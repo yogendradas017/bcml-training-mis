@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block page_title %}Training Records (2A){% endblock %}
+{% block content %}
+
+<!-- Bulk Upload -->
+<div class="card mb-4" style="border-left:5px solid #0d6efd;">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:#0d6efd;color:#fff;">
+    <span><i class="bi bi-cloud-upload"></i> Bulk Upload Training Records (Excel / CSV)</span>
+    <a href="{{ url_for('training_template') }}" class="btn btn-light btn-sm">
+      <i class="bi bi-file-earmark-arrow-down"></i> Download Template
+    </a>
+  </div>
+  <div class="card-body">
+    <p class="text-muted mb-2" style="font-size:13px;">
+      Download the template, fill in attendance data, then upload here. If you add a <strong>Session Code</strong>,
+      Programme Name / Type / Mode will auto-fill from the Calendar.
+      Required columns: <strong>Employee Code, Programme Name, Start Date, Hours</strong>
+    </p>
+    <form method="POST" action="{{ url_for('training_bulk_upload') }}" enctype="multipart/form-data">
+      <div class="d-flex gap-2 align-items-end">
+        <div>
+          <label class="form-label">Select Excel or CSV file</label>
+          <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required style="width:340px;">
+        </div>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-upload"></i> Upload & Import
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header" style="background:#198754;color:#fff;">
+    <i class="bi bi-person-check"></i> Add Single Training Record
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info py-2" style="font-size:13px;">
+      <i class="bi bi-info-circle"></i>
+      Select a <strong>Session Code</strong> — programme details will auto-fill. Or enter manually for ad-hoc trainings.
+    </div>
+    <form method="POST" action="{{ url_for('add_emp_training') }}">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Employee <span class="required-star">*</span></label>
+          <select name="emp_code" id="tr_emp_code" class="form-select" required
+                  onchange="fillEmpDetails(this.value,'tr')">
+            <option value="">-- Select Employee --</option>
+            {% for emp in employees %}
+            <option value="{{ emp.emp_code }}">{{ emp.name }} ({{ emp.emp_code }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Collar</label>
+          <input type="text" id="tr_collar" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Department</label>
+          <input type="text" id="tr_dept" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Session Code (from Calendar)</label>
+          <select name="session_code" id="tr_session_code" class="form-select"
+                  onchange="fillSessionDetails(this.value)">
+            <option value="">-- Select Session (optional) --</option>
+            {% for s in sessions %}
+            <option value="{{ s.session_code }}">{{ s.session_code }} — {{ s.programme_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">Programme Name <span class="required-star">*</span></label>
+          <input type="text" name="programme_name" id="tr_prog_name" class="form-control"
+                 required placeholder="Auto-fill from session or type manually">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Type</label>
+          <input type="text" id="tr_prog_type_disp" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Mode</label>
+          <input type="text" id="tr_mode_disp" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Start Date <span class="required-star">*</span></label>
+          <input type="date" name="start_date" id="tr_start_date" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">End Date</label>
+          <input type="date" name="end_date" id="tr_end_date" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Hours <span class="required-star">*</span></label>
+          <input type="number" name="hrs" id="tr_hrs" class="form-control" step="0.5" min="0" required value="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Venue</label>
+          <input type="text" name="venue" class="form-control" placeholder="e.g. Training Hall, Plant">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Pre-Session Rating (1-5)</label>
+          <input type="number" name="pre_rating" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Post-Session Rating (1-5)</label>
+          <input type="number" name="post_rating" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-success px-4">
+            <i class="bi bi-plus-circle"></i> Add Training Record
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Records Table -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:#1a3a5c;color:#fff;">
+    <span><i class="bi bi-table"></i> Training Records — <strong>{{ records|length }}</strong> entries</span>
+    <span class="badge bg-info">
+      Total Hours: {{ records|sum(attribute='hrs')|round(1) }}
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:13px;">
+        <thead>
+          <tr>
+            <th>#</th><th>Employee</th><th>Collar</th><th>Session</th>
+            <th>Programme</th><th>Type</th><th>Start Date</th>
+            <th>Hrs</th><th>Pre</th><th>Post</th><th>Venue</th><th>Month</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rec in records %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>
+              <strong>{{ rec.emp_name or rec.emp_code }}</strong><br>
+              <small class="text-muted">{{ rec.emp_code }}</small>
+            </td>
+            <td>
+              {% if rec.collar == 'Blue Collared' %}<span class="badge badge-bc">Blue</span>
+              {% elif rec.collar == 'White Collared' %}<span class="badge badge-wc">White</span>
+              {% else %}—{% endif %}
+            </td>
+            <td><code style="font-size:11px;">{{ rec.session_code or '—' }}</code></td>
+            <td><strong>{{ rec.programme_name }}</strong></td>
+            <td><span class="badge bg-secondary" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
+            <td>{{ rec.start_date or '—' }}</td>
+            <td><strong>{{ rec.hrs }}</strong></td>
+            <td>{{ rec.pre_rating or '—' }}</td>
+            <td>{{ rec.post_rating or '—' }}</td>
+            <td>{{ rec.venue or '—' }}</td>
+            <td>{{ rec.month or '—' }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('delete_emp_training', rec_id=rec.id) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Delete this training record?')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="13" class="text-center text-muted py-4">No training records yet. Add above.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

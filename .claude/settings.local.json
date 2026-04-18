@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Read(//c/Users/yogendra.das/Desktop/Master Emp Data/**)",
+      "Bash(python -c \"from app import init_db; init_db\\(\\); print\\('DB initialised OK'\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(py -3 -c ' *)"
+    ]
+  }
+}

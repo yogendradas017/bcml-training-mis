@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block page_title %}{{ plant.name }} — Plant Detail View{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <a href="{{ url_for('central_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Back to All Plants
+    </a>
+  </div>
+  <a href="{{ url_for('export_excel', plant_id=plant.id) }}" class="btn btn-success btn-sm">
+    <i class="bi bi-file-earmark-excel"></i> Export Excel
+  </a>
+</div>
+
+<div class="card mb-4 p-3" style="border-left:6px solid #1a3a5c;">
+  <div class="row align-items-center">
+    <div class="col-auto">
+      <div style="font-size:2rem;font-weight:800;color:#1a3a5c;">{{ plant.name }}</div>
+      <span class="badge bg-secondary fs-6">{{ plant.unit_code }}</span>
+    </div>
+    <div class="col text-muted" style="font-size:13px;">FY 2026-27 | Balrampur Chini Mills Ltd.</div>
+  </div>
+</div>
+
+<!-- Compliance Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card p-3" style="border-left:5px solid #0d6efd;">
+      <div class="fw-bold text-primary" style="font-size:13px;">BLUE COLLAR COMPLIANCE</div>
+      <div style="font-size:2rem;font-weight:800;color:#0d6efd;">{{ compliance.bc_pct }}%</div>
+      <div class="text-muted" style="font-size:12px;">
+        {{ compliance.bc_actual }} / {{ compliance.bc_mandate }} hrs
+        ({{ compliance.bc_emp }} emp × 12 hrs)
+      </div>
+      <div class="progress mt-2" style="height:8px;">
+        <div class="progress-bar bg-primary" style="width:{{ [compliance.bc_pct,100]|min }}%"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3" style="border-left:5px solid #198754;">
+      <div class="fw-bold text-success" style="font-size:13px;">WHITE COLLAR COMPLIANCE</div>
+      <div style="font-size:2rem;font-weight:800;color:#198754;">{{ compliance.wc_pct }}%</div>
+      <div class="text-muted" style="font-size:12px;">
+        {{ compliance.wc_actual }} / {{ compliance.wc_mandate }} hrs
+        ({{ compliance.wc_emp }} emp × 24 hrs)
+      </div>
+      <div class="progress mt-2" style="height:8px;">
+        <div class="progress-bar bg-success" style="width:{{ [compliance.wc_pct,100]|min }}%"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3" style="border-left:5px solid #dc3545;">
+      <div class="fw-bold text-danger" style="font-size:13px;">OVERALL COMPLIANCE</div>
+      <div style="font-size:2rem;font-weight:800;color:#dc3545;">{{ compliance.total_pct }}%</div>
+      <div class="text-muted" style="font-size:12px;">
+        {{ compliance.bc_actual + compliance.wc_actual }} /
+        {{ compliance.bc_mandate + compliance.wc_mandate }} hrs total
+      </div>
+      <div class="progress mt-2" style="height:8px;">
+        <div class="progress-bar bg-danger" style="width:{{ [compliance.total_pct,100]|min }}%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Month Filter -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="GET" class="d-flex align-items-center gap-3">
+      <label class="form-label mb-0 fw-bold">Filter by Month:</label>
+      <select name="month" class="form-select" style="width:180px;" onchange="this.form.submit()">
+        <option value="">— Cumulative (All) —</option>
+        {% for mo in months %}
+        <option value="{{ mo }}" {% if mo == selected_month %}selected{% endif %}>{{ mo }}</option>
+        {% endfor %}
+      </select>
+      {% if selected_month %}
+      <a href="{{ url_for('central_plant_view', plant_id=plant.id) }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<!-- MIS Table -->
+<div class="card">
+  <div class="card-header" style="background:#1a3a5c;color:#fff;">
+    <i class="bi bi-table"></i> MIS Summary — {{ plant.name }}
+    {% if selected_month %}({{ selected_month }}){% else %}(Cumulative){% endif %}
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered mb-0" style="font-size:13px;">
+        <thead>
+          <tr style="background:#2e6da4;color:#fff;">
+            <th rowspan="2" class="align-middle">Programme Type</th>
+            <th colspan="4" class="text-center">No. of Programmes</th>
+            <th colspan="3" class="text-center">Person Seats Trained</th>
+            <th colspan="3" class="text-center">Man-Hours</th>
+          </tr>
+          <tr style="background:#3a7dbf;color:#fff;">
+            <th>BC</th><th>WC</th><th>Int.</th><th>Ext.</th>
+            <th>BC</th><th>WC</th><th>Total</th>
+            <th>BC</th><th>WC</th><th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in summary_rows %}
+          <tr>
+            <td><strong>{{ row.prog_type }}</strong></td>
+            <td class="text-center">{{ row.bc_progs or '—' }}</td>
+            <td class="text-center">{{ row.wc_progs or '—' }}</td>
+            <td class="text-center">{{ row.int_prog or '—' }}</td>
+            <td class="text-center">{{ row.ext_prog or '—' }}</td>
+            <td class="text-center">{{ row.bc_seats or '—' }}</td>
+            <td class="text-center">{{ row.wc_seats or '—' }}</td>
+            <td class="text-center"><strong>{{ row.total_seats or '—' }}</strong></td>
+            <td class="text-center">{{ row.bc_hrs or '—' }}</td>
+            <td class="text-center">{{ row.wc_hrs or '—' }}</td>
+            <td class="text-center"><strong>{{ row.total_hrs or '—' }}</strong></td>
+          </tr>
+          {% endfor %}
+          <tr style="background:#1a3a5c;color:#fff;font-weight:bold;">
+            <td>TOTAL</td>
+            <td class="text-center">{{ totals.bc_progs }}</td>
+            <td class="text-center">{{ totals.wc_progs }}</td>
+            <td class="text-center">{{ totals.int_prog }}</td>
+            <td class="text-center">{{ totals.ext_prog }}</td>
+            <td class="text-center">{{ totals.bc_seats }}</td>
+            <td class="text-center">{{ totals.wc_seats }}</td>
+            <td class="text-center">{{ totals.total_seats }}</td>
+            <td class="text-center">{{ totals.bc_hrs }}</td>
+            <td class="text-center">{{ totals.wc_hrs }}</td>
+            <td class="text-center">{{ totals.total_hrs }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
