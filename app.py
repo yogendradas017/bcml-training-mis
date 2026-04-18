@@ -932,6 +932,173 @@ def export_excel(plant_id):
     return send_file(output, download_name=filename, as_attachment=True,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+@app.route('/calendar/template')
+@spoc_required
+def calendar_template():
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Calendar_Bulk_Upload'
+    headers = ['Programme Name', 'Type of Programme', 'Source', 'Planned Month',
+               'Plan Start (YYYY-MM-DD)', 'Plan End (YYYY-MM-DD)', 'Duration (Hrs)',
+               'Level', 'Mode', 'Target Audience', 'Planned Pax', 'Trainer/Vendor']
+    hdr_fill = PatternFill('solid', fgColor='1F4E79')
+    hdr_font = Font(bold=True, color='FFFFFF')
+    for i, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=i, value=h)
+        cell.fill = hdr_fill; cell.font = hdr_font
+        ws.column_dimensions[get_column_letter(i)].width = 24
+    samples = [
+        ['Fire Safety Training', 'EHS/HR', 'TNI', 'June', '2026-06-10', '2026-06-10', 4, 'General', 'Classroom', 'Blue Collared', 30, 'Internal Faculty'],
+        ['Leadership Skills', 'Behavioural/Leadership', 'Management', 'July', '2026-07-05', '2026-07-06', 8, 'Specialized', 'Classroom', 'White Collared', 20, 'External Vendor'],
+    ]
+    for r, row in enumerate(samples, 2):
+        for c, val in enumerate(row, 1):
+            ws.cell(row=r, column=c, value=val)
+    ws['A5'] = 'VALID Types: Behavioural/Leadership | Cane | Commercial | EHS/HR | IT | Technical'
+    ws['A6'] = 'VALID Modes: Classroom | OJT | SOP | Online'
+    ws['A7'] = 'VALID Audience: Blue Collared | White Collared | Common'
+    ws['A8'] = 'VALID Months: April | May | June | July | August | September | October | November | December | January | February | March'
+    out = io.BytesIO(); wb.save(out); out.seek(0)
+    return send_file(out, download_name='Calendar_Bulk_Upload_Template.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/calendar/bulk', methods=['POST'])
+@spoc_required
+def calendar_bulk_upload():
+    plant_id = session['plant_id']
+    f = request.files.get('file')
+    if not f or f.filename == '':
+        flash('No file selected.', 'danger')
+        return redirect(url_for('training_calendar'))
+    try:
+        df = _read_upload_file(f)
+    except Exception as e:
+        flash(f'Could not read file: {e}', 'danger')
+        return redirect(url_for('training_calendar'))
+    db = get_db(); inserted = 0; errors = []
+    for i, row in df.iterrows():
+        prog_name = _clean(row, ['programme name', 'programme_name', 'program name'])
+        prog_type = _clean(row, ['type of programme', 'type', 'prog type'])
+        source    = _clean(row, ['source']) or 'TNI'
+        month     = _clean(row, ['planned month', 'month'])
+        plan_start= _clean(row, ['plan start (yyyy-mm-dd)', 'plan start', 'start date'])
+        plan_end  = _clean(row, ['plan end (yyyy-mm-dd)', 'plan end', 'end date'])
+        duration  = _safe_float(_clean(row, ['duration (hrs)', 'duration', 'hrs'])) or 0
+        level     = _clean(row, ['level'])
+        mode      = _clean(row, ['mode'])
+        audience  = _clean(row, ['target audience', 'audience'])
+        pax       = int(_safe_float(_clean(row, ['planned pax', 'pax'])) or 0)
+        trainer   = _clean(row, ['trainer/vendor', 'trainer', 'vendor'])
+        if not prog_name:
+            errors.append(f'Row {i+2}: Programme Name is required.')
+            continue
+        if not prog_type:
+            errors.append(f'Row {i+2}: Type of Programme is required.')
+            continue
+        prog_code    = _get_or_create_prog_code(plant_id, prog_name, prog_type, db)
+        session_code = _new_session_code(plant_id, prog_code, db)
+        db.execute('''INSERT INTO calendar
+            (plant_id,prog_code,session_code,source,programme_name,prog_type,
+             planned_month,plan_start,plan_end,duration_hrs,level,mode,
+             target_audience,planned_pax,trainer_vendor,status)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'To Be Planned')''',
+            (plant_id, prog_code, session_code, source, prog_name, prog_type,
+             month, plan_start, plan_end, duration, level, mode, audience, pax, trainer))
+        inserted += 1
+    db.commit()
+    if inserted:
+        flash(f'Bulk upload complete: {inserted} sessions added to calendar.', 'success')
+    if errors:
+        for err in errors: flash(err, 'upload_error')
+        flash(f'{len(errors)} row(s) had errors — see details below.', 'warning')
+    return redirect(url_for('training_calendar'))
+
+@app.route('/programme/template')
+@spoc_required
+def programme_template():
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = '2C_Bulk_Upload'
+    headers = ['Session Code', 'Actual Start Date (YYYY-MM-DD)', 'Actual End Date (YYYY-MM-DD)',
+               'Actual Hours', 'Faculty Name', 'Internal/External', 'Cost (Rs.)', 'Venue',
+               'Course Feedback (1-5)', 'Faculty Feedback (1-5)',
+               'Trainer FB Participants (1-5)', 'Trainer FB Facilities (1-5)']
+    hdr_fill = PatternFill('solid', fgColor='6B3FA0')
+    hdr_font = Font(bold=True, color='FFFFFF')
+    for i, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=i, value=h)
+        cell.fill = hdr_fill; cell.font = hdr_font
+        ws.column_dimensions[get_column_letter(i)].width = 26
+    samples = [
+        ['BCM/EHS/001/B01', '2026-06-10', '2026-06-10', 4, 'Mr. Ramesh Kumar', 'Internal', 0, 'Training Hall', 4.2, 4.0, 3.8, 4.1],
+    ]
+    for r, row in enumerate(samples, 2):
+        for c, val in enumerate(row, 1):
+            ws.cell(row=r, column=c, value=val)
+    ws['A4'] = 'NOTE: Session Code must exist in Training Calendar. Internal/External options: Internal | External | Online'
+    out = io.BytesIO(); wb.save(out); out.seek(0)
+    return send_file(out, download_name='2C_Programme_Bulk_Upload_Template.xlsx', as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/programme/bulk', methods=['POST'])
+@spoc_required
+def programme_bulk_upload():
+    plant_id = session['plant_id']
+    f = request.files.get('file')
+    if not f or f.filename == '':
+        flash('No file selected.', 'danger')
+        return redirect(url_for('programme_details'))
+    try:
+        df = _read_upload_file(f)
+    except Exception as e:
+        flash(f'Could not read file: {e}', 'danger')
+        return redirect(url_for('programme_details'))
+    db = get_db(); inserted = 0; errors = []
+    for i, row in df.iterrows():
+        sc         = _clean(row, ['session code', 'session_code'])
+        start_date = _clean(row, ['actual start date (yyyy-mm-dd)', 'start date', 'actual start date'])
+        end_date   = _clean(row, ['actual end date (yyyy-mm-dd)', 'end date', 'actual end date'])
+        hrs        = _safe_float(_clean(row, ['actual hours', 'hours', 'hrs'])) or 0
+        faculty    = _clean(row, ['faculty name', 'faculty'])
+        int_ext    = _clean(row, ['internal/external', 'int/ext', 'internal external'])
+        cost       = _safe_float(_clean(row, ['cost (rs.)', 'cost'])) or 0
+        venue      = _clean(row, ['venue'])
+        cfb        = _safe_float(_clean(row, ['course feedback (1-5)', 'course feedback', 'course fb']))
+        ffb        = _safe_float(_clean(row, ['faculty feedback (1-5)', 'faculty feedback', 'faculty fb']))
+        tfbp       = _safe_float(_clean(row, ['trainer fb participants (1-5)', 'trainer fb participants']))
+        tfbf       = _safe_float(_clean(row, ['trainer fb facilities (1-5)', 'trainer fb facilities']))
+        if not sc:
+            errors.append(f'Row {i+2}: Session Code is required.')
+            continue
+        cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=?', (sc, plant_id)).fetchone()
+        if not cal:
+            errors.append(f'Row {i+2}: Session Code {sc} not found in Calendar.')
+            continue
+        if db.execute('SELECT 1 FROM programme_details WHERE session_code=? AND plant_id=?', (sc, plant_id)).fetchone():
+            errors.append(f'Row {i+2}: Session {sc} already has programme details recorded.')
+            continue
+        if not start_date:
+            errors.append(f'Row {i+2}: Actual Start Date is required.')
+            continue
+        db.execute('''INSERT INTO programme_details
+            (plant_id,session_code,programme_name,prog_type,level,cal_new,mode,
+             start_date,end_date,audience,hours_actual,faculty_name,int_ext,cost,
+             venue,course_feedback,faculty_feedback,trainer_fb_participants,trainer_fb_facilities)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+            (plant_id, sc, cal['programme_name'], cal['prog_type'], cal['level'],
+             'Calendar Program', cal['mode'], start_date, end_date,
+             cal['target_audience'], hrs, faculty, int_ext, cost, venue, cfb, ffb, tfbp, tfbf))
+        db.execute("UPDATE calendar SET status='Conducted', actual_date=? WHERE session_code=? AND plant_id=?",
+                   (start_date, sc, plant_id))
+        inserted += 1
+    db.commit()
+    if inserted:
+        flash(f'Bulk upload complete: {inserted} programme records saved.', 'success')
+    if errors:
+        for err in errors: flash(err, 'upload_error')
+        flash(f'{len(errors)} row(s) had errors — see details below.', 'warning')
+    return redirect(url_for('programme_details'))
+
 # ─── API (AJAX auto-fill) ─────────────────────────────────────────────────────
 
 @app.route('/api/employee/<emp_code>')

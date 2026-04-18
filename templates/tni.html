@@ -102,13 +102,26 @@
 
 <!-- TNI Records -->
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:#1a3a5c;color:#fff;">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
     <span><i class="bi bi-clipboard-data"></i> TNI Records — <strong>{{ records|length }}</strong> entries</span>
-    <span class="badge bg-success">{{ records|selectattr('id','in', completed_map.keys())|list|length }} tracked</span>
+    <span class="badge" style="background:#d1fae5;color:#065f46;">{{ records|selectattr('id','in', completed_map.keys())|list|length }} tracked</span>
+  </div>
+  <div class="card-body pb-2 pt-3">
+    <div class="d-flex gap-2">
+      <div class="position-relative flex-grow-1" style="max-width:420px;">
+        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
+        <input type="text" class="form-control" placeholder="Search by name, emp code, programme, department..." style="padding-left:34px;" oninput="filterTable(this.value,'tniTable')">
+      </div>
+      <select class="form-select" style="width:160px;" onchange="filterByCollar(this.value)">
+        <option value="">All Collar</option>
+        <option value="blue">Blue Collar</option>
+        <option value="white">White Collar</option>
+      </select>
+    </div>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0">
+      <table class="table table-hover mb-0" id="tniTable">
         <thead>
           <tr>
             <th>#</th><th>Employee</th><th>Collar</th><th>Department</th>
@@ -159,4 +172,21 @@
     </div>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+function filterTable(query, tableId) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+function filterByCollar(collar) {
+  document.querySelectorAll('#tniTable tbody tr').forEach(row => {
+    if (!collar) { row.style.display = ''; return; }
+    const text = row.textContent.toLowerCase();
+    row.style.display = text.includes(collar) ? '' : 'none';
+  });
+}
+</script>
 {% endblock %}

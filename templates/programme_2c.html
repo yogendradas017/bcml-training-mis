@@ -2,21 +2,44 @@
 {% block page_title %}Programme Details (2C){% endblock %}
 {% block content %}
 
+<!-- Bulk Upload -->
+<div class="card mb-4" style="border-left:4px solid #7c3aed;">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#5b21b6,#7c3aed);color:#fff;">
+    <span><i class="bi bi-cloud-upload"></i> Bulk Upload Programme Details (Excel / CSV)</span>
+    <a href="{{ url_for('programme_template') }}" class="btn btn-light btn-sm">
+      <i class="bi bi-file-earmark-arrow-down"></i> Download Template
+    </a>
+  </div>
+  <div class="card-body">
+    <p class="text-muted mb-2" style="font-size:13px;">
+      Session Code must already exist in Calendar. Required: <strong>Session Code, Actual Start Date</strong>.
+    </p>
+    <form method="POST" action="{{ url_for('programme_bulk_upload') }}" enctype="multipart/form-data">
+      <div class="d-flex gap-2 align-items-end">
+        <div>
+          <label class="form-label">Select Excel or CSV file</label>
+          <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required style="width:340px;">
+        </div>
+        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-upload"></i> Upload &amp; Import</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="card mb-4">
-  <div class="card-header" style="background:#6f42c1;color:#fff;">
-    <i class="bi bi-journal-plus"></i> Add Programme Details
+  <div class="card-header" style="background:linear-gradient(135deg,#5b21b6,#7c3aed);color:#fff;">
+    <i class="bi bi-journal-plus"></i> Add Single Programme Record
   </div>
   <div class="card-body">
     <div class="alert alert-info py-2" style="font-size:13px;">
       <i class="bi bi-info-circle"></i>
-      Select a <strong>Session Code</strong> from the Calendar — programme details auto-fill. Participants count is auto-calculated from Training Records (2A).
+      Select a <strong>Session Code</strong> from the Calendar — details auto-fill. Participants count auto-calculated from 2A records.
     </div>
     <form method="POST" action="{{ url_for('add_programme_details') }}">
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">Session Code <span class="required-star">*</span></label>
-          <select name="session_code" id="pc_session_code" class="form-select" required
-                  onchange="fillSessionDetails2c(this.value)">
+          <select name="session_code" id="pc_session_code" class="form-select" required onchange="fillSessionDetails2c(this.value)">
             <option value="">-- Select Session Code --</option>
             {% for s in cal_sessions %}
             <option value="{{ s.session_code }}">{{ s.session_code }} — {{ s.programme_name }}</option>
@@ -55,14 +78,14 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label">Cost (₹)</label>
+          <label class="form-label">Cost (&#8377;)</label>
           <input type="number" name="cost" class="form-control" step="0.01" min="0" value="0">
         </div>
         <div class="col-md-3">
           <label class="form-label">Venue</label>
           <input type="text" name="venue" class="form-control" placeholder="e.g. Training Hall">
         </div>
-        <div class="col-12"><hr class="my-1"><strong style="font-size:14px;">Feedback Scores (1–5)</strong></div>
+        <div class="col-12"><hr class="my-1"><strong style="font-size:13px;">Feedback Scores (1&#8211;5)</strong></div>
         <div class="col-md-3">
           <label class="form-label">Course Feedback</label>
           <input type="number" name="course_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
@@ -72,17 +95,15 @@
           <input type="number" name="faculty_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Trainer FB — Participants</label>
+          <label class="form-label">Trainer FB &#8212; Participants</label>
           <input type="number" name="trainer_fb_participants" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Trainer FB — Facilities</label>
+          <label class="form-label">Trainer FB &#8212; Facilities</label>
           <input type="number" name="trainer_fb_facilities" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-12">
-          <button type="submit" class="btn px-4" style="background:#6f42c1;color:#fff;">
-            <i class="bi bi-plus-circle"></i> Save Programme Details
-          </button>
+          <button type="submit" class="btn btn-primary px-4"><i class="bi bi-plus-circle"></i> Save Programme Details</button>
         </div>
       </div>
     </form>
@@ -91,17 +112,23 @@
 
 <!-- Records Table -->
 <div class="card">
-  <div class="card-header" style="background:#1a3a5c;color:#fff;">
-    <i class="bi bi-journal-text"></i> Programme Records — <strong>{{ records|length }}</strong> entries
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
+    <span><i class="bi bi-journal-text"></i> Programme Records — <strong>{{ records|length }}</strong> entries</span>
+  </div>
+  <div class="card-body pb-2 pt-3">
+    <div class="position-relative" style="max-width:400px;">
+      <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
+      <input type="text" class="form-control" placeholder="Search session, programme, faculty..." style="padding-left:34px;" oninput="filterTable(this.value,'prog2cTable')">
+    </div>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0" style="font-size:13px;">
+      <table class="table table-hover mb-0" id="prog2cTable" style="font-size:13px;">
         <thead>
           <tr>
             <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th>
             <th>Start Date</th><th>Hrs</th><th>Faculty</th><th>Int/Ext</th>
-            <th>Cost (₹)</th><th>Course FB</th><th>Participants</th><th>Man-Hrs</th><th>Action</th>
+            <th>Cost (&#8377;)</th><th>Course FB</th><th>Participants</th><th>Man-Hrs</th><th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -115,9 +142,9 @@
             <td>{{ rec.hours_actual }}</td>
             <td>{{ rec.faculty_name or '—' }}</td>
             <td>
-              {% if rec.int_ext == 'Internal' %}<span class="badge bg-primary">Internal</span>
-              {% elif rec.int_ext == 'External' %}<span class="badge bg-warning text-dark">External</span>
-              {% else %}<span class="badge bg-info text-dark">{{ rec.int_ext or '—' }}</span>{% endif %}
+              {% if rec.int_ext == 'Internal' %}<span class="badge" style="background:#dbeafe;color:#1d4ed8;">Internal</span>
+              {% elif rec.int_ext == 'External' %}<span class="badge" style="background:#fef3c7;color:#92400e;">External</span>
+              {% else %}<span class="badge bg-secondary">{{ rec.int_ext or '—' }}</span>{% endif %}
             </td>
             <td>{{ "%.0f"|format(rec.cost or 0) }}</td>
             <td>{{ rec.course_feedback or '—' }}</td>
@@ -125,8 +152,7 @@
             <td><strong>{{ "%.1f"|format(rec.man_hours or 0) }}</strong></td>
             <td>
               <form method="POST" action="{{ url_for('delete_programme', rec_id=rec.id) }}" style="display:inline;">
-                <button type="submit" class="btn btn-sm btn-outline-danger"
-                        onclick="return confirm('Delete programme record for {{ rec.session_code }}?')">
+                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete programme record for {{ rec.session_code }}?')">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
@@ -154,6 +180,12 @@ function fillSessionDetails2c(code) {
       if (d.plan_start) document.getElementById('pc_start_date').value = d.plan_start;
       if (d.plan_end)   document.getElementById('pc_end_date').value   = d.plan_end;
     });
+}
+function filterTable(query, tableId) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
 }
 </script>
 {% endblock %}
