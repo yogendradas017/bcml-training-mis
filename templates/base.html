@@ -6,185 +6,182 @@
   <title>BCML Training MIS{% if page_title %} — {{ page_title }}{% endif %}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    /* ── ROOT TOKENS ─────────────────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════════
+       BCML TRAINING MIS — PREMIUM UI
+    ═══════════════════════════════════════════════════════════════ */
     :root {
-      --sb-bg:       #0d1b2e;
-      --sb-hover:    rgba(255,255,255,.06);
-      --sb-active:   rgba(59,130,246,.18);
-      --sb-border:   rgba(255,255,255,.07);
-      --sb-text:     #94a3b8;
-      --sb-text-hi:  #e2e8f0;
-      --sb-accent:   #3b82f6;
-      --body-bg:     #f0f4f8;
-      --card-bg:     #ffffff;
-      --topbar-bg:   #ffffff;
-      --primary:     #1e3a5f;
-      --primary-mid: #2563a8;
-      --primary-lt:  #3b82f6;
-      --text:        #1e293b;
-      --muted:       #64748b;
-      --border:      #e2e8f0;
-      --radius:      12px;
+      --c-bg:       #f4f6fb;
+      --c-white:    #ffffff;
+      --c-border:   #e5e9f2;
+      --c-text:     #111827;
+      --c-muted:    #6b7280;
+      --c-primary:  #4f46e5;
+      --c-primary2: #7c3aed;
+      --sb-w:       256px;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+    html { scroll-behavior: smooth; }
     body {
-      font-family: 'Inter', Arial, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--c-bg);
+      color: var(--c-text);
       font-size: 14px;
-      background: var(--body-bg);
-      color: var(--text);
+      line-height: 1.5;
     }
 
-    /* ── SCROLLBAR ───────────────────────────────────────────────────────── */
+    /* ── SCROLLBAR ─────────────────────────────────────────────── */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
 
-    /* ── SIDEBAR ─────────────────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════════
+       SIDEBAR
+    ══════════════════════════════════════════════════════════════ */
     .sidebar {
-      width: 252px;
-      height: 100vh;
-      position: fixed;
-      top: 0; left: 0;
-      background: linear-gradient(180deg, #0d1b2e 0%, #091629 100%);
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-      overflow-x: hidden;
-      scrollbar-width: thin;
-      scrollbar-color: #1e3a5f transparent;
+      position: fixed; top: 0; left: 0;
+      width: var(--sb-w); height: 100vh;
+      background: linear-gradient(175deg, #0d1117 0%, #161b27 50%, #0d1117 100%);
+      display: flex; flex-direction: column;
+      overflow-y: auto; overflow-x: hidden;
+      scrollbar-width: thin; scrollbar-color: #1f2937 transparent;
       z-index: 1000;
-      border-right: 1px solid var(--sb-border);
+      border-right: 1px solid rgba(255,255,255,.04);
     }
     .sidebar::-webkit-scrollbar { width: 3px; }
-    .sidebar::-webkit-scrollbar-thumb { background: #1e3a5f; }
+    .sidebar::-webkit-scrollbar-thumb { background: #1f2937; }
 
     /* brand */
     .sb-brand {
-      padding: 18px 16px 16px;
-      background: linear-gradient(135deg, #122240 0%, #1e3a5f 100%);
-      border-bottom: 1px solid var(--sb-border);
+      padding: 20px 16px 18px;
+      background: linear-gradient(135deg, #1a1f35 0%, #252d45 100%);
+      border-bottom: 1px solid rgba(255,255,255,.06);
       flex-shrink: 0;
     }
-    .sb-brand-logo {
-      display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
-    }
-    .sb-brand-icon {
-      width: 36px; height: 36px; border-radius: 9px;
-      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    .sb-logo-row { display: flex; align-items: center; gap: 11px; margin-bottom: 10px; }
+    .sb-logo-box {
+      width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; color: #fff; flex-shrink: 0;
+      font-size: 19px; color: #fff;
+      box-shadow: 0 4px 14px rgba(79,70,229,.5);
     }
-    .sb-brand-title { font-size: 12px; font-weight: 700; color: #fff; letter-spacing: .6px; line-height: 1.3; }
-    .sb-brand-sub   { font-size: 10px; color: rgba(255,255,255,.45); margin-top: 1px; }
-    .sb-plant-chip  {
+    .sb-brand-name {
+      font-size: 11.5px; font-weight: 800; color: #fff;
+      letter-spacing: .5px; line-height: 1.3;
+      text-transform: uppercase;
+    }
+    .sb-brand-sub { font-size: 10px; color: rgba(255,255,255,.4); margin-top: 1px; }
+    .sb-plant-tag {
       display: inline-flex; align-items: center; gap: 5px;
-      background: rgba(59,130,246,.15);
-      border: 1px solid rgba(59,130,246,.3);
-      border-radius: 20px;
-      padding: 4px 10px;
-      font-size: 11px; font-weight: 600;
-      color: #93c5fd;
+      background: rgba(79,70,229,.2);
+      border: 1px solid rgba(79,70,229,.4);
+      border-radius: 20px; padding: 4px 10px;
+      font-size: 11px; font-weight: 600; color: #a5b4fc;
     }
 
-    /* nav sections */
-    .sb-section {
-      font-size: 10px; font-weight: 700; letter-spacing: 1.4px;
-      text-transform: uppercase; color: #334155;
-      padding: 18px 16px 6px;
-      flex-shrink: 0;
+    /* nav section label */
+    .sb-label {
+      font-size: 9.5px; font-weight: 700; letter-spacing: 1.8px;
+      text-transform: uppercase; color: #374151;
+      padding: 18px 18px 6px; flex-shrink: 0;
     }
 
     /* nav links */
-    .sb-nav { list-style: none; padding: 0; margin: 0; flex-shrink: 0; }
+    .sb-nav { list-style: none; padding: 0 8px; flex-shrink: 0; }
+    .sb-nav li { margin-bottom: 2px; }
     .sb-nav a {
       display: flex; align-items: center; gap: 10px;
-      padding: 9px 16px;
-      color: var(--sb-text);
-      font-size: 13px; font-weight: 500;
+      padding: 9px 12px; border-radius: 9px;
+      color: #9ca3af; font-size: 13px; font-weight: 500;
       text-decoration: none;
-      border-left: 3px solid transparent;
-      transition: all .15s ease;
-      white-space: nowrap;
+      transition: all .16s ease;
+      position: relative;
     }
-    .sb-nav a i { font-size: 15px; flex-shrink: 0; opacity: .8; }
+    .sb-nav a i { font-size: 15px; flex-shrink: 0; }
     .sb-nav a:hover {
-      color: var(--sb-text-hi);
-      background: var(--sb-hover);
-      border-left-color: var(--sb-accent);
+      color: #e5e7eb;
+      background: rgba(255,255,255,.06);
     }
     .sb-nav a.active {
-      color: #fff;
-      background: var(--sb-active);
-      border-left-color: var(--sb-accent);
-      font-weight: 600;
+      color: #fff; font-weight: 600;
+      background: linear-gradient(135deg, rgba(79,70,229,.3), rgba(124,58,237,.2));
+      box-shadow: inset 0 0 0 1px rgba(79,70,229,.3);
     }
-    .sb-nav a.active i { opacity: 1; }
+    .sb-nav a.active i { color: #a5b4fc; }
+    .sb-nav a.active::before {
+      content: '';
+      position: absolute; left: 0; top: 20%; bottom: 20%;
+      width: 3px; background: linear-gradient(to bottom, #4f46e5, #7c3aed);
+      border-radius: 0 3px 3px 0;
+    }
 
     /* footer */
     .sb-footer {
-      margin-top: auto;
-      padding: 12px 14px;
-      border-top: 1px solid var(--sb-border);
-      flex-shrink: 0;
+      margin-top: auto; padding: 14px 12px;
+      border-top: 1px solid rgba(255,255,255,.05); flex-shrink: 0;
     }
-
-    /* ── MAIN WRAPPER ─────────────────────────────────────────────────────── */
-    .main-wrap {
-      margin-left: 252px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+    .sb-logout {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 14px; border-radius: 9px;
+      color: #6b7280; font-size: 12.5px; font-weight: 500;
+      text-decoration: none;
+      border: 1px solid rgba(255,255,255,.07);
+      transition: all .15s;
     }
+    .sb-logout:hover { color: #f87171; border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.07); }
 
-    /* ── TOPBAR ───────────────────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════════
+       MAIN LAYOUT
+    ══════════════════════════════════════════════════════════════ */
+    .main-wrap { margin-left: var(--sb-w); min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── TOPBAR ────────────────────────────────────────────────── */
     .topbar {
-      height: 58px;
-      background: var(--topbar-bg);
-      border-bottom: 1px solid var(--border);
+      height: 60px; background: var(--c-white);
+      border-bottom: 1px solid var(--c-border);
       padding: 0 28px;
       display: flex; align-items: center; justify-content: space-between;
       position: sticky; top: 0; z-index: 500;
-      box-shadow: 0 1px 0 rgba(0,0,0,.05);
-      flex-shrink: 0;
+      box-shadow: 0 1px 0 rgba(0,0,0,.04);
     }
-    .topbar-title {
-      font-size: 15px; font-weight: 700;
-      color: var(--primary);
-      display: flex; align-items: center; gap: 8px;
+    .topbar-left { display: flex; align-items: center; gap: 10px; }
+    .topbar-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; color: #fff;
     }
-    .topbar-title i { color: var(--primary-lt); }
+    .topbar-title { font-size: 15px; font-weight: 700; color: var(--c-text); }
     .topbar-right { display: flex; align-items: center; gap: 10px; }
-    .t-badge-plant {
-      background: linear-gradient(135deg, #eff6ff, #dbeafe);
-      border: 1px solid #bfdbfe;
-      color: #1d4ed8;
-      padding: 4px 12px; border-radius: 20px;
-      font-size: 11.5px; font-weight: 600;
-      display: flex; align-items: center; gap: 5px;
+    .t-plant {
+      display: flex; align-items: center; gap: 6px;
+      background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+      border: 1px solid #c4b5fd; border-radius: 20px;
+      padding: 5px 14px; font-size: 12px; font-weight: 700; color: #5b21b6;
     }
-    .t-badge-user {
-      background: #f8fafc; border: 1px solid var(--border);
-      padding: 4px 12px; border-radius: 20px;
-      font-size: 11.5px; color: var(--muted);
-      display: flex; align-items: center; gap: 5px;
+    .t-user {
+      display: flex; align-items: center; gap: 6px;
+      background: #f9fafb; border: 1px solid var(--c-border);
+      border-radius: 20px; padding: 5px 14px;
+      font-size: 12px; color: var(--c-muted);
     }
-    .t-badge-user i { color: var(--primary-mid); }
+    .t-user i { color: var(--c-primary); }
 
-    /* ── PAGE BODY ────────────────────────────────────────────────────────── */
-    .page-body { padding: 24px 28px; flex: 1; }
+    /* ── PAGE BODY ─────────────────────────────────────────────── */
+    .page-body { padding: 28px 28px; flex: 1; }
 
-    /* ── ALERTS ───────────────────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════════
+       ALERTS
+    ══════════════════════════════════════════════════════════════ */
     .alert {
-      border: none; border-radius: 10px;
-      font-size: 13px; padding: 11px 16px;
-      display: flex; align-items: flex-start; gap: 9px;
+      border: none; border-radius: 12px; padding: 12px 16px;
+      font-size: 13px; display: flex; align-items: flex-start; gap: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
     }
-    .alert i { flex-shrink: 0; margin-top: 1px; font-size: 15px; }
-    .alert .btn-close { margin-left: auto; flex-shrink: 0; }
+    .alert i { flex-shrink: 0; font-size: 16px; margin-top: 1px; }
+    .alert .btn-close { margin-left: auto; flex-shrink: 0; opacity: .5; }
     .alert-success { background: #f0fdf4; color: #166534; border-left: 4px solid #22c55e; }
     .alert-danger  { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
     .alert-warning { background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b; }
@@ -192,179 +189,210 @@
 
     /* bulk error panel */
     .bulk-err-panel {
+      border-radius: 12px; overflow: hidden;
+      border: 1px solid #fcd34d; border-left: 4px solid #f59e0b;
       background: #fff;
-      border: 1px solid #fcd34d;
-      border-left: 4px solid #f59e0b;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(245,158,11,.12);
+      box-shadow: 0 2px 12px rgba(245,158,11,.1);
     }
-    .bulk-err-header {
-      background: #fffbeb;
-      padding: 11px 16px;
+    .bulk-err-hdr {
+      background: #fffbeb; padding: 12px 18px;
       display: flex; align-items: center; gap: 8px;
-      font-size: 13px; font-weight: 600; color: #92400e;
-      cursor: pointer;
+      font-size: 13px; font-weight: 600; color: #92400e; cursor: pointer;
     }
-    .bulk-err-header .toggle-btn {
-      margin-left: auto;
-      font-size: 11px; font-weight: 500;
-      color: #78350f; background: none; border: none; padding: 0;
-    }
-    #bulkErrBody { display: none; }
-    #bulkErrBody table thead th {
-      background: #fef3c7; color: #78350f;
-      font-size: 11.5px; padding: 8px 14px;
-    }
-    #bulkErrBody table td { font-size: 12px; padding: 7px 14px; color: #7c2d12; }
+    .bulk-err-hdr .tog { margin-left: auto; font-size: 11px; background: none; border: none; color: #78350f; }
+    #bErrBody { display: none; }
+    #bErrBody thead th { background: #fef3c7; color: #78350f; font-size: 11.5px; padding: 8px 14px; }
+    #bErrBody td { font-size: 12px; padding: 7px 14px; color: #7c2d12; }
 
-    /* ── CARDS ────────────────────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════════
+       CARDS
+    ══════════════════════════════════════════════════════════════ */
     .card {
-      background: var(--card-bg);
-      border: 1px solid rgba(0,0,0,.06);
-      border-radius: var(--radius);
-      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      background: var(--c-white);
+      border: 1px solid var(--c-border);
+      border-radius: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.05);
       overflow: hidden;
       transition: box-shadow .2s, transform .2s;
     }
-    .card-hover:hover { box-shadow: 0 6px 20px rgba(0,0,0,.1); transform: translateY(-2px); }
+    .card-lift:hover { box-shadow: 0 8px 28px rgba(0,0,0,.1); transform: translateY(-2px); }
     .card-header {
-      padding: 13px 20px;
-      font-size: 13.5px; font-weight: 700;
-      border-bottom: 1px solid rgba(0,0,0,.06);
-      border-radius: 0 !important;
+      padding: 14px 20px; font-size: 13.5px; font-weight: 700;
+      border-bottom: 1px solid rgba(0,0,0,.06); border-radius: 0 !important;
     }
     .card-body { padding: 20px; }
 
-    /* ── STAT CARDS ───────────────────────────────────────────────────────── */
-    .stat-card {
-      background: var(--card-bg);
-      border-radius: var(--radius);
-      padding: 18px 20px;
-      border: 1px solid rgba(0,0,0,.05);
-      box-shadow: 0 1px 4px rgba(0,0,0,.06);
-      position: relative;
-      overflow: hidden;
-      transition: transform .18s, box-shadow .18s;
+    /* ══════════════════════════════════════════════════════════════
+       STAT CARDS — Gradient versions
+    ══════════════════════════════════════════════════════════════ */
+    .sc {
+      border-radius: 16px; padding: 22px 20px;
+      position: relative; overflow: hidden;
+      transition: transform .2s, box-shadow .2s;
+      cursor: default;
     }
-    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.1); }
-    .stat-card::after {
+    .sc:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,.18); }
+    .sc::after {
       content: '';
-      position: absolute;
-      top: 0; left: 0;
-      width: 4px; height: 100%;
+      position: absolute; bottom: -20px; right: -20px;
+      width: 80px; height: 80px; border-radius: 50%;
+      background: rgba(255,255,255,.08);
     }
-    .sc-blue::after   { background: #3b82f6; }
-    .sc-indigo::after { background: #6366f1; }
-    .sc-green::after  { background: #10b981; }
-    .sc-amber::after  { background: #f59e0b; }
-    .sc-rose::after   { background: #f43f5e; }
-    .sc-cyan::after   { background: #06b6d4; }
-    .sc-violet::after { background: #8b5cf6; }
-    .sc-teal::after   { background: #14b8a6; }
-    .stat-icon {
-      width: 42px; height: 42px; border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 19px; margin-bottom: 12px; flex-shrink: 0;
+    .sc::before {
+      content: '';
+      position: absolute; bottom: 10px; right: 30px;
+      width: 48px; height: 48px; border-radius: 50%;
+      background: rgba(255,255,255,.05);
     }
-    .si-blue   { background: #eff6ff; color: #3b82f6; }
-    .si-indigo { background: #eef2ff; color: #6366f1; }
-    .si-green  { background: #f0fdf4; color: #10b981; }
-    .si-amber  { background: #fffbeb; color: #f59e0b; }
-    .si-rose   { background: #fff1f2; color: #f43f5e; }
-    .si-cyan   { background: #ecfeff; color: #06b6d4; }
-    .si-violet { background: #f5f3ff; color: #8b5cf6; }
-    .si-teal   { background: #f0fdfa; color: #14b8a6; }
-    .stat-value { font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; }
-    .stat-label { font-size: 12px; color: var(--muted); margin-top: 5px; font-weight: 500; }
+    .sc-violet { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); box-shadow: 0 4px 20px rgba(79,70,229,.35); }
+    .sc-blue   { background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); box-shadow: 0 4px 20px rgba(2,132,199,.35); }
+    .sc-green  { background: linear-gradient(135deg, #059669 0%, #10b981 100%); box-shadow: 0 4px 20px rgba(5,150,105,.35); }
+    .sc-amber  { background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); box-shadow: 0 4px 20px rgba(217,119,6,.35); }
+    .sc-rose   { background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%); box-shadow: 0 4px 20px rgba(225,29,72,.35); }
+    .sc-cyan   { background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%); box-shadow: 0 4px 20px rgba(8,145,178,.35); }
+    .sc-indigo { background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); box-shadow: 0 4px 20px rgba(67,56,202,.35); }
+    .sc-teal   { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); box-shadow: 0 4px 20px rgba(13,148,136,.35); }
 
-    /* ── TABLES ───────────────────────────────────────────────────────────── */
+    .sc-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: rgba(255,255,255,.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; color: #fff; margin-bottom: 14px;
+    }
+    .sc-val  { font-size: 30px; font-weight: 800; color: #fff; line-height: 1; }
+    .sc-lbl  { font-size: 12px; color: rgba(255,255,255,.75); margin-top: 5px; font-weight: 500; }
+
+    /* ══════════════════════════════════════════════════════════════
+       TABLES
+    ══════════════════════════════════════════════════════════════ */
     .table { margin-bottom: 0; }
     .table thead th {
-      background: #1e3a5f; color: #fff;
-      font-size: 12px; font-weight: 600;
-      padding: 11px 14px; border: none;
-      white-space: nowrap; letter-spacing: .3px;
+      background: linear-gradient(135deg, #1a1f35, #252d45);
+      color: #e2e8f0; font-size: 11.5px; font-weight: 700;
+      padding: 12px 16px; border: none;
+      white-space: nowrap; letter-spacing: .4px; text-transform: uppercase;
     }
+    .table thead th:first-child { border-radius: 0; }
     .table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .1s; }
-    .table tbody tr:hover { background: #f8fafc; }
-    .table td {
-      font-size: 13px; padding: 10px 14px;
-      vertical-align: middle; border: none;
-    }
+    .table tbody tr:hover { background: linear-gradient(90deg, #f8f7ff, #fff); }
+    .table td { font-size: 13px; padding: 11px 16px; vertical-align: middle; border: none; }
     .table tfoot td, .table tfoot th {
-      background: #f0f4ff; font-weight: 700;
-      font-size: 13px; padding: 10px 14px; border-top: 2px solid #c7d7f0;
+      background: #f0f2ff; font-weight: 700; font-size: 13px;
+      padding: 11px 16px; border-top: 2px solid #c7d2fe;
     }
 
-    /* ── BADGES ───────────────────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════════
+       BADGES
+    ══════════════════════════════════════════════════════════════ */
     .badge { font-size: 11px; padding: 4px 9px; border-radius: 6px; font-weight: 600; }
-    .badge-bc         { background: #dbeafe; color: #1d4ed8; }
+    .badge-bc         { background: #ede9fe; color: #5b21b6; }
     .badge-wc         { background: #d1fae5; color: #065f46; }
     .badge-conducted  { background: #d1fae5; color: #065f46; }
     .badge-planned    { background: #fef9c3; color: #854d0e; }
     .badge-cancelled  { background: #fee2e2; color: #991b1b; }
     .badge-rescheduled{ background: #f3f4f6; color: #374151; }
 
-    /* ── FORMS ────────────────────────────────────────────────────────────── */
-    .form-label {
-      font-size: 12.5px; font-weight: 600;
-      color: #374151; margin-bottom: 5px;
-    }
+    /* ══════════════════════════════════════════════════════════════
+       FORMS
+    ══════════════════════════════════════════════════════════════ */
+    .form-label { font-size: 12.5px; font-weight: 600; color: #374151; margin-bottom: 5px; }
     .form-control, .form-select {
-      border: 1.5px solid #e2e8f0;
-      border-radius: 8px;
-      font-size: 13px; padding: 8px 11px;
-      background: #fff;
+      border: 1.5px solid #e5e7eb; border-radius: 9px;
+      font-size: 13px; padding: 8px 12px; background: #fff;
       transition: border-color .15s, box-shadow .15s;
     }
     .form-control:focus, .form-select:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79,70,229,.12);
       outline: none;
     }
-    .form-control[readonly] { background: #f8fafc; color: #6b7280; }
+    .form-control[readonly] { background: #f9fafb; color: #6b7280; }
     .required-star { color: #ef4444; }
 
-    /* ── BUTTONS ──────────────────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════════
+       BUTTONS
+    ══════════════════════════════════════════════════════════════ */
     .btn {
-      font-size: 13px; font-weight: 600;
-      border-radius: 8px; padding: 8px 18px;
-      transition: all .15s;
+      font-size: 13px; font-weight: 600; border-radius: 9px;
+      padding: 8px 18px; transition: all .15s; border: none;
     }
     .btn:hover { transform: translateY(-1px); }
-    .btn-primary   { background: #2563a8; border-color: #2563a8; color: #fff; }
-    .btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
-    .btn-success   { background: #059669; border-color: #059669; color: #fff; }
-    .btn-success:hover { background: #047857; border-color: #047857; color: #fff; }
-    .btn-warning   { background: #d97706; border-color: #d97706; color: #fff; }
-    .btn-warning:hover { background: #b45309; border-color: #b45309; color: #fff; }
-    .btn-danger    { background: #dc2626; border-color: #dc2626; color: #fff; }
-    .btn-danger:hover  { background: #b91c1c; border-color: #b91c1c; color: #fff; }
-    .btn-sm { padding: 5px 12px; font-size: 12px; }
-    .btn-outline-primary { border-color: #2563a8; color: #2563a8; }
-    .btn-outline-primary:hover { background: #2563a8; color: #fff; }
-    .btn-outline-danger { border-color: #dc2626; color: #dc2626; }
-    .btn-outline-danger:hover { background: #dc2626; color: #fff; }
-    .btn-outline-success { border-color: #059669; color: #059669; }
-    .btn-outline-success:hover { background: #059669; color: #fff; }
-    .btn-outline-light { border-color: rgba(255,255,255,.3); color: rgba(255,255,255,.8); }
-    .btn-outline-light:hover { background: rgba(255,255,255,.1); color: #fff; }
+    .btn:active { transform: translateY(0); }
+    .btn-primary {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #fff; box-shadow: 0 2px 8px rgba(79,70,229,.35);
+    }
+    .btn-primary:hover { box-shadow: 0 4px 14px rgba(79,70,229,.45); color: #fff; }
+    .btn-success {
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: #fff; box-shadow: 0 2px 8px rgba(5,150,105,.3);
+    }
+    .btn-success:hover { box-shadow: 0 4px 14px rgba(5,150,105,.4); color: #fff; }
+    .btn-warning {
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+      color: #fff; box-shadow: 0 2px 8px rgba(217,119,6,.3);
+    }
+    .btn-warning:hover { box-shadow: 0 4px 14px rgba(217,119,6,.4); color: #fff; }
+    .btn-danger {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      color: #fff; box-shadow: 0 2px 8px rgba(220,38,38,.3);
+    }
+    .btn-danger:hover { box-shadow: 0 4px 14px rgba(220,38,38,.4); color: #fff; }
+    .btn-light { background: #f3f4f6; color: #374151; }
+    .btn-light:hover { background: #e5e7eb; color: #111827; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 7px; }
+    .btn-outline-primary { border: 1.5px solid #4f46e5; color: #4f46e5; background: transparent; }
+    .btn-outline-primary:hover { background: #4f46e5; color: #fff; }
+    .btn-outline-danger { border: 1.5px solid #ef4444; color: #ef4444; background: transparent; }
+    .btn-outline-danger:hover { background: #ef4444; color: #fff; }
+    .btn-outline-success { border: 1.5px solid #10b981; color: #10b981; background: transparent; }
+    .btn-outline-success:hover { background: #10b981; color: #fff; }
 
-    /* ── PROGRESS ─────────────────────────────────────────────────────────── */
-    .progress { background: #f1f5f9; border-radius: 6px; }
-    .progress-bar { border-radius: 6px; }
+    /* ══════════════════════════════════════════════════════════════
+       PROGRESS
+    ══════════════════════════════════════════════════════════════ */
+    .progress { background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+    .progress-bar { border-radius: 99px; transition: width .6s ease; }
 
-    /* ── ANIMATIONS ───────────────────────────────────────────────────────── */
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(10px); }
+    /* ══════════════════════════════════════════════════════════════
+       SECTION HEADER (page sub-headings)
+    ══════════════════════════════════════════════════════════════ */
+    .section-hd {
+      font-size: 10.5px; font-weight: 800; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #9ca3af; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-hd::after { content: ''; flex: 1; height: 1px; background: var(--c-border); }
+
+    /* ══════════════════════════════════════════════════════════════
+       ANIMATIONS
+    ══════════════════════════════════════════════════════════════ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .fade-in { animation: fadeInUp .22s ease both; }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .fade-up { animation: fadeUp .28s ease both; }
+    .slide-in { animation: slideIn .22s ease both; }
 
-    /* ── RESPONSIVE ───────────────────────────────────────────────────────── */
+    /* stagger children */
+    .stagger > *:nth-child(1) { animation-delay: .00s; }
+    .stagger > *:nth-child(2) { animation-delay: .04s; }
+    .stagger > *:nth-child(3) { animation-delay: .08s; }
+    .stagger > *:nth-child(4) { animation-delay: .12s; }
+    .stagger > *:nth-child(5) { animation-delay: .16s; }
+    .stagger > *:nth-child(6) { animation-delay: .20s; }
+    .stagger > *:nth-child(7) { animation-delay: .24s; }
+    .stagger > *:nth-child(8) { animation-delay: .28s; }
+
+    /* ══════════════════════════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════════════════════════ */
     @media (max-width: 768px) {
-      .sidebar  { transform: translateX(-100%); }
+      .sidebar { transform: translateX(-100%); }
       .main-wrap { margin-left: 0; }
       .topbar, .page-body { padding-left: 16px; padding-right: 16px; }
     }
@@ -373,147 +401,104 @@
 <body>
 
 {% if session.user_id %}
-<!-- ─── SIDEBAR ─────────────────────────────────────────────────────────── -->
+<!-- ═══════════════════════ SIDEBAR ═══════════════════════════ -->
 <nav class="sidebar">
 
   <div class="sb-brand">
-    <div class="sb-brand-logo">
-      <div class="sb-brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
+    <div class="sb-logo-row">
+      <div class="sb-logo-box"><i class="bi bi-mortarboard-fill"></i></div>
       <div>
-        <div class="sb-brand-title">Balrampur Chini Mills</div>
+        <div class="sb-brand-name">Balrampur Chini Mills</div>
         <div class="sb-brand-sub">Training Management System</div>
       </div>
     </div>
     {% if session.plant_name %}
-    <span class="sb-plant-chip">
-      <i class="bi bi-geo-alt-fill"></i>
-      {{ session.plant_name }}&nbsp;·&nbsp;{{ session.unit_code }}
+    <span class="sb-plant-tag">
+      <i class="bi bi-geo-alt-fill" style="font-size:10px;"></i>
+      {{ session.plant_name }} &middot; {{ session.unit_code }}
     </span>
     {% endif %}
   </div>
 
-  {# ── SPOC MENU (visible to spoc role, OR to admin who has selected a plant) ── #}
   {% if session.role == 'spoc' or (session.role == 'admin' and session.plant_id) %}
-  <div class="sb-section">SPOC Menu</div>
+  <div class="sb-label">SPOC Menu</div>
   <ul class="sb-nav">
-    <li>
-      <a href="{{ url_for('spoc_dashboard') }}"
-         class="{% if request.endpoint=='spoc_dashboard' %}active{% endif %}">
-        <i class="bi bi-speedometer2"></i> Dashboard
-      </a>
-    </li>
-    <li>
-      <a href="{{ url_for('employees') }}"
-         class="{% if request.endpoint=='employees' %}active{% endif %}">
-        <i class="bi bi-people-fill"></i> Employee Master
-      </a>
-    </li>
-    <li>
-      <a href="{{ url_for('tni') }}"
-         class="{% if request.endpoint=='tni' %}active{% endif %}">
-        <i class="bi bi-clipboard-check-fill"></i> TNI Tracking
-      </a>
-    </li>
-    <li>
-      <a href="{{ url_for('training_calendar') }}"
-         class="{% if request.endpoint=='training_calendar' %}active{% endif %}">
-        <i class="bi bi-calendar3"></i> Training Calendar
-      </a>
-    </li>
-    <li>
-      <a href="{{ url_for('emp_training') }}"
-         class="{% if request.endpoint=='emp_training' %}active{% endif %}">
-        <i class="bi bi-person-check-fill"></i> Training Records (2A)
-      </a>
-    </li>
-    <li>
-      <a href="{{ url_for('programme_details') }}"
-         class="{% if request.endpoint=='programme_details' %}active{% endif %}">
-        <i class="bi bi-journal-richtext"></i> Programme Details (2C)
-      </a>
-    </li>
-    <li>
-      <a href="{{ url_for('monthly_summary') }}"
-         class="{% if request.endpoint=='monthly_summary' %}active{% endif %}">
-        <i class="bi bi-bar-chart-fill"></i> Monthly Summary
-      </a>
-    </li>
-    <li>
-      <a href="{{ url_for('export_excel', plant_id=session.plant_id) }}">
-        <i class="bi bi-file-earmark-excel-fill" style="color:#4ade80;"></i> Export to Excel
-      </a>
-    </li>
+    <li><a href="{{ url_for('spoc_dashboard') }}" class="{% if request.endpoint=='spoc_dashboard' %}active{% endif %}">
+      <i class="bi bi-speedometer2"></i> Dashboard
+    </a></li>
+    <li><a href="{{ url_for('employees') }}" class="{% if request.endpoint=='employees' %}active{% endif %}">
+      <i class="bi bi-people-fill"></i> Employee Master
+    </a></li>
+    <li><a href="{{ url_for('tni') }}" class="{% if request.endpoint=='tni' %}active{% endif %}">
+      <i class="bi bi-clipboard-check-fill"></i> TNI Tracking
+    </a></li>
+    <li><a href="{{ url_for('training_calendar') }}" class="{% if request.endpoint=='training_calendar' %}active{% endif %}">
+      <i class="bi bi-calendar3"></i> Training Calendar
+    </a></li>
+    <li><a href="{{ url_for('emp_training') }}" class="{% if request.endpoint=='emp_training' %}active{% endif %}">
+      <i class="bi bi-person-check-fill"></i> Training Records (2A)
+    </a></li>
+    <li><a href="{{ url_for('programme_details') }}" class="{% if request.endpoint=='programme_details' %}active{% endif %}">
+      <i class="bi bi-journal-richtext"></i> Programme Details (2C)
+    </a></li>
+    <li><a href="{{ url_for('monthly_summary') }}" class="{% if request.endpoint=='monthly_summary' %}active{% endif %}">
+      <i class="bi bi-bar-chart-fill"></i> Monthly Summary
+    </a></li>
+    <li><a href="{{ url_for('export_excel', plant_id=session.plant_id) }}">
+      <i class="bi bi-file-earmark-excel-fill" style="color:#4ade80;"></i> Export to Excel
+    </a></li>
     {% if session.role == 'admin' %}
-    <li>
-      <a href="{{ url_for('admin_clear_plant') }}" style="color:#fbbf24;">
-        <i class="bi bi-arrow-left-right"></i> Switch Plant
-      </a>
-    </li>
+    <li><a href="{{ url_for('admin_clear_plant') }}" style="color:#fbbf24;">
+      <i class="bi bi-arrow-left-right"></i> Switch Plant
+    </a></li>
     {% endif %}
   </ul>
   {% endif %}
 
-  {# ── CENTRAL MENU ── #}
-  {% if session.role in ('central', 'admin') %}
-  <div class="sb-section">Central Team</div>
+  {% if session.role in ('central','admin') %}
+  <div class="sb-label">Central Team</div>
   <ul class="sb-nav">
-    <li>
-      <a href="{{ url_for('central_dashboard') }}"
-         class="{% if request.endpoint=='central_dashboard' %}active{% endif %}">
-        <i class="bi bi-grid-3x3-gap-fill"></i> All Plants Overview
-      </a>
-    </li>
+    <li><a href="{{ url_for('central_dashboard') }}" class="{% if request.endpoint=='central_dashboard' %}active{% endif %}">
+      <i class="bi bi-grid-3x3-gap-fill"></i> All Plants Overview
+    </a></li>
   </ul>
   {% endif %}
 
   <div class="sb-footer">
-    <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm w-100">
-      <i class="bi bi-box-arrow-right me-1"></i> Logout ({{ session.username }})
+    <a href="{{ url_for('logout') }}" class="sb-logout">
+      <i class="bi bi-box-arrow-right"></i> Logout &nbsp;·&nbsp; {{ session.username }}
     </a>
   </div>
 </nav>
 
-<!-- ─── MAIN WRAP ───────────────────────────────────────────────────────── -->
+<!-- ═══════════════════════ MAIN ═══════════════════════════════ -->
 <div class="main-wrap">
-
-  <!-- Topbar -->
   <div class="topbar">
-    <div class="topbar-title">
-      <i class="bi bi-mortarboard-fill"></i>
-      {% block page_title %}{% endblock %}
+    <div class="topbar-left">
+      <div class="topbar-icon"><i class="bi bi-mortarboard-fill"></i></div>
+      <span class="topbar-title">{% block page_title %}{% endblock %}</span>
     </div>
     <div class="topbar-right">
       {% if session.plant_name %}
-      <span class="t-badge-plant">
-        <i class="bi bi-building"></i> {{ session.plant_name }}
-      </span>
+      <span class="t-plant"><i class="bi bi-building" style="font-size:11px;"></i> {{ session.plant_name }}</span>
       {% endif %}
-      <span class="t-badge-user">
-        <i class="bi bi-person-circle"></i> {{ session.username }}
-      </span>
+      <span class="t-user"><i class="bi bi-person-circle"></i> {{ session.username }}</span>
     </div>
   </div>
 
-  <!-- Page body -->
-  <div class="page-body fade-in">
+  <div class="page-body fade-up">
 
-    {# ── Flash Messages ── #}
+    {# ── Flash messages ── #}
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      {% set regular = [] %}
-      {% set row_errors = [] %}
+      {% set reg = [] %}{% set errs = [] %}
       {% for cat, msg in messages %}
-        {% if cat == 'upload_error' %}
-          {% if row_errors.append(msg) %}{% endif %}
-        {% else %}
-          {% if regular.append((cat, msg)) %}{% endif %}
-        {% endif %}
+        {% if cat == 'upload_error' %}{% if errs.append(msg) %}{% endif %}
+        {% else %}{% if reg.append((cat, msg)) %}{% endif %}{% endif %}
       {% endfor %}
-
-      {# Regular alerts #}
-      {% if regular %}
+      {% if reg %}
       <div class="mb-3">
-        {% for cat, msg in regular %}
+        {% for cat, msg in reg %}
         <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
           <i class="bi bi-{% if cat=='success' %}check-circle-fill{% elif cat=='danger' %}exclamation-triangle-fill{% elif cat=='warning' %}exclamation-circle-fill{% else %}info-circle-fill{% endif %}"></i>
           <span>{{ msg }}</span>
@@ -522,53 +507,27 @@
         {% endfor %}
       </div>
       {% endif %}
-
-      {# Bulk upload row errors — collapsible table #}
-      {% if row_errors %}
+      {% if errs %}
       <div class="bulk-err-panel mb-4">
-        <div class="bulk-err-header" onclick="toggleBulkErr()">
+        <div class="bulk-err-hdr" onclick="var b=document.getElementById('bErrBody');var t=document.getElementById('bTog');b.style.display=b.style.display=='block'?'none':'block';t.textContent=b.style.display=='block'?'▲ Hide':'▼ Show Details';">
           <i class="bi bi-exclamation-triangle-fill"></i>
-          Bulk Upload — {{ row_errors|length }} row(s) failed to import
-          <button class="toggle-btn" id="bulkErrToggleBtn">▼ Show Details</button>
+          Bulk Upload — {{ errs|length }} row(s) failed
+          <button class="tog" id="bTog">▼ Show Details</button>
         </div>
-        <div id="bulkErrBody">
+        <div id="bErrBody">
           <table class="table table-sm mb-0">
-            <thead>
-              <tr>
-                <th style="width:50px;">#</th>
-                <th>Error Detail</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for err in row_errors %}
-              <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ err }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
+            <thead><tr><th style="width:50px;">#</th><th>Error</th></tr></thead>
+            <tbody>{% for e in errs %}<tr><td>{{ loop.index }}</td><td>{{ e }}</td></tr>{% endfor %}</tbody>
           </table>
         </div>
       </div>
-      <script>
-        function toggleBulkErr() {
-          var body = document.getElementById('bulkErrBody');
-          var btn  = document.getElementById('bulkErrToggleBtn');
-          if (body.style.display === 'block') {
-            body.style.display = 'none'; btn.textContent = '▼ Show Details';
-          } else {
-            body.style.display = 'block'; btn.textContent = '▲ Hide Details';
-          }
-        }
-      </script>
       {% endif %}
-
     {% endif %}
     {% endwith %}
 
     {% block content %}{% endblock %}
-  </div><!-- /page-body -->
-</div><!-- /main-wrap -->
+  </div>
+</div>
 
 {% else %}
 {% block auth_content %}{% endblock %}
