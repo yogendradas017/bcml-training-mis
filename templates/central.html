@@ -55,15 +55,6 @@
   </div>
 </div>
 
-<!-- Alerts for underperforming plants -->
-{% set low_plants = plants | selectattr('bc_pct', 'lt', 40) | list %}
-{% if low_plants %}
-<div class="alert alert-danger mb-4">
-  <i class="bi bi-exclamation-triangle-fill"></i>
-  <strong>{{ low_plants|length }} plant(s) below 40% Blue Collar compliance:</strong>
-  {% for p in low_plants %}<strong>{{ p.name }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}
-</div>
-{% endif %}
 {% endif %}
 
 <!-- Plant-wise Table -->
@@ -166,7 +157,7 @@
 </div>
 
 <!-- Compliance Heat Map -->
-<div class="row g-3 mt-2">
+<div class="row g-3 mt-2 mb-4">
   {% for p in plants %}
   <div class="col-6 col-md-3 col-lg-2">
     <div class="card p-3 text-center">
@@ -178,10 +169,97 @@
         <div style="font-size:1.6rem;font-weight:800;color:{{ color }};">{{ overall }}%</div>
         <div style="font-size:11px;color:#6c757d;">Overall Compliance</div>
       </div>
-      <a href="{{ url_for('central_plant_view', plant_id=p.id) }}"
-         class="btn btn-outline-primary btn-sm mt-2">Details</a>
+      <div class="d-flex gap-1 mt-2">
+        <a href="{{ url_for('central_plant_view', plant_id=p.id) }}"
+           class="btn btn-outline-primary btn-sm flex-grow-1">Details</a>
+        <a href="{{ url_for('export_excel', plant_id=p.id) }}"
+           class="btn btn-outline-success btn-sm" title="Export Excel">
+          <i class="bi bi-file-earmark-excel"></i>
+        </a>
+      </div>
     </div>
   </div>
   {% endfor %}
+</div>
+
+<!-- ── Quarterly Review ──────────────────────────────────────── -->
+<div class="card mb-4">
+  <div class="card-header" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
+    <i class="bi bi-bar-chart-steps"></i> Quarterly Review — FY 2026-27
+  </div>
+  <div class="card-body p-0">
+    <!-- Quarter Summary Cards -->
+    <div class="row g-0" style="border-bottom:1px solid #f1f5f9;">
+      {% for q in quarterly %}
+      <div class="col-6 col-md-3" style="{% if not loop.last %}border-right:1px solid #f1f5f9;{% endif %}padding:18px 20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6b7280;margin-bottom:8px;">
+          {{ q.quarter }}
+        </div>
+        <div class="d-flex gap-3">
+          <div>
+            <div style="font-size:22px;font-weight:800;color:#4f46e5;line-height:1;">{{ q.sessions }}</div>
+            <div style="font-size:11px;color:#9ca3af;">Sessions</div>
+          </div>
+          <div>
+            <div style="font-size:22px;font-weight:800;color:#059669;line-height:1;">{{ q.manhours }}</div>
+            <div style="font-size:11px;color:#9ca3af;">Man-Hours</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Per-plant quarterly breakdown table -->
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:12.5px;" id="quarterlyTable">
+        <thead>
+          <tr>
+            <th>Plant</th>
+            {% for q in quarterly %}
+            <th colspan="2" style="text-align:center;border-left:2px solid rgba(255,255,255,.12);">
+              {{ q.quarter }}
+            </th>
+            {% endfor %}
+          </tr>
+          <tr style="background:#252d45;">
+            <th style="font-size:11px;color:#94a3b8;">Unit</th>
+            {% for q in quarterly %}
+            <th style="font-size:11px;color:#94a3b8;border-left:2px solid rgba(255,255,255,.12);">Sessions</th>
+            <th style="font-size:11px;color:#94a3b8;">Man-Hrs</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in range(plants|length) %}
+          {% set p = plants[i] %}
+          <tr>
+            <td>
+              <strong style="color:#1a3a5c;">{{ p.name }}</strong>
+              <span class="badge bg-secondary ms-1" style="font-size:10px;">{{ p.unit_code }}</span>
+            </td>
+            {% for q in quarterly %}
+            {% set pq = q.plants[i] %}
+            <td style="border-left:2px solid #f1f5f9;">
+              <span class="badge" style="background:#ede9fe;color:#5b21b6;">{{ pq.sessions }}</span>
+            </td>
+            <td>
+              <span class="badge" style="background:#d1fae5;color:#065f46;">{{ pq.manhours }}</span>
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td><strong>TOTAL</strong></td>
+            {% for q in quarterly %}
+            <td style="border-left:2px solid #c7d2fe;"><strong>{{ q.sessions }}</strong></td>
+            <td><strong>{{ q.manhours }}</strong></td>
+            {% endfor %}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}

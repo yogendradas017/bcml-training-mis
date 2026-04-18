@@ -752,7 +752,30 @@ def central_dashboard():
         'sessions':  sum(p['sessions'] for p in plant_summaries),
         'conducted': sum(p['conducted'] for p in plant_summaries),
     }
-    return render_template('central.html', plants=plant_summaries, grand=grand)
+
+    # Quarterly review (FY quarters)
+    Q_MONTHS = [
+        ('Q1 (Apr–Jun)', ['April','May','June']),
+        ('Q2 (Jul–Sep)', ['July','August','September']),
+        ('Q3 (Oct–Dec)', ['October','November','December']),
+        ('Q4 (Jan–Mar)', ['January','February','March']),
+    ]
+    quarterly = []
+    for qname, months in Q_MONTHS:
+        ph = ','.join('?'*len(months))
+        sc = db.execute(f"SELECT COUNT(*) FROM calendar WHERE status='Conducted' AND planned_month IN ({ph})", months).fetchone()[0]
+        mh = db.execute(f"SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE month IN ({ph})", months).fetchone()[0]
+        # Per-plant breakdown for this quarter
+        plant_q = []
+        for p in plant_summaries:
+            pid = p['id']
+            sc_p = db.execute(f"SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted' AND planned_month IN ({ph})", [pid]+months).fetchone()[0]
+            mh_p = db.execute(f"SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND month IN ({ph})", [pid]+months).fetchone()[0]
+            plant_q.append({'name': p['name'], 'unit_code': p['unit_code'], 'id': p['id'],
+                            'sessions': sc_p, 'manhours': round(mh_p, 1)})
+        quarterly.append({'quarter': qname, 'sessions': sc, 'manhours': round(mh, 1), 'plants': plant_q})
+
+    return render_template('central.html', plants=plant_summaries, grand=grand, quarterly=quarterly)
 
 @app.route('/central/plant/<int:plant_id>')
 @central_required
