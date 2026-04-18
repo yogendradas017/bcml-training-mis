@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block page_title %}Training Calendar{% endblock %}
+{% block content %}
+
+<div class="card mb-4">
+  <div class="card-header" style="background:#0d6efd;color:#fff;">
+    <i class="bi bi-calendar-plus"></i> Add Training Session
+  </div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('add_calendar') }}">
+      <div class="row g-3">
+        <div class="col-md-5">
+          <label class="form-label">Programme Name <span class="required-star">*</span></label>
+          <input type="text" name="programme_name" class="form-control" required
+                 placeholder="e.g. Fire Safety Awareness">
+          <div class="form-text">PROG CODE will be auto-generated.</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Type of Programme <span class="required-star">*</span></label>
+          <select name="prog_type" class="form-select" required>
+            <option value="">-- Select --</option>
+            {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Source</label>
+          <select name="source" class="form-select">
+            <option value="TNI">TNI</option>
+            <option value="Management">Management</option>
+            <option value="Statutory">Statutory</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Planned Month</label>
+          <select name="planned_month" class="form-select">
+            <option value="">-- Select --</option>
+            {% for mo in months %}<option>{{ mo }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Plan Start Date</label>
+          <input type="date" name="plan_start" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Plan End Date</label>
+          <input type="date" name="plan_end" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Time From</label>
+          <input type="time" name="time_from" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Time To</label>
+          <input type="time" name="time_to" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Duration (Hrs)</label>
+          <input type="number" name="duration_hrs" class="form-control" step="0.5" min="0" value="0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Level</label>
+          <select name="level" class="form-select">
+            <option value="">-- Select --</option>
+            {% for l in levels %}<option>{{ l }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Mode</label>
+          <select name="mode" class="form-select">
+            <option value="">-- Select --</option>
+            {% for m in modes %}<option>{{ m }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Target Audience</label>
+          <select name="target_audience" class="form-select">
+            <option value="">-- Select --</option>
+            {% for a in audiences %}<option>{{ a }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Planned Pax</label>
+          <input type="number" name="planned_pax" class="form-control" min="0" value="0">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Trainer / Vendor</label>
+          <input type="text" name="trainer_vendor" class="form-control" placeholder="Name of trainer or vendor">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-plus-circle"></i> Add to Calendar
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Calendar Table -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:#1a3a5c;color:#fff;">
+    <span><i class="bi bi-calendar3"></i> Training Calendar — <strong>{{ sessions|length }}</strong> sessions</span>
+    <div class="d-flex gap-2 small">
+      <span class="badge bg-warning text-dark">To Be Planned: {{ sessions|selectattr('status','equalto','To Be Planned')|list|length }}</span>
+      <span class="badge bg-success">Conducted: {{ sessions|selectattr('status','equalto','Conducted')|list|length }}</span>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:13px;">
+        <thead>
+          <tr>
+            <th>#</th><th>Session Code</th><th>Programme Name</th><th>Type</th>
+            <th>Month</th><th>Plan Start</th><th>Duration</th><th>Mode</th>
+            <th>Audience</th><th>Plan Pax</th><th>TNI Demand</th>
+            <th>Trainer</th><th>Status</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td><code style="font-size:11px;">{{ s.session_code }}</code><br>
+                <small class="text-muted">{{ s.prog_code }}</small></td>
+            <td><strong>{{ s.programme_name }}</strong></td>
+            <td><span class="badge bg-secondary" style="font-size:11px;">{{ s.prog_type or '—' }}</span></td>
+            <td>{{ s.planned_month or '—' }}</td>
+            <td>{{ s.plan_start or '—' }}</td>
+            <td>{{ s.duration_hrs }} hrs</td>
+            <td>{{ s.mode or '—' }}</td>
+            <td>{{ s.target_audience or '—' }}</td>
+            <td>{{ s.planned_pax }}</td>
+            <td>{{ demand_map.get(s.programme_name, '—') }}</td>
+            <td style="font-size:12px;">{{ s.trainer_vendor or '—' }}</td>
+            <td>
+              {% if s.status == 'Conducted' %}<span class="badge badge-conducted">Conducted</span>
+              {% elif s.status == 'To Be Planned' %}<span class="badge badge-planned">To Be Planned</span>
+              {% elif s.status == 'Cancelled' %}<span class="badge badge-cancelled">Cancelled</span>
+              {% elif s.status == 'Re-Scheduled' %}<span class="badge badge-rescheduled">Re-Scheduled</span>
+              {% else %}<span class="badge bg-secondary">{{ s.status }}</span>{% endif %}
+            </td>
+            <td>
+              <form method="POST" action="{{ url_for('delete_calendar', cal_id=s.id) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Delete session {{ s.session_code }}?')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="14" class="text-center text-muted py-4">No sessions planned yet. Add above.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

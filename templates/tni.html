@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block page_title %}TNI Tracking{% endblock %}
+{% block content %}
+
+<!-- Bulk Upload -->
+<div class="card mb-4" style="border-left:5px solid #198754;">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:#198754;color:#fff;">
+    <span><i class="bi bi-cloud-upload"></i> Bulk Upload TNI (Excel / CSV)</span>
+    <a href="{{ url_for('tni_template') }}" class="btn btn-light btn-sm">
+      <i class="bi bi-file-earmark-arrow-down"></i> Download Template
+    </a>
+  </div>
+  <div class="card-body">
+    <p class="text-muted mb-2" style="font-size:13px;">
+      Download the template, fill employee codes and training needs, then upload here.
+      Columns required: <strong>Employee Code, Programme Name, Type of Programme, Mode, Target Month, Planned Hours</strong>
+    </p>
+    <form method="POST" action="{{ url_for('tni_bulk_upload') }}" enctype="multipart/form-data">
+      <div class="d-flex gap-2 align-items-end">
+        <div>
+          <label class="form-label">Select Excel or CSV file</label>
+          <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required style="width:340px;">
+        </div>
+        <button type="submit" class="btn btn-success px-4">
+          <i class="bi bi-upload"></i> Upload & Import
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header bg-warning text-dark">
+    <i class="bi bi-clipboard-plus"></i> Add Single TNI Entry
+  </div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('add_tni') }}">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Employee <span class="required-star">*</span></label>
+          <select name="emp_code" id="tni_emp_code" class="form-select" required onchange="fillEmpDetails(this.value,'tni')">
+            <option value="">-- Select Employee --</option>
+            {% for emp in employees %}
+            <option value="{{ emp.emp_code }}">{{ emp.name }} ({{ emp.emp_code }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Grade</label>
+          <input type="text" id="tni_grade" class="form-control" placeholder="Auto-fill" readonly style="background:#f8f9fa;">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Collar</label>
+          <input type="text" id="tni_collar" class="form-control" placeholder="Auto-fill" readonly style="background:#f8f9fa;">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Department</label>
+          <input type="text" id="tni_dept" class="form-control" placeholder="Auto-fill" readonly style="background:#f8f9fa;">
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">Programme Name <span class="required-star">*</span></label>
+          <input type="text" name="programme_name" class="form-control" required
+                 list="prog_list" placeholder="Type or select programme name">
+          <datalist id="prog_list">
+            {% for p in programmes %}<option value="{{ p }}">{% endfor %}
+          </datalist>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Type of Programme <span class="required-star">*</span></label>
+          <select name="prog_type" class="form-select" required>
+            <option value="">-- Select --</option>
+            {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Mode</label>
+          <select name="mode" class="form-select">
+            <option value="">-- Select --</option>
+            {% for m in modes %}<option>{{ m }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Target Month</label>
+          <select name="target_month" class="form-select">
+            <option value="">-- Select --</option>
+            {% for mo in months %}<option>{{ mo }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Planned Hours</label>
+          <input type="number" name="planned_hours" class="form-control" step="0.5" min="0" value="0">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-warning px-4">
+            <i class="bi bi-plus-circle"></i> Add TNI Entry
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TNI Records -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:#1a3a5c;color:#fff;">
+    <span><i class="bi bi-clipboard-data"></i> TNI Records — <strong>{{ records|length }}</strong> entries</span>
+    <span class="badge bg-success">{{ records|selectattr('id','in', completed_map.keys())|list|length }} tracked</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>#</th><th>Employee</th><th>Collar</th><th>Department</th>
+            <th>Programme Name</th><th>Type</th><th>Mode</th>
+            <th>Target Month</th><th>Hrs</th><th>Completed?</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rec in records %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>
+              <strong>{{ rec.name or rec.emp_code }}</strong><br>
+              <small class="text-muted">{{ rec.emp_code }}</small>
+            </td>
+            <td>
+              {% if rec.collar == 'Blue Collared' %}<span class="badge badge-bc">Blue</span>
+              {% elif rec.collar == 'White Collared' %}<span class="badge badge-wc">White</span>
+              {% else %}<span class="badge bg-secondary">—</span>{% endif %}
+            </td>
+            <td style="font-size:13px;">{{ rec.department or '—' }}</td>
+            <td><strong>{{ rec.programme_name }}</strong></td>
+            <td><span class="badge bg-secondary" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
+            <td style="font-size:13px;">{{ rec.mode or '—' }}</td>
+            <td style="font-size:13px;">{{ rec.target_month or '—' }}</td>
+            <td>{{ rec.planned_hours }}</td>
+            <td>
+              {% if completed_map[rec.id] == 'Yes' %}
+              <span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>
+              {% else %}
+              <span class="badge bg-secondary">Pending</span>
+              {% endif %}
+            </td>
+            <td>
+              <form method="POST" action="{{ url_for('delete_tni', tni_id=rec.id) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Delete this TNI entry?')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="11" class="text-center text-muted py-4">No TNI entries yet. Add above.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

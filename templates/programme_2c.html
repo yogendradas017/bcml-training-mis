@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block page_title %}Programme Details (2C){% endblock %}
+{% block content %}
+
+<div class="card mb-4">
+  <div class="card-header" style="background:#6f42c1;color:#fff;">
+    <i class="bi bi-journal-plus"></i> Add Programme Details
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info py-2" style="font-size:13px;">
+      <i class="bi bi-info-circle"></i>
+      Select a <strong>Session Code</strong> from the Calendar — programme details auto-fill. Participants count is auto-calculated from Training Records (2A).
+    </div>
+    <form method="POST" action="{{ url_for('add_programme_details') }}">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Session Code <span class="required-star">*</span></label>
+          <select name="session_code" id="pc_session_code" class="form-select" required
+                  onchange="fillSessionDetails2c(this.value)">
+            <option value="">-- Select Session Code --</option>
+            {% for s in cal_sessions %}
+            <option value="{{ s.session_code }}">{{ s.session_code }} — {{ s.programme_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">Programme Name</label>
+          <input type="text" id="pc_prog_name" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Type</label>
+          <input type="text" id="pc_prog_type" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Actual Start Date <span class="required-star">*</span></label>
+          <input type="date" name="start_date" id="pc_start_date" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Actual End Date</label>
+          <input type="date" name="end_date" id="pc_end_date" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Actual Hours</label>
+          <input type="number" name="hours_actual" id="pc_hours" class="form-control" step="0.5" min="0" value="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Faculty Name</label>
+          <input type="text" name="faculty_name" class="form-control" placeholder="Trainer / Faculty name">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Internal / External</label>
+          <select name="int_ext" class="form-select">
+            <option value="">-- Select --</option>
+            {% for ie in int_ext %}<option>{{ ie }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Cost (₹)</label>
+          <input type="number" name="cost" class="form-control" step="0.01" min="0" value="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Venue</label>
+          <input type="text" name="venue" class="form-control" placeholder="e.g. Training Hall">
+        </div>
+        <div class="col-12"><hr class="my-1"><strong style="font-size:14px;">Feedback Scores (1–5)</strong></div>
+        <div class="col-md-3">
+          <label class="form-label">Course Feedback</label>
+          <input type="number" name="course_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Faculty Feedback</label>
+          <input type="number" name="faculty_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Trainer FB — Participants</label>
+          <input type="number" name="trainer_fb_participants" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Trainer FB — Facilities</label>
+          <input type="number" name="trainer_fb_facilities" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn px-4" style="background:#6f42c1;color:#fff;">
+            <i class="bi bi-plus-circle"></i> Save Programme Details
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Records Table -->
+<div class="card">
+  <div class="card-header" style="background:#1a3a5c;color:#fff;">
+    <i class="bi bi-journal-text"></i> Programme Records — <strong>{{ records|length }}</strong> entries
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:13px;">
+        <thead>
+          <tr>
+            <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th>
+            <th>Start Date</th><th>Hrs</th><th>Faculty</th><th>Int/Ext</th>
+            <th>Cost (₹)</th><th>Course FB</th><th>Participants</th><th>Man-Hrs</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rec in records %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td><code style="font-size:11px;">{{ rec.session_code }}</code></td>
+            <td><strong>{{ rec.programme_name or '—' }}</strong></td>
+            <td><span class="badge bg-secondary" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
+            <td>{{ rec.start_date or '—' }}</td>
+            <td>{{ rec.hours_actual }}</td>
+            <td>{{ rec.faculty_name or '—' }}</td>
+            <td>
+              {% if rec.int_ext == 'Internal' %}<span class="badge bg-primary">Internal</span>
+              {% elif rec.int_ext == 'External' %}<span class="badge bg-warning text-dark">External</span>
+              {% else %}<span class="badge bg-info text-dark">{{ rec.int_ext or '—' }}</span>{% endif %}
+            </td>
+            <td>{{ "%.0f"|format(rec.cost or 0) }}</td>
+            <td>{{ rec.course_feedback or '—' }}</td>
+            <td><strong>{{ rec.participants }}</strong></td>
+            <td><strong>{{ "%.1f"|format(rec.man_hours or 0) }}</strong></td>
+            <td>
+              <form method="POST" action="{{ url_for('delete_programme', rec_id=rec.id) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Delete programme record for {{ rec.session_code }}?')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="13" class="text-center text-muted py-4">No programme records yet. Add above.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function fillSessionDetails2c(code) {
+  if (!code) return;
+  fetch('/api/session/' + encodeURIComponent(code))
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('pc_prog_name').value  = d.programme_name || '';
+      document.getElementById('pc_prog_type').value  = d.prog_type || '';
+      document.getElementById('pc_hours').value      = d.duration_hrs || 0;
+      if (d.plan_start) document.getElementById('pc_start_date').value = d.plan_start;
+      if (d.plan_end)   document.getElementById('pc_end_date').value   = d.plan_end;
+    });
+}
+</script>
+{% endblock %}

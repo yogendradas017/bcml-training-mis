@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block page_title %}Central Dashboard — All Plants{% endblock %}
+{% block content %}
+
+<!-- Grand Totals -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card stat-card p-3">
+      <div class="stat-value">{{ grand.total_emp }}</div>
+      <div class="stat-label"><i class="bi bi-people"></i> Total Employees (All Plants)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card p-3" style="border-color:#6f42c1;">
+      <div class="stat-value" style="color:#6f42c1;">{{ grand.sessions }}</div>
+      <div class="stat-label"><i class="bi bi-calendar3"></i> Sessions Planned</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card p-3" style="border-color:#198754;">
+      <div class="stat-value text-success">{{ grand.conducted }}</div>
+      <div class="stat-label"><i class="bi bi-check-circle"></i> Sessions Conducted</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card p-3" style="border-color:#dc3545;">
+      <div class="stat-value text-danger">{{ grand.manhours }}</div>
+      <div class="stat-label"><i class="bi bi-clock-history"></i> Total Man-Hours</div>
+    </div>
+  </div>
+</div>
+
+<!-- Plant-wise Table -->
+<div class="card">
+  <div class="card-header" style="background:#1a3a5c;color:#fff;">
+    <i class="bi bi-building"></i> Plant-wise Training Summary — FY 2026-27
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:13px;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Plant</th>
+            <th>Code</th>
+            <th>Total Emp</th>
+            <th>Blue Collar</th>
+            <th>White Collar</th>
+            <th>Sessions</th>
+            <th>Conducted</th>
+            <th>Man-Hours</th>
+            <th>BC Compliance</th>
+            <th>WC Compliance</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in plants %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td><strong>{{ p.name }}</strong></td>
+            <td><span class="badge bg-secondary">{{ p.unit_code }}</span></td>
+            <td><strong>{{ p.total_emp }}</strong></td>
+            <td><span class="badge badge-bc">{{ p.blue_collar }}</span></td>
+            <td><span class="badge badge-wc">{{ p.white_collar }}</span></td>
+            <td>{{ p.sessions }}</td>
+            <td>
+              <span class="badge badge-conducted">{{ p.conducted }}</span>
+              {% if p.sessions > 0 %}
+              <small class="text-muted">({{ "%.0f"|format(p.conducted/p.sessions*100) }}%)</small>
+              {% endif %}
+            </td>
+            <td><strong>{{ p.manhours }}</strong></td>
+            <td>
+              {% set bc_color = 'success' if p.bc_pct >= 75 else ('warning' if p.bc_pct >= 40 else 'danger') %}
+              <div class="d-flex align-items-center gap-1">
+                <div class="progress flex-grow-1" style="height:10px;width:60px;">
+                  <div class="progress-bar bg-{{ bc_color }}"
+                       style="width:{{ [p.bc_pct,100]|min }}%"></div>
+                </div>
+                <span class="badge bg-{{ bc_color }}">{{ p.bc_pct }}%</span>
+              </div>
+            </td>
+            <td>
+              {% set wc_color = 'success' if p.wc_pct >= 75 else ('warning' if p.wc_pct >= 40 else 'danger') %}
+              <div class="d-flex align-items-center gap-1">
+                <div class="progress flex-grow-1" style="height:10px;width:60px;">
+                  <div class="progress-bar bg-{{ wc_color }}"
+                       style="width:{{ [p.wc_pct,100]|min }}%"></div>
+                </div>
+                <span class="badge bg-{{ wc_color }}">{{ p.wc_pct }}%</span>
+              </div>
+            </td>
+            <td>
+              <div class="d-flex gap-1 flex-wrap">
+                <a href="{{ url_for('central_plant_view', plant_id=p.id) }}"
+                   class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-eye"></i> View
+                </a>
+                {% if session.role == 'admin' %}
+                <a href="{{ url_for('admin_select_plant', plant_id=p.id) }}"
+                   class="btn btn-sm btn-warning" title="Enter as SPOC for this plant">
+                  <i class="bi bi-box-arrow-in-right"></i> Enter
+                </a>
+                {% endif %}
+                <a href="{{ url_for('export_excel', plant_id=p.id) }}"
+                   class="btn btn-sm btn-outline-success" title="Export Excel">
+                  <i class="bi bi-file-earmark-excel"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="background:#f0f4ff;font-weight:bold;">
+            <td colspan="3">GRAND TOTAL</td>
+            <td>{{ grand.total_emp }}</td>
+            <td>{{ plants|sum(attribute='blue_collar') }}</td>
+            <td>{{ plants|sum(attribute='white_collar') }}</td>
+            <td>{{ grand.sessions }}</td>
+            <td>{{ grand.conducted }}</td>
+            <td>{{ grand.manhours }}</td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Compliance Heat Map -->
+<div class="row g-3 mt-2">
+  {% for p in plants %}
+  <div class="col-6 col-md-3 col-lg-2">
+    <div class="card p-3 text-center">
+      <div class="fw-bold" style="font-size:13px;color:#1a3a5c;">{{ p.name }}</div>
+      <div style="font-size:11px;color:#6c757d;">{{ p.unit_code }}</div>
+      <div class="mt-2">
+        {% set overall = ((p.bc_pct + p.wc_pct) / 2)|round(1) %}
+        {% set color = '#198754' if overall >= 75 else ('#ffc107' if overall >= 40 else '#dc3545') %}
+        <div style="font-size:1.6rem;font-weight:800;color:{{ color }};">{{ overall }}%</div>
+        <div style="font-size:11px;color:#6c757d;">Overall Compliance</div>
+      </div>
+      <a href="{{ url_for('central_plant_view', plant_id=p.id) }}"
+         class="btn btn-outline-primary btn-sm mt-2">Details</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
