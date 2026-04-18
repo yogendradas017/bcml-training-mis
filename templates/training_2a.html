@@ -118,15 +118,21 @@
 
 <!-- Records Table -->
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:#1a3a5c;color:#fff;">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
     <span><i class="bi bi-table"></i> Training Records — <strong>{{ records|length }}</strong> entries</span>
-    <span class="badge bg-info">
+    <span class="badge" style="background:#dbeafe;color:#1d4ed8;">
       Total Hours: {{ records|sum(attribute='hrs')|round(1) }}
     </span>
   </div>
+  <div class="card-body pb-2 pt-3">
+    <div class="position-relative" style="max-width:420px;">
+      <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
+      <input type="text" class="form-control" placeholder="Search by name, emp code, programme, session..." style="padding-left:34px;" oninput="filterTable(this.value,'training2aTable')">
+    </div>
+  </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0" style="font-size:13px;">
+      <table class="table table-hover mb-0" id="training2aTable" style="font-size:13px;">
         <thead>
           <tr>
             <th>#</th><th>Employee</th><th>Collar</th><th>Session</th>
@@ -173,4 +179,14 @@
     </div>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+function filterTable(query, tableId) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+</script>
 {% endblock %}

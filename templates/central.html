@@ -30,6 +30,42 @@
   </div>
 </div>
 
+{% if session.role == 'admin' %}
+<!-- Admin Quick Plant Access -->
+<div class="card mb-4" style="border-left:4px solid #f59e0b;">
+  <div class="card-header" style="background:linear-gradient(135deg,#92400e,#d97706);color:#fff;">
+    <i class="bi bi-shield-lock-fill"></i> Admin &#8212; Enter Any Plant as SPOC
+  </div>
+  <div class="card-body">
+    <div class="row g-2">
+      {% for p in plants %}
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="{{ url_for('admin_select_plant', plant_id=p.id) }}" class="btn btn-sm w-100 text-start"
+           style="background:#fff;border:1.5px solid #e5e7eb;color:#374151;border-radius:9px;padding:8px 12px;">
+          <strong style="color:#1e3a5f;">{{ p.unit_code }}</strong><br>
+          <small>{{ p.name }}</small>
+          <span class="float-end">
+            {% set overall = ((p.bc_pct + p.wc_pct) / 2)|round(0)|int %}
+            <span style="font-size:11px;font-weight:700;color:{% if overall >= 75 %}#059669{% elif overall >= 40 %}#d97706{% else %}#dc2626{% endif %};">{{ overall }}%</span>
+          </span>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Alerts for underperforming plants -->
+{% set low_plants = plants | selectattr('bc_pct', 'lt', 40) | list %}
+{% if low_plants %}
+<div class="alert alert-danger mb-4">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <strong>{{ low_plants|length }} plant(s) below 40% Blue Collar compliance:</strong>
+  {% for p in low_plants %}<strong>{{ p.name }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}
+</div>
+{% endif %}
+{% endif %}
+
 <!-- Plant-wise Table -->
 <div class="card">
   <div class="card-header" style="background:#1a3a5c;color:#fff;">
