@@ -784,154 +784,152 @@ def export_excel(plant_id):
         flash('Plant not found.', 'danger')
         return redirect(url_for('index'))
 
-    db   = get_db()
-    wb   = openpyxl.Workbook()
-    fy   = '2026-27'
-    hdr  = Font(bold=True, color='FFFFFF')
-    hdr_fill = PatternFill('solid', start_color='1F4E79')
-    sub_fill = PatternFill('solid', start_color='2E75B6')
-    thin = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin'))
+    from openpyxl.cell import WriteOnlyCell
+    db  = get_db()
+    fy  = '2026-27'
+    # write_only=True streams row-by-row → much less RAM
+    wb  = openpyxl.Workbook(write_only=True)
 
-    def style_header(ws, row, cols):
-        for c in range(1, cols + 1):
-            cell = ws.cell(row=row, column=c)
-            cell.font = hdr
-            cell.fill = hdr_fill
-            cell.border = thin
-            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    H_FONT = Font(bold=True, color='FFFFFF', size=10)
+    H_FILL = PatternFill('solid', fgColor='1F4E79')
+    H_ALIGN = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    T_FONT  = Font(bold=True, size=11)
 
-    def set_title(ws, title):
-        ws['A1'] = 'BALRAMPUR CHINI MILLS LIMITED'
-        ws['A1'].font = Font(bold=True, size=13)
-        ws['A2'] = title
-        ws['A2'].font = Font(bold=True, size=11)
+    def hc(ws, val):
+        """Styled header cell."""
+        c = WriteOnlyCell(ws, value=val)
+        c.font = H_FONT; c.fill = H_FILL; c.alignment = H_ALIGN
+        return c
 
-    # Sheet 1 – Employee Master
-    ws = wb.active
-    ws.title = 'EMP_MASTER'
-    set_title(ws, f"{plant['name'].upper()}  —  EMPLOYEE MASTER  |  FY {fy}")
-    headers = ['Sr.','Emp Code','Name','Designation','Grade','Collar','Department','Section','Category','Gender','PH','Exit Date','Exit Reason','Remarks']
-    for i, h in enumerate(headers, 1):
-        ws.cell(row=4, column=i, value=h)
-    style_header(ws, 4, len(headers))
-    emps = db.execute('SELECT * FROM employees WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
-    for r, emp in enumerate(emps, 5):
-        row_data = [r-4, emp['emp_code'], emp['name'], emp['designation'], emp['grade'],
-                    emp['collar'], emp['department'], emp['section'], emp['category'],
-                    emp['gender'], emp['physically_handicapped'],
-                    emp['exit_date'] or '', emp['exit_reason'] or '', emp['remarks'] or '']
-        for c, val in enumerate(row_data, 1):
-            cell = ws.cell(row=r, column=c, value=val)
-            cell.border = thin
-    for col in ws.columns:
-        ws.column_dimensions[get_column_letter(col[0].column)].width = 18
+    def tc(ws, val):
+        """Title cell."""
+        c = WriteOnlyCell(ws, value=val)
+        c.font = T_FONT
+        return c
 
-    # Sheet 2 – TNI
+    pname = plant['name'].upper()
+
+    # ── Sheet 1: Employee Master ──────────────────────────────────────────
+    ws1 = wb.create_sheet('EMP_MASTER')
+    ws1.append([tc(ws1, 'BALRAMPUR CHINI MILLS LIMITED')])
+    ws1.append([tc(ws1, f'{pname} — EMPLOYEE MASTER | FY {fy}')])
+    ws1.append([])
+    ws1.append([hc(ws1, h) for h in
+        ['Sr.','Emp Code','Name','Designation','Grade','Collar',
+         'Department','Section','Category','Gender','PH',
+         'Exit Date','Exit Reason','Remarks']])
+    for r, e in enumerate(db.execute(
+            'SELECT * FROM employees WHERE plant_id=? ORDER BY name', (plant_id,)), 1):
+        ws1.append([r, e['emp_code'], e['name'], e['designation'] or '',
+                    e['grade'] or '', e['collar'] or '', e['department'] or '',
+                    e['section'] or '', e['category'] or '', e['gender'] or '',
+                    e['physically_handicapped'] or '',
+                    e['exit_date'] or '', e['exit_reason'] or '', e['remarks'] or ''])
+
+    # ── Sheet 2: TNI ──────────────────────────────────────────────────────
     ws2 = wb.create_sheet('TNI_Tracking')
-    set_title(ws2, f"{plant['name'].upper()}  —  TNI TRACKING  |  FY {fy}")
-    headers2 = ['Sr.','Emp Code','Name','Designation','Grade','Collar','Dept','Section','Programme Name','Type','Mode','Target Month','Planned Hrs','Completed?']
-    for i, h in enumerate(headers2, 1):
-        ws2.cell(row=4, column=i, value=h)
-    style_header(ws2, 4, len(headers2))
-    tni_recs = db.execute('''SELECT t.*,e.name,e.designation,e.grade,e.collar,e.department,e.section
-        FROM tni t LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-        WHERE t.plant_id=?''', (plant_id,)).fetchall()
-    for r, rec in enumerate(tni_recs, 5):
-        done = db.execute('SELECT 1 FROM emp_training WHERE plant_id=? AND emp_code=? AND programme_name=?',
-                          (plant_id, rec['emp_code'], rec['programme_name'])).fetchone()
-        row_data = [r-4, rec['emp_code'], rec['name'] or '', rec['designation'] or '',
-                    rec['grade'] or '', rec['collar'] or '', rec['department'] or '',
-                    rec['section'] or '', rec['programme_name'], rec['prog_type'] or '',
-                    rec['mode'] or '', rec['target_month'] or '', rec['planned_hours'],
-                    'Yes' if done else 'No']
-        for c, val in enumerate(row_data, 1):
-            cell = ws2.cell(row=r, column=c, value=val)
-            cell.border = thin
+    ws2.append([tc(ws2, 'BALRAMPUR CHINI MILLS LIMITED')])
+    ws2.append([tc(ws2, f'{pname} — TNI TRACKING | FY {fy}')])
+    ws2.append([])
+    ws2.append([hc(ws2, h) for h in
+        ['Sr.','Emp Code','Name','Designation','Grade','Collar','Dept',
+         'Section','Programme Name','Type','Mode','Target Month','Planned Hrs','Completed?']])
+    # Pre-build completion set — one query instead of N queries
+    done_set = set(
+        (row[0], row[1]) for row in db.execute(
+            'SELECT emp_code, programme_name FROM emp_training WHERE plant_id=?', (plant_id,))
+    )
+    for r, t in enumerate(db.execute('''
+            SELECT t.*,e.name,e.designation,e.grade,e.collar,e.department,e.section
+            FROM tni t LEFT JOIN employees e
+              ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+            WHERE t.plant_id=?''', (plant_id,)), 1):
+        ws2.append([r, t['emp_code'], t['name'] or '', t['designation'] or '',
+                    t['grade'] or '', t['collar'] or '', t['department'] or '',
+                    t['section'] or '', t['programme_name'], t['prog_type'] or '',
+                    t['mode'] or '', t['target_month'] or '', t['planned_hours'],
+                    'Yes' if (t['emp_code'], t['programme_name']) in done_set else 'No'])
 
-    # Sheet 3 – Calendar
+    # ── Sheet 3: Calendar ─────────────────────────────────────────────────
     ws3 = wb.create_sheet('Cal_Plan_vs_Actual')
-    set_title(ws3, f"{plant['name'].upper()}  —  TRAINING CALENDAR  |  FY {fy}")
-    headers3 = ['S/N','PROG CODE','SESSION CODE','Source','Programme Name','Type','Planned Month',
-                'Plan Start','Plan End','Time From','Time To','Duration(Hrs)','Level','Mode',
-                'Target Audience','Planned Pax','Trainer/Vendor','STATUS','Actual Date','Actual Pax']
-    for i, h in enumerate(headers3, 1):
-        ws3.cell(row=4, column=i, value=h)
-    style_header(ws3, 4, len(headers3))
-    cal_recs = db.execute('SELECT * FROM calendar WHERE plant_id=? ORDER BY id', (plant_id,)).fetchall()
-    for r, rec in enumerate(cal_recs, 5):
-        pd2c = db.execute('SELECT start_date, COUNT(*) as pax FROM programme_details WHERE session_code=? AND plant_id=?',
-                          (rec['session_code'], plant_id)).fetchone()
-        act_pax = db.execute('SELECT COUNT(*) FROM emp_training WHERE session_code=? AND plant_id=?',
-                             (rec['session_code'], plant_id)).fetchone()[0]
-        row_data = [r-4, rec['prog_code'], rec['session_code'], rec['source'],
-                    rec['programme_name'], rec['prog_type'], rec['planned_month'],
-                    rec['plan_start'], rec['plan_end'], rec['time_from'], rec['time_to'],
-                    rec['duration_hrs'], rec['level'], rec['mode'], rec['target_audience'],
-                    rec['planned_pax'], rec['trainer_vendor'], rec['status'],
-                    pd2c['start_date'] if pd2c and pd2c['start_date'] else '',
-                    act_pax]
-        for c, val in enumerate(row_data, 1):
-            cell = ws3.cell(row=r, column=c, value=val)
-            cell.border = thin
+    ws3.append([tc(ws3, 'BALRAMPUR CHINI MILLS LIMITED')])
+    ws3.append([tc(ws3, f'{pname} — TRAINING CALENDAR | FY {fy}')])
+    ws3.append([])
+    ws3.append([hc(ws3, h) for h in
+        ['S/N','PROG CODE','SESSION CODE','Source','Programme Name','Type',
+         'Planned Month','Plan Start','Plan End','Duration(Hrs)','Level','Mode',
+         'Target Audience','Planned Pax','Trainer/Vendor','STATUS','Actual Date','Actual Pax']])
+    act_pax_map = {row[0]: row[1] for row in db.execute(
+        'SELECT session_code, COUNT(*) FROM emp_training WHERE plant_id=? GROUP BY session_code',
+        (plant_id,))}
+    pd_date_map = {row[0]: row[1] for row in db.execute(
+        'SELECT session_code, start_date FROM programme_details WHERE plant_id=?', (plant_id,))}
+    for r, c in enumerate(db.execute(
+            'SELECT * FROM calendar WHERE plant_id=? ORDER BY id', (plant_id,)), 1):
+        ws3.append([r, c['prog_code'], c['session_code'], c['source'] or '',
+                    c['programme_name'], c['prog_type'] or '', c['planned_month'] or '',
+                    c['plan_start'] or '', c['plan_end'] or '',
+                    c['duration_hrs'], c['level'] or '', c['mode'] or '',
+                    c['target_audience'] or '', c['planned_pax'],
+                    c['trainer_vendor'] or '', c['status'] or '',
+                    pd_date_map.get(c['session_code'], ''),
+                    act_pax_map.get(c['session_code'], 0)])
 
-    # Sheet 4 – 2A Employee Training
+    # ── Sheet 4: 2A Employee Training ─────────────────────────────────────
     ws4 = wb.create_sheet('2A_Emp_Training')
-    set_title(ws4, f"{plant['name'].upper()}  —  2A: EMPLOYEE TRAINING DETAILS  |  FY {fy}")
-    headers4 = ['Sr.','Emp Code','Name','Designation','Grade','Collar','Dept','Section',
-                'Start Date','End Date','Hrs','Programme Name','Type','Level','Mode',
-                'Cal/New','Pre Rating','Post Rating','Venue','Month']
-    for i, h in enumerate(headers4, 1):
-        ws4.cell(row=4, column=i, value=h)
-    style_header(ws4, 4, len(headers4))
-    trng = db.execute('''SELECT t.*,e.name as emp_name,e.designation,e.grade,e.collar,e.department,e.section
-        FROM emp_training t LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-        WHERE t.plant_id=? ORDER BY t.id''', (plant_id,)).fetchall()
-    for r, rec in enumerate(trng, 5):
-        row_data = [r-4, rec['emp_code'], rec['emp_name'] or '', rec['designation'] or '',
-                    rec['grade'] or '', rec['collar'] or '', rec['department'] or '',
-                    rec['section'] or '', rec['start_date'], rec['end_date'],
-                    rec['hrs'], rec['programme_name'], rec['prog_type'] or '',
-                    rec['level'] or '', rec['mode'] or '', rec['cal_new'] or '',
-                    rec['pre_rating'], rec['post_rating'], rec['venue'] or '', rec['month'] or '']
-        for c, val in enumerate(row_data, 1):
-            cell = ws4.cell(row=r, column=c, value=val)
-            cell.border = thin
+    ws4.append([tc(ws4, 'BALRAMPUR CHINI MILLS LIMITED')])
+    ws4.append([tc(ws4, f'{pname} — 2A: EMPLOYEE TRAINING DETAILS | FY {fy}')])
+    ws4.append([])
+    ws4.append([hc(ws4, h) for h in
+        ['Sr.','Emp Code','Name','Designation','Grade','Collar','Dept','Section',
+         'Start Date','End Date','Hrs','Programme Name','Type','Level','Mode',
+         'Cal/New','Pre Rating','Post Rating','Venue','Month']])
+    for r, t in enumerate(db.execute('''
+            SELECT t.*,e.name as emp_name,e.designation,e.grade,e.collar,
+                   e.department,e.section
+            FROM emp_training t LEFT JOIN employees e
+              ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+            WHERE t.plant_id=? ORDER BY t.id''', (plant_id,)), 1):
+        ws4.append([r, t['emp_code'], t['emp_name'] or '', t['designation'] or '',
+                    t['grade'] or '', t['collar'] or '', t['department'] or '',
+                    t['section'] or '', t['start_date'] or '', t['end_date'] or '',
+                    t['hrs'], t['programme_name'], t['prog_type'] or '',
+                    t['level'] or '', t['mode'] or '', t['cal_new'] or '',
+                    t['pre_rating'], t['post_rating'], t['venue'] or '', t['month'] or ''])
 
-    # Sheet 5 – 2C Programme Details
+    # ── Sheet 5: 2C Programme Details ─────────────────────────────────────
     ws5 = wb.create_sheet('2C_Programme')
-    set_title(ws5, f"{plant['name'].upper()}  —  2C: PROGRAMME-WISE DETAILS  |  FY {fy}")
-    headers5 = ['Sr.','Session Code','Programme Name','Type','Level','Cal/New','Mode',
-                'Start Date','End Date','Audience','Hours Actual','Faculty Name','Int/Ext',
-                'Cost (Rs.)','Venue','Course FB','Faculty FB','Trainer FB-Participants',
-                'Trainer FB-Facilities','Participants','Man-Hours']
-    for i, h in enumerate(headers5, 1):
-        ws5.cell(row=4, column=i, value=h)
-    style_header(ws5, 4, len(headers5))
-    prog_recs = db.execute('SELECT * FROM programme_details WHERE plant_id=? ORDER BY id', (plant_id,)).fetchall()
-    for r, rec in enumerate(prog_recs, 5):
-        participants = db.execute('SELECT COUNT(*) FROM emp_training WHERE session_code=? AND plant_id=?',
-                                  (rec['session_code'], plant_id)).fetchone()[0]
-        man_hours = db.execute('SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE session_code=? AND plant_id=?',
-                               (rec['session_code'], plant_id)).fetchone()[0]
-        row_data = [r-4, rec['session_code'], rec['programme_name'], rec['prog_type'],
-                    rec['level'], rec['cal_new'], rec['mode'],
-                    rec['start_date'], rec['end_date'], rec['audience'],
-                    rec['hours_actual'], rec['faculty_name'], rec['int_ext'],
-                    rec['cost'], rec['venue'], rec['course_feedback'],
-                    rec['faculty_feedback'], rec['trainer_fb_participants'],
-                    rec['trainer_fb_facilities'], participants, round(man_hours, 1)]
-        for c, val in enumerate(row_data, 1):
-            cell = ws5.cell(row=r, column=c, value=val)
-            cell.border = thin
+    ws5.append([tc(ws5, 'BALRAMPUR CHINI MILLS LIMITED')])
+    ws5.append([tc(ws5, f'{pname} — 2C: PROGRAMME-WISE DETAILS | FY {fy}')])
+    ws5.append([])
+    ws5.append([hc(ws5, h) for h in
+        ['Sr.','Session Code','Programme Name','Type','Level','Cal/New','Mode',
+         'Start Date','End Date','Audience','Hours Actual','Faculty Name','Int/Ext',
+         'Cost (Rs.)','Venue','Course FB','Faculty FB','Trainer FB-Participants',
+         'Trainer FB-Facilities','Participants','Man-Hours']])
+    pax_map = {row[0]: row[1] for row in db.execute(
+        'SELECT session_code, COUNT(*) FROM emp_training WHERE plant_id=? GROUP BY session_code',
+        (plant_id,))}
+    hrs_map = {row[0]: row[1] for row in db.execute(
+        'SELECT session_code, COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? GROUP BY session_code',
+        (plant_id,))}
+    for r, p in enumerate(db.execute(
+            'SELECT * FROM programme_details WHERE plant_id=? ORDER BY id', (plant_id,)), 1):
+        ws5.append([r, p['session_code'], p['programme_name'], p['prog_type'] or '',
+                    p['level'] or '', p['cal_new'] or '', p['mode'] or '',
+                    p['start_date'] or '', p['end_date'] or '', p['audience'] or '',
+                    p['hours_actual'], p['faculty_name'] or '', p['int_ext'] or '',
+                    p['cost'], p['venue'] or '', p['course_feedback'],
+                    p['faculty_feedback'], p['trainer_fb_participants'],
+                    p['trainer_fb_facilities'],
+                    pax_map.get(p['session_code'], 0),
+                    round(hrs_map.get(p['session_code'], 0), 1)])
 
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
     filename = f"BCML_{plant['unit_code']}_Training_MIS_{fy.replace('-','')}.xlsx"
-    return send_file(output, download_name=filename,
-                     as_attachment=True,
+    return send_file(output, download_name=filename, as_attachment=True,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 # ─── API (AJAX auto-fill) ─────────────────────────────────────────────────────
