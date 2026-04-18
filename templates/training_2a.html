@@ -127,7 +127,7 @@
   <div class="card-body pb-2 pt-3">
     <div class="position-relative" style="max-width:420px;">
       <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
-      <input type="text" class="form-control" placeholder="Search by name, emp code, programme, session..." style="padding-left:34px;" oninput="filterTable(this.value,'training2aTable')">
+      <input type="text" class="form-control" placeholder="Search by name, emp code, programme, session..." style="padding-left:34px;" oninput="TBL.search('training2aTable',this.value)">
     </div>
   </div>
   <div class="card-body p-0">
@@ -172,7 +172,7 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="13" class="text-center text-muted py-4">No training records yet. Add above.</td></tr>
+          <tr data-empty="1"><td colspan="13" class="text-center text-muted py-4">No training records yet. Add above.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -182,11 +182,6 @@
 {% endblock %}
 {% block scripts %}
 <script>
-function filterTable(query, tableId) {
-  const q = query.toLowerCase();
-  document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
-    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
-  });
-}
+TBL.init('training2aTable', 10);
 </script>
 {% endblock %}

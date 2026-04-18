@@ -89,9 +89,22 @@
       {% endif %}
     </div>
   </div>
+  <div class="card-body pb-2 pt-3">
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="position-relative flex-grow-1" style="max-width:380px;">
+        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
+        <input type="text" class="form-control" placeholder="Search by name, emp code, designation, department..." style="padding-left:34px;" oninput="TBL.search('empTable',this.value)">
+      </div>
+      <select class="form-select" style="width:160px;" onchange="TBL.filter('empTable','collarFilter',this.value)">
+        <option value="">All Collar</option>
+        <option value="blue">Blue Collar</option>
+        <option value="white">White Collar</option>
+      </select>
+    </div>
+  </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0">
+      <table class="table table-hover mb-0" id="empTable">
         <thead>
           <tr>
             <th>#</th><th>Emp Code</th><th>Name</th><th>Designation</th>
@@ -171,7 +184,7 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="10" class="text-center text-muted py-4">No employees found.</td></tr>
+          <tr data-empty="1"><td colspan="10" class="text-center text-muted py-4">No employees found.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -183,5 +196,6 @@
 <script>
 const today = new Date().toISOString().split('T')[0];
 document.querySelectorAll('input[name="exit_date"]').forEach(el => el.value = today);
+TBL.init('empTable', 10);
 </script>
 {% endblock %}

@@ -110,9 +110,9 @@
     <div class="d-flex gap-2">
       <div class="position-relative flex-grow-1" style="max-width:420px;">
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
-        <input type="text" class="form-control" placeholder="Search by name, emp code, programme, department..." style="padding-left:34px;" oninput="filterTable(this.value,'tniTable')">
+        <input type="text" class="form-control" placeholder="Search by name, emp code, programme, department..." style="padding-left:34px;" oninput="TBL.search('tniTable',this.value)">
       </div>
-      <select class="form-select" style="width:160px;" onchange="filterByCollar(this.value)">
+      <select class="form-select" style="width:160px;" onchange="TBL.filter('tniTable','collarFilter',this.value)">
         <option value="">All Collar</option>
         <option value="blue">Blue Collar</option>
         <option value="white">White Collar</option>
@@ -165,7 +165,7 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="11" class="text-center text-muted py-4">No TNI entries yet. Add above.</td></tr>
+          <tr data-empty="1"><td colspan="11" class="text-center text-muted py-4">No TNI entries yet. Add above.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -175,18 +175,6 @@
 {% endblock %}
 {% block scripts %}
 <script>
-function filterTable(query, tableId) {
-  const q = query.toLowerCase();
-  document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
-    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
-  });
-}
-function filterByCollar(collar) {
-  document.querySelectorAll('#tniTable tbody tr').forEach(row => {
-    if (!collar) { row.style.display = ''; return; }
-    const text = row.textContent.toLowerCase();
-    row.style.display = text.includes(collar) ? '' : 'none';
-  });
-}
+TBL.init('tniTable', 10);
 </script>
 {% endblock %}

@@ -389,6 +389,27 @@
     .stagger > *:nth-child(8) { animation-delay: .28s; }
 
     /* ══════════════════════════════════════════════════════════════
+       PAGINATION
+    ══════════════════════════════════════════════════════════════ */
+    .tbl-pager {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-top: 1px solid #f1f5f9;
+      background: #fafbfc; flex-wrap: wrap; gap: 8px;
+    }
+    .tbl-info { font-size: 12px; color: #6b7280; }
+    .pager-btns { display: flex; gap: 3px; align-items: center; }
+    .pager-btn {
+      min-width: 30px; height: 30px; border: 1px solid #e5e7eb;
+      background: #fff; border-radius: 6px; font-size: 12px; font-weight: 500;
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #374151; padding: 0 6px;
+      transition: all .12s; line-height: 1;
+    }
+    .pager-btn:hover:not([disabled]) { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+    .pager-btn.pg-active { background: #4f46e5; color: #fff; border-color: #4f46e5; font-weight: 700; }
+    .pager-btn[disabled] { opacity: .38; cursor: default; pointer-events: none; }
+
+    /* ══════════════════════════════════════════════════════════════
        RESPONSIVE
     ══════════════════════════════════════════════════════════════ */
     @media (max-width: 768px) {
@@ -444,9 +465,11 @@
     <li><a href="{{ url_for('monthly_summary') }}" class="{% if request.endpoint=='monthly_summary' %}active{% endif %}">
       <i class="bi bi-bar-chart-fill"></i> Monthly Summary
     </a></li>
+    {% if session.plant_id %}
     <li><a href="{{ url_for('export_excel', plant_id=session.plant_id) }}">
       <i class="bi bi-file-earmark-excel-fill" style="color:#4ade80;"></i> Export to Excel
     </a></li>
+    {% endif %}
     {% if session.role == 'admin' %}
     <li><a href="{{ url_for('admin_clear_plant') }}" style="color:#fbbf24;">
       <i class="bi bi-arrow-left-right"></i> Switch Plant
@@ -535,6 +558,99 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{{ url_for('static', filename='js/autofill.js') }}"></script>
+<script>
+/* ═══════════════════════════════════════════════════
+   TBL — Universal table search + pagination engine
+═══════════════════════════════════════════════════ */
+const TBL = {
+  _st: {},   // tableId → { page, pageSize, search, collarFilter, statusFilter }
+
+  init(id, pageSize) {
+    this._st[id] = { page:1, pageSize: pageSize||10, search:'', collarFilter:'', statusFilter:'' };
+    this._render(id);
+  },
+
+  search(id, q) {
+    if (!this._st[id]) return;
+    this._st[id].search = q.toLowerCase(); this._st[id].page = 1; this._render(id);
+  },
+
+  filter(id, key, val) {
+    if (!this._st[id]) return;
+    this._st[id][key] = val.toLowerCase(); this._st[id].page = 1; this._render(id);
+  },
+
+  go(id, p) {
+    if (!this._st[id]) return;
+    this._st[id].page = p; this._render(id);
+  },
+
+  _visible(id) {
+    const st = this._st[id];
+    const tbl = document.getElementById(id);
+    if (!tbl) return [];
+    const q = st.search, col = st.collarFilter, sta = st.statusFilter;
+    return Array.from(tbl.querySelectorAll('tbody tr')).filter(r => {
+      if (r.dataset.empty) return false;
+      const txt = r.textContent.toLowerCase();
+      if (q && !txt.includes(q)) return false;
+      if (col && !txt.includes(col)) return false;
+      if (sta && (r.dataset.status||'').toLowerCase() !== sta) return false;
+      return true;
+    });
+  },
+
+  _render(id) {
+    const st = this._st[id];
+    const tbl = document.getElementById(id);
+    if (!tbl) return;
+    const all = Array.from(tbl.querySelectorAll('tbody tr'));
+    const emptyRow = all.find(r => r.dataset.empty);
+    const vis = this._visible(id);
+
+    // Hide all
+    all.forEach(r => r.style.display = 'none');
+
+    if (vis.length === 0) {
+      if (emptyRow) { emptyRow.style.display = ''; }
+      this._pager(id, 0, 1, 1); return;
+    }
+
+    const ps = st.pageSize;
+    const pages = Math.max(1, Math.ceil(vis.length / ps));
+    st.page = Math.max(1, Math.min(st.page, pages));
+    vis.slice((st.page-1)*ps, st.page*ps).forEach(r => r.style.display = '');
+    this._pager(id, vis.length, st.page, pages);
+  },
+
+  _pager(id, total, page, pages) {
+    const st = this._st[id];
+    let el = document.getElementById(id+'_pager');
+    if (!el) {
+      const tbl = document.getElementById(id);
+      el = document.createElement('div');
+      el.id = id + '_pager'; el.className = 'tbl-pager';
+      const wrap = tbl.closest('.table-responsive') || tbl.parentElement;
+      wrap.insertAdjacentElement('afterend', el);
+    }
+    if (total === 0) { el.innerHTML = ''; return; }
+    const s = (page-1)*st.pageSize+1, e = Math.min(page*st.pageSize, total);
+    const info = `<span class="tbl-info">Showing <strong>${s}–${e}</strong> of <strong>${total}</strong> records</span>`;
+    const b = (label, p, dis, active) =>
+      `<button class="pager-btn${active?' pg-active':''}" onclick="TBL.go('${id}',${p})" ${dis?'disabled':''}>${label}</button>`;
+    let btns = `<div class="pager-btns">`;
+    btns += b('<i class="bi bi-chevron-double-left"></i>', 1, page===1, false);
+    btns += b('<i class="bi bi-chevron-left"></i>', page-1, page===1, false);
+    const st2 = Math.max(1, Math.min(page-2, pages-4));
+    const en = Math.min(pages, st2+4);
+    for (let i=st2; i<=en; i++) btns += b(i, i, false, i===page);
+    btns += b('<i class="bi bi-chevron-right"></i>', page+1, page===pages, false);
+    btns += b('<i class="bi bi-chevron-double-right"></i>', pages, page===pages, false);
+    btns += `</div>`;
+    el.innerHTML = info + btns;
+  }
+};
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

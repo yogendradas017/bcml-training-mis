@@ -122,9 +122,9 @@
     <div class="d-flex gap-2 align-items-center">
       <div class="position-relative flex-grow-1" style="max-width:400px;">
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
-        <input type="text" id="calSearch" class="form-control" placeholder="Search session, programme, type, month, trainer..." style="padding-left:34px;" oninput="filterTable(this.value,'calTable')">
+        <input type="text" id="calSearch" class="form-control" placeholder="Search session, programme, type, month, trainer..." style="padding-left:34px;" oninput="TBL.search('calTable',this.value)">
       </div>
-      <select id="calStatusFilter" class="form-select" style="width:160px;" onchange="filterTable(document.getElementById('calSearch').value,'calTable')">
+      <select id="calStatusFilter" class="form-select" style="width:160px;" onchange="TBL.filter('calTable','statusFilter',this.value)">
         <option value="">All Status</option>
         <option>To Be Planned</option>
         <option>Conducted</option>
@@ -176,7 +176,7 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="14" class="text-center text-muted py-4">No sessions planned yet.</td></tr>
+          <tr data-empty="1"><td colspan="14" class="text-center text-muted py-4">No sessions planned yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -186,17 +186,6 @@
 {% endblock %}
 {% block scripts %}
 <script>
-function filterTable(query, tableId) {
-  const q = query.toLowerCase();
-  const sf = document.getElementById('calStatusFilter');
-  const statusFilter = sf ? sf.value.toLowerCase() : '';
-  document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
-    const text = row.textContent.toLowerCase();
-    const status = (row.dataset.status || '').toLowerCase();
-    const matchQ = !q || text.includes(q);
-    const matchS = !statusFilter || status === statusFilter;
-    row.style.display = (matchQ && matchS) ? '' : 'none';
-  });
-}
+TBL.init('calTable', 10);
 </script>
 {% endblock %}
