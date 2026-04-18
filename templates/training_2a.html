@@ -61,9 +61,8 @@
         </div>
         <div class="col-md-3">
           <label class="form-label">Session Code (from Calendar)</label>
-          <select name="session_code" id="tr_session_code" class="form-select"
-                  onchange="fillSessionDetails(this.value)">
-            <option value="">-- Select Session (optional) --</option>
+          <select name="session_code" id="tr_session_code" class="form-select">
+            <option value="">-- Type to search session --</option>
             {% for s in sessions %}
             <option value="{{ s.session_code }}">{{ s.session_code }} — {{ s.programme_name }}</option>
             {% endfor %}
@@ -206,5 +205,12 @@
 {% block scripts %}
 <script>
 TBL.init('training2aTable', 30);
+
+// Searchable session code dropdown
+new TomSelect('#tr_session_code', {
+  allowEmptyOption: true,
+  placeholder: 'Type session code or programme name...',
+  onChange: function(val) { fillSessionDetails(val); }
+});
 </script>
 {% endblock %}

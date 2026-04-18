@@ -39,8 +39,8 @@
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">Session Code <span class="required-star">*</span></label>
-          <select name="session_code" id="pc_session_code" class="form-select" required onchange="fillSessionDetails2c(this.value)">
-            <option value="">-- Select Session Code --</option>
+          <select name="session_code" id="pc_session_code" class="form-select" required>
+            <option value="">-- Type to search session --</option>
             {% for s in cal_sessions %}
             <option value="{{ s.session_code }}">{{ s.session_code }} — {{ s.programme_name }}</option>
             {% endfor %}
@@ -188,7 +188,8 @@
 <script>
 function fillSessionDetails2c(code) {
   if (!code) return;
-  fetch('/api/session/' + encodeURIComponent(code))
+  // Use encodeURIComponent on each segment to handle slashes in session codes
+  fetch('/api/session/' + code.split('/').map(encodeURIComponent).join('/'))
     .then(r => r.json())
     .then(d => {
       document.getElementById('pc_prog_name').value  = d.programme_name || '';
@@ -198,6 +199,14 @@ function fillSessionDetails2c(code) {
       if (d.plan_end)   document.getElementById('pc_end_date').value   = d.plan_end;
     });
 }
+
 TBL.init('prog2cTable', 30);
+
+// Searchable session code dropdown
+new TomSelect('#pc_session_code', {
+  allowEmptyOption: true,
+  placeholder: 'Type session code or programme name...',
+  onChange: function(val) { fillSessionDetails2c(val); }
+});
 </script>
 {% endblock %}
