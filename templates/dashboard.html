@@ -3,92 +3,89 @@
 {% block content %}
 
 <!-- Stat Cards -->
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="stat-card sc-blue">
-      <div class="stat-icon si-blue"><i class="bi bi-people-fill"></i></div>
-      <div class="stat-value">{{ stats.total_emp }}</div>
-      <div class="stat-label">Active Employees</div>
+<div class="row g-3 mb-4 stagger">
+  <div class="col-6 col-md-3 fade-up">
+    <div class="sc sc-violet">
+      <div class="sc-icon"><i class="bi bi-people-fill"></i></div>
+      <div class="sc-val">{{ stats.total_emp }}</div>
+      <div class="sc-lbl">Active Employees</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card sc-indigo">
-      <div class="stat-icon si-indigo"><i class="bi bi-person-badge-fill"></i></div>
-      <div class="stat-value">{{ stats.blue_collar }}</div>
-      <div class="stat-label">Blue Collar</div>
+  <div class="col-6 col-md-3 fade-up">
+    <div class="sc sc-blue">
+      <div class="sc-icon"><i class="bi bi-person-badge-fill"></i></div>
+      <div class="sc-val">{{ stats.blue_collar }}</div>
+      <div class="sc-lbl">Blue Collar</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card sc-green">
-      <div class="stat-icon si-green"><i class="bi bi-person-badge-fill"></i></div>
-      <div class="stat-value">{{ stats.white_collar }}</div>
-      <div class="stat-label">White Collar</div>
+  <div class="col-6 col-md-3 fade-up">
+    <div class="sc sc-green">
+      <div class="sc-icon"><i class="bi bi-person-badge-fill"></i></div>
+      <div class="sc-val">{{ stats.white_collar }}</div>
+      <div class="sc-lbl">White Collar</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card sc-amber">
-      <div class="stat-icon si-amber"><i class="bi bi-clipboard-check-fill"></i></div>
-      <div class="stat-value">{{ stats.tni_count }}</div>
-      <div class="stat-label">TNI Entries</div>
+  <div class="col-6 col-md-3 fade-up">
+    <div class="sc sc-amber">
+      <div class="sc-icon"><i class="bi bi-clipboard-check-fill"></i></div>
+      <div class="sc-val">{{ stats.tni_count }}</div>
+      <div class="sc-lbl">TNI Entries</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card sc-violet">
-      <div class="stat-icon si-violet"><i class="bi bi-calendar3"></i></div>
-      <div class="stat-value">{{ stats.sessions }}</div>
-      <div class="stat-label">Sessions Planned</div>
+  <div class="col-6 col-md-3 fade-up">
+    <div class="sc sc-indigo">
+      <div class="sc-icon"><i class="bi bi-calendar3"></i></div>
+      <div class="sc-val">{{ stats.sessions }}</div>
+      <div class="sc-lbl">Sessions Planned</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card sc-teal">
-      <div class="stat-icon si-teal"><i class="bi bi-check-circle-fill"></i></div>
-      <div class="stat-value">{{ stats.conducted }}</div>
-      <div class="stat-label">Sessions Conducted</div>
+  <div class="col-6 col-md-3 fade-up">
+    <div class="sc sc-teal">
+      <div class="sc-icon"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="sc-val">{{ stats.conducted }}</div>
+      <div class="sc-lbl">Sessions Conducted</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card sc-cyan">
-      <div class="stat-icon si-cyan"><i class="bi bi-person-check-fill"></i></div>
-      <div class="stat-value">{{ stats.trainings }}</div>
-      <div class="stat-label">Training Records</div>
+  <div class="col-6 col-md-3 fade-up">
+    <div class="sc sc-cyan">
+      <div class="sc-icon"><i class="bi bi-person-check-fill"></i></div>
+      <div class="sc-val">{{ stats.trainings }}</div>
+      <div class="sc-lbl">Training Records</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card sc-rose">
-      <div class="stat-icon si-rose"><i class="bi bi-clock-history"></i></div>
-      <div class="stat-value">{{ "%.0f"|format(stats.manhours) }}</div>
-      <div class="stat-label">Total Man-Hours</div>
+  <div class="col-6 col-md-3 fade-up">
+    <div class="sc sc-rose">
+      <div class="sc-icon"><i class="bi bi-clock-history"></i></div>
+      <div class="sc-val">{{ "%.0f"|format(stats.manhours) }}</div>
+      <div class="sc-lbl">Total Man-Hours</div>
     </div>
   </div>
 </div>
 
 <!-- Quick Actions -->
-<div class="mb-3">
-  <p class="text-muted" style="font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:12px;">
-    Quick Actions
-  </p>
-</div>
+<div class="section-hd">Quick Actions</div>
 <div class="row g-3">
   {% set modules = [
-    ('employees',         'bi-people-fill',         '#3b82f6', 'Employee Master',       'Add joiners, mark exits, view active employees'),
-    ('tni',               'bi-clipboard-check-fill', '#f59e0b', 'TNI Tracking',          'Record training needs identified for employees'),
-    ('training_calendar', 'bi-calendar3',            '#6366f1', 'Training Calendar',     'Plan sessions, track Plan vs Actual'),
-    ('emp_training',      'bi-person-check-fill',    '#10b981', 'Training Records (2A)', 'Log who attended which training programme'),
-    ('programme_details', 'bi-journal-richtext',     '#64748b', 'Programme Details (2C)','Faculty details, feedback, cost per programme'),
-    ('monthly_summary',   'bi-bar-chart-fill',       '#f43f5e', 'Monthly Summary',       'Auto-calculated MIS summary by programme type'),
+    ('employees',         'bi-people-fill',         'linear-gradient(135deg,#4f46e5,#7c3aed)', 'Employee Master',       'Add joiners, mark exits, view active employees'),
+    ('tni',               'bi-clipboard-check-fill', 'linear-gradient(135deg,#d97706,#f59e0b)', 'TNI Tracking',          'Record training needs for each employee'),
+    ('training_calendar', 'bi-calendar3',            'linear-gradient(135deg,#0891b2,#06b6d4)', 'Training Calendar',     'Plan sessions, track Plan vs Actual'),
+    ('emp_training',      'bi-person-check-fill',    'linear-gradient(135deg,#059669,#10b981)', 'Training Records (2A)', 'Log who attended which training programme'),
+    ('programme_details', 'bi-journal-richtext',     'linear-gradient(135deg,#4338ca,#6366f1)', 'Programme Details (2C)','Faculty, feedback, cost per programme'),
+    ('monthly_summary',   'bi-bar-chart-fill',       'linear-gradient(135deg,#e11d48,#f43f5e)', 'Monthly Summary',       'Auto-calculated MIS by programme type'),
   ] %}
-  {% for endpoint, icon, color, title, desc in modules %}
+  {% for endpoint, icon, grad, title, desc in modules %}
   <div class="col-12 col-md-6 col-lg-4">
     <a href="{{ url_for(endpoint) }}" class="text-decoration-none">
-      <div class="card card-hover" style="border-left: 4px solid {{ color }};">
+      <div class="card card-lift" style="border-top: 3px solid transparent; border-image: {{ grad }} 1;">
         <div class="card-body d-flex align-items-center gap-3 py-3">
-          <div style="width:42px;height:42px;border-radius:10px;background:{{ color }}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="bi {{ icon }}" style="font-size:18px;color:{{ color }};"></i>
+          <div style="width:44px;height:44px;border-radius:12px;background:{{ grad }};display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15);">
+            <i class="bi {{ icon }}" style="font-size:19px;color:#fff;"></i>
           </div>
           <div>
-            <div style="font-weight:700;font-size:13.5px;color:#1e293b;">{{ title }}</div>
-            <div style="font-size:11.5px;color:#64748b;margin-top:2px;">{{ desc }}</div>
+            <div style="font-weight:700;font-size:13.5px;color:#111827;">{{ title }}</div>
+            <div style="font-size:11.5px;color:#6b7280;margin-top:2px;">{{ desc }}</div>
           </div>
+          <i class="bi bi-chevron-right ms-auto" style="color:#d1d5db;font-size:13px;"></i>
         </div>
       </div>
     </a>
@@ -97,15 +94,16 @@
 
   <div class="col-12 col-md-6 col-lg-4">
     <a href="{{ url_for('export_excel', plant_id=session.plant_id) }}" class="text-decoration-none">
-      <div class="card card-hover" style="border-left: 4px solid #22c55e;">
+      <div class="card card-lift" style="border-top: 3px solid #22c55e;">
         <div class="card-body d-flex align-items-center gap-3 py-3">
-          <div style="width:42px;height:42px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="bi bi-file-earmark-excel-fill" style="font-size:18px;color:#22c55e;"></i>
+          <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#16a34a,#22c55e);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(22,163,74,.25);">
+            <i class="bi bi-file-earmark-excel-fill" style="font-size:19px;color:#fff;"></i>
           </div>
           <div>
-            <div style="font-weight:700;font-size:13.5px;color:#1e293b;">Export to Excel</div>
-            <div style="font-size:11.5px;color:#64748b;margin-top:2px;">Download full MIS in BCML Excel format</div>
+            <div style="font-weight:700;font-size:13.5px;color:#111827;">Export to Excel</div>
+            <div style="font-size:11.5px;color:#6b7280;margin-top:2px;">Download full MIS in BCML format</div>
           </div>
+          <i class="bi bi-chevron-right ms-auto" style="color:#d1d5db;font-size:13px;"></i>
         </div>
       </div>
     </a>
