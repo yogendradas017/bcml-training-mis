@@ -125,9 +125,32 @@
     </span>
   </div>
   <div class="card-body pb-2 pt-3">
-    <div class="position-relative" style="max-width:420px;">
-      <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
-      <input type="text" class="form-control" placeholder="Search by name, emp code, programme, session..." style="padding-left:34px;" oninput="TBL.search('training2aTable',this.value)">
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="position-relative flex-grow-1" style="max-width:300px;">
+        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
+        <input type="text" class="form-control" placeholder="Search name, emp code, programme, session..." style="padding-left:34px;" oninput="TBL.search('training2aTable',this.value)">
+      </div>
+      <select class="form-select" style="width:150px;" onchange="TBL.filter('training2aTable','collar',this.value)">
+        <option value="">All Collar</option>
+        <option value="Blue Collared">Blue Collar</option>
+        <option value="White Collared">White Collar</option>
+      </select>
+      <select class="form-select" style="width:170px;" onchange="TBL.filter('training2aTable','type',this.value)">
+        <option value="">All Types</option>
+        <option>Behavioural/Leadership</option>
+        <option>Cane</option>
+        <option>Commercial</option>
+        <option>EHS/HR</option>
+        <option>IT</option>
+        <option>Technical</option>
+      </select>
+      <select class="form-select" style="width:140px;" onchange="TBL.filter('training2aTable','month',this.value)">
+        <option value="">All Months</option>
+        <option>April</option><option>May</option><option>June</option>
+        <option>July</option><option>August</option><option>September</option>
+        <option>October</option><option>November</option><option>December</option>
+        <option>January</option><option>February</option><option>March</option>
+      </select>
     </div>
   </div>
   <div class="card-body p-0">
@@ -142,7 +165,7 @@
         </thead>
         <tbody>
           {% for rec in records %}
-          <tr>
+          <tr data-collar="{{ rec.collar or '' }}" data-type="{{ rec.prog_type or '' }}" data-month="{{ rec.month or '' }}">
             <td>{{ loop.index }}</td>
             <td>
               <strong>{{ rec.emp_name or rec.emp_code }}</strong><br>

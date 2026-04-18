@@ -563,10 +563,10 @@
    TBL — Universal table search + pagination engine
 ═══════════════════════════════════════════════════ */
 const TBL = {
-  _st: {},   // tableId → { page, pageSize, search, collarFilter, statusFilter }
+  _st: {},   // tableId → { page, pageSize, search, ...filterKeys }
 
   init(id, pageSize) {
-    this._st[id] = { page:1, pageSize: pageSize||10, search:'', collarFilter:'', statusFilter:'' };
+    this._st[id] = { page:1, pageSize: pageSize||10, search:'' };
     this._render(id);
   },
 
@@ -589,13 +589,20 @@ const TBL = {
     const st = this._st[id];
     const tbl = document.getElementById(id);
     if (!tbl) return [];
-    const q = st.search, col = st.collarFilter, sta = st.statusFilter;
+    const q = st.search || '';
     return Array.from(tbl.querySelectorAll('tbody tr')).filter(r => {
       if (r.dataset.empty) return false;
       const txt = r.textContent.toLowerCase();
       if (q && !txt.includes(q)) return false;
-      if (col && !txt.includes(col)) return false;
-      if (sta && (r.dataset.status||'').toLowerCase() !== sta) return false;
+      for (const [k, v] of Object.entries(st)) {
+        if (['page','pageSize','search'].includes(k) || !v) continue;
+        const dv = r.dataset[k];
+        if (dv !== undefined) {
+          if (dv.toLowerCase() !== v.toLowerCase()) return false;
+        } else {
+          if (!txt.includes(v.toLowerCase())) return false;
+        }
+      }
       return true;
     });
   },
@@ -648,6 +655,20 @@ const TBL = {
     btns += b('<i class="bi bi-chevron-double-right"></i>', pages, page===pages, false);
     btns += `</div>`;
     el.innerHTML = info + btns;
+  },
+
+  buildDynamic(tableId, dataKey, selectEl, label) {
+    const tbl = document.getElementById(tableId);
+    if (!tbl || !selectEl) return;
+    const vals = new Set();
+    tbl.querySelectorAll('tbody tr:not([data-empty])').forEach(r => {
+      const v = r.dataset[dataKey];
+      if (v && v.trim() && v.trim() !== '—') vals.add(v.trim());
+    });
+    [...vals].sort().forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v; selectEl.appendChild(o);
+    });
   }
 };
 </script>

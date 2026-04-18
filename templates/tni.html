@@ -107,15 +107,46 @@
     <span class="badge" style="background:#d1fae5;color:#065f46;">{{ records|selectattr('id','in', completed_map.keys())|list|length }} tracked</span>
   </div>
   <div class="card-body pb-2 pt-3">
-    <div class="d-flex gap-2">
-      <div class="position-relative flex-grow-1" style="max-width:420px;">
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="position-relative flex-grow-1" style="max-width:280px;">
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
-        <input type="text" class="form-control" placeholder="Search by name, emp code, programme, department..." style="padding-left:34px;" oninput="TBL.search('tniTable',this.value)">
+        <input type="text" class="form-control" placeholder="Search name, code, programme..." style="padding-left:34px;" oninput="TBL.search('tniTable',this.value)">
       </div>
-      <select class="form-select" style="width:160px;" onchange="TBL.filter('tniTable','collarFilter',this.value)">
+      <select class="form-select" style="width:150px;" onchange="TBL.filter('tniTable','collar',this.value)">
         <option value="">All Collar</option>
-        <option value="blue">Blue Collar</option>
-        <option value="white">White Collar</option>
+        <option value="Blue Collared">Blue Collar</option>
+        <option value="White Collared">White Collar</option>
+      </select>
+      <select id="tniDeptFilter" class="form-select" style="width:170px;" onchange="TBL.filter('tniTable','dept',this.value)">
+        <option value="">All Departments</option>
+      </select>
+      <select class="form-select" style="width:170px;" onchange="TBL.filter('tniTable','type',this.value)">
+        <option value="">All Types</option>
+        <option>Behavioural/Leadership</option>
+        <option>Cane</option>
+        <option>Commercial</option>
+        <option>EHS/HR</option>
+        <option>IT</option>
+        <option>Technical</option>
+      </select>
+      <select class="form-select" style="width:130px;" onchange="TBL.filter('tniTable','mode',this.value)">
+        <option value="">All Modes</option>
+        <option>Classroom</option>
+        <option>OJT</option>
+        <option>SOP</option>
+        <option>Online</option>
+      </select>
+      <select class="form-select" style="width:140px;" onchange="TBL.filter('tniTable','month',this.value)">
+        <option value="">All Months</option>
+        <option>April</option><option>May</option><option>June</option>
+        <option>July</option><option>August</option><option>September</option>
+        <option>October</option><option>November</option><option>December</option>
+        <option>January</option><option>February</option><option>March</option>
+      </select>
+      <select class="form-select" style="width:130px;" onchange="TBL.filter('tniTable','completed',this.value)">
+        <option value="">All Status</option>
+        <option value="Yes">Completed</option>
+        <option value="Pending">Pending</option>
       </select>
     </div>
   </div>
@@ -131,7 +162,7 @@
         </thead>
         <tbody>
           {% for rec in records %}
-          <tr>
+          <tr data-collar="{{ rec.collar or '' }}" data-dept="{{ rec.department or '' }}" data-type="{{ rec.prog_type or '' }}" data-mode="{{ rec.mode or '' }}" data-month="{{ rec.target_month or '' }}" data-completed="{{ 'Yes' if completed_map[rec.id] == 'Yes' else 'Pending' }}">
             <td>{{ loop.index }}</td>
             <td>
               <strong>{{ rec.name or rec.emp_code }}</strong><br>
@@ -176,5 +207,6 @@
 {% block scripts %}
 <script>
 TBL.init('tniTable', 30);
+TBL.buildDynamic('tniTable', 'dept', document.getElementById('tniDeptFilter'));
 </script>
 {% endblock %}

@@ -116,9 +116,26 @@
     <span><i class="bi bi-journal-text"></i> Programme Records — <strong>{{ records|length }}</strong> entries</span>
   </div>
   <div class="card-body pb-2 pt-3">
-    <div class="position-relative" style="max-width:400px;">
-      <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
-      <input type="text" class="form-control" placeholder="Search session, programme, faculty..." style="padding-left:34px;" oninput="TBL.search('prog2cTable',this.value)">
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="position-relative flex-grow-1" style="max-width:300px;">
+        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
+        <input type="text" class="form-control" placeholder="Search session, programme, faculty..." style="padding-left:34px;" oninput="TBL.search('prog2cTable',this.value)">
+      </div>
+      <select class="form-select" style="width:170px;" onchange="TBL.filter('prog2cTable','type',this.value)">
+        <option value="">All Types</option>
+        <option>Behavioural/Leadership</option>
+        <option>Cane</option>
+        <option>Commercial</option>
+        <option>EHS/HR</option>
+        <option>IT</option>
+        <option>Technical</option>
+      </select>
+      <select class="form-select" style="width:140px;" onchange="TBL.filter('prog2cTable','intext',this.value)">
+        <option value="">Internal / External</option>
+        <option value="Internal">Internal</option>
+        <option value="External">External</option>
+        <option value="Online">Online</option>
+      </select>
     </div>
   </div>
   <div class="card-body p-0">
@@ -133,7 +150,7 @@
         </thead>
         <tbody>
           {% for rec in records %}
-          <tr>
+          <tr data-type="{{ rec.prog_type or '' }}" data-intext="{{ rec.int_ext or '' }}">
             <td>{{ loop.index }}</td>
             <td><code style="font-size:11px;">{{ rec.session_code }}</code></td>
             <td><strong>{{ rec.programme_name or '—' }}</strong></td>
