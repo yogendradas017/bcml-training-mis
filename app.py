@@ -207,7 +207,7 @@ def employees():
     else:
         emps = db.execute('SELECT * FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name', (plant_id,)).fetchall()
     return render_template('employees.html', employees=emps, show_exited=show_exited,
-                           genders=GENDERS)
+                           genders=GENDERS, today=str(date.today()))
 
 @app.route('/employees/add', methods=['POST'])
 @spoc_required
@@ -269,13 +269,16 @@ def tni():
         ORDER BY t.id DESC
     ''', (plant_id,)).fetchall()
 
-    # Mark completed where a matching 2A record exists
-    completed_map = {}
-    for r in records:
-        exists = db.execute('''SELECT 1 FROM emp_training
-            WHERE plant_id=? AND emp_code=? AND programme_name=?''',
-            (plant_id, r['emp_code'], r['programme_name'])).fetchone()
-        completed_map[r['id']] = 'Yes' if exists else 'No'
+    # Mark completed — single query instead of N queries
+    done_set = set(
+        (row['emp_code'], row['programme_name'])
+        for row in db.execute(
+            'SELECT DISTINCT emp_code, programme_name FROM emp_training WHERE plant_id=?', (plant_id,))
+    )
+    completed_map = {
+        r['id']: ('Yes' if (r['emp_code'], r['programme_name']) in done_set else 'No')
+        for r in records
+    }
 
     emps = db.execute('SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name', (plant_id,)).fetchall()
     programmes = _get_programme_names(plant_id, db)
@@ -1142,7 +1145,7 @@ def api_employee(emp_code):
         'category': emp['category'], 'gender': emp['gender']
     })
 
-@app.route('/api/session/<session_code>')
+@app.route('/api/session/<path:session_code>')
 @login_required
 def api_session(session_code):
     plant_id = session.get('plant_id')
@@ -1265,11 +1268,13 @@ def _calc_summary(plant_id, month_filter, db):
         wc_hrs = db.execute(f'''SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', params_wc).fetchone()[0]
+        # Internal/External counts from 2C — filter by month derived from start_date
+        month_clause_2c = "AND strftime('%m', p.start_date) = strftime('%m', '2000-' || ? || '-01')" if month_filter else ""
         int_prog = db.execute(f'''SELECT COUNT(DISTINCT p.session_code) FROM programme_details p
-            WHERE p.plant_id=? AND p.prog_type=? AND p.int_ext='Internal' {clause.replace('t.month','p.created_at')}''',
+            WHERE p.plant_id=? AND p.prog_type=? AND p.int_ext='Internal' {month_clause_2c}''',
             [plant_id, pt] + ([month_filter] if month_filter else [])).fetchone()[0]
         ext_prog = db.execute(f'''SELECT COUNT(DISTINCT p.session_code) FROM programme_details p
-            WHERE p.plant_id=? AND p.prog_type=? AND p.int_ext='External' {clause.replace('t.month','p.created_at')}''',
+            WHERE p.plant_id=? AND p.prog_type=? AND p.int_ext='External' {month_clause_2c}''',
             [plant_id, pt] + ([month_filter] if month_filter else [])).fetchone()[0]
         rows.append({
             'prog_type': pt,
