@@ -119,17 +119,46 @@
     </div>
   </div>
   <div class="card-body pb-2 pt-3">
-    <div class="d-flex gap-2 align-items-center">
-      <div class="position-relative flex-grow-1" style="max-width:400px;">
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="position-relative flex-grow-1" style="max-width:280px;">
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
-        <input type="text" id="calSearch" class="form-control" placeholder="Search session, programme, type, month, trainer..." style="padding-left:34px;" oninput="TBL.search('calTable',this.value)">
+        <input type="text" class="form-control" placeholder="Search session, programme, trainer..." style="padding-left:34px;" oninput="TBL.search('calTable',this.value)">
       </div>
-      <select id="calStatusFilter" class="form-select" style="width:160px;" onchange="TBL.filter('calTable','statusFilter',this.value)">
+      <select class="form-select" style="width:155px;" onchange="TBL.filter('calTable','status',this.value)">
         <option value="">All Status</option>
         <option>To Be Planned</option>
         <option>Conducted</option>
         <option>Re-Scheduled</option>
         <option>Cancelled</option>
+      </select>
+      <select class="form-select" style="width:170px;" onchange="TBL.filter('calTable','type',this.value)">
+        <option value="">All Types</option>
+        <option>Behavioural/Leadership</option>
+        <option>Cane</option>
+        <option>Commercial</option>
+        <option>EHS/HR</option>
+        <option>IT</option>
+        <option>Technical</option>
+      </select>
+      <select class="form-select" style="width:130px;" onchange="TBL.filter('calTable','mode',this.value)">
+        <option value="">All Modes</option>
+        <option>Classroom</option>
+        <option>OJT</option>
+        <option>SOP</option>
+        <option>Online</option>
+      </select>
+      <select class="form-select" style="width:140px;" onchange="TBL.filter('calTable','month',this.value)">
+        <option value="">All Months</option>
+        <option>April</option><option>May</option><option>June</option>
+        <option>July</option><option>August</option><option>September</option>
+        <option>October</option><option>November</option><option>December</option>
+        <option>January</option><option>February</option><option>March</option>
+      </select>
+      <select class="form-select" style="width:145px;" onchange="TBL.filter('calTable','audience',this.value)">
+        <option value="">All Audience</option>
+        <option>Blue Collared</option>
+        <option>White Collared</option>
+        <option>Common</option>
       </select>
     </div>
   </div>
@@ -146,7 +175,7 @@
         </thead>
         <tbody>
           {% for s in sessions %}
-          <tr data-status="{{ s.status }}">
+          <tr data-status="{{ s.status }}" data-type="{{ s.prog_type or '' }}" data-mode="{{ s.mode or '' }}" data-month="{{ s.planned_month or '' }}" data-audience="{{ s.target_audience or '' }}">
             <td>{{ loop.index }}</td>
             <td><code style="font-size:11px;">{{ s.session_code }}</code><br>
                 <small class="text-muted">{{ s.prog_code }}</small></td>
