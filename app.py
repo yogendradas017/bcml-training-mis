@@ -307,6 +307,8 @@ def delete_tni(tni_id):
     db = get_db()
     db.execute('DELETE FROM tni WHERE id=? AND plant_id=?', (tni_id, session['plant_id']))
     db.commit()
+    if _is_ajax():
+        return '', 204
     flash('TNI entry deleted.', 'warning')
     return redirect(url_for('tni'))
 
@@ -459,6 +461,8 @@ def delete_calendar(cal_id):
     db = get_db()
     db.execute('DELETE FROM calendar WHERE id=? AND plant_id=?', (cal_id, session['plant_id']))
     db.commit()
+    if _is_ajax():
+        return '', 204
     flash('Calendar entry deleted.', 'warning')
     return redirect(url_for('training_calendar'))
 
@@ -545,6 +549,8 @@ def delete_emp_training(rec_id):
     db = get_db()
     db.execute('DELETE FROM emp_training WHERE id=? AND plant_id=?', (rec_id, session['plant_id']))
     db.commit()
+    if _is_ajax():
+        return '', 204
     flash('Training record deleted.', 'warning')
     return redirect(url_for('emp_training'))
 
@@ -743,6 +749,8 @@ def delete_programme(rec_id):
         db.execute("UPDATE calendar SET status='To Be Planned', actual_date=NULL WHERE session_code=? AND plant_id=?",
                    (rec['session_code'], session['plant_id']))
         db.commit()
+    if _is_ajax():
+        return '', 204
     flash('Programme record deleted.', 'warning')
     return redirect(url_for('programme_details'))
 
@@ -1232,6 +1240,9 @@ def api_employees_list():
     return jsonify([{'code': e['emp_code'], 'name': e['name']} for e in emps])
 
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+def _is_ajax():
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
 def _read_upload_file(file_storage):
     import pandas as pd

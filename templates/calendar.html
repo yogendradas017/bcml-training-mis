@@ -200,7 +200,8 @@
             </td>
             <td>
               <form method="POST" action="{{ url_for('delete_calendar', cal_id=s.id) }}" style="display:inline;">
-                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete session {{ s.session_code }}?')">
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        onclick="ajaxDelete(this,'Delete session {{ s.session_code }}?')">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>

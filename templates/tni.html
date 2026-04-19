@@ -193,8 +193,8 @@
             </td>
             <td>
               <form method="POST" action="{{ url_for('delete_tni', tni_id=rec.id) }}" style="display:inline;">
-                <button type="submit" class="btn btn-sm btn-outline-danger"
-                        onclick="return confirm('Delete this TNI entry?')">
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        onclick="ajaxDelete(this,'Delete this TNI entry?')">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>

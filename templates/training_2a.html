@@ -188,8 +188,8 @@
             <td>{{ rec.month or '—' }}</td>
             <td>
               <form method="POST" action="{{ url_for('delete_emp_training', rec_id=rec.id) }}" style="display:inline;">
-                <button type="submit" class="btn btn-sm btn-outline-danger"
-                        onclick="return confirm('Delete this training record?')">
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        onclick="ajaxDelete(this,'Delete this training record?')">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
