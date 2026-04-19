@@ -310,6 +310,19 @@ def delete_tni(tni_id):
     flash('TNI entry deleted.', 'warning')
     return redirect(url_for('tni'))
 
+@app.route('/tni/bulk-delete', methods=['POST'])
+@spoc_required
+def tni_bulk_delete():
+    plant_id = session['plant_id']
+    ids = request.form.getlist('ids[]')
+    if ids:
+        ph = ','.join('?' * len(ids))
+        db = get_db()
+        db.execute(f'DELETE FROM tni WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
+        db.commit()
+        flash(f'{len(ids)} TNI entries deleted.', 'warning')
+    return redirect(url_for('tni'))
+
 @app.route('/tni/template')
 @spoc_required
 def tni_template():
@@ -449,6 +462,19 @@ def delete_calendar(cal_id):
     flash('Calendar entry deleted.', 'warning')
     return redirect(url_for('training_calendar'))
 
+@app.route('/calendar/bulk-delete', methods=['POST'])
+@spoc_required
+def calendar_bulk_delete():
+    plant_id = session['plant_id']
+    ids = request.form.getlist('ids[]')
+    if ids:
+        ph = ','.join('?' * len(ids))
+        db = get_db()
+        db.execute(f'DELETE FROM calendar WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
+        db.commit()
+        flash(f'{len(ids)} calendar sessions deleted.', 'warning')
+    return redirect(url_for('training_calendar'))
+
 # ─── EMPLOYEE TRAINING (2A) ───────────────────────────────────────────────────
 
 @app.route('/training')
@@ -520,6 +546,19 @@ def delete_emp_training(rec_id):
     db.execute('DELETE FROM emp_training WHERE id=? AND plant_id=?', (rec_id, session['plant_id']))
     db.commit()
     flash('Training record deleted.', 'warning')
+    return redirect(url_for('emp_training'))
+
+@app.route('/training/bulk-delete', methods=['POST'])
+@spoc_required
+def training_bulk_delete():
+    plant_id = session['plant_id']
+    ids = request.form.getlist('ids[]')
+    if ids:
+        ph = ','.join('?' * len(ids))
+        db = get_db()
+        db.execute(f'DELETE FROM emp_training WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
+        db.commit()
+        flash(f'{len(ids)} training records deleted.', 'warning')
     return redirect(url_for('emp_training'))
 
 @app.route('/training/template')
@@ -705,6 +744,24 @@ def delete_programme(rec_id):
                    (rec['session_code'], session['plant_id']))
         db.commit()
     flash('Programme record deleted.', 'warning')
+    return redirect(url_for('programme_details'))
+
+@app.route('/programme/bulk-delete', methods=['POST'])
+@spoc_required
+def programme_bulk_delete():
+    plant_id = session['plant_id']
+    ids = request.form.getlist('ids[]')
+    if ids:
+        ph = ','.join('?' * len(ids))
+        db = get_db()
+        recs = db.execute(f'SELECT session_code FROM programme_details WHERE id IN ({ph}) AND plant_id=?',
+                          ids + [plant_id]).fetchall()
+        for r in recs:
+            db.execute("UPDATE calendar SET status='To Be Planned', actual_date=NULL WHERE session_code=? AND plant_id=?",
+                       (r['session_code'], plant_id))
+        db.execute(f'DELETE FROM programme_details WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
+        db.commit()
+        flash(f'{len(ids)} programme records deleted.', 'warning')
     return redirect(url_for('programme_details'))
 
 # ─── MONTHLY SUMMARY ──────────────────────────────────────────────────────────

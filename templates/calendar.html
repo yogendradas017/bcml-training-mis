@@ -167,6 +167,7 @@
       <table class="table table-hover mb-0" id="calTable" style="font-size:13px;">
         <thead>
           <tr>
+            <th><input type="checkbox" class="cb-all"></th>
             <th>#</th><th>Session Code</th><th>Programme Name</th><th>Type</th>
             <th>Month</th><th>Plan Start</th><th>Duration</th><th>Mode</th>
             <th>Audience</th><th>Pax</th><th>TNI Demand</th>
@@ -176,6 +177,7 @@
         <tbody>
           {% for s in sessions %}
           <tr data-status="{{ s.status }}" data-type="{{ s.prog_type or '' }}" data-mode="{{ s.mode or '' }}" data-month="{{ s.planned_month or '' }}" data-audience="{{ s.target_audience or '' }}">
+            <td><input type="checkbox" class="cb-row" value="{{ s.id }}"></td>
             <td>{{ loop.index }}</td>
             <td><code style="font-size:11px;">{{ s.session_code }}</code><br>
                 <small class="text-muted">{{ s.prog_code }}</small></td>
@@ -205,7 +207,7 @@
             </td>
           </tr>
           {% else %}
-          <tr data-empty="1"><td colspan="14" class="text-center text-muted py-4">No sessions planned yet.</td></tr>
+          <tr data-empty="1"><td colspan="15" class="text-center text-muted py-4">No sessions planned yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -216,5 +218,6 @@
 {% block scripts %}
 <script>
 TBL.init('calTable', 30);
+BulkSelect.init('calTable', '{{ url_for("calendar_bulk_delete") }}');
 </script>
 {% endblock %}

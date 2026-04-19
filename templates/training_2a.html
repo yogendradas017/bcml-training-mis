@@ -157,6 +157,7 @@
       <table class="table table-hover mb-0" id="training2aTable" style="font-size:13px;">
         <thead>
           <tr>
+            <th><input type="checkbox" class="cb-all"></th>
             <th>#</th><th>Employee</th><th>Collar</th><th>Session</th>
             <th>Programme</th><th>Type</th><th>Start Date</th>
             <th>Hrs</th><th>Pre</th><th>Post</th><th>Venue</th><th>Month</th><th>Action</th>
@@ -165,6 +166,7 @@
         <tbody>
           {% for rec in records %}
           <tr data-collar="{{ rec.collar or '' }}" data-type="{{ rec.prog_type or '' }}" data-month="{{ rec.month or '' }}">
+            <td><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
             <td>{{ loop.index }}</td>
             <td>
               <strong>{{ rec.emp_name or rec.emp_code }}</strong><br>
@@ -194,7 +196,7 @@
             </td>
           </tr>
           {% else %}
-          <tr data-empty="1"><td colspan="13" class="text-center text-muted py-4">No training records yet. Add above.</td></tr>
+          <tr data-empty="1"><td colspan="14" class="text-center text-muted py-4">No training records yet. Add above.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -205,6 +207,7 @@
 {% block scripts %}
 <script>
 TBL.init('training2aTable', 30);
+BulkSelect.init('training2aTable', '{{ url_for("training_bulk_delete") }}');
 
 // Searchable session code dropdown
 new TomSelect('#tr_session_code', {
