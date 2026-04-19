@@ -1058,6 +1058,46 @@ const TBL = {
 
 <script>
 /* ═══════════════════════════════════════════════════
+   AJAX ROW DELETE
+═══════════════════════════════════════════════════ */
+function ajaxDelete(btn, confirmMsg) {
+  if (!confirm(confirmMsg || 'Delete this record? This cannot be undone.')) return;
+  const form = btn.closest('form');
+  const row  = btn.closest('tr');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;border-width:2px;"></span>';
+  fetch(form.action, {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  }).then(r => {
+    if (r.status === 204 || r.ok) {
+      row.style.transition = 'opacity .18s ease, transform .18s ease';
+      row.style.opacity = '0';
+      row.style.transform = 'translateX(16px)';
+      setTimeout(() => row.remove(), 200);
+      showToast('Deleted successfully.', 'warning');
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-trash"></i>';
+      showToast('Delete failed. Please try again.', 'danger');
+    }
+  }).catch(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-trash"></i>';
+    showToast('Network error.', 'danger');
+  });
+}
+
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.className = `alert alert-${type}`;
+  t.style.cssText = 'position:fixed;top:76px;right:20px;z-index:9999;min-width:220px;max-width:340px;animation:fadeUp .2s ease both;box-shadow:0 8px 24px rgba(0,0,0,.15);';
+  t.innerHTML = `<i class="bi bi-${type==='warning'?'check-circle-fill':'exclamation-triangle-fill'}"></i> ${msg}`;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 320); }, 2400);
+}
+
+/* ═══════════════════════════════════════════════════
    BULK SELECT UTILITY
 ═══════════════════════════════════════════════════ */
 const BulkSelect = {

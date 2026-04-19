@@ -171,7 +171,8 @@
             <td><strong>{{ "%.1f"|format(rec.man_hours or 0) }}</strong></td>
             <td>
               <form method="POST" action="{{ url_for('delete_programme', rec_id=rec.id) }}" style="display:inline;">
-                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete programme record for {{ rec.session_code }}?')">
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        onclick="ajaxDelete(this,'Delete programme record for {{ rec.session_code }}?')">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
