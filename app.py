@@ -476,12 +476,11 @@ def tni_bulk_upload():
                    (plant_id, emp_code, prog_name, prog_type, mode, month, hours))
         inserted += 1
     db.commit()
-    if inserted:
-        flash(f'Bulk upload complete: {inserted} TNI entries added successfully.', 'success')
     if errors:
-        for err in errors:
-            flash(err, 'upload_error')
-        flash(f'{len(errors)} row(s) had errors — see details below.', 'warning')
+        if inserted:
+            flash(f'Bulk upload complete: {inserted} TNI entries added. {len(errors)} rows had errors — downloading error report.', 'warning')
+        return _error_excel_response(errors, inserted, 'TNI_Upload_Errors.xlsx')
+    flash(f'Bulk upload complete: {inserted} TNI entries added successfully.', 'success')
     return redirect(url_for('tni'))
 
 # ─── TRAINING CALENDAR ────────────────────────────────────────────────────────
@@ -740,12 +739,11 @@ def training_bulk_upload():
              pre_r, post_r, venue, month))
         inserted += 1
     db.commit()
-    if inserted:
-        flash(f'Bulk upload complete: {inserted} training records added successfully.', 'success')
     if errors:
-        for err in errors:
-            flash(err, 'upload_error')
-        flash(f'{len(errors)} row(s) had errors — see details below.', 'warning')
+        if inserted:
+            flash(f'Bulk upload complete: {inserted} records added. {len(errors)} rows had errors — downloading error report.', 'warning')
+        return _error_excel_response(errors, inserted, 'Training2A_Upload_Errors.xlsx')
+    flash(f'Bulk upload complete: {inserted} training records added successfully.', 'success')
     return redirect(url_for('emp_training'))
 
 # ─── PROGRAMME DETAILS (2C) ───────────────────────────────────────────────────
@@ -1176,11 +1174,11 @@ def calendar_bulk_upload():
              month, plan_start, plan_end, duration, level, mode, audience, pax, trainer))
         inserted += 1
     db.commit()
-    if inserted:
-        flash(f'Bulk upload complete: {inserted} sessions added to calendar.', 'success')
     if errors:
-        for err in errors: flash(err, 'upload_error')
-        flash(f'{len(errors)} row(s) had errors — see details below.', 'warning')
+        if inserted:
+            flash(f'Bulk upload complete: {inserted} sessions added. {len(errors)} rows had errors — downloading error report.', 'warning')
+        return _error_excel_response(errors, inserted, 'Calendar_Upload_Errors.xlsx')
+    flash(f'Bulk upload complete: {inserted} sessions added to calendar.', 'success')
     return redirect(url_for('training_calendar'))
 
 @app.route('/programme/template')
@@ -1262,11 +1260,11 @@ def programme_bulk_upload():
                    (start_date, sc, plant_id))
         inserted += 1
     db.commit()
-    if inserted:
-        flash(f'Bulk upload complete: {inserted} programme records saved.', 'success')
     if errors:
-        for err in errors: flash(err, 'upload_error')
-        flash(f'{len(errors)} row(s) had errors — see details below.', 'warning')
+        if inserted:
+            flash(f'Bulk upload complete: {inserted} programme records saved. {len(errors)} rows had errors — downloading error report.', 'warning')
+        return _error_excel_response(errors, inserted, 'Programme2C_Upload_Errors.xlsx')
+    flash(f'Bulk upload complete: {inserted} programme records saved.', 'success')
     return redirect(url_for('programme_details'))
 
 # ─── API (AJAX auto-fill) ─────────────────────────────────────────────────────
@@ -1352,6 +1350,57 @@ def _safe_float(val):
         return float(val) if val and str(val).strip() != '' else None
     except (ValueError, TypeError):
         return None
+
+def _error_excel_response(errors, inserted, download_name='Upload_Errors.xlsx'):
+    """Return an Excel file response listing failed rows with reasons."""
+    wb  = openpyxl.Workbook()
+    ws  = wb.active
+    ws.title = 'Failed Rows'
+    # summary row
+    ws.append([f'{inserted} rows imported successfully. {len(errors)} rows failed — details below.'])
+    ws['A1'].font = Font(bold=True, size=12)
+    ws.merge_cells('A1:C1')
+    ws.append([])
+    # header
+    hdr = ['Row #', 'Error Reason', 'Tip']
+    ws.append(hdr)
+    for c, h in enumerate(hdr, 1):
+        cell = ws.cell(row=3, column=c)
+        cell.font      = Font(bold=True, color='FFFFFF')
+        cell.fill      = PatternFill('solid', fgColor='C0392B')
+        cell.alignment = Alignment(horizontal='center')
+    # error rows
+    for err in errors:
+        # parse "Row N: message"
+        parts = err.split(':', 1)
+        row_ref = parts[0].strip() if len(parts) == 2 else ''
+        reason  = parts[1].strip() if len(parts) == 2 else err
+        # generate tip
+        tip = ''
+        rl  = reason.lower()
+        if 'not found in your plant'   in rl: tip = 'Check employee code is registered under this plant in Employee Master'
+        elif 'required'                in rl: tip = 'This column must not be empty'
+        elif 'month'                   in rl: tip = 'Use: April / May / June / July / August / September / October / November / December / January / February / March'
+        elif 'type' in rl or 'prog'    in rl: tip = 'Use: Behavioural/Leadership | Cane | Commercial | EHS/HR | IT | Technical'
+        elif 'mode'                    in rl: tip = 'Use: Classroom | OJT | SOP | Online'
+        elif 'date'                    in rl: tip = 'Use format YYYY-MM-DD'
+        elif 'hours' in rl or 'hrs'    in rl: tip = 'Must be a number e.g. 4 or 2.5'
+        elif 'session'                 in rl: tip = 'Session Code must already exist in Training Calendar'
+        elif 'employee'                in rl: tip = 'Employee Code must exist in Employee Master for this plant'
+        ws.append([row_ref, reason, tip])
+    # column widths
+    ws.column_dimensions['A'].width = 10
+    ws.column_dimensions['B'].width = 55
+    ws.column_dimensions['C'].width = 65
+    # zebra stripes
+    for row in ws.iter_rows(min_row=4):
+        if row[0].row % 2 == 0:
+            for cell in row:
+                cell.fill = PatternFill('solid', fgColor='FFF5F5')
+    out = io.BytesIO()
+    wb.save(out); out.seek(0)
+    return send_file(out, download_name=download_name, as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 def _date_to_month(date_str):
     if not date_str:
