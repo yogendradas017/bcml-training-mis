@@ -261,30 +261,91 @@ def reactivate_employee(emp_id):
 def tni():
     plant_id = session['plant_id']
     db = get_db()
-    records = db.execute('''
-        SELECT t.*, e.name, e.designation, e.grade, e.collar, e.department, e.section
-        FROM tni t
-        LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-        WHERE t.plant_id=?
-        ORDER BY t.id DESC
-    ''', (plant_id,)).fetchall()
-
-    # Mark completed — single query instead of N queries
-    done_set = set(
-        (row['emp_code'], row['programme_name'])
-        for row in db.execute(
-            'SELECT DISTINCT emp_code, programme_name FROM emp_training WHERE plant_id=?', (plant_id,))
-    )
-    completed_map = {
-        r['id']: ('Yes' if (r['emp_code'], r['programme_name']) in done_set else 'No')
-        for r in records
-    }
-
+    total = db.execute('SELECT COUNT(*) FROM tni WHERE plant_id=?', (plant_id,)).fetchone()[0]
     emps = db.execute('SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name', (plant_id,)).fetchall()
     programmes = _get_programme_names(plant_id, db)
-    return render_template('tni.html', records=records, completed_map=completed_map,
+    depts = [r[0] for r in db.execute(
+        'SELECT DISTINCT department FROM employees WHERE plant_id=? AND department IS NOT NULL AND department != "" ORDER BY department',
+        (plant_id,)).fetchall()]
+    return render_template('tni.html', total=total,
                            employees=emps, programmes=programmes,
-                           prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY)
+                           prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY,
+                           departments=depts)
+
+def _tni_filters(plant_id):
+    """Build WHERE clause + params from current request args for TNI queries."""
+    q         = request.args.get('q', '').strip()
+    collar    = request.args.get('collar', '')
+    dept      = request.args.get('dept', '')
+    ptype     = request.args.get('type', '')
+    mode      = request.args.get('mode', '')
+    month     = request.args.get('month', '')
+    completed = request.args.get('completed', '')
+
+    where  = ['t.plant_id=?']
+    params = [plant_id]
+    if collar: where.append('e.collar=?');          params.append(collar)
+    if dept:   where.append('e.department=?');       params.append(dept)
+    if ptype:  where.append('t.prog_type=?');        params.append(ptype)
+    if mode:   where.append('t.mode=?');             params.append(mode)
+    if month:  where.append('t.target_month=?');     params.append(month)
+    if q:
+        where.append('(COALESCE(e.name,"") LIKE ? OR t.emp_code LIKE ? OR t.programme_name LIKE ?)')
+        like = f'%{q}%'; params += [like, like, like]
+    if completed == 'Yes':
+        where.append('et.emp_code IS NOT NULL')
+    elif completed == 'Pending':
+        where.append('et.emp_code IS NULL')
+    return ' AND '.join(where), params
+
+@app.route('/tni/data')
+@spoc_required
+def tni_data():
+    plant_id = session['plant_id']
+    db       = get_db()
+    page     = max(1, int(request.args.get('page', 1)))
+    per_page = 30
+
+    where_clause, params = _tni_filters(plant_id)
+
+    join_sql = f'''
+        FROM tni t
+        LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+        LEFT JOIN (SELECT DISTINCT emp_code, programme_name
+                   FROM emp_training WHERE plant_id=?) et
+               ON et.emp_code=t.emp_code AND et.programme_name=t.programme_name
+        WHERE {where_clause}
+    '''
+    # total count — fast SQL COUNT
+    total = db.execute(f'SELECT COUNT(*) {join_sql}', [plant_id] + params).fetchone()[0]
+
+    offset = (page - 1) * per_page
+    rows_raw = db.execute(
+        f'''SELECT t.id, t.emp_code, t.programme_name, t.prog_type, t.mode,
+                   t.target_month, t.planned_hours,
+                   e.name, e.collar, e.department,
+                   CASE WHEN et.emp_code IS NOT NULL THEN 'Yes' ELSE 'Pending' END AS completed
+            {join_sql}
+            ORDER BY t.id DESC LIMIT ? OFFSET ?''',
+        [plant_id] + params + [per_page, offset]
+    ).fetchall()
+
+    rows = [{
+        'id':             r['id'],
+        'emp_code':       r['emp_code'],
+        'name':           r['name'] or r['emp_code'],
+        'collar':         r['collar'] or '',
+        'department':     r['department'] or '',
+        'programme_name': r['programme_name'],
+        'prog_type':      r['prog_type'] or '',
+        'mode':           r['mode'] or '',
+        'target_month':   r['target_month'] or '',
+        'planned_hours':  r['planned_hours'],
+        'completed':      r['completed'],
+        'delete_url':     url_for('delete_tni', tni_id=r['id']),
+    } for r in rows_raw]
+
+    return jsonify({'total': total, 'page': page, 'per_page': per_page, 'rows': rows})
 
 @app.route('/tni/add', methods=['POST'])
 @spoc_required
@@ -316,13 +377,31 @@ def delete_tni(tni_id):
 @spoc_required
 def tni_bulk_delete():
     plant_id = session['plant_id']
-    ids = request.form.getlist('ids[]')
-    if ids:
-        ph = ','.join('?' * len(ids))
-        db = get_db()
-        db.execute(f'DELETE FROM tni WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
-        db.commit()
-        flash(f'{len(ids)} TNI entries deleted.', 'warning')
+    db = get_db()
+    if request.form.get('select_all') == '1':
+        # delete all records matching current filters
+        where_clause, params = _tni_filters(plant_id)
+        join_sql = f'''
+            FROM tni t
+            LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+            LEFT JOIN (SELECT DISTINCT emp_code, programme_name
+                       FROM emp_training WHERE plant_id=?) et
+                   ON et.emp_code=t.emp_code AND et.programme_name=t.programme_name
+            WHERE {where_clause}
+        '''
+        ids_to_del = [r[0] for r in db.execute(f'SELECT t.id {join_sql}', [plant_id] + params).fetchall()]
+        if ids_to_del:
+            ph = ','.join('?' * len(ids_to_del))
+            db.execute(f'DELETE FROM tni WHERE id IN ({ph}) AND plant_id=?', ids_to_del + [plant_id])
+            db.commit()
+            flash(f'{len(ids_to_del)} TNI entries deleted.', 'warning')
+    else:
+        ids = request.form.getlist('ids[]')
+        if ids:
+            ph = ','.join('?' * len(ids))
+            db.execute(f'DELETE FROM tni WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
+            db.commit()
+            flash(f'{len(ids)} TNI entries deleted.', 'warning')
     return redirect(url_for('tni'))
 
 @app.route('/tni/template')
