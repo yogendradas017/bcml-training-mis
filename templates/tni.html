@@ -103,27 +103,27 @@
 <!-- TNI Records -->
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
-    <span><i class="bi bi-clipboard-data"></i> TNI Records — <strong>{{ records|length }}</strong> entries</span>
+    <span><i class="bi bi-clipboard-data"></i> TNI Records — <strong id="tni-total">{{ total }}</strong> entries</span>
     <div class="d-flex gap-2 align-items-center">
-      <span class="badge" style="background:#d1fae5;color:#065f46;">{{ records|selectattr('id','in', completed_map.keys())|list|length }} tracked</span>
-      <span class="badge" style="background:rgba(239,68,68,.2);color:#fca5a5;font-size:11px;cursor:pointer;" onclick="BulkSelect.clear()" id="tni-sel-hint" style="display:none">Select rows to bulk delete</span>
+      <span class="badge" style="background:#d1fae5;color:#065f46;" id="tni-showing">Loading...</span>
     </div>
   </div>
   <div class="card-body pb-2 pt-3">
     <div class="d-flex gap-2 flex-wrap">
       <div class="position-relative flex-grow-1" style="max-width:280px;">
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
-        <input type="text" class="form-control" placeholder="Search name, code, programme..." style="padding-left:34px;" oninput="TBL.search('tniTable',this.value)">
+        <input type="text" id="tni-q" class="form-control" placeholder="Search name, code, programme..." style="padding-left:34px;">
       </div>
-      <select class="form-select" style="width:150px;" onchange="TBL.filter('tniTable','collar',this.value)">
+      <select id="tni-collar" class="form-select" style="width:150px;">
         <option value="">All Collar</option>
         <option value="Blue Collared">Blue Collar</option>
         <option value="White Collared">White Collar</option>
       </select>
-      <select id="tniDeptFilter" class="form-select" style="width:170px;" onchange="TBL.filter('tniTable','dept',this.value)">
+      <select id="tni-dept" class="form-select" style="width:170px;">
         <option value="">All Departments</option>
+        {% for d in departments %}<option>{{ d }}</option>{% endfor %}
       </select>
-      <select class="form-select" style="width:170px;" onchange="TBL.filter('tniTable','type',this.value)">
+      <select id="tni-type" class="form-select" style="width:170px;">
         <option value="">All Types</option>
         <option>Behavioural/Leadership</option>
         <option>Cane</option>
@@ -132,21 +132,21 @@
         <option>IT</option>
         <option>Technical</option>
       </select>
-      <select class="form-select" style="width:130px;" onchange="TBL.filter('tniTable','mode',this.value)">
+      <select id="tni-mode" class="form-select" style="width:130px;">
         <option value="">All Modes</option>
         <option>Classroom</option>
         <option>OJT</option>
         <option>SOP</option>
         <option>Online</option>
       </select>
-      <select class="form-select" style="width:140px;" onchange="TBL.filter('tniTable','month',this.value)">
+      <select id="tni-month" class="form-select" style="width:140px;">
         <option value="">All Months</option>
         <option>April</option><option>May</option><option>June</option>
         <option>July</option><option>August</option><option>September</option>
         <option>October</option><option>November</option><option>December</option>
         <option>January</option><option>February</option><option>March</option>
       </select>
-      <select class="form-select" style="width:130px;" onchange="TBL.filter('tniTable','completed',this.value)">
+      <select id="tni-completed" class="form-select" style="width:130px;">
         <option value="">All Status</option>
         <option value="Yes">Completed</option>
         <option value="Pending">Pending</option>
@@ -155,64 +155,239 @@
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0" id="tniTable">
+      <table class="table table-hover mb-0" id="tniTable" style="font-size:13px;">
         <thead>
           <tr>
-            <th><input type="checkbox" class="cb-all"></th>
+            <th><input type="checkbox" id="tni-cb-all" class="cb-all"></th>
             <th>#</th><th>Employee</th><th>Collar</th><th>Department</th>
             <th>Programme Name</th><th>Type</th><th>Mode</th>
             <th>Target Month</th><th>Hrs</th><th>Completed?</th><th>Action</th>
           </tr>
         </thead>
-        <tbody>
-          {% for rec in records %}
-          <tr data-collar="{{ rec.collar or '' }}" data-dept="{{ rec.department or '' }}" data-type="{{ rec.prog_type or '' }}" data-mode="{{ rec.mode or '' }}" data-month="{{ rec.target_month or '' }}" data-completed="{{ 'Yes' if completed_map[rec.id] == 'Yes' else 'Pending' }}">
-            <td><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
-            <td>{{ loop.index }}</td>
-            <td>
-              <strong>{{ rec.name or rec.emp_code }}</strong><br>
-              <small class="text-muted">{{ rec.emp_code }}</small>
-            </td>
-            <td>
-              {% if rec.collar == 'Blue Collared' %}<span class="badge badge-bc">Blue</span>
-              {% elif rec.collar == 'White Collared' %}<span class="badge badge-wc">White</span>
-              {% else %}<span class="badge bg-secondary">—</span>{% endif %}
-            </td>
-            <td style="font-size:13px;">{{ rec.department or '—' }}</td>
-            <td><strong>{{ rec.programme_name }}</strong></td>
-            <td><span class="badge bg-secondary" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
-            <td style="font-size:13px;">{{ rec.mode or '—' }}</td>
-            <td style="font-size:13px;">{{ rec.target_month or '—' }}</td>
-            <td>{{ rec.planned_hours }}</td>
-            <td>
-              {% if completed_map[rec.id] == 'Yes' %}
-              <span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>
-              {% else %}
-              <span class="badge bg-secondary">Pending</span>
-              {% endif %}
-            </td>
-            <td>
-              <form method="POST" action="{{ url_for('delete_tni', tni_id=rec.id) }}" style="display:inline;">
-                <button type="button" class="btn btn-sm btn-outline-danger"
-                        onclick="ajaxDelete(this,'Delete this TNI entry?')">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </form>
-            </td>
-          </tr>
-          {% else %}
-          <tr data-empty="1"><td colspan="12" class="text-center text-muted py-4">No TNI entries yet. Add above.</td></tr>
-          {% endfor %}
+        <tbody id="tniBody">
+          <tr><td colspan="12" class="text-center py-4">
+            <span class="spinner-border spinner-border-sm me-2"></span>Loading...
+          </td></tr>
         </tbody>
       </table>
     </div>
+    <div id="tni-pager" class="d-flex justify-content-between align-items-center px-3 py-2" style="font-size:13px;border-top:1px solid #e5e7eb;"></div>
   </div>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
-TBL.init('tniTable', 30);
-TBL.buildDynamic('tniTable', 'dept', document.getElementById('tniDeptFilter'));
-BulkSelect.init('tniTable', '{{ url_for("tni_bulk_delete") }}');
+/* ── TNI server-side table ── */
+const TNI = {
+  page: 1, total: 0, perPage: 30,
+  selectAll: false,   // true = all filtered records selected across pages
+  selectedIds: new Set(),
+  bulkUrl: '{{ url_for("tni_bulk_delete") }}',
+  _timer: null,
+
+  _params() {
+    return new URLSearchParams({
+      page: this.page,
+      q:         document.getElementById('tni-q').value,
+      collar:    document.getElementById('tni-collar').value,
+      dept:      document.getElementById('tni-dept').value,
+      type:      document.getElementById('tni-type').value,
+      mode:      document.getElementById('tni-mode').value,
+      month:     document.getElementById('tni-month').value,
+      completed: document.getElementById('tni-completed').value,
+    });
+  },
+
+  init() {
+    document.getElementById('tni-q').addEventListener('input', () => {
+      clearTimeout(this._timer); this._timer = setTimeout(() => this.load(true), 320);
+    });
+    ['tni-collar','tni-dept','tni-type','tni-mode','tni-month','tni-completed']
+      .forEach(id => document.getElementById(id).addEventListener('change', () => this.load(true)));
+    document.getElementById('tni-cb-all').addEventListener('change', e => this._togglePageAll(e.target.checked));
+    // hijack bulk-delete-btn for TNI
+    document.getElementById('bulk-delete-btn').addEventListener('click', () => this._bulkDelete());
+    // hijack cancel button
+    document.querySelector('#bulk-bar [onclick="BulkSelect.clear()"]')
+      ?.setAttribute('onclick','TNI.clear()');
+    this.load(true);
+  },
+
+  load(reset) {
+    if (reset) { this.page = 1; this.selectAll = false; this.selectedIds.clear(); }
+    const tbody = document.getElementById('tniBody');
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-3"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</td></tr>';
+    fetch('/tni/data?' + this._params())
+      .then(r => r.json())
+      .then(d => { this.total = d.total; this._render(d.rows, d.page, d.total, d.per_page); });
+  },
+
+  _render(rows, page, total, perPage) {
+    const tbody = document.getElementById('tniBody');
+    document.getElementById('tni-total').textContent = total;
+    document.getElementById('tni-showing').textContent =
+      total === 0 ? '0 entries' : `Showing ${(page-1)*perPage+1}–${Math.min(page*perPage,total)} of ${total}`;
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">No TNI entries found.</td></tr>';
+      document.getElementById('tni-pager').innerHTML = '';
+      this._updateBulkBar(); return;
+    }
+
+    const offset = (page - 1) * perPage;
+    tbody.innerHTML = rows.map((r, i) => {
+      const collarBadge = r.collar === 'Blue Collared'
+        ? '<span class="badge badge-bc">Blue</span>'
+        : r.collar === 'White Collared'
+          ? '<span class="badge badge-wc">White</span>'
+          : '<span class="badge bg-secondary">—</span>';
+      const doneBadge = r.completed === 'Yes'
+        ? '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>'
+        : '<span class="badge bg-secondary">Pending</span>';
+      const chk = (this.selectAll || this.selectedIds.has(r.id)) ? 'checked' : '';
+      return `<tr>
+        <td><input type="checkbox" class="cb-row tni-cb-row" data-id="${r.id}" ${chk}></td>
+        <td>${offset+i+1}</td>
+        <td><strong>${r.name}</strong><br><small class="text-muted">${r.emp_code}</small></td>
+        <td>${collarBadge}</td>
+        <td style="font-size:13px;">${r.department||'—'}</td>
+        <td><strong>${r.programme_name}</strong></td>
+        <td><span class="badge bg-secondary" style="font-size:11px;">${r.prog_type||'—'}</span></td>
+        <td style="font-size:13px;">${r.mode||'—'}</td>
+        <td style="font-size:13px;">${r.target_month||'—'}</td>
+        <td>${r.planned_hours}</td>
+        <td>${doneBadge}</td>
+        <td><form method="POST" action="${r.delete_url}" style="display:inline;">
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="ajaxDelete(this,'Delete this TNI entry?')">
+            <i class="bi bi-trash"></i></button></form></td>
+      </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('.tni-cb-row').forEach(cb => {
+      cb.addEventListener('change', () => {
+        this.selectAll = false;
+        const id = parseInt(cb.dataset.id);
+        if (cb.checked) this.selectedIds.add(id); else this.selectedIds.delete(id);
+        this._updateBulkBar();
+      });
+    });
+
+    this._renderPager(page, total, perPage);
+    this._updateBulkBar();
+  },
+
+  _renderPager(page, total, perPage) {
+    const pages = Math.ceil(total / perPage);
+    const pager = document.getElementById('tni-pager');
+    if (pages <= 1) { pager.innerHTML = ''; return; }
+    const btn = (p, label, dis) =>
+      `<button class="btn btn-sm ${p===page?'btn-primary':'btn-outline-secondary'}" ${dis?'disabled':''} onclick="TNI.go(${p})">${label}</button>`;
+    let b = btn(page-1,'&laquo; Prev', page<=1);
+    const s=Math.max(1,page-2), e=Math.min(pages,page+2);
+    if(s>1) b+=`<button class="btn btn-sm btn-outline-secondary" onclick="TNI.go(1)">1</button>${s>2?'<span class="px-1">…</span>':''}`;
+    for(let p=s;p<=e;p++) b+=btn(p,p,false);
+    if(e<pages) b+=`${e<pages-1?'<span class="px-1">…</span>':''}<button class="btn btn-sm btn-outline-secondary" onclick="TNI.go(${pages})">${pages}</button>`;
+    b+=btn(page+1,'Next &raquo;',page>=pages);
+    pager.innerHTML=`<span class="text-muted">Page ${page} of ${pages}</span><div class="d-flex gap-1 flex-wrap">${b}</div>`;
+  },
+
+  go(p) { this.page = p; this.load(false); },
+
+  _togglePageAll(checked) {
+    this.selectAll = checked;  // select/deselect ALL records across all pages
+    this.selectedIds.clear();
+    document.getElementById('tniBody').querySelectorAll('.tni-cb-row').forEach(cb => { cb.checked = checked; });
+    this._updateBulkBar();
+  },
+
+  _updateBulkBar() {
+    const bar     = document.getElementById('bulk-bar');
+    const allCbs  = [...document.getElementById('tniBody').querySelectorAll('.tni-cb-row')];
+    const allCb   = document.getElementById('tni-cb-all');
+    const selCount = this.selectAll ? this.total : this.selectedIds.size;
+
+    document.getElementById('bulk-count').textContent = selCount + ' selected';
+    if (selCount > 0) bar.classList.add('show'); else bar.classList.remove('show');
+
+    // show/hide "select all N" banner
+    let banner = document.getElementById('tni-select-all-banner');
+    const allOnPageChecked = allCbs.length > 0 && allCbs.every(c => c.checked);
+    if (allOnPageChecked && this.total > this.perPage && !this.selectAll) {
+      if (!banner) {
+        banner = document.createElement('tr');
+        banner.id = 'tni-select-all-banner';
+        banner.innerHTML = `<td colspan="12" class="text-center py-2" style="background:#eff6ff;font-size:13px;">
+          All ${allCbs.length} records on this page selected.
+          <a href="#" onclick="TNI._selectAllRecords();return false;" style="font-weight:600;">
+            Select all ${this.total} records in this list</a>
+        </td>`;
+        document.getElementById('tniBody').prepend(banner);
+      }
+    } else if (this.selectAll) {
+      if (!banner) {
+        banner = document.createElement('tr');
+        banner.id = 'tni-select-all-banner';
+        document.getElementById('tniBody').prepend(banner);
+      }
+      banner.innerHTML = `<td colspan="12" class="text-center py-2" style="background:#fef9c3;font-size:13px;">
+        <strong>All ${this.total} records selected.</strong>
+        <a href="#" onclick="TNI.clear();return false;" style="color:#dc2626;font-weight:600;margin-left:8px;">Clear selection</a>
+      </td>`;
+    } else {
+      if (banner) banner.remove();
+    }
+
+    if (allCb) {
+      const vis = allCbs.filter(c=>c.checked).length;
+      allCb.checked = this.selectAll || (allCbs.length > 0 && vis === allCbs.length);
+      allCb.indeterminate = !this.selectAll && vis > 0 && vis < allCbs.length;
+    }
+  },
+
+  _selectAllRecords() {
+    this.selectAll = true;
+    document.getElementById('tniBody').querySelectorAll('.tni-cb-row').forEach(c => c.checked = true);
+    this._updateBulkBar();
+  },
+
+  _bulkDelete() {
+    const count = this.selectAll ? this.total : this.selectedIds.size;
+    if (!count) return;
+    if (!confirm(`Delete ${count} TNI entries? This cannot be undone.`)) return;
+    const form = document.createElement('form');
+    form.method = 'POST'; form.action = this.bulkUrl;
+    if (this.selectAll) {
+      // pass current filter params + select_all flag
+      const add = (n,v) => { const i=document.createElement('input');i.type='hidden';i.name=n;i.value=v;form.appendChild(i); };
+      add('select_all','1');
+      add('q',    document.getElementById('tni-q').value);
+      add('collar',document.getElementById('tni-collar').value);
+      add('dept',  document.getElementById('tni-dept').value);
+      add('type',  document.getElementById('tni-type').value);
+      add('mode',  document.getElementById('tni-mode').value);
+      add('month', document.getElementById('tni-month').value);
+      add('completed',document.getElementById('tni-completed').value);
+    } else {
+      this.selectedIds.forEach(id => {
+        const i=document.createElement('input');i.type='hidden';i.name='ids[]';i.value=id;form.appendChild(i);
+      });
+    }
+    document.body.appendChild(form);
+    form.submit();
+  },
+
+  clear() {
+    this.selectAll = false;
+    this.selectedIds.clear();
+    document.getElementById('tniBody').querySelectorAll('.tni-cb-row').forEach(c => { c.checked=false; });
+    const allCb = document.getElementById('tni-cb-all');
+    if (allCb) { allCb.checked=false; allCb.indeterminate=false; }
+    document.getElementById('bulk-bar').classList.remove('show');
+    const banner = document.getElementById('tni-select-all-banner');
+    if (banner) banner.remove();
+  }
+};
+
+TNI.init();
 </script>
 {% endblock %}
