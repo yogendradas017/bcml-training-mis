@@ -632,6 +632,32 @@
       .table-responsive { font-size: 12px; }
       .table td, .table thead th { padding: 9px 12px; }
     }
+    /* ══════════════════════════════════════════════════════════════
+       BULK ACTION BAR
+    ══════════════════════════════════════════════════════════════ */
+    #bulk-bar {
+      position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+      z-index: 2000; transition: bottom .28s cubic-bezier(.4,0,.2,1);
+      min-width: 360px;
+    }
+    #bulk-bar.show { bottom: 24px; }
+    .bulk-bar-inner {
+      background: #1a1f35; border-radius: 16px;
+      padding: 13px 20px; display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.2);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .bulk-count {
+      color: #e5e7eb; font-size: 13px; font-weight: 600;
+      padding: 4px 14px; background: rgba(255,255,255,.12);
+      border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+    }
+    .cb-row, .cb-all {
+      width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;
+      accent-color: var(--c-primary);
+    }
+    th:has(.cb-all), td:has(.cb-row) { width: 36px; text-align: center; }
+
     @media (max-width: 480px) {
       .page-body { padding: 12px; }
       .sc { padding: 18px 16px; }
@@ -1016,5 +1042,83 @@ const TBL = {
 };
 </script>
 {% block scripts %}{% endblock %}
+
+<!-- BULK ACTION BAR -->
+<div id="bulk-bar">
+  <div class="bulk-bar-inner">
+    <span id="bulk-count" class="bulk-count">0 selected</span>
+    <button id="bulk-delete-btn" type="button" class="btn btn-danger btn-sm">
+      <i class="bi bi-trash-fill"></i> Delete Selected
+    </button>
+    <button type="button" class="btn btn-light btn-sm" onclick="BulkSelect.clear()">
+      <i class="bi bi-x-lg"></i> Cancel
+    </button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   BULK SELECT UTILITY
+═══════════════════════════════════════════════════ */
+const BulkSelect = {
+  _tableId: null,
+  _actionUrl: null,
+
+  init(tableId, actionUrl) {
+    this._tableId   = tableId;
+    this._actionUrl = actionUrl;
+    const tbl   = document.getElementById(tableId);
+    if (!tbl) return;
+    const allCb = tbl.querySelector('.cb-all');
+
+    tbl.addEventListener('change', e => {
+      if (e.target.classList.contains('cb-row') || e.target.classList.contains('cb-all')) {
+        if (e.target.classList.contains('cb-all')) {
+          const visible = [...tbl.querySelectorAll('tbody tr')]
+            .filter(r => r.style.display !== 'none' && !r.dataset.empty);
+          visible.forEach(r => { const c = r.querySelector('.cb-row'); if (c) c.checked = e.target.checked; });
+        }
+        this._update(tbl, allCb, actionUrl);
+      }
+    });
+
+    document.getElementById('bulk-delete-btn').addEventListener('click', () => {
+      const checked = [...tbl.querySelectorAll('.cb-row:checked')];
+      if (!checked.length) return;
+      if (!confirm(`Delete ${checked.length} selected record(s)? This cannot be undone.`)) return;
+      const form = document.createElement('form');
+      form.method = 'POST'; form.action = this._actionUrl;
+      checked.forEach(cb => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = cb.value;
+        form.appendChild(inp);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    });
+  },
+
+  _update(tbl, allCb, actionUrl) {
+    const all     = [...tbl.querySelectorAll('tbody .cb-row')];
+    const checked = all.filter(c => c.checked);
+    const bar     = document.getElementById('bulk-bar');
+    document.getElementById('bulk-count').textContent = checked.length + ' selected';
+    bar.dataset.action = actionUrl;
+    if (checked.length > 0) { bar.classList.add('show'); }
+    else { bar.classList.remove('show'); if (allCb) { allCb.checked = false; allCb.indeterminate = false; } }
+    if (allCb) {
+      allCb.indeterminate = checked.length > 0 && checked.length < all.length;
+      allCb.checked = all.length > 0 && checked.length === all.length;
+    }
+  },
+
+  clear() {
+    if (!this._tableId) return;
+    const tbl = document.getElementById(this._tableId);
+    if (tbl) tbl.querySelectorAll('.cb-row, .cb-all').forEach(c => { c.checked = false; c.indeterminate = false; });
+    document.getElementById('bulk-bar').classList.remove('show');
+  }
+};
+</script>
 </body>
 </html>

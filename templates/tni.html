@@ -104,7 +104,10 @@
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
     <span><i class="bi bi-clipboard-data"></i> TNI Records — <strong>{{ records|length }}</strong> entries</span>
-    <span class="badge" style="background:#d1fae5;color:#065f46;">{{ records|selectattr('id','in', completed_map.keys())|list|length }} tracked</span>
+    <div class="d-flex gap-2 align-items-center">
+      <span class="badge" style="background:#d1fae5;color:#065f46;">{{ records|selectattr('id','in', completed_map.keys())|list|length }} tracked</span>
+      <span class="badge" style="background:rgba(239,68,68,.2);color:#fca5a5;font-size:11px;cursor:pointer;" onclick="BulkSelect.clear()" id="tni-sel-hint" style="display:none">Select rows to bulk delete</span>
+    </div>
   </div>
   <div class="card-body pb-2 pt-3">
     <div class="d-flex gap-2 flex-wrap">
@@ -155,6 +158,7 @@
       <table class="table table-hover mb-0" id="tniTable">
         <thead>
           <tr>
+            <th><input type="checkbox" class="cb-all"></th>
             <th>#</th><th>Employee</th><th>Collar</th><th>Department</th>
             <th>Programme Name</th><th>Type</th><th>Mode</th>
             <th>Target Month</th><th>Hrs</th><th>Completed?</th><th>Action</th>
@@ -163,6 +167,7 @@
         <tbody>
           {% for rec in records %}
           <tr data-collar="{{ rec.collar or '' }}" data-dept="{{ rec.department or '' }}" data-type="{{ rec.prog_type or '' }}" data-mode="{{ rec.mode or '' }}" data-month="{{ rec.target_month or '' }}" data-completed="{{ 'Yes' if completed_map[rec.id] == 'Yes' else 'Pending' }}">
+            <td><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
             <td>{{ loop.index }}</td>
             <td>
               <strong>{{ rec.name or rec.emp_code }}</strong><br>
@@ -196,7 +201,7 @@
             </td>
           </tr>
           {% else %}
-          <tr data-empty="1"><td colspan="11" class="text-center text-muted py-4">No TNI entries yet. Add above.</td></tr>
+          <tr data-empty="1"><td colspan="12" class="text-center text-muted py-4">No TNI entries yet. Add above.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -208,5 +213,6 @@
 <script>
 TBL.init('tniTable', 30);
 TBL.buildDynamic('tniTable', 'dept', document.getElementById('tniDeptFilter'));
+BulkSelect.init('tniTable', '{{ url_for("tni_bulk_delete") }}');
 </script>
 {% endblock %}
