@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block page_title %}Smart TNI Import{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+<div class="col-lg-8">
+
+<!-- How it works -->
+<div class="d-flex gap-0 mb-4 align-items-stretch justify-content-center" style="font-size:13px;">
+  {% set steps_info = [
+    ('1','bi-cloud-upload','Upload Messy File','Any format, any headers'),
+    ('2','bi-file-earmark-arrow-down','Get Review Excel','Colour-coded, with dropdowns'),
+    ('3','bi-pencil-square','Fix Red Rows in Excel','Familiar Excel environment'),
+    ('4','bi-check2-all','Re-upload & Import','TMS reads TMS_ columns'),
+  ] %}
+  {% for num, icon, label, sub in steps_info %}
+  <div style="flex:1;text-align:center;padding:14px 8px;background:#f8fafc;border:1px solid #e5e7eb;
+       border-radius:{% if loop.first %}12px 0 0 12px{% elif loop.last %}0 12px 12px 0{% else %}0{% endif %};">
+    <div style="width:32px;height:32px;border-radius:50%;background:#6366f1;color:#fff;
+         display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;margin-bottom:6px;">{{ num }}</div>
+    <div><i class="bi {{ icon }}" style="color:#6366f1;font-size:16px;display:block;margin-bottom:3px;"></i></div>
+    <div style="font-weight:700;color:#1e3a5f;font-size:12px;">{{ label }}</div>
+    <div style="color:#9ca3af;font-size:11px;">{{ sub }}</div>
+  </div>
+  {% if not loop.last %}
+  <div style="width:24px;background:#f8fafc;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;
+       display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:18px;">›</div>
+  {% endif %}
+  {% endfor %}
+</div>
+
+<!-- Step 1: Upload messy file -->
+<div class="card mb-4" style="border-left:5px solid #6366f1;">
+  <div class="card-header" style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;">
+    <i class="bi bi-cloud-upload me-1"></i> Step 1 — Upload Your Messy TNI File
+  </div>
+  <div class="card-body">
+    <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">
+      Upload any file — Balrampur format, any headers, any order.
+      TMS will analyse it and send back a <strong>colour-coded Excel</strong> with all its best guesses filled in.
+    </p>
+    <form method="POST" action="{{ url_for('tni_smart_import') }}" enctype="multipart/form-data">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-7">
+          <label class="form-label fw-semibold" style="font-size:13px;">Select file</label>
+          <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold" style="font-size:13px;">Skip top rows</label>
+          <select name="skip_rows" class="form-select" style="font-size:13px;">
+            <option value="0">0 rows (header = row 1)</option>
+            <option value="1">Skip 1 row</option>
+            <option value="2">Skip 2 rows</option>
+            <option value="3">Skip 3 rows</option>
+            <option value="4">Skip 4 rows</option>
+            <option value="5">Skip 5 rows</option>
+          </select>
+          <div class="form-text" style="font-size:11px;">Use if your file has a title/logo above the headers.</div>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn w-100 fw-semibold" style="background:#6366f1;color:#fff;border:none;">
+            <i class="bi bi-download me-1"></i> Get Review File
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Step 2: What you get -->
+<div class="card mb-4" style="border:1px dashed #c7d2fe;background:#f5f3ff;">
+  <div class="card-body py-3">
+    <div style="font-size:13px;font-weight:700;color:#4f46e5;margin-bottom:10px;">
+      <i class="bi bi-file-earmark-excel me-1"></i> What the Review Excel looks like
+    </div>
+    <div class="row g-2" style="font-size:12px;">
+      <div class="col-md-4">
+        <div style="background:#D1FAE5;border-radius:8px;padding:8px 12px;">
+          <strong style="color:#065f46;">✓ Green rows</strong><br>
+          <span style="color:#374151;">Ready to import — no action needed</span>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div style="background:#FEF3C7;border-radius:8px;padding:8px 12px;">
+          <strong style="color:#92400e;">⚡ Yellow rows</strong><br>
+          <span style="color:#374151;">TMS auto-fixed a typo — verify it's correct</span>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div style="background:#FEE2E2;border-radius:8px;padding:8px 12px;">
+          <strong style="color:#dc2626;">✎ Red rows</strong><br>
+          <span style="color:#374151;">You must fix these — dropdown cells provided</span>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:#6b7280;margin-top:10px;">
+      <i class="bi bi-info-circle me-1"></i>
+      The file has <strong>TMS_ columns</strong> (B to H) — edit only those. Original columns are kept for reference but not imported.
+      An <strong>Instructions</strong> sheet explains everything.
+    </div>
+  </div>
+</div>
+
+<!-- Step 3: Re-upload corrected file -->
+<div class="card" style="border-left:5px solid #10b981;">
+  <div class="card-header" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;">
+    <i class="bi bi-check2-all me-1"></i> Step 3 — Re-upload Corrected Review File
+  </div>
+  <div class="card-body">
+    <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">
+      After fixing red rows in Excel, upload the <strong>same review file</strong> here.
+      TMS reads the TMS_ columns and imports everything with a valid employee code and programme name.
+    </p>
+    <form method="POST" action="{{ url_for('tni_smart_import_corrected') }}" enctype="multipart/form-data">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-8">
+          <label class="form-label fw-semibold" style="font-size:13px;">Select corrected review file</label>
+          <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+          <div class="form-text" style="font-size:11px;">Must be the TMS review file (contains TMS_EmpCode, TMS_ProgName… columns).</div>
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn w-100 fw-semibold" style="background:#10b981;color:#fff;border:none;">
+            <i class="bi bi-upload me-1"></i> Import to TNI
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mt-3">
+  <a href="{{ url_for('tni') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to TNI</a>
+</div>
+
+</div>
+</div>
+
+{% endblock %}

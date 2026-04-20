@@ -2,30 +2,24 @@
 {% block page_title %}TNI Tracking{% endblock %}
 {% block content %}
 
-<!-- Bulk Upload -->
-<div class="card mb-4" style="border-left:5px solid #198754;">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:#198754;color:#fff;">
-    <span><i class="bi bi-cloud-upload"></i> Bulk Upload TNI (Excel / CSV)</span>
-    <a href="{{ url_for('tni_template') }}" class="btn btn-light btn-sm">
-      <i class="bi bi-file-earmark-arrow-down"></i> Download Template
+<!-- TNI Analyzer — primary upload path -->
+<div class="card mb-4" style="border-left:5px solid #6366f1;">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;">
+    <span><i class="bi bi-search me-1"></i> Bulk Upload TNI — with Data Analyzer</span>
+    <a href="{{ url_for('tni_template') }}" class="btn btn-warning btn-sm fw-bold">
+      <i class="bi bi-file-earmark-arrow-down"></i> Download Template First
     </a>
   </div>
   <div class="card-body">
-    <p class="text-muted mb-2" style="font-size:13px;">
-      Download the template, fill employee codes and training needs, then upload here.
-      Columns required: <strong>Employee Code, Programme Name, Type of Programme, Mode, Target Month, Planned Hours</strong>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:14px;">
+      Download the template → fill in Excel → upload here.
+      TMS analyzes every row: <span style="color:#065f46;font-weight:600;">green = OK</span>,
+      <span style="color:#dc2626;font-weight:600;">red = issue</span>.
+      Fix red rows inline, re-check, then confirm import.
     </p>
-    <form method="POST" action="{{ url_for('tni_bulk_upload') }}" enctype="multipart/form-data">
-      <div class="d-flex gap-2 align-items-end">
-        <div>
-          <label class="form-label">Select Excel or CSV file</label>
-          <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required style="width:340px;">
-        </div>
-        <button type="submit" class="btn btn-success px-4">
-          <i class="bi bi-upload"></i> Upload & Import
-        </button>
-      </div>
-    </form>
+    <a href="{{ url_for('tni_analyze') }}" class="btn fw-semibold px-4" style="background:#6366f1;color:#fff;border:none;">
+      <i class="bi bi-search me-1"></i> Upload &amp; Analyze TNI Data
+    </a>
   </div>
 </div>
 
@@ -77,13 +71,6 @@
           <select name="mode" class="form-select">
             <option value="">-- Select --</option>
             {% for m in modes %}<option>{{ m }}</option>{% endfor %}
-          </select>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">Target Month</label>
-          <select name="target_month" class="form-select">
-            <option value="">-- Select --</option>
-            {% for mo in months %}<option>{{ mo }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-2">
@@ -139,13 +126,6 @@
         <option>SOP</option>
         <option>Online</option>
       </select>
-      <select id="tni-month" class="form-select" style="width:140px;">
-        <option value="">All Months</option>
-        <option>April</option><option>May</option><option>June</option>
-        <option>July</option><option>August</option><option>September</option>
-        <option>October</option><option>November</option><option>December</option>
-        <option>January</option><option>February</option><option>March</option>
-      </select>
       <select id="tni-completed" class="form-select" style="width:130px;">
         <option value="">All Status</option>
         <option value="Yes">Completed</option>
@@ -161,11 +141,11 @@
             <th><input type="checkbox" id="tni-cb-all" class="cb-all"></th>
             <th>#</th><th>Employee</th><th>Collar</th><th>Department</th>
             <th>Programme Name</th><th>Type</th><th>Mode</th>
-            <th>Target Month</th><th>Hrs</th><th>Completed?</th><th>Action</th>
+            <th>Hrs</th><th>Completed?</th><th>Action</th>
           </tr>
         </thead>
         <tbody id="tniBody">
-          <tr><td colspan="12" class="text-center py-4">
+          <tr><td colspan="11" class="text-center py-4">
             <span class="spinner-border spinner-border-sm me-2"></span>Loading...
           </td></tr>
         </tbody>
@@ -193,7 +173,6 @@ const TNI = {
       dept:      document.getElementById('tni-dept').value,
       type:      document.getElementById('tni-type').value,
       mode:      document.getElementById('tni-mode').value,
-      month:     document.getElementById('tni-month').value,
       completed: document.getElementById('tni-completed').value,
     });
   },
@@ -202,7 +181,7 @@ const TNI = {
     document.getElementById('tni-q').addEventListener('input', () => {
       clearTimeout(this._timer); this._timer = setTimeout(() => this.load(true), 320);
     });
-    ['tni-collar','tni-dept','tni-type','tni-mode','tni-month','tni-completed']
+    ['tni-collar','tni-dept','tni-type','tni-mode','tni-completed']
       .forEach(id => document.getElementById(id).addEventListener('change', () => this.load(true)));
     document.getElementById('tni-cb-all').addEventListener('change', e => this._togglePageAll(e.target.checked));
     // hijack bulk-delete-btn for TNI
@@ -216,7 +195,7 @@ const TNI = {
   load(reset) {
     if (reset) { this.page = 1; this.selectAll = false; this.selectedIds.clear(); }
     const tbody = document.getElementById('tniBody');
-    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-3"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-3"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</td></tr>';
     fetch('/tni/data?' + this._params())
       .then(r => r.json())
       .then(d => { this.total = d.total; this._render(d.rows, d.page, d.total, d.per_page); });
@@ -229,7 +208,7 @@ const TNI = {
       total === 0 ? '0 entries' : `Showing ${(page-1)*perPage+1}–${Math.min(page*perPage,total)} of ${total}`;
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">No TNI entries found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">No TNI entries found.</td></tr>';
       document.getElementById('tni-pager').innerHTML = '';
       this._updateBulkBar(); return;
     }
@@ -254,7 +233,6 @@ const TNI = {
         <td><strong>${r.programme_name}</strong></td>
         <td><span class="badge bg-secondary" style="font-size:11px;">${r.prog_type||'—'}</span></td>
         <td style="font-size:13px;">${r.mode||'—'}</td>
-        <td style="font-size:13px;">${r.target_month||'—'}</td>
         <td>${r.planned_hours}</td>
         <td>${doneBadge}</td>
         <td><form method="POST" action="${r.delete_url}" style="display:inline;">
@@ -316,7 +294,7 @@ const TNI = {
       if (!banner) {
         banner = document.createElement('tr');
         banner.id = 'tni-select-all-banner';
-        banner.innerHTML = `<td colspan="12" class="text-center py-2" style="background:#eff6ff;font-size:13px;">
+        banner.innerHTML = `<td colspan="11" class="text-center py-2" style="background:#eff6ff;font-size:13px;">
           All ${allCbs.length} records on this page selected.
           <a href="#" onclick="TNI._selectAllRecords();return false;" style="font-weight:600;">
             Select all ${this.total} records in this list</a>
@@ -329,7 +307,7 @@ const TNI = {
         banner.id = 'tni-select-all-banner';
         document.getElementById('tniBody').prepend(banner);
       }
-      banner.innerHTML = `<td colspan="12" class="text-center py-2" style="background:#fef9c3;font-size:13px;">
+      banner.innerHTML = `<td colspan="11" class="text-center py-2" style="background:#fef9c3;font-size:13px;">
         <strong>All ${this.total} records selected.</strong>
         <a href="#" onclick="TNI.clear();return false;" style="color:#dc2626;font-weight:600;margin-left:8px;">Clear selection</a>
       </td>`;

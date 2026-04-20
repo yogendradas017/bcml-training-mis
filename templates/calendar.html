@@ -35,8 +35,31 @@
       <div class="row g-3">
         <div class="col-md-5">
           <label class="form-label">Programme Name <span class="required-star">*</span></label>
-          <input type="text" name="programme_name" class="form-control" required placeholder="e.g. Fire Safety Awareness">
-          <div class="form-text">Session Code auto-generates.</div>
+          <input type="text" name="programme_name" id="cal_prog_name" class="form-control" required
+                 placeholder="e.g. Fire Safety Awareness" list="tni_prog_list" autocomplete="off">
+          <datalist id="tni_prog_list">
+            {% for p in tni_programmes %}<option value="{{ p }}">{% endfor %}
+          </datalist>
+          <div class="form-text">Session Code auto-generates. Type to see TNI demand.</div>
+        </div>
+
+        <!-- TNI Coverage Panel — shown when programme name matches TNI -->
+        <div class="col-12" id="tni-coverage-panel" style="display:none;">
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;">
+            <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:10px;">
+              <i class="bi bi-bar-chart-fill me-1"></i> TNI Demand — "<span id="tni-cp-name"></span>"
+            </div>
+            <div class="row g-2" style="font-size:13px;">
+              <div class="col-md-3"><i class="bi bi-people-fill text-warning me-1"></i> <strong id="tni-cp-demand">0</strong> employees need this</div>
+              <div class="col-md-3"><i class="bi bi-calendar3 text-primary me-1"></i> <strong id="tni-cp-sessions">0</strong> sessions planned this FY</div>
+              <div class="col-md-3"><i class="bi bi-person-check-fill text-success me-1"></i> <strong id="tni-cp-covered">0</strong> covered</div>
+              <div class="col-md-3"><i class="bi bi-exclamation-circle-fill text-warning me-1"></i> <strong id="tni-cp-uncovered">0</strong> still uncovered</div>
+            </div>
+            <div style="background:#e5e7eb;border-radius:99px;height:8px;overflow:hidden;margin-top:10px;">
+              <div id="tni-cp-bar" style="height:100%;border-radius:99px;width:0%;transition:width .5s ease;"></div>
+            </div>
+            <div id="tni-cp-hint" style="font-size:11px;color:#92400e;margin-top:5px;"></div>
+          </div>
         </div>
         <div class="col-md-3">
           <label class="form-label">Type of Programme <span class="required-star">*</span></label>
@@ -219,6 +242,36 @@
 {% block scripts %}
 <script>
 TBL.init('calTable', 30);
+
+/* TNI Coverage Panel */
+let _cpTimer;
+document.getElementById('cal_prog_name').addEventListener('input', function() {
+  clearTimeout(_cpTimer);
+  const val = this.value.trim();
+  if (!val) { document.getElementById('tni-coverage-panel').style.display='none'; return; }
+  _cpTimer = setTimeout(() => {
+    fetch('/api/tni-coverage?q=' + encodeURIComponent(val))
+      .then(r => r.json())
+      .then(d => {
+        if (!d.demand) { document.getElementById('tni-coverage-panel').style.display='none'; return; }
+        document.getElementById('tni-cp-name').textContent      = val;
+        document.getElementById('tni-cp-demand').textContent    = d.demand;
+        document.getElementById('tni-cp-sessions').textContent  = d.sessions_planned;
+        document.getElementById('tni-cp-covered').textContent   = d.covered;
+        document.getElementById('tni-cp-uncovered').textContent = d.uncovered;
+        const bar = document.getElementById('tni-cp-bar');
+        bar.style.width = d.pct + '%';
+        bar.style.background = d.pct >= 80 ? 'linear-gradient(90deg,#10b981,#34d399)'
+                             : d.pct >= 30 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)'
+                             : 'linear-gradient(90deg,#ef4444,#f87171)';
+        const hint = d.uncovered > 0
+          ? `${d.pct}% covered · ${d.uncovered} employees still need this — plan more sessions`
+          : `100% covered · All TNI demand met`;
+        document.getElementById('tni-cp-hint').textContent = hint;
+        document.getElementById('tni-coverage-panel').style.display = '';
+      });
+  }, 400);
+});
 BulkSelect.init('calTable', '{{ url_for("calendar_bulk_delete") }}');
 </script>
 {% endblock %}

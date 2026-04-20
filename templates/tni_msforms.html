@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block page_title %}Microsoft Forms — TNI Import{% endblock %}
+{% block content %}
+
+<div class="row g-4">
+
+  <!-- LEFT: Setup Guide -->
+  <div class="col-lg-7">
+    <div class="card h-100" style="border-left:5px solid #0078d4;">
+      <div class="card-header d-flex align-items-center gap-2" style="background:linear-gradient(135deg,#0078d4,#106ebe);color:#fff;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Microsoft_Forms_2019-present.svg/32px-Microsoft_Forms_2019-present.svg.png"
+             style="width:22px;height:22px;" onerror="this.style.display='none'">
+        <span><i class="bi bi-ui-checks me-1"></i> Step 1 — Create Microsoft Form (one-time setup)</span>
+      </div>
+      <div class="card-body" style="font-size:13px;">
+
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:18px;">
+          <strong style="color:#1d4ed8;">Go to</strong>
+          <code style="background:#dbeafe;padding:2px 8px;border-radius:4px;margin:0 4px;">forms.office.com</code>
+          → New Form → add the questions below <strong>in this exact order.</strong>
+        </div>
+
+        <!-- Question list -->
+        {% set questions = [
+          ('1','Employee Code','Text','Required. SPOC types their 6-digit employee code. Example: BCM001','bi-person-badge','#dc2626'),
+          ('2','Programme Name','Text','Required. Name of the training programme needed. Example: Fire Safety Awareness','bi-book','#dc2626'),
+          ('3','Type of Programme','Choice','Add these 6 options: Behavioural/Leadership, Cane, Commercial, EHS/HR, IT, Technical','bi-tag','#0891b2'),
+          ('4','Mode','Choice','Add these 4 options: Classroom, OJT, SOP, Online','bi-display','#0891b2'),
+          ('5','Target Month','Choice','Add all 12 months: April, May, June … March (in FY order)','bi-calendar3','#0891b2'),
+          ('6','Planned Hours','Number','Optional. Training duration in hours. Set min = 0','bi-clock','#6b7280'),
+        ] %}
+
+        {% for num, qname, qtype, hint, icon, color in questions %}
+        <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;align-items:flex-start;">
+          <div style="width:28px;height:28px;border-radius:50%;background:{{ color }};color:#fff;
+               display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;margin-top:2px;">
+            {{ num }}
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:700;color:#111827;">
+              <i class="bi {{ icon }} me-1" style="color:{{ color }};"></i>
+              {{ qname }}
+              {% if num in ('1','2') %}<span style="color:#dc2626;font-size:11px;margin-left:4px;">★ Required</span>{% endif %}
+            </div>
+            <div style="display:inline-block;background:#f3f4f6;color:#374151;font-size:11px;padding:1px 8px;border-radius:99px;margin:3px 0;">
+              Type: {{ qtype }}
+            </div>
+            <div style="color:#6b7280;font-size:12px;margin-top:3px;">{{ hint }}</div>
+          </div>
+        </div>
+        {% endfor %}
+
+        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-top:16px;font-size:12px;">
+          <strong><i class="bi bi-lightbulb-fill text-warning me-1"></i> Pro tips:</strong>
+          <ul class="mb-0 mt-2" style="padding-left:18px;">
+            <li>Set the form title to: <strong>TNI — {{ plant_name }}</strong></li>
+            <li>Turn on <strong>"Accept responses"</strong> and copy the link to share with employees/supervisors</li>
+            <li>For Choice questions, turn off "Other" option so only valid values can be selected</li>
+            <li>You can add a <strong>Section</strong> at the top asking for the respondent's department for better tracking</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: How to export + Import -->
+  <div class="col-lg-5">
+
+    <!-- Step 2: Export from MS Forms -->
+    <div class="card mb-4" style="border-left:5px solid #059669;">
+      <div class="card-header" style="background:linear-gradient(135deg,#047857,#059669);color:#fff;">
+        <i class="bi bi-file-earmark-arrow-down me-1"></i> Step 2 — Download Responses from MS Forms
+      </div>
+      <div class="card-body" style="font-size:13px;">
+        <ol style="padding-left:18px;margin:0;line-height:2;">
+          <li>Open your form at <code>forms.office.com</code></li>
+          <li>Click the <strong>Responses</strong> tab</li>
+          <li>Click <strong>"Open in Excel"</strong> or <strong>"Download responses"</strong></li>
+          <li>Save the <code>.xlsx</code> file to your computer</li>
+        </ol>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;margin-top:12px;font-size:12px;color:#065f46;">
+          <i class="bi bi-info-circle me-1"></i>
+          The exported file has columns: <strong>ID, Start time, Completion time, Email, Name</strong> followed by your question columns.
+          TMS automatically skips the first 5 columns.
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Upload to TMS -->
+    <div class="card" style="border-left:5px solid #6366f1;">
+      <div class="card-header" style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;">
+        <i class="bi bi-upload me-1"></i> Step 3 — Import to TMS
+      </div>
+      <div class="card-body">
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">
+          Upload the downloaded Excel file. TMS reads the question columns and imports all valid responses into TNI.
+        </p>
+        <form method="POST" action="{{ url_for('tni_msforms_import') }}" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:13px;">Select MS Forms response Excel</label>
+            <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+            <div class="form-text" style="font-size:11px;">Only <code>.xlsx</code> / <code>.xls</code> files from Microsoft Forms.</div>
+          </div>
+          <button type="submit" class="btn w-100 fw-semibold" style="background:#6366f1;color:#fff;border:none;">
+            <i class="bi bi-upload me-1"></i> Import MS Forms Responses to TNI
+          </button>
+        </form>
+
+        <hr style="margin:16px 0;">
+
+        <!-- What gets validated -->
+        <div style="font-size:12px;color:#6b7280;">
+          <div style="font-weight:700;color:#374151;margin-bottom:8px;"><i class="bi bi-shield-check me-1 text-success"></i> TMS validates every row:</div>
+          <div><i class="bi bi-check2 text-success me-1"></i> Employee code exists in <strong>{{ plant_name }}</strong> ({{ emp_count }} active employees)</div>
+          <div><i class="bi bi-check2 text-success me-1"></i> Programme Name is not empty</div>
+          <div><i class="bi bi-check2 text-success me-1"></i> Skips duplicate/empty rows</div>
+          <div class="mt-2"><i class="bi bi-file-earmark-excel text-warning me-1"></i> Failed rows → downloaded as error Excel</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <a href="{{ url_for('tni') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to TNI</a>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
