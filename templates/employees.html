@@ -179,8 +179,33 @@
     </div>
   </div>
 </div>
+{% if recent_exited and not show_exited %}
+<!-- Recently Exited — Undo Strip -->
+<div class="card mb-3" style="border-left:4px solid #f59e0b;">
+  <div class="card-header py-2" style="background:#fef3c7;color:#92400e;font-size:13px;">
+    <i class="bi bi-clock-history"></i> <strong>Recently Exited</strong> — Undo available within 7 days
+  </div>
+  <div class="card-body py-2 px-3">
+    <div class="d-flex flex-wrap gap-2">
+      {% for emp in recent_exited %}
+      <div class="d-flex align-items-center gap-2 px-3 py-2 rounded" style="background:#fff;border:1px solid #fde68a;font-size:13px;">
+        <span><strong>{{ emp.name }}</strong> <small class="text-muted">({{ emp.emp_code }})</small></span>
+        {% if emp.exit_date %}<span class="badge bg-warning text-dark">{{ emp.exit_date }}</span>{% endif %}
+        <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}" style="display:inline;">
+          <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2"
+                  onclick="return confirm('Undo exit for {{ emp.name }}?')">
+            <i class="bi bi-arrow-counterclockwise"></i> Undo Exit
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Shared Exit Modal (outside table to avoid overflow clipping) -->
-<div class="modal fade" id="sharedExitModal" tabindex="-1" aria-labelledby="exitModalLabel" aria-hidden="true">
+<div class="modal fade" id="sharedExitModal" tabindex="-1" aria-labelledby="exitModalLabel">
   <div class="modal-dialog modal-sm">
     <div class="modal-content">
       <div class="modal-header">
@@ -214,14 +239,24 @@
 const today = new Date().toISOString().split('T')[0];
 document.getElementById('exitDateInput').value = today;
 
+let _exitModal = null;
+const _exitModalEl = document.getElementById('sharedExitModal');
+
+_exitModalEl.addEventListener('hidden.bs.modal', function() {
+  // clean up any leftover backdrop
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+  document.body.classList.remove('modal-open');
+  document.body.style.removeProperty('overflow');
+  document.body.style.removeProperty('padding-right');
+});
+
 document.querySelectorAll('.exit-btn').forEach(btn => {
   btn.addEventListener('click', function() {
-    const name = this.dataset.empName;
-    const url  = this.dataset.exitUrl;
-    document.getElementById('exitModalLabel').textContent = 'Mark Exit — ' + name;
-    document.getElementById('exitModalForm').action = url;
+    document.getElementById('exitModalLabel').textContent = 'Mark Exit — ' + this.dataset.empName;
+    document.getElementById('exitModalForm').action = this.dataset.exitUrl;
     document.getElementById('exitDateInput').value = today;
-    new bootstrap.Modal(document.getElementById('sharedExitModal')).show();
+    if (!_exitModal) _exitModal = new bootstrap.Modal(_exitModalEl, {backdrop: true, keyboard: true});
+    _exitModal.show();
   });
 });
 

@@ -206,7 +206,12 @@ def employees():
         emps = db.execute('SELECT * FROM employees WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
     else:
         emps = db.execute('SELECT * FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name', (plant_id,)).fetchall()
+    # Recently exited (within 7 days) — shown as undo strip in active view
+    recent_exited = db.execute(
+        "SELECT * FROM employees WHERE plant_id=? AND is_active=0 AND exit_date >= date('now','-7 days') ORDER BY exit_date DESC",
+        (plant_id,)).fetchall()
     return render_template('employees.html', employees=emps, show_exited=show_exited,
+                           recent_exited=recent_exited,
                            genders=GENDERS, today=str(date.today()))
 
 @app.route('/employees/add', methods=['POST'])
