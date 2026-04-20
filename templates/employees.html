@@ -2,6 +2,47 @@
 {% block page_title %}Employee Master{% endblock %}
 {% block content %}
 
+{% if recent_exited and not show_exited %}
+<!-- Undo Exit — Dedicated Section at Top -->
+<div class="card mb-4" style="border:2px solid #f59e0b;">
+  <div class="card-header d-flex align-items-center gap-2" style="background:linear-gradient(135deg,#92400e,#d97706);color:#fff;">
+    <i class="bi bi-arrow-counterclockwise fs-5"></i>
+    <div>
+      <strong>Undo Exit</strong> &nbsp;—&nbsp; {{ recent_exited|length }} employee(s) exited recently
+      <div style="font-size:11px;opacity:.85;">Available within 7 days of exit date</div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0" style="font-size:13px;">
+      <thead>
+        <tr style="background:#fef3c7;">
+          <th>#</th><th>Emp Code</th><th>Name</th><th>Exit Date</th><th>Reason</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for emp in recent_exited %}
+        <tr>
+          <td class="text-muted">{{ loop.index }}</td>
+          <td><code>{{ emp.emp_code }}</code></td>
+          <td><strong>{{ emp.name }}</strong></td>
+          <td><span class="badge bg-warning text-dark">{{ emp.exit_date or '—' }}</span></td>
+          <td style="color:#6b7280;">{{ emp.exit_reason or '—' }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}"
+                  onsubmit="return confirm('Undo exit for this employee?')">
+              <button type="submit" class="btn btn-sm btn-success py-0 px-3">
+                <i class="bi bi-arrow-counterclockwise"></i> Undo Exit
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 <!-- Add Employee Form -->
 <div class="card mb-4">
   <div class="card-header bg-primary text-white">
@@ -179,31 +220,6 @@
     </div>
   </div>
 </div>
-{% if recent_exited and not show_exited %}
-<!-- Recently Exited — Undo Strip -->
-<div class="card mb-3" style="border-left:4px solid #f59e0b;">
-  <div class="card-header py-2" style="background:#fef3c7;color:#92400e;font-size:13px;">
-    <i class="bi bi-clock-history"></i> <strong>Recently Exited</strong> — Undo available within 7 days
-  </div>
-  <div class="card-body py-2 px-3">
-    <div class="d-flex flex-wrap gap-2">
-      {% for emp in recent_exited %}
-      <div class="d-flex align-items-center gap-2 px-3 py-2 rounded" style="background:#fff;border:1px solid #fde68a;font-size:13px;">
-        <span><strong>{{ emp.name }}</strong> <small class="text-muted">({{ emp.emp_code }})</small></span>
-        {% if emp.exit_date %}<span class="badge bg-warning text-dark">{{ emp.exit_date }}</span>{% endif %}
-        <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}" style="display:inline;">
-          <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2"
-                  onclick="return confirm('Undo exit for {{ emp.name }}?')">
-            <i class="bi bi-arrow-counterclockwise"></i> Undo Exit
-          </button>
-        </form>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</div>
-{% endif %}
-
 <!-- Shared Exit Modal (outside table to avoid overflow clipping) -->
 <div class="modal fade" id="sharedExitModal" tabindex="-1" aria-labelledby="exitModalLabel">
   <div class="modal-dialog modal-sm">
