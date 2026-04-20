@@ -19,7 +19,7 @@
     <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Big Ticket Items</div>
       <div class="sc-val" style="font-size:32px;font-weight:800;color:#f59e0b;">{{ big_tickets }}</div>
-      <div style="font-size:11px;color:#9ca3af;margin-top:2px;">High demand, low coverage</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Demand ≥ 30, coverage &lt; 30%</div>
     </div>
   </div>
   <div class="col-md-3">
@@ -38,6 +38,7 @@
       <span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-weight:600;">On Track ≥80%</span>
       <span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-weight:600;">In Progress 30–79%</span>
       <span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:20px;font-weight:600;">⚠ Big Ticket &lt;30%</span>
+      <span style="background:#f3f4f6;color:#6b7280;padding:3px 10px;border-radius:20px;font-weight:600;">Small Group &lt;30 pax</span>
     </div>
   </div>
   <div class="card-body pb-2 pt-3">
@@ -45,9 +46,10 @@
       <input type="text" id="intel-search" class="form-control" placeholder="Search programme..." style="max-width:280px;font-size:13px;">
       <select id="intel-filter" class="form-select" style="width:160px;font-size:13px;">
         <option value="">All Status</option>
-        <option value="Big Ticket">Big Ticket</option>
+        <option value="Big Ticket">⚠ Big Ticket</option>
         <option value="In Progress">In Progress</option>
         <option value="On Track">On Track</option>
+        <option value="Small Group">Small Group</option>
       </select>
     </div>
   </div>
@@ -91,8 +93,10 @@
             <span style="background:#d1fae5;color:#065f46;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">On Track</span>
           {% elif p.status == 'In Progress' %}
             <span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">In Progress</span>
-          {% else %}
+          {% elif p.status == 'Big Ticket' %}
             <span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">⚠ Big Ticket</span>
+          {% else %}
+            <span style="background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">Small Group</span>
           {% endif %}
         </div>
       </div>
