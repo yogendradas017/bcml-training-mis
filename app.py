@@ -378,7 +378,6 @@ def tni_bulk_delete():
     plant_id = session['plant_id']
     db = get_db()
     if request.form.get('select_all') == '1':
-        # delete all records matching current filters
         where_clause, params = _tni_filters(plant_id)
         join_sql = f'''
             FROM tni t
@@ -388,19 +387,23 @@ def tni_bulk_delete():
                    ON et.emp_code=t.emp_code AND et.programme_name=t.programme_name
             WHERE {where_clause}
         '''
-        ids_to_del = [r[0] for r in db.execute(f'SELECT t.id {join_sql}', [plant_id] + params).fetchall()]
-        if ids_to_del:
-            ph = ','.join('?' * len(ids_to_del))
-            db.execute(f'DELETE FROM tni WHERE id IN ({ph}) AND plant_id=?', ids_to_del + [plant_id])
+        count = db.execute(f'SELECT COUNT(*) {join_sql}', [plant_id] + params).fetchone()[0]
+        if count:
+            db.execute(f'DELETE FROM tni WHERE id IN (SELECT t.id {join_sql})', [plant_id] + params)
             db.commit()
-            flash(f'{len(ids_to_del)} TNI entries deleted.', 'warning')
+            flash(f'{count} TNI entries deleted.', 'warning')
     else:
         ids = request.form.getlist('ids[]')
         if ids:
-            ph = ','.join('?' * len(ids))
-            db.execute(f'DELETE FROM tni WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
+            # Delete in chunks of 900 to stay under SQLite variable limit
+            deleted = 0
+            for i in range(0, len(ids), 900):
+                chunk = ids[i:i+900]
+                ph = ','.join('?' * len(chunk))
+                db.execute(f'DELETE FROM tni WHERE id IN ({ph}) AND plant_id=?', chunk + [plant_id])
+                deleted += len(chunk)
             db.commit()
-            flash(f'{len(ids)} TNI entries deleted.', 'warning')
+            flash(f'{deleted} TNI entries deleted.', 'warning')
     return redirect(url_for('tni'))
 
 @app.route('/tni/template')
@@ -651,11 +654,15 @@ def calendar_bulk_delete():
     plant_id = session['plant_id']
     ids = request.form.getlist('ids[]')
     if ids:
-        ph = ','.join('?' * len(ids))
         db = get_db()
-        db.execute(f'DELETE FROM calendar WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
+        deleted = 0
+        for i in range(0, len(ids), 900):
+            chunk = ids[i:i+900]
+            ph = ','.join('?' * len(chunk))
+            db.execute(f'DELETE FROM calendar WHERE id IN ({ph}) AND plant_id=?', chunk + [plant_id])
+            deleted += len(chunk)
         db.commit()
-        flash(f'{len(ids)} calendar sessions deleted.', 'warning')
+        flash(f'{deleted} calendar sessions deleted.', 'warning')
     return redirect(url_for('training_calendar'))
 
 # ─── EMPLOYEE TRAINING (2A) ───────────────────────────────────────────────────
@@ -739,11 +746,15 @@ def training_bulk_delete():
     plant_id = session['plant_id']
     ids = request.form.getlist('ids[]')
     if ids:
-        ph = ','.join('?' * len(ids))
         db = get_db()
-        db.execute(f'DELETE FROM emp_training WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
+        deleted = 0
+        for i in range(0, len(ids), 900):
+            chunk = ids[i:i+900]
+            ph = ','.join('?' * len(chunk))
+            db.execute(f'DELETE FROM emp_training WHERE id IN ({ph}) AND plant_id=?', chunk + [plant_id])
+            deleted += len(chunk)
         db.commit()
-        flash(f'{len(ids)} training records deleted.', 'warning')
+        flash(f'{deleted} training records deleted.', 'warning')
     return redirect(url_for('emp_training'))
 
 @app.route('/training/template')
