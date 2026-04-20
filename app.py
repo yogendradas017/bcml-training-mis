@@ -1511,9 +1511,10 @@ def programme_intelligence():
         planned  = sessions_map.get(name, 0)
         uncovered= max(0, demand - covered)
         pct      = round(covered / demand * 100) if demand > 0 else 0
-        if pct >= 80:   status = 'On Track'
-        elif pct >= 30: status = 'In Progress'
-        else:           status = 'Big Ticket'
+        if demand < 30:  status = 'Small Group'
+        elif pct >= 80:  status = 'On Track'
+        elif pct >= 30:  status = 'In Progress'
+        else:            status = 'Big Ticket'
         total_uncovered += uncovered
         programmes.append({'name': name, 'demand': demand, 'covered': covered,
                            'planned': planned, 'uncovered': uncovered, 'pct': pct, 'status': status})
