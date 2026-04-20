@@ -246,6 +246,9 @@ def exit_employee(emp_id):
     if exit_date > str(date.today()):
         flash('Exit date cannot be a future date.', 'danger')
         return redirect(url_for('employees'))
+    if not exit_reason.strip():
+        flash('Exit reason is mandatory for attrition analysis.', 'danger')
+        return redirect(url_for('employees'))
     db.execute('UPDATE employees SET is_active=0, exit_date=?, exit_reason=? WHERE id=? AND plant_id=?',
                (exit_date, exit_reason, emp_id, session['plant_id']))
     db.commit()
