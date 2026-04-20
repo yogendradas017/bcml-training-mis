@@ -253,7 +253,9 @@
 {% block scripts %}
 <script>
 const today = new Date().toISOString().split('T')[0];
-document.getElementById('exitDateInput').value = today;
+const exitDateEl = document.getElementById('exitDateInput');
+exitDateEl.value = today;
+exitDateEl.max = today;  // no future dates allowed
 
 // Move modal to <body> so .main-wrap overflow:hidden doesn't clip it
 const _exitModalEl = document.getElementById('sharedExitModal');
