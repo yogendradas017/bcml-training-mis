@@ -239,23 +239,17 @@
 const today = new Date().toISOString().split('T')[0];
 document.getElementById('exitDateInput').value = today;
 
-let _exitModal = null;
+// Move modal to <body> so .main-wrap overflow:hidden doesn't clip it
 const _exitModalEl = document.getElementById('sharedExitModal');
+document.body.appendChild(_exitModalEl);
 
-_exitModalEl.addEventListener('hidden.bs.modal', function() {
-  // clean up any leftover backdrop
-  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-  document.body.classList.remove('modal-open');
-  document.body.style.removeProperty('overflow');
-  document.body.style.removeProperty('padding-right');
-});
+const _exitModal = new bootstrap.Modal(_exitModalEl, {backdrop: true, keyboard: true});
 
 document.querySelectorAll('.exit-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     document.getElementById('exitModalLabel').textContent = 'Mark Exit — ' + this.dataset.empName;
     document.getElementById('exitModalForm').action = this.dataset.exitUrl;
     document.getElementById('exitDateInput').value = today;
-    if (!_exitModal) _exitModal = new bootstrap.Modal(_exitModalEl, {backdrop: true, keyboard: true});
     _exitModal.show();
   });
 });
