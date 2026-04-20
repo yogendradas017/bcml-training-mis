@@ -64,76 +64,53 @@
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0" style="font-size:13px;">
+      <table class="table table-hover mb-0" style="font-size:12px;white-space:nowrap;">
         <thead>
-          <tr>
+          <tr style="background:#1a3a5c;color:#fff;">
             <th>#</th>
             <th>Plant</th>
             <th>Code</th>
-            <th>Total Emp</th>
-            <th>Blue Collar</th>
-            <th>White Collar</th>
+            <th>Emp</th>
+            <th>BC</th>
+            <th>WC</th>
             <th>Sessions</th>
             <th>Conducted</th>
-            <th>Man-Hours</th>
-            <th>BC Compliance</th>
-            <th>WC Compliance</th>
+            <th>Man-Hrs</th>
+            <th>BC%</th>
+            <th>WC%</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for p in plants %}
           <tr>
-            <td>{{ loop.index }}</td>
-            <td><strong>{{ p.name }}</strong></td>
-            <td><span class="badge bg-secondary">{{ p.unit_code }}</span></td>
+            <td style="color:#9ca3af;">{{ loop.index }}</td>
+            <td><strong style="font-size:12px;">{{ p.name }}</strong></td>
+            <td><span class="badge bg-secondary" style="font-size:10px;">{{ p.unit_code }}</span></td>
             <td><strong>{{ p.total_emp }}</strong></td>
-            <td><span class="badge badge-bc">{{ p.blue_collar }}</span></td>
-            <td><span class="badge badge-wc">{{ p.white_collar }}</span></td>
+            <td><span class="badge badge-bc" style="font-size:10px;">{{ p.blue_collar }}</span></td>
+            <td><span class="badge badge-wc" style="font-size:10px;">{{ p.white_collar }}</span></td>
             <td>{{ p.sessions }}</td>
             <td>
-              <span class="badge badge-conducted">{{ p.conducted }}</span>
-              {% if p.sessions > 0 %}
-              <small class="text-muted">({{ "%.0f"|format(p.conducted/p.sessions*100) }}%)</small>
-              {% endif %}
+              <span class="badge badge-conducted" style="font-size:10px;">{{ p.conducted }}</span>
+              {% if p.sessions > 0 %}<small class="text-muted"> {{ "%.0f"|format(p.conducted/p.sessions*100) }}%</small>{% endif %}
             </td>
             <td><strong>{{ p.manhours }}</strong></td>
             <td>
-              {% set bc_color = 'success' if p.bc_pct >= 75 else ('warning' if p.bc_pct >= 40 else 'danger') %}
-              <div class="d-flex align-items-center gap-1">
-                <div class="progress flex-grow-1" style="height:10px;width:60px;">
-                  <div class="progress-bar bg-{{ bc_color }}"
-                       style="width:{{ [p.bc_pct,100]|min }}%"></div>
-                </div>
-                <span class="badge bg-{{ bc_color }}">{{ p.bc_pct }}%</span>
-              </div>
+              {% set bc_color = '#059669' if p.bc_pct >= 75 else ('#d97706' if p.bc_pct >= 40 else '#dc2626') %}
+              <span style="font-weight:700;color:{{ bc_color }};">{{ p.bc_pct }}%</span>
             </td>
             <td>
-              {% set wc_color = 'success' if p.wc_pct >= 75 else ('warning' if p.wc_pct >= 40 else 'danger') %}
-              <div class="d-flex align-items-center gap-1">
-                <div class="progress flex-grow-1" style="height:10px;width:60px;">
-                  <div class="progress-bar bg-{{ wc_color }}"
-                       style="width:{{ [p.wc_pct,100]|min }}%"></div>
-                </div>
-                <span class="badge bg-{{ wc_color }}">{{ p.wc_pct }}%</span>
-              </div>
+              {% set wc_color = '#059669' if p.wc_pct >= 75 else ('#d97706' if p.wc_pct >= 40 else '#dc2626') %}
+              <span style="font-weight:700;color:{{ wc_color }};">{{ p.wc_pct }}%</span>
             </td>
             <td>
-              <div class="d-flex gap-1 flex-wrap">
-                <a href="{{ url_for('central_plant_view', plant_id=p.id) }}"
-                   class="btn btn-sm btn-outline-primary">
-                  <i class="bi bi-eye"></i> View
-                </a>
+              <div class="d-flex gap-1">
+                <a href="{{ url_for('central_plant_view', plant_id=p.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="View"><i class="bi bi-eye"></i></a>
                 {% if session.role == 'admin' %}
-                <a href="{{ url_for('admin_select_plant', plant_id=p.id) }}"
-                   class="btn btn-sm btn-warning" title="Enter as SPOC for this plant">
-                  <i class="bi bi-box-arrow-in-right"></i> Enter
-                </a>
+                <a href="{{ url_for('admin_select_plant', plant_id=p.id) }}" class="btn btn-sm btn-warning py-0 px-2" title="Enter as SPOC"><i class="bi bi-box-arrow-in-right"></i></a>
                 {% endif %}
-                <a href="{{ url_for('export_excel', plant_id=p.id) }}"
-                   class="btn btn-sm btn-outline-success" title="Export Excel">
-                  <i class="bi bi-file-earmark-excel"></i>
-                </a>
+                <a href="{{ url_for('export_excel', plant_id=p.id) }}" class="btn btn-sm btn-outline-success py-0 px-2" title="Export Excel"><i class="bi bi-file-earmark-excel"></i></a>
               </div>
             </td>
           </tr>
