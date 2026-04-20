@@ -288,7 +288,7 @@ def _tni_filters(plant_id):
     if dept:   where.append('e.department=?');       params.append(dept)
     if ptype:  where.append('t.prog_type=?');        params.append(ptype)
     if mode:   where.append('t.mode=?');             params.append(mode)
-    if month:  where.append('t.target_month=?');     params.append(month)
+    # target_month filter removed
     if q:
         where.append('(COALESCE(e.name,"") LIKE ? OR t.emp_code LIKE ? OR t.programme_name LIKE ?)')
         like = f'%{q}%'; params += [like, like, like]
@@ -322,7 +322,7 @@ def tni_data():
     offset = (page - 1) * per_page
     rows_raw = db.execute(
         f'''SELECT t.id, t.emp_code, t.programme_name, t.prog_type, t.mode,
-                   t.target_month, t.planned_hours,
+                   t.planned_hours,
                    e.name, e.collar, e.department,
                    CASE WHEN et.emp_code IS NOT NULL THEN 'Yes' ELSE 'Pending' END AS completed
             {join_sql}
@@ -339,7 +339,6 @@ def tni_data():
         'programme_name': r['programme_name'],
         'prog_type':      r['prog_type'] or '',
         'mode':           r['mode'] or '',
-        'target_month':   r['target_month'] or '',
         'planned_hours':  r['planned_hours'],
         'completed':      r['completed'],
         'delete_url':     url_for('delete_tni', tni_id=r['id']),
@@ -353,11 +352,11 @@ def add_tni():
     plant_id = session['plant_id']
     f = request.form
     db = get_db()
-    db.execute('''INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,target_month,planned_hours)
-                  VALUES(?,?,?,?,?,?,?)''',
+    db.execute('''INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours)
+                  VALUES(?,?,?,?,?,?)''',
                (plant_id, f['emp_code'], f['programme_name'].strip(),
                 f.get('prog_type',''), f.get('mode',''),
-                f.get('target_month',''), float(f.get('planned_hours') or 0)))
+                float(f.get('planned_hours') or 0)))
     db.commit()
     flash('TNI entry added.', 'success')
     return redirect(url_for('tni'))
@@ -407,35 +406,134 @@ def tni_bulk_delete():
 @app.route('/tni/template')
 @spoc_required
 def tni_template():
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    plant_id = session['plant_id']
+    db       = get_db()
+
+    # fetch active employees for this plant
+    emps = db.execute(
+        'SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name',
+        (plant_id,)).fetchall()
+
     wb = openpyxl.Workbook()
+
+    # ── Sheet 1: Data Entry ──────────────────────────────────────
     ws = wb.active
-    ws.title = 'TNI_Bulk_Upload'
-    headers = ['Employee Code', 'Programme Name', 'Type of Programme',
-               'Mode', 'Target Month', 'Planned Hours']
-    hdr_fill = PatternFill('solid', start_color='1F4E79')
-    hdr_font = Font(bold=True, color='FFFFFF')
+    ws.title = 'TNI Data'
+
+    # header
+    headers = ['Employee Code', 'Employee Name (auto)', 'Programme Name',
+               'Type of Programme', 'Mode', 'Target Month', 'Planned Hours']
+    hdr_fill = PatternFill('solid', fgColor='1F4E79')
+    hdr_font = Font(bold=True, color='FFFFFF', size=11)
     for i, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=i, value=h)
-        cell.fill = hdr_fill
-        cell.font = hdr_font
-        ws.column_dimensions[get_column_letter(i)].width = 22
-    # Sample rows
-    samples = [
-        ['21700011', 'Fire Safety Training', 'EHS/HR', 'Classroom', 'June', 4],
-        ['21101568', 'Leadership Development', 'Behavioural/Leadership', 'Classroom', 'July', 8],
-    ]
-    for r, row in enumerate(samples, 2):
-        for c, val in enumerate(row, 1):
-            ws.cell(row=r, column=c, value=val)
-    ws['A4'] = 'VALID Programme Types:'
-    ws['B4'] = 'Behavioural/Leadership | Cane | Commercial | EHS/HR | IT | Technical'
-    ws['A5'] = 'VALID Modes:'
-    ws['B5'] = 'Classroom | OJT | SOP | Online'
-    ws['A6'] = 'VALID Months:'
-    ws['B6'] = 'April | May | June | July | August | September | October | November | December | January | February | March'
+        cell.fill      = hdr_fill
+        cell.font      = hdr_font
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[1].height = 22
+
+    # column widths
+    widths = [18, 28, 36, 24, 14, 16, 16]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    # lock header row
+    ws.freeze_panes = 'A2'
+
+    # ── Sheet 2: Employee List (hidden) ──────────────────────────
+    ws_emp = wb.create_sheet('_EmpList')
+    ws_emp.sheet_state = 'hidden'
+    for r, emp in enumerate(emps, 1):
+        c = ws_emp.cell(row=r, column=1, value=str(emp['emp_code']))
+        c.number_format = '@'  # force text so VLOOKUP TEXT() match works
+        ws_emp.cell(row=r, column=2, value=emp['name'])
+
+    emp_count = len(emps)
+
+    # ── Sheet 3: Valid Values (hidden) ───────────────────────────
+    ws_vals = wb.create_sheet('_ValidValues')
+    ws_vals.sheet_state = 'hidden'
+    prog_types = PROG_TYPES
+    modes      = MODES
+    months     = MONTHS_FY
+    for r, v in enumerate(prog_types, 1): ws_vals.cell(row=r, column=1, value=v)
+    for r, v in enumerate(modes, 1):      ws_vals.cell(row=r, column=2, value=v)
+    for r, v in enumerate(months, 1):     ws_vals.cell(row=r, column=3, value=v)
+
+    # named ranges for validation
+    wb.defined_names['EmpCodes']   = openpyxl.workbook.defined_name.DefinedName(
+        'EmpCodes',   attr_text=f'_EmpList!$A$1:$A${emp_count}')
+    wb.defined_names['ProgTypes']  = openpyxl.workbook.defined_name.DefinedName(
+        'ProgTypes',  attr_text=f'_ValidValues!$A$1:$A${len(prog_types)}')
+    wb.defined_names['ModeList']   = openpyxl.workbook.defined_name.DefinedName(
+        'ModeList',   attr_text=f'_ValidValues!$B$1:$B${len(modes)}')
+    wb.defined_names['MonthList']  = openpyxl.workbook.defined_name.DefinedName(
+        'MonthList',  attr_text=f'_ValidValues!$C$1:$C${len(months)}')
+
+    # ── Data Validations ─────────────────────────────────────────
+    max_rows = 2000
+
+    # Col A — Employee Code dropdown
+    dv_emp = DataValidation(type='list', formula1='EmpCodes', allow_blank=False,
+                            showErrorMessage=True, errorTitle='Invalid Employee',
+                            error='Select a valid Employee Code from the dropdown.',
+                            showDropDown=False)
+    dv_emp.sqref = f'A2:A{max_rows}'
+    ws.add_data_validation(dv_emp)
+
+    # Col D — Type of Programme
+    dv_type = DataValidation(type='list', formula1='ProgTypes', allow_blank=False,
+                             showErrorMessage=True, errorTitle='Invalid Type',
+                             error='Select from: ' + ', '.join(prog_types),
+                             showDropDown=False)
+    dv_type.sqref = f'D2:D{max_rows}'
+    ws.add_data_validation(dv_type)
+
+    # Col E — Mode
+    dv_mode = DataValidation(type='list', formula1='ModeList', allow_blank=True,
+                             showErrorMessage=True, errorTitle='Invalid Mode',
+                             error='Select from: ' + ', '.join(modes),
+                             showDropDown=False)
+    dv_mode.sqref = f'E2:E{max_rows}'
+    ws.add_data_validation(dv_mode)
+
+    # Col F — Month
+    dv_month = DataValidation(type='list', formula1='MonthList', allow_blank=True,
+                              showErrorMessage=True, errorTitle='Invalid Month',
+                              error='Select a valid month from the dropdown.',
+                              showDropDown=False)
+    dv_month.sqref = f'F2:F{max_rows}'
+    ws.add_data_validation(dv_month)
+
+    # Col G — Hours: decimal > 0
+    dv_hrs = DataValidation(type='decimal', operator='greaterThan', formula1='0',
+                            allow_blank=True,
+                            showErrorMessage=True, errorTitle='Invalid Hours',
+                            error='Enter a number greater than 0, e.g. 4 or 2.5')
+    dv_hrs.sqref = f'G2:G{max_rows}'
+    ws.add_data_validation(dv_hrs)
+
+    # Col B — auto-fill name via VLOOKUP
+    # TEXT(A{r},"0") normalises both text and number entries so type mismatch doesn't cause "Not Found"
+    for r in range(2, max_rows + 1):
+        ws.cell(row=r, column=2).value = (
+            f'=IF(A{r}="","",IFERROR(VLOOKUP(TEXT(A{r},"0"),_EmpList!$A:$B,2,0),"Not Found"))'
+        )
+        ws.cell(row=r, column=2).font      = Font(color='1F4E79', italic=True)
+        ws.cell(row=r, column=2).fill      = PatternFill('solid', fgColor='EFF6FF')
+        ws.cell(row=r, column=7).value     = 0  # default hours
+
+    # instruction row
+    ws.cell(row=1, column=1).comment = None  # clear any existing
+    note_cell = ws.cell(row=max_rows + 2, column=1,
+                        value='⚠ Do not add columns. Do not delete hidden sheets. Column B auto-fills from Employee Code.')
+    note_cell.font = Font(italic=True, color='FF0000', size=9)
+    ws.merge_cells(f'A{max_rows+2}:G{max_rows+2}')
+
     out = io.BytesIO()
-    wb.save(out)
-    out.seek(0)
+    wb.save(out); out.seek(0)
     return send_file(out, download_name='TNI_Bulk_Upload_Template.xlsx', as_attachment=True,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
@@ -461,7 +559,6 @@ def tni_bulk_upload():
         prog_name = _clean(row, ['programme name', 'program name', 'programme_name', 'training name'])
         prog_type = _clean(row, ['type of programme', 'type', 'prog type', 'programme type'])
         mode      = _clean(row, ['mode'])
-        month     = _clean(row, ['target month', 'month'])
         hours     = _safe_float(_clean(row, ['planned hours', 'hours', 'hrs'])) or 0
 
         if not emp_code or not prog_name:
@@ -472,8 +569,8 @@ def tni_bulk_upload():
         if not emp:
             errors.append(f'Row {i+2}: Employee {emp_code} not found in your plant.')
             continue
-        db.execute('INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,target_month,planned_hours) VALUES(?,?,?,?,?,?,?)',
-                   (plant_id, emp_code, prog_name, prog_type, mode, month, hours))
+        db.execute('INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
+                   (plant_id, emp_code, prog_name, prog_type, mode, hours))
         inserted += 1
     db.commit()
     if errors:
@@ -500,7 +597,11 @@ def training_calendar():
     for row in db.execute('SELECT programme_name, COUNT(*) as cnt FROM tni WHERE plant_id=? GROUP BY programme_name', (plant_id,)):
         demand_map[row['programme_name']] = row['cnt']
 
+    tni_programmes = [r[0] for r in db.execute(
+        'SELECT DISTINCT programme_name FROM tni WHERE plant_id=? ORDER BY programme_name', (plant_id,))]
+
     return render_template('calendar.html', sessions=sessions, demand_map=demand_map,
+                           tni_programmes=tni_programmes,
                            prog_types=PROG_TYPES, modes=MODES, levels=LEVELS,
                            audiences=AUDIENCES, months=MONTHS_FY, statuses=STATUSES)
 
@@ -809,8 +910,8 @@ def add_programme_details():
 
     # Update calendar status
     act_date = f.get('start_date','')
-    db.execute("UPDATE calendar SET status='Conducted', actual_date=? WHERE session_code=? AND plant_id=?",
-               (act_date, session_code, plant_id))
+    db.execute("UPDATE calendar SET status='Conducted' WHERE session_code=? AND plant_id=?",
+               (session_code, plant_id))
     db.commit()
     flash(f'Programme {session_code} details saved.', 'success')
     return redirect(url_for('programme_details'))
@@ -823,7 +924,7 @@ def delete_programme(rec_id):
                      (rec_id, session['plant_id'])).fetchone()
     if rec:
         db.execute('DELETE FROM programme_details WHERE id=? AND plant_id=?', (rec_id, session['plant_id']))
-        db.execute("UPDATE calendar SET status='To Be Planned', actual_date=NULL WHERE session_code=? AND plant_id=?",
+        db.execute("UPDATE calendar SET status='To Be Planned' WHERE session_code=? AND plant_id=?",
                    (rec['session_code'], session['plant_id']))
         db.commit()
     if _is_ajax():
@@ -842,7 +943,7 @@ def programme_bulk_delete():
         recs = db.execute(f'SELECT session_code FROM programme_details WHERE id IN ({ph}) AND plant_id=?',
                           ids + [plant_id]).fetchall()
         for r in recs:
-            db.execute("UPDATE calendar SET status='To Be Planned', actual_date=NULL WHERE session_code=? AND plant_id=?",
+            db.execute("UPDATE calendar SET status='To Be Planned' WHERE session_code=? AND plant_id=?",
                        (r['session_code'], plant_id))
         db.execute(f'DELETE FROM programme_details WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
         db.commit()
@@ -1256,8 +1357,8 @@ def programme_bulk_upload():
             (plant_id, sc, cal['programme_name'], cal['prog_type'], cal['level'],
              'Calendar Program', cal['mode'], start_date, end_date,
              cal['target_audience'], hrs, faculty, int_ext, cost, venue, cfb, ffb, tfbp, tfbf))
-        db.execute("UPDATE calendar SET status='Conducted', actual_date=? WHERE session_code=? AND plant_id=?",
-                   (start_date, sc, plant_id))
+        db.execute("UPDATE calendar SET status='Conducted' WHERE session_code=? AND plant_id=?",
+                   (sc, plant_id))
         inserted += 1
     db.commit()
     if errors:
@@ -1315,6 +1416,90 @@ def api_employees_list():
     emps = db.execute('SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name',
                       (plant_id,)).fetchall()
     return jsonify([{'code': e['emp_code'], 'name': e['name']} for e in emps])
+
+@app.route('/api/emp-lookup')
+@spoc_required
+def api_emp_lookup():
+    plant_id = session['plant_id']
+    code = request.args.get('code', '').strip()
+    if not code:
+        return jsonify({'name': None})
+    db  = get_db()
+    emp = db.execute('SELECT name FROM employees WHERE emp_code=? AND plant_id=? AND is_active=1',
+                     (code, plant_id)).fetchone()
+    return jsonify({'name': emp['name'] if emp else None})
+
+@app.route('/api/tni-coverage')
+@spoc_required
+def api_tni_coverage():
+    plant_id  = session['plant_id']
+    prog_name = request.args.get('q', '').strip()
+    if not prog_name:
+        return jsonify({})
+    db  = get_db()
+    fy  = _current_fy()
+    demand          = db.execute('SELECT COUNT(DISTINCT emp_code) FROM tni WHERE plant_id=? AND programme_name=?',
+                                 (plant_id, prog_name)).fetchone()[0]
+    sessions_planned= db.execute('SELECT COUNT(*) FROM calendar WHERE plant_id=? AND programme_name=? AND session_code LIKE ?',
+                                 (plant_id, prog_name, f'%/{fy}/%')).fetchone()[0]
+    covered         = db.execute('SELECT COUNT(DISTINCT emp_code) FROM emp_training WHERE plant_id=? AND programme_name=?',
+                                 (plant_id, prog_name)).fetchone()[0]
+    uncovered = max(0, demand - covered)
+    pct       = round(covered / demand * 100) if demand > 0 else 0
+    return jsonify({'demand': demand, 'sessions_planned': sessions_planned,
+                    'covered': covered, 'uncovered': uncovered, 'pct': pct})
+
+@app.route('/intelligence')
+@spoc_required
+def programme_intelligence():
+    plant_id = session['plant_id']
+    db       = get_db()
+    fy       = _current_fy()
+
+    # unique programmes & sessions this FY
+    unique_progs = db.execute(
+        'SELECT COUNT(DISTINCT prog_code) FROM calendar WHERE plant_id=? AND session_code LIKE ?',
+        (plant_id, f'%/{fy}/%')).fetchone()[0]
+    total_sessions = db.execute(
+        'SELECT COUNT(*) FROM calendar WHERE plant_id=? AND session_code LIKE ?',
+        (plant_id, f'%/{fy}/%')).fetchone()[0]
+
+    # all TNI programmes with demand
+    tni_rows = db.execute(
+        'SELECT programme_name, COUNT(DISTINCT emp_code) as demand FROM tni WHERE plant_id=? GROUP BY programme_name ORDER BY demand DESC',
+        (plant_id,)).fetchall()
+
+    # covered per programme (from 2A)
+    covered_map = {}
+    for r in db.execute('SELECT programme_name, COUNT(DISTINCT emp_code) as cnt FROM emp_training WHERE plant_id=? GROUP BY programme_name', (plant_id,)):
+        covered_map[r['programme_name']] = r['cnt']
+
+    # sessions planned per programme this FY
+    sessions_map = {}
+    for r in db.execute('SELECT programme_name, COUNT(*) as cnt FROM calendar WHERE plant_id=? AND session_code LIKE ? GROUP BY programme_name',
+                        (plant_id, f'%/{fy}/%')):
+        sessions_map[r['programme_name']] = r['cnt']
+
+    programmes = []
+    total_uncovered = 0
+    for r in tni_rows:
+        name     = r['programme_name']
+        demand   = r['demand']
+        covered  = covered_map.get(name, 0)
+        planned  = sessions_map.get(name, 0)
+        uncovered= max(0, demand - covered)
+        pct      = round(covered / demand * 100) if demand > 0 else 0
+        if pct >= 80:   status = 'On Track'
+        elif pct >= 30: status = 'In Progress'
+        else:           status = 'Big Ticket'
+        total_uncovered += uncovered
+        programmes.append({'name': name, 'demand': demand, 'covered': covered,
+                           'planned': planned, 'uncovered': uncovered, 'pct': pct, 'status': status})
+
+    big_tickets = sum(1 for p in programmes if p['status'] == 'Big Ticket')
+    return render_template('intelligence.html', fy=fy, unique_progs=unique_progs,
+                           total_sessions=total_sessions, big_tickets=big_tickets,
+                           total_uncovered=total_uncovered, programmes=programmes)
 
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -1426,10 +1611,16 @@ def _get_or_create_prog_code(plant_id, prog_name, prog_type, db):
                            (plant_id, f'{unit_code}/{abbrev}/%')).fetchone()[0]
     return f'{unit_code}/{abbrev}/{count+1:03d}'
 
+def _current_fy():
+    today = date.today()
+    y = today.year
+    return f'{str(y-1)[2:]}-{str(y)[2:]}' if today.month < 4 else f'{str(y)[2:]}-{str(y+1)[2:]}'
+
 def _new_session_code(plant_id, prog_code, db):
-    count = db.execute('SELECT COUNT(*) FROM calendar WHERE plant_id=? AND prog_code=?',
-                       (plant_id, prog_code)).fetchone()[0]
-    return f'{prog_code}/B{count+1:02d}'
+    fy    = _current_fy()
+    count = db.execute('SELECT COUNT(*) FROM calendar WHERE plant_id=? AND prog_code=? AND session_code LIKE ?',
+                       (plant_id, prog_code, f'{prog_code}/{fy}/%')).fetchone()[0]
+    return f'{prog_code}/{fy}/B{count+1:02d}'
 
 def _sync_calendar_from_2c(plant_id, db):
     db.execute('''UPDATE calendar SET status='Conducted'
@@ -1512,6 +1703,406 @@ def _calc_compliance(plant_id, db):
         'wc_pct': round(wc_act / wc_mandate * 100, 1) if wc_mandate else 0,
         'total_pct': round((bc_act + wc_act) / (bc_mandate + wc_mandate) * 100, 1) if (bc_mandate + wc_mandate) else 0
     }
+
+# ─── MICROSOFT FORMS IMPORT ───────────────────────────────────────────────────
+
+# MS Forms Excel export: columns = ID, Start time, Completion time, Email, Name, [questions...]
+# We detect question columns by matching known header keywords.
+
+_MSFORMS_SKIP_HEADERS = {'id','start time','completion time','email','name','responder'}
+
+def _parse_msforms_excel(file_storage, plant_id, db):
+    import pandas as pd, io as _io
+    raw = file_storage.read()
+    try:
+        df = pd.read_excel(_io.BytesIO(raw), dtype=str).fillna('')
+    except Exception as e:
+        raise ValueError(f'Could not read file: {e}')
+
+    emp_rows = db.execute('SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)).fetchall()
+    emp_map  = {r['emp_code']: r['name'] for r in emp_rows}
+
+    # Map column headers to TNI fields
+    field_keywords = {
+        'emp_code':       ['emp code','employee code','empcode','staff code','employee id'],
+        'programme_name': ['programme name','program name','training name','course name','training need'],
+        'prog_type':      ['type of programme','programme type','training type','type'],
+        'mode':           ['mode','training mode','delivery mode'],
+        'hours':          ['planned hours','hours','hrs','duration'],
+    }
+    col_map = {}
+    for col in df.columns:
+        cl = str(col).strip().lower()
+        if cl in _MSFORMS_SKIP_HEADERS:
+            continue
+        for field, kws in field_keywords.items():
+            if field not in col_map:
+                for kw in kws:
+                    if kw in cl or cl in kw:
+                        col_map[field] = col
+                        break
+
+    inserted, errors = 0, []
+    for i, row in df.iterrows():
+        def gv(field):
+            c = col_map.get(field)
+            v = str(row.get(c, '') or '').strip() if c else ''
+            return '' if v.lower() in ('nan','none') else v
+
+        emp_code     = gv('emp_code')
+        prog_name    = gv('programme_name')
+        prog_type    = gv('prog_type')
+        mode         = gv('mode')
+        hours        = _safe_float(gv('hours')) or 0.0
+
+        if not emp_code or not prog_name:
+            errors.append(f'Row {i+2}: Employee Code and Programme Name are required.')
+            continue
+        if emp_code not in emp_map:
+            errors.append(f'Row {i+2}: Employee code "{emp_code}" not found in your plant.')
+            continue
+        db.execute('INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
+                   (plant_id, emp_code, prog_name, prog_type, mode, hours))
+        inserted += 1
+
+    db.commit()
+    return inserted, errors
+
+
+@app.route('/tni/msforms', methods=['GET'])
+@spoc_required
+def tni_msforms():
+    plant_id   = session['plant_id']
+    plant_name = session.get('plant_name', '')
+    db = get_db()
+    emp_count  = db.execute('SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)).fetchone()[0]
+    return render_template('tni_msforms.html', plant_name=plant_name,
+                           emp_count=emp_count, prog_types=PROG_TYPES,
+                           modes=MODES, months=MONTHS_FY)
+
+
+@app.route('/tni/msforms/import', methods=['POST'])
+@spoc_required
+def tni_msforms_import():
+    f = request.files.get('file')
+    if not f or f.filename == '':
+        flash('No file selected.', 'danger')
+        return redirect(url_for('tni_msforms'))
+    plant_id = session['plant_id']
+    db = get_db()
+    try:
+        inserted, errors = _parse_msforms_excel(f, plant_id, db)
+    except ValueError as e:
+        flash(str(e), 'danger')
+        return redirect(url_for('tni_msforms'))
+
+    if errors:
+        return _error_excel_response(errors, inserted, 'MSForms_Import_Errors.xlsx')
+    flash(f'Microsoft Forms import complete: {inserted} TNI entries added.', 'success')
+    return redirect(url_for('tni'))
+
+
+# ─── SMART TNI ANALYZER ──────────────────────────────────────────────────────
+import json as _json, uuid as _uuid, io as _io
+from difflib import get_close_matches
+
+def _fuzzy_fix(val, valid_list):
+    """Return (fixed_val, was_changed). None if no confident match."""
+    if not val: return '', False
+    vl = val.strip().lower()
+    for v in valid_list:
+        if v.lower() == vl: return v, False          # exact match
+    for v in valid_list:
+        if vl in v.lower() or v.lower() in vl: return v, True   # substring
+    m = get_close_matches(vl, [v.lower() for v in valid_list], n=1, cutoff=0.55)
+    if m:
+        idx = [v.lower() for v in valid_list].index(m[0])
+        return valid_list[idx], True
+    return val, False  # can't fix → return original so caller can flag
+
+def _detect_col(columns, keywords):
+    """Return first column name whose header matches any keyword (partial, case-insensitive)."""
+    for col in columns:
+        cl = str(col).strip().lower()
+        for kw in keywords:
+            if kw in cl or cl in kw:
+                return col
+    return None
+
+def _smart_analyze_rows(df, plant_id, db):
+    from difflib import get_close_matches as gcm
+    emp_rows  = db.execute('SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)).fetchall()
+    emp_map   = {r['emp_code']: r['name'] for r in emp_rows}
+    emp_upper = {k.upper(): k for k in emp_map}
+
+    # Known programme names from calendar + existing TNI for spell-fix
+    known_progs = [r[0] for r in db.execute(
+        'SELECT DISTINCT programme_name FROM tni WHERE plant_id=? UNION '
+        'SELECT DISTINCT programme_name FROM calendar WHERE plant_id=?', (plant_id, plant_id))]
+
+    # Detect columns once — works on any file format
+    cols = df.columns.tolist()
+    col_emp   = _detect_col(cols, ['emp code','employee code','empcode','staff code','emp id','employee id','code'])
+    col_prog  = _detect_col(cols, ['programme name','program name','training name','course name','training need','training'])
+    col_type  = _detect_col(cols, ['type of programme','type','programme type','prog type','training type','category'])
+    col_mode  = _detect_col(cols, ['mode','training mode','delivery mode'])
+    col_hrs   = _detect_col(cols, ['planned hours','hours','hrs','duration'])
+
+    # If neither critical column found, raise helpful error showing actual columns
+    if not col_emp and not col_prog:
+        col_list = ', '.join(f'"{c}"' for c in cols[:15])
+        raise ValueError(
+            f'Could not detect Employee Code or Programme Name columns. '
+            f'Columns found in file: {col_list}. '
+            f'Try using "Skip top rows" if your file has a title row above the headers.'
+        )
+
+    def gv(row, col):
+        if not col: return ''
+        v = str(row.get(col, '') or '').strip()
+        return '' if v.lower() in ('nan','none','0','') else v
+
+    results = []
+    for i, row in df.iterrows():
+        raw_emp   = gv(row, col_emp)
+        raw_prog  = gv(row, col_prog)
+        raw_type  = gv(row, col_type)
+        raw_mode  = gv(row, col_mode)
+        raw_hrs   = gv(row, col_hrs)
+
+        if not any([raw_emp, raw_prog, raw_type, raw_mode]):
+            continue
+
+        fixes   = []   # list of {field, original, fixed, how}
+        issues  = []   # unfixable problems
+        status  = 'ok'
+
+        # ── Employee Code ──────────────────────────────────────────
+        clean_emp = raw_emp
+        if not raw_emp:
+            issues.append('Employee Code is missing')
+            status = 'error'
+        elif raw_emp in emp_map:
+            pass  # exact match
+        elif raw_emp.upper() in emp_upper:
+            clean_emp = emp_upper[raw_emp.upper()]
+            fixes.append({'field':'Employee Code','original':raw_emp,'fixed':clean_emp,'how':'Capitalisation corrected'})
+            if status == 'ok': status = 'fixed'
+        else:
+            issues.append(f'Employee code "{raw_emp}" not found in this plant')
+            status = 'error'
+
+        emp_name = emp_map.get(clean_emp, '')
+
+        # ── Programme Name ─────────────────────────────────────────
+        clean_prog = raw_prog
+        if not raw_prog:
+            issues.append('Programme Name is missing')
+            status = 'error'
+        else:
+            titled = raw_prog.title()
+            if titled != raw_prog:
+                fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'Title case applied'})
+                clean_prog = titled
+                if status == 'ok': status = 'fixed'
+            else:
+                clean_prog = raw_prog
+            # Spell-check against known programmes
+            if known_progs:
+                m = gcm(clean_prog.lower(), [p.lower() for p in known_progs], n=1, cutoff=0.75)
+                if m:
+                    best = known_progs[[p.lower() for p in known_progs].index(m[0])]
+                    if best.lower() != clean_prog.lower():
+                        fixes.append({'field':'Programme Name','original':clean_prog,'fixed':best,'how':'Spell-checked against existing programmes'})
+                        clean_prog = best
+                        if status == 'ok': status = 'fixed'
+
+        # ── Programme Type ─────────────────────────────────────────
+        clean_type, type_changed = _fuzzy_fix(raw_type, PROG_TYPES) if raw_type else ('', False)
+        if raw_type and clean_type not in PROG_TYPES:
+            issues.append(f'Unknown programme type: "{raw_type}" — could not auto-fix')
+            if status == 'ok': status = 'error'
+        elif raw_type and type_changed:
+            fixes.append({'field':'Type of Programme','original':raw_type,'fixed':clean_type,'how':'Auto-matched to standard value'})
+            if status == 'ok': status = 'fixed'
+
+        # ── Mode ───────────────────────────────────────────────────
+        clean_mode, mode_changed = _fuzzy_fix(raw_mode, MODES) if raw_mode else ('', False)
+        if raw_mode and clean_mode not in MODES:
+            issues.append(f'Unknown mode: "{raw_mode}" — could not auto-fix')
+            if status == 'ok': status = 'error'
+        elif raw_mode and mode_changed:
+            fixes.append({'field':'Mode','original':raw_mode,'fixed':clean_mode,'how':'Auto-matched to standard value'})
+            if status == 'ok': status = 'fixed'
+
+        hours = _safe_float(raw_hrs) or 0.0
+
+        results.append({
+            'row_num':        i + 2,
+            'status':         status,   # ok | fixed | error
+            'fixes':          fixes,
+            'issues':         issues,
+            'emp_code':       clean_emp,
+            'emp_name':       emp_name,
+            'programme_name': clean_prog,
+            'prog_type':      clean_type or raw_type,
+            'mode':           clean_mode or raw_mode,
+            'planned_hours':  hours,
+        })
+    return results
+
+
+def _error_excel_for_tni(error_rows):
+    """Generate a pre-filled correction Excel for rows that couldn't be auto-fixed."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Rows To Fix'
+
+    from openpyxl.worksheet.datavalidation import DataValidation
+    hdr_fill = PatternFill('solid', fgColor='7F1D1D')
+    hdr_font = Font(bold=True, color='FFFFFF', size=11)
+    headers  = ['Row #','Employee Code','Programme Name','Type of Programme',
+                'Mode','Planned Hours','Issue(s) Found']
+    col_w    = [7, 16, 34, 22, 14, 14, 60]
+    for ci, (h, w) in enumerate(zip(headers, col_w), 1):
+        c = ws.cell(row=1, column=ci, value=h)
+        c.fill = hdr_fill; c.font = hdr_font
+        c.alignment = Alignment(horizontal='center', vertical='center')
+        ws.column_dimensions[get_column_letter(ci)].width = w
+    ws.row_dimensions[1].height = 24
+    ws.freeze_panes = 'A2'
+
+    err_fill = PatternFill('solid', fgColor='FEF2F2')
+    for ri, r in enumerate(error_rows, 2):
+        vals = [r['row_num'], r['emp_code'], r['programme_name'],
+                r['prog_type'], r['mode'], r['planned_hours'],
+                '; '.join(r['issues'])]
+        for ci, v in enumerate(vals, 1):
+            cell = ws.cell(row=ri, column=ci, value=v)
+            cell.fill = err_fill
+            if ci == 7:
+                cell.font = Font(color='DC2626', size=10, italic=True)
+                cell.alignment = Alignment(wrap_text=True)
+
+    # Dropdowns
+    dv_type = DataValidation(type='list', formula1=f'"{",".join(PROG_TYPES)}"', allow_blank=True)
+    dv_mode = DataValidation(type='list', formula1=f'"{",".join(MODES)}"',      allow_blank=True)
+    dv_type.sqref = f'D2:D{len(error_rows)+1}'
+    dv_mode.sqref = f'E2:E{len(error_rows)+1}'
+    ws.add_data_validation(dv_type)
+    ws.add_data_validation(dv_mode)
+
+    # Instructions sheet
+    ws2 = wb.create_sheet('How To Fix')
+    tips = [
+        'These rows could NOT be auto-fixed. Please correct column by column:',
+        '',
+        'Employee Code — must exactly match the code in TMS employee master',
+        'Programme Name — enter the correct training programme name',
+        'Type of Programme — use the dropdown (click the cell)',
+        'Mode — use the dropdown',
+        '',
+        'After fixing, save and re-upload on the TNI Analyzer page.',
+        'Column G (Issues) shows exactly what was wrong — read it before fixing.',
+    ]
+    for ri, t in enumerate(tips, 1):
+        c = ws2.cell(row=ri, column=1, value=t)
+        if ri == 1: c.font = Font(bold=True, color='7F1D1D', size=12)
+        ws2.column_dimensions['A'].width = 80
+
+    buf = _io.BytesIO()
+    wb.save(buf); buf.seek(0)
+    return buf
+
+
+@app.route('/tni/analyze', methods=['GET', 'POST'])
+@spoc_required
+def tni_analyze():
+    if request.method == 'GET':
+        return render_template('tni_analyze.html', step='upload')
+
+    f = request.files.get('file')
+    if not f or f.filename == '':
+        flash('No file selected.', 'danger')
+        return render_template('tni_analyze.html', step='upload')
+    skip = int(request.form.get('skip_rows', 0))
+    try:
+        raw   = f.read()
+        fname = f.filename.lower()
+        import pandas as _pd  # noqa: PLC0415
+        if fname.endswith('.csv'):
+            df = _pd.read_csv(_io.BytesIO(raw), dtype=str, skiprows=skip).fillna('')
+        else:
+            df = _pd.read_excel(_io.BytesIO(raw), dtype=str, skiprows=skip).fillna('')
+    except Exception as e:
+        flash(f'Could not read file: {e}', 'danger')
+        return render_template('tni_analyze.html', step='upload')
+
+    plant_id = session['plant_id']
+    db       = get_db()
+    try:
+        rows = _smart_analyze_rows(df, plant_id, db)
+    except ValueError as e:
+        flash(str(e), 'danger')
+        return render_template('tni_analyze.html', step='upload')
+
+    if not rows:
+        col_list = ', '.join(f'"{c}"' for c in df.columns.tolist()[:15])
+        flash(f'No data rows found. Columns detected: {col_list}. '
+              f'Try increasing "Skip top rows" if headers are not on row 1.', 'warning')
+        return render_template('tni_analyze.html', step='upload')
+
+    aid = str(_uuid.uuid4())
+    with open(os.path.join(BASE_DIR, 'data', f'tni_analyze_{aid}.json'), 'w') as fp:
+        _json.dump(rows, fp)
+
+    ok_count    = sum(1 for r in rows if r['status'] == 'ok')
+    fixed_count = sum(1 for r in rows if r['status'] == 'fixed')
+    err_count   = sum(1 for r in rows if r['status'] == 'error')
+    return render_template('tni_analyze.html', step='review',
+                           rows=rows, aid=aid,
+                           ok_count=ok_count, fixed_count=fixed_count, err_count=err_count,
+                           prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY)
+
+
+@app.route('/tni/analyze/confirm', methods=['POST'])
+@spoc_required
+def tni_analyze_confirm():
+    aid  = request.form.get('aid', '')
+    path = os.path.join(BASE_DIR, 'data', f'tni_analyze_{aid}.json')
+    if not aid or not os.path.exists(path):
+        flash('Session expired. Please re-upload.', 'danger')
+        return redirect(url_for('tni_analyze'))
+
+    with open(path) as fp:
+        rows = _json.load(fp)
+
+    plant_id  = session['plant_id']
+    db        = get_db()
+    inserted  = 0
+    err_rows  = [r for r in rows if r['status'] == 'error']
+
+    for row in rows:
+        if row['status'] == 'error':
+            continue
+        db.execute('INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
+                   (plant_id, row['emp_code'], row['programme_name'],
+                    row['prog_type'], row['mode'], row['planned_hours']))
+        inserted += 1
+    db.commit()
+    try: os.remove(path)
+    except: pass
+
+    if err_rows:
+        buf = _error_excel_for_tni(err_rows)
+        flash(f'{inserted} records imported. {len(err_rows)} errors — downloading correction file.', 'warning')
+        return send_file(buf, as_attachment=True,
+                         download_name='TNI_Errors_To_Fix.xlsx',
+                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    flash(f'{inserted} TNI entries imported successfully — all clean!', 'success')
+    return redirect(url_for('tni'))
+
 
 # ─── ENTRY POINT ─────────────────────────────────────────────────────────────
 
