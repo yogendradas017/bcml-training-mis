@@ -154,38 +154,12 @@
             </td>
             <td>
               {% if emp.is_active %}
-              <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
-                      data-bs-target="#exitModal{{ emp.id }}">
+              <button class="btn btn-sm btn-outline-danger exit-btn"
+                      data-emp-id="{{ emp.id }}"
+                      data-emp-name="{{ emp.name }}"
+                      data-exit-url="{{ url_for('exit_employee', emp_id=emp.id) }}">
                 <i class="bi bi-box-arrow-right"></i> Exit
               </button>
-              <!-- Exit Modal -->
-              <div class="modal fade" id="exitModal{{ emp.id }}" tabindex="-1">
-                <div class="modal-dialog modal-sm">
-                  <div class="modal-content">
-                    <div class="modal-header">
-                      <h6 class="modal-title">Mark Exit — {{ emp.name }}</h6>
-                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form method="POST" action="{{ url_for('exit_employee', emp_id=emp.id) }}">
-                      <div class="modal-body">
-                        <div class="mb-3">
-                          <label class="form-label">Exit Date</label>
-                          <input type="date" name="exit_date" class="form-control"
-                                 value="{{ today }}" required>
-                        </div>
-                        <div class="mb-3">
-                          <label class="form-label">Reason</label>
-                          <input type="text" name="exit_reason" class="form-control"
-                                 placeholder="Resignation / Retirement / Transfer...">
-                        </div>
-                      </div>
-                      <div class="modal-footer">
-                        <button type="submit" class="btn btn-danger btn-sm">Confirm Exit</button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
               {% else %}
               <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}"
                     style="display:inline;">
@@ -205,11 +179,52 @@
     </div>
   </div>
 </div>
+<!-- Shared Exit Modal (outside table to avoid overflow clipping) -->
+<div class="modal fade" id="sharedExitModal" tabindex="-1" aria-labelledby="exitModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="exitModalLabel">Mark Exit</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="exitModalForm" action="">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Exit Date</label>
+            <input type="date" name="exit_date" id="exitDateInput" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Reason</label>
+            <input type="text" name="exit_reason" class="form-control"
+                   placeholder="Resignation / Retirement / Transfer...">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger btn-sm">Confirm Exit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}
 <script>
 const today = new Date().toISOString().split('T')[0];
-document.querySelectorAll('input[name="exit_date"]').forEach(el => el.value = today);
+document.getElementById('exitDateInput').value = today;
+
+document.querySelectorAll('.exit-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const name = this.dataset.empName;
+    const url  = this.dataset.exitUrl;
+    document.getElementById('exitModalLabel').textContent = 'Mark Exit — ' + name;
+    document.getElementById('exitModalForm').action = url;
+    document.getElementById('exitDateInput').value = today;
+    new bootstrap.Modal(document.getElementById('sharedExitModal')).show();
+  });
+});
+
 TBL.init('empTable', 30);
 TBL.buildDynamic('empTable', 'dept', document.getElementById('empDeptFilter'), 'All Departments');
 </script>
