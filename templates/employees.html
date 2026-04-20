@@ -235,9 +235,18 @@
             <input type="date" name="exit_date" id="exitDateInput" class="form-control" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Reason</label>
-            <input type="text" name="exit_reason" class="form-control"
-                   placeholder="Resignation / Retirement / Transfer...">
+            <label class="form-label">Reason <span class="required-star">*</span></label>
+            <select name="exit_reason" class="form-select" required>
+              <option value="">-- Select Reason --</option>
+              <option>Resignation</option>
+              <option>Retirement</option>
+              <option>Transfer</option>
+              <option>Termination</option>
+              <option>Absconding</option>
+              <option>Death</option>
+              <option>Contract End</option>
+              <option>Other</option>
+            </select>
           </div>
         </div>
         <div class="modal-footer">
