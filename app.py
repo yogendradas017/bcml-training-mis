@@ -1989,6 +1989,15 @@ _MASTER_LOWER = [p.lower() for p in MASTER_PROGRAMMES]
 
 def _smart_analyze_rows(df, plant_id, db):
     from difflib import get_close_matches as gcm
+    _prog_cache = {}  # cache: raw_lower → canonical name (avoid recomputing same programme names)
+
+    def _match_master(raw_lower):
+        if raw_lower in _prog_cache:
+            return _prog_cache[raw_lower]
+        m = gcm(raw_lower, _MASTER_LOWER, n=1, cutoff=0.72)
+        result = MASTER_PROGRAMMES[_MASTER_LOWER.index(m[0])] if m else None
+        _prog_cache[raw_lower] = result
+        return result
     emp_rows  = db.execute('SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)).fetchall()
     emp_map   = {r['emp_code']: r['name'] for r in emp_rows}
     emp_upper = {k.upper(): k for k in emp_map}
@@ -2059,16 +2068,15 @@ def _smart_analyze_rows(df, plant_id, db):
             status = 'error'
         else:
             raw_lower = raw_prog.strip().lower()
-            # Step 1: fuzzy match against master list (primary)
-            m = gcm(raw_lower, _MASTER_LOWER, n=1, cutoff=0.72)
-            if m:
-                best = MASTER_PROGRAMMES[_MASTER_LOWER.index(m[0])]
+            # Step 1: fuzzy match against master list (cached)
+            best = _match_master(raw_lower)
+            if best is not None:
                 if best.lower() != raw_lower:
                     fixes.append({'field':'Programme Name','original':raw_prog,'fixed':best,'how':'Matched to master list'})
                     clean_prog = best
                     if status == 'ok': status = 'fixed'
                 else:
-                    clean_prog = best  # exact match — use canonical form
+                    clean_prog = best
             else:
                 # Step 2: fallback — smart title case preserving acronyms
                 titled = _smart_title(raw_prog)
