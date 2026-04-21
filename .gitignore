@@ -1,0 +1,14 @@
+# Database — never commit live data; use Render Persistent Disk
+data/training.db
+data/*.db
+
+# Temp analysis files
+data/smart_import_*.json
+data/smart_raw_*.json
+data/tni_analyze_*.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
