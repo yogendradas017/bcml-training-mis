@@ -491,6 +491,18 @@ def tni_duplicates_delete():
 def programme_master():
     plant_id = session['plant_id']
     db = get_db()
+    db.execute('''CREATE TABLE IF NOT EXISTS programme_master (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plant_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        prog_type TEXT, mode TEXT,
+        created_at TEXT DEFAULT (date('now')),
+        UNIQUE(plant_id, name))''')
+    # Seed Balrampur if empty
+    if plant_id == 1 and db.execute('SELECT COUNT(*) FROM programme_master WHERE plant_id=1').fetchone()[0] == 0:
+        for pname in MASTER_PROGRAMMES:
+            db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(1,?)', (pname,))
+        db.commit()
     progs = db.execute(
         'SELECT * FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
     return render_template('programme_master.html', progs=progs,
@@ -507,18 +519,30 @@ def programme_master_add():
         flash('Programme name is required.', 'danger')
         return redirect(url_for('programme_master'))
     db = get_db()
-    existing = db.execute('SELECT id FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
-                          (plant_id, name)).fetchone()
-    if existing:
-        db.execute('UPDATE programme_master SET prog_type=?, mode=? WHERE id=?',
-                   (prog_type or None, mode or None, existing['id']))
-        db.commit()
-        flash(f'"{name}" updated in master list.', 'success')
-    else:
-        db.execute('INSERT INTO programme_master(plant_id,name,prog_type,mode) VALUES(?,?,?,?)',
-                   (plant_id, name, prog_type or None, mode or None))
-        db.commit()
-        flash(f'"{name}" added to master list.', 'success')
+    # Ensure table exists (handles live DBs that predate this migration)
+    db.execute('''CREATE TABLE IF NOT EXISTS programme_master (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plant_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        prog_type TEXT, mode TEXT,
+        created_at TEXT DEFAULT (date('now')),
+        UNIQUE(plant_id, name))''')
+    try:
+        existing = db.execute('SELECT id FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
+                              (plant_id, name)).fetchone()
+        if existing:
+            db.execute('UPDATE programme_master SET prog_type=?, mode=? WHERE id=?',
+                       (prog_type or None, mode or None, existing['id']))
+            db.commit()
+            flash(f'"{name}" updated.', 'success')
+        else:
+            db.execute('INSERT INTO programme_master(plant_id,name,prog_type,mode) VALUES(?,?,?,?)',
+                       (plant_id, name, prog_type or None, mode or None))
+            db.commit()
+            flash(f'"{name}" added to master list.', 'success')
+    except Exception as e:
+        import logging; logging.error(f'programme_master_add error: {e}')
+        flash(f'Error: {e}', 'danger')
     return redirect(url_for('programme_master'))
 
 @app.route('/programme-master/<int:prog_id>/delete', methods=['POST'])
