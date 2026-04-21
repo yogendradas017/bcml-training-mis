@@ -1852,6 +1852,132 @@ def _detect_col(columns, keywords):
                 return col
     return None
 
+# ── Master Programme List ─────────────────────────────────────────────────────
+_ACRONYMS = {
+    'PPE','SOP','EHS','OJT','DCS','UPS','VFD','DG','SLD','AC','DC','GST','ISO',
+    'HR','IT','MBC','FFT','MIST','DM','ETP','CPU','CGCB','MSDS','OFSAM','ZFD',
+    'STD2SD','FCS','RTD','TC','KNO3','MOP','PDM','5S','5-S','JCB','PM','R&M',
+}
+
+def _smart_title(s):
+    """Title case that preserves known acronyms."""
+    result = []
+    for w in s.split():
+        core = w.strip('.,;:()')
+        suffix = w[len(core):]
+        if core.upper() in _ACRONYMS:
+            result.append(core.upper() + suffix)
+        elif core.lower() == 'ph':
+            result.append('pH' + suffix)
+        else:
+            result.append(w.title())
+    return ' '.join(result)
+
+MASTER_PROGRAMMES = [
+    "5-S Management","5S Commercial","Advance Practice Pathology In Agriculture",
+    "Advanced Excel","Alignment Of Pumps, Fans And Gear Boxes With Motors",
+    "An Overview Of Bio-Pesticides And Its Classification",
+    "Bagasse Feeding As Per Boiler Requirement","Bagasse Handling",
+    "Basic Fire Safety Awareness","Basic Knowledge Of Hardware",
+    "Basic Of DCS Maintenance","Basic Of Maintenance And Programming Of Electronic Governor",
+    "Behaviour Based Safety","Boiler Operation & Maintenance","Breakdown Handling",
+    "Budget Planning","CGCB Guideline","CPU Operation",
+    "Cane Quality & Minimise The Cut To Crush Period",
+    "Checking Of Tube Cleaning/Tube Choking","Chemical Safety","Communication Skill",
+    "Concept Of Fitting Methodology","Condenser Maintenance And Testing",
+    "Condition Monitoring & Log Book Maintenance",
+    "Condition Monitoring System Of Equipment","Confined Space",
+    "Control Of Insect Pest & Diseases","Control Of Maintenance Schedule",
+    "DCS Maintenance & Programming","DM Plant Operation & Maintenance",
+    "Dismantling And Fitting Of Pump, Gear Boxes And Fans",
+    "ETP Operation","Economiser Maintenance","Electrical Safety",
+    "Emergency Awareness During Running Plant","Emergency Management",
+    "FFT Efficiency","Failure Analysis Of Process Material",
+    "Fire Fighting Equipment Technique","Fire Safety","Flow Measurement",
+    "GST","General Checking Of Equipment In Running Season",
+    "General Safety Awareness","Good Knowledge Of Metals","HR SOP",
+    "Handling Of All Testing Equipment","Handling Of Juice And Mud Removal System",
+    "Health Monitoring/Condition Monitoring Of Running Equipment",
+    "Hot Work (Gas Cutting, Building And Grinding)",
+    "How To Collect Samples","How To Handle Emergency Situation During Running Plant",
+    "How To Identify Cane Diseases","Hydraulic Testing And Vacuum Trial Of Pan",
+    "ISO General Awareness","IT SOP","Implementation Of OFSAM",
+    "Importance Of Machine Guarding","Improvement Of Fermentation Efficiency",
+    "Improvement Steam Economy","Income Tax",
+    "Industrial Hygiene And 5-S Management",
+    "Inspections And Testing Of Lifting Tool And Tackles Lifting Operation",
+    "Inventory Management","Irrigation Automation","JCB Operation","JCB Pumping",
+    "Juice Analysis","Knowledge About Cleaning And Ability To Conduct Schedule Checking Of Engines",
+    "Knowledge About Cleaning, Switch Gear Panels And Motors Checklist",
+    "Knowledge About Lab Apparatus & Equipment",
+    "Knowledge And Application Of Condensate Removal System",
+    "Knowledge And Operations Of Turbine","Knowledge Of Boiler Water Treatment",
+    "Knowledge Of DCS Hardware And Panel Wiring",
+    "Knowledge Of Electrical Equipment (Motor, Transformers, DG), SLD And Electrical Logics",
+    "Knowledge Of Field Instruments Like Pressure Transmitters, Temperature Transmitters, RTD/TC, I To P Converters, Control Valves, Loop Testing",
+    "Knowledge Of Importance Of Aeration In Melt",
+    "Knowledge Of Industrial Lubricants Properties",
+    "Knowledge Of Lighting And AC Systems",
+    "Knowledge Of MBC/Belt Conveyor Health Monitoring - Gearbox, Chain Condition, Rake Condition, Idlers And Belt",
+    "Knowledge Of Maintenance Of Pumps","Knowledge Of Measuring Instruments",
+    "Knowledge Of Molasses Brix & Purity",
+    "Knowledge Of Operating Parameter And Quality Of Steam And Cooling Water",
+    "Knowledge Of Operation Of MIST","Knowledge Of Pumps And Its Parts",
+    "Knowledge Of Supersaturation Zones During Pan Boiling",
+    "Knowledge Of Three Motion Hydraulic Cane Unloader Operations",
+    "Knowledge Of Upgraded Technology Related IT",
+    "Knowledge Of Wire Rope Sling Size By Weight And Job Wise",
+    "Knowledge Of Working Tools, Tackles And Fasteners",
+    "Labour Laws","Leadership Quality","Legal Compliance",
+    "Maintain Brix Of Magma","Maintain Temperature From Juice Heater",
+    "Maintaining Load Of Machine By Operating The Feed Valve",
+    "Maintenance And Programming Of Electronic Governor",
+    "Maintenance Effectiveness","Maintenance Of AC & DC Drives",
+    "Maintenance Of Electrical Machine And Switch Gears",
+    "Maintenance Of Power Turbine",
+    "Maintenance Of Safety Valves And Checking For Its Perfection",
+    "Maintenance Of UPS & Battery","Manufacturing Process",
+    "Massecuite Curing Temperature And Its Impact","Material Handling",
+    "Material Handling (Manual And Mechanical)","Measurement Maintenance",
+    "Mill Efficiency","Molasses Conditioning Temperature And Brix",
+    "Monitoring And Ensuring Proper Operations Of Bagasse Belt Conveyors",
+    "New Methodology In Soil Testing","New Varietal Trial","New Wage Code",
+    "Nil Safety","Operation & Maintenance Of Boiler",
+    "Operation Of Boiler From Cold To Pressurization",
+    "Operation Of Turbine Within Controlled Parameters",
+    "Operational Behaviour Awareness",
+    "Optimum Temperature And pH Adjustment During Defecation",
+    "Organic Waste Management","Overhauling And Maintenance Of Centrifugal Machine",
+    "Ownership","PPE Awareness Use Inspection And Handling","Personal Effectiveness",
+    "Planning Of Different Massecuite Boiling To Control The Material Load",
+    "PowerPoint","Premium Potash Fertilisers: SOP Vs KNO3 Vs MOP Vs PDM",
+    "Preventive Maintenance",
+    "Preventive Maintenance And Condition Monitoring Of Electrical Equipment",
+    "Problem Solving","Process Parameter","Process Safety Management",
+    "Purification Of Condensate Removal System","Qualitimetry",
+    "Quality Communication & Industrial Security","Quality R&M And Operation",
+    "Raw Material Analysis","Removal Of Juice And Filter Cake From The System",
+    "Repair & Maintenance Of Workshop Machine","Reporting Of Non EHS Lapses",
+    "Reporting Of Non Performance Of Chemicals","Road Safety & Defensive Driving",
+    "SOP Boiler","SOP Distillation And Fermentation Operation","SOP ETP",
+    "SOP Electrical","SOP Instrumentation","SOP Mill House","SOP PM Module",
+    "SOP Sales","SOP Store","SOP Workshop","STD2SD","Safety Induction",
+    "Sample Collection","Sample Collection Methods As Per SOP",
+    "Sampling & Its Importance","Screen Checking And Molasses Purity Control",
+    "Self Discipline","Start And Stop The Boiler","Switch Gear Maintenance & Testing",
+    "Team Work","Theft Prevention","To Control Fermentation Process Parameter",
+    "To Maintain Brix Of Massecuite Of Dropping Pan",
+    "To Maintain Brix Of Syrup At Fix",
+    "To Maintain Chemical Dosing As Per Requirement",
+    "To Maintain Temperature & pH Of Juice",
+    "To Maintain Temperature & pH Of Juice/Melt",
+    "To Maintain Temperature And pH Of Juice","Treated Water Parameters",
+    "Understanding Of DCS Logic And Graphics","Use Of MSDS",
+    "Use Of Optimum Dose Of Flocculant","VFD Maintenance","VFD Operation & Maintenance",
+    "Water Management","Withdrawal Of Scum From FCS Clarifier","ZFD",
+]
+_MASTER_LOWER = [p.lower() for p in MASTER_PROGRAMMES]
+
 def _smart_analyze_rows(df, plant_id, db):
     from difflib import get_close_matches as gcm
     emp_rows  = db.execute('SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)).fetchall()
@@ -1923,22 +2049,24 @@ def _smart_analyze_rows(df, plant_id, db):
             issues.append('Programme Name is missing')
             status = 'error'
         else:
-            titled = raw_prog.title()
-            if titled != raw_prog:
-                fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'Title case applied'})
-                clean_prog = titled
-                if status == 'ok': status = 'fixed'
+            raw_lower = raw_prog.strip().lower()
+            # Step 1: fuzzy match against master list (primary)
+            m = gcm(raw_lower, _MASTER_LOWER, n=1, cutoff=0.72)
+            if m:
+                best = MASTER_PROGRAMMES[_MASTER_LOWER.index(m[0])]
+                if best.lower() != raw_lower:
+                    fixes.append({'field':'Programme Name','original':raw_prog,'fixed':best,'how':'Matched to master list'})
+                    clean_prog = best
+                    if status == 'ok': status = 'fixed'
+                else:
+                    clean_prog = best  # exact match — use canonical form
             else:
-                clean_prog = raw_prog
-            # Spell-check against known programmes
-            if known_progs:
-                m = gcm(clean_prog.lower(), [p.lower() for p in known_progs], n=1, cutoff=0.75)
-                if m:
-                    best = known_progs[[p.lower() for p in known_progs].index(m[0])]
-                    if best.lower() != clean_prog.lower():
-                        fixes.append({'field':'Programme Name','original':clean_prog,'fixed':best,'how':'Spell-checked against existing programmes'})
-                        clean_prog = best
-                        if status == 'ok': status = 'fixed'
+                # Step 2: fallback — smart title case preserving acronyms
+                titled = _smart_title(raw_prog)
+                if titled != raw_prog:
+                    fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'Title case applied (not in master list)'})
+                    clean_prog = titled
+                    if status == 'ok': status = 'fixed'
 
         # ── Programme Type ─────────────────────────────────────────
         clean_type, type_changed = _fuzzy_fix(raw_type, PROG_TYPES) if raw_type else ('', False)
