@@ -776,6 +776,9 @@
     <li><a href="{{ url_for('programme_intelligence') }}" class="{% if request.endpoint=='programme_intelligence' %}active{% endif %}">
       <i class="bi bi-graph-up-arrow"></i> Programme Intelligence
     </a></li>
+    <li><a href="{{ url_for('programme_master') }}" class="{% if request.endpoint=='programme_master' %}active{% endif %}">
+      <i class="bi bi-journal-check"></i> Programme Master
+    </a></li>
     {% if session.plant_id %}
     <li><a href="{{ url_for('export_excel', plant_id=session.plant_id) }}">
       <i class="bi bi-file-earmark-excel-fill" style="color:#4ade80;"></i> Export to Excel

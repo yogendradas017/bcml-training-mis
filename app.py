@@ -86,6 +86,10 @@ def init_db():
     for u in users:
         db.execute('INSERT OR IGNORE INTO users(username,password,role,plant_id) VALUES(?,?,?,?)',
                    (u[0], generate_password_hash(u[1]), u[2], u[3]))
+    # Seed Balrampur master programmes (plant_id=1) from hardcoded list if empty
+    if db.execute('SELECT COUNT(*) FROM programme_master WHERE plant_id=1').fetchone()[0] == 0:
+        for name in MASTER_PROGRAMMES:
+            db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(1,?)', (name,))
     db.commit()
     db.close()
 
@@ -475,6 +479,155 @@ def tni_duplicates_delete():
     db.commit()
     flash(f'{deleted} duplicate TNI entries removed.', 'success')
     return redirect(url_for('tni'))
+
+# ─── PROGRAMME MASTER ─────────────────────────────────────────────────────────
+
+@app.route('/programme-master')
+@spoc_required
+def programme_master():
+    plant_id = session['plant_id']
+    db = get_db()
+    progs = db.execute(
+        'SELECT * FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
+    return render_template('programme_master.html', progs=progs,
+                           prog_types=PROG_TYPES, modes=MODES)
+
+@app.route('/programme-master/add', methods=['POST'])
+@spoc_required
+def programme_master_add():
+    plant_id = session['plant_id']
+    name = request.form.get('name', '').strip()
+    prog_type = request.form.get('prog_type', '').strip()
+    mode = request.form.get('mode', '').strip()
+    if not name:
+        flash('Programme name is required.', 'danger')
+        return redirect(url_for('programme_master'))
+    db = get_db()
+    try:
+        db.execute('INSERT INTO programme_master(plant_id,name,prog_type,mode) VALUES(?,?,?,?)',
+                   (plant_id, name, prog_type or None, mode or None))
+        db.commit()
+        flash(f'"{name}" added to master list.', 'success')
+    except Exception:
+        flash(f'"{name}" already exists in master list.', 'warning')
+    return redirect(url_for('programme_master'))
+
+@app.route('/programme-master/<int:prog_id>/delete', methods=['POST'])
+@spoc_required
+def programme_master_delete(prog_id):
+    plant_id = session['plant_id']
+    db = get_db()
+    db.execute('DELETE FROM programme_master WHERE id=? AND plant_id=?', (prog_id, plant_id))
+    db.commit()
+    flash('Programme removed from master list.', 'warning')
+    return redirect(url_for('programme_master'))
+
+@app.route('/programme-master/bulk', methods=['POST'])
+@spoc_required
+def programme_master_bulk():
+    plant_id = session['plant_id']
+    f = request.files.get('file')
+    if not f or f.filename == '':
+        flash('No file selected.', 'danger')
+        return redirect(url_for('programme_master'))
+    try:
+        import pandas as _pd
+        fname = f.filename.lower()
+        if fname.endswith('.csv'):
+            df = _pd.read_csv(f, dtype=str).fillna('')
+        else:
+            df = _pd.read_excel(f, dtype=str).fillna('')
+    except Exception as e:
+        flash(f'Could not read file: {e}', 'danger')
+        return redirect(url_for('programme_master'))
+
+    # Auto-detect name column
+    cols_lower = {c.strip().lower(): c for c in df.columns}
+    name_col = next((cols_lower[k] for k in ['programme name','program name','name','training name','course name'] if k in cols_lower), None)
+    type_col = next((cols_lower[k] for k in ['type of programme','type','prog type','programme type'] if k in cols_lower), None)
+    mode_col = next((cols_lower[k] for k in ['mode','training mode','delivery mode'] if k in cols_lower), None)
+
+    if not name_col:
+        flash(f'Could not find a "Programme Name" column. Columns found: {", ".join(df.columns.tolist()[:10])}', 'danger')
+        return redirect(url_for('programme_master'))
+
+    db = get_db()
+    inserted = skipped = 0
+    for _, row in df.iterrows():
+        name = str(row.get(name_col, '')).strip()
+        if not name or name.lower() in ('nan', 'none', ''):
+            continue
+        prog_type = str(row.get(type_col, '')).strip() if type_col else ''
+        mode      = str(row.get(mode_col, '')).strip() if mode_col else ''
+        try:
+            db.execute('INSERT INTO programme_master(plant_id,name,prog_type,mode) VALUES(?,?,?,?)',
+                       (plant_id, name, prog_type or None, mode or None))
+            inserted += 1
+        except Exception:
+            skipped += 1
+    db.commit()
+    flash(f'{inserted} programmes added. {skipped} already existed (skipped).', 'success' if inserted else 'warning')
+    return redirect(url_for('programme_master'))
+
+@app.route('/programme-master/template')
+@spoc_required
+def programme_master_template():
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Programme Master'
+    hdr_fill = PatternFill('solid', fgColor='1A1F35')
+    headers = ['Programme Name', 'Type of Programme', 'Mode']
+    widths  = [45, 25, 15]
+    for ci, (h, w) in enumerate(zip(headers, widths), 1):
+        c = ws.cell(row=1, column=ci, value=h)
+        c.fill = hdr_fill
+        c.font = Font(bold=True, color='FFFFFF', size=11)
+        c.alignment = Alignment(horizontal='center')
+        ws.column_dimensions[get_column_letter(ci)].width = w
+    ws.row_dimensions[1].height = 22
+    # Sample rows
+    samples = [('Fire Safety', 'EHS/HR', 'Classroom'),
+               ('5-S Management', 'EHS/HR', 'OJT'),
+               ('Advanced Excel', 'IT', 'Classroom')]
+    for row in samples:
+        ws.append(row)
+    from openpyxl.worksheet.datavalidation import DataValidation
+    dv_type = DataValidation(type='list', formula1=f'"{",".join(PROG_TYPES)}"', allow_blank=True)
+    dv_mode = DataValidation(type='list', formula1=f'"{",".join(MODES)}"', allow_blank=True)
+    dv_type.sqref = 'B2:B500'; dv_mode.sqref = 'C2:C500'
+    ws.add_data_validation(dv_type); ws.add_data_validation(dv_mode)
+    ws.freeze_panes = 'A2'
+    buf = _io.BytesIO(); wb.save(buf); buf.seek(0)
+    return send_file(buf, as_attachment=True, download_name='Programme_Master_Template.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/programme-master/export')
+@spoc_required
+def programme_master_export():
+    plant_id = session['plant_id']
+    plant_name = session.get('plant_name', 'Plant')
+    db = get_db()
+    progs = db.execute('SELECT name, prog_type, mode, created_at FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Programme Master'
+    hdr_fill = PatternFill('solid', fgColor='1A1F35')
+    headers = ['#', 'Programme Name', 'Type of Programme', 'Mode', 'Added On']
+    widths  = [5, 45, 25, 15, 14]
+    for ci, (h, w) in enumerate(zip(headers, widths), 1):
+        c = ws.cell(row=1, column=ci, value=h)
+        c.fill = hdr_fill
+        c.font = Font(bold=True, color='FFFFFF', size=11)
+        c.alignment = Alignment(horizontal='center')
+        ws.column_dimensions[get_column_letter(ci)].width = w
+    ws.row_dimensions[1].height = 22
+    ws.freeze_panes = 'A2'
+    for i, r in enumerate(progs, 1):
+        ws.append([i, r['name'], r['prog_type'] or '', r['mode'] or '', r['created_at'] or ''])
+    buf = _io.BytesIO(); wb.save(buf); buf.seek(0)
+    return send_file(buf, as_attachment=True,
+                     download_name=f'Programme_Master_{plant_name}.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @app.route('/tni/template')
 @spoc_required
@@ -2059,13 +2212,19 @@ _MASTER_LOWER = [p.lower() for p in MASTER_PROGRAMMES]
 
 def _smart_analyze_rows(df, plant_id, db):
     from difflib import get_close_matches as gcm
-    _prog_cache = {}  # cache: raw_lower → canonical name (avoid recomputing same programme names)
+    _prog_cache = {}  # cache: raw_lower → canonical name
+
+    # Load plant-specific master from DB; fallback to hardcoded list if empty
+    _db_master = [r[0] for r in db.execute(
+        'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,))]
+    _active_master       = _db_master if _db_master else MASTER_PROGRAMMES
+    _active_master_lower = [p.lower() for p in _active_master]
 
     def _match_master(raw_lower):
         if raw_lower in _prog_cache:
             return _prog_cache[raw_lower]
-        m = gcm(raw_lower, _MASTER_LOWER, n=1, cutoff=0.72)
-        result = MASTER_PROGRAMMES[_MASTER_LOWER.index(m[0])] if m else None
+        m = gcm(raw_lower, _active_master_lower, n=1, cutoff=0.72)
+        result = _active_master[_active_master_lower.index(m[0])] if m else None
         _prog_cache[raw_lower] = result
         return result
     emp_rows  = db.execute('SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)).fetchall()

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block page_title %}Programme Master{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0">Programme Master — {{ session.plant_name }}</h5>
+    <small class="text-muted">{{ progs|length }} canonical programme{{ 's' if progs|length != 1 }}. TNI Analyzer matches uploads against this list.</small>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('programme_master_template') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-download"></i> Download Template
+    </a>
+    <a href="{{ url_for('programme_master_export') }}" class="btn btn-outline-success btn-sm">
+      <i class="bi bi-file-earmark-excel"></i> Export List
+    </a>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+      <i class="bi bi-plus-lg"></i> Add Programme
+    </button>
+    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#bulkModal">
+      <i class="bi bi-upload"></i> Bulk Upload
+    </button>
+  </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'warning' if cat=='warning' else 'danger' }} alert-dismissible fade show py-2">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endwith %}
+
+{% if not progs %}
+<div class="card mb-3">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-journal-plus" style="font-size:36px;display:block;margin-bottom:10px;color:#6366f1;"></i>
+    <strong>No programmes in master list yet.</strong><br>
+    Add programmes manually or bulk upload an Excel file.<br>
+    <small>Until a master list exists, the TNI Analyzer will still clean names using title-case rules.</small>
+  </div>
+</div>
+{% else %}
+
+<div class="card">
+  <div class="card-body pb-2 pt-3">
+    <input type="text" id="pm-search" class="form-control" placeholder="Search programme..." style="max-width:300px;font-size:13px;">
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th style="width:44px;padding:10px 14px;">#</th>
+          <th style="padding:10px 14px;">Programme Name</th>
+          <th style="padding:10px 14px;width:180px;">Type</th>
+          <th style="padding:10px 14px;width:120px;">Mode</th>
+          <th style="padding:10px 14px;width:60px;text-align:center;">Del</th>
+        </tr>
+      </thead>
+      <tbody id="pm-body">
+        {% for p in progs %}
+        <tr class="pm-row" data-name="{{ p.name|lower }}">
+          <td style="padding:8px 14px;color:#9ca3af;font-size:11px;">{{ loop.index }}</td>
+          <td style="padding:8px 14px;font-weight:600;color:#111827;">{{ p.name }}</td>
+          <td style="padding:8px 14px;color:#6b7280;">{{ p.prog_type or '—' }}</td>
+          <td style="padding:8px 14px;color:#6b7280;">{{ p.mode or '—' }}</td>
+          <td style="padding:8px 14px;text-align:center;">
+            <form method="POST" action="{{ url_for('programme_master_delete', prog_id=p.id) }}"
+                  onsubmit="return confirm('Remove {{ p.name }}?');" style="display:inline;">
+              <button class="btn btn-link p-0" style="color:#ef4444;font-size:15px;" title="Delete">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# ── Add Single Modal ── #}
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('programme_master_add') }}">
+      <div class="modal-content">
+        <div class="modal-header" style="background:#1a1f35;color:#fff;">
+          <h5 class="modal-title fs-6">Add Programme to Master</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:13px;">Programme Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control form-control-sm" placeholder="e.g. Fire Safety" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:13px;">Type of Programme</label>
+            <select name="prog_type" class="form-select form-select-sm">
+              <option value="">— Select —</option>
+              {% for pt in prog_types %}<option>{{ pt }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold" style="font-size:13px;">Default Mode</label>
+            <select name="mode" class="form-select form-select-sm">
+              <option value="">— Select —</option>
+              {% for m in modes %}<option>{{ m }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Add</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Bulk Upload Modal ── #}
+<div class="modal fade" id="bulkModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('programme_master_bulk') }}" enctype="multipart/form-data">
+      <div class="modal-content">
+        <div class="modal-header" style="background:#1a1f35;color:#fff;">
+          <h5 class="modal-title fs-6">Bulk Upload Programme Master</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:#6b7280;">Upload an Excel/CSV with a <strong>Programme Name</strong> column. Type and Mode columns are optional.</p>
+          <div class="mb-2">
+            <label class="form-label fw-semibold" style="font-size:13px;">File <span class="text-danger">*</span></label>
+            <input type="file" name="file" class="form-control form-control-sm" accept=".xlsx,.xls,.csv" required>
+          </div>
+          <small class="text-muted">Duplicates are automatically skipped. Existing entries are preserved.</small>
+        </div>
+        <div class="modal-footer">
+          <a href="{{ url_for('programme_master_template') }}" class="btn btn-outline-secondary btn-sm me-auto">
+            <i class="bi bi-download"></i> Get Template
+          </a>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Upload</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const pmSearch = document.getElementById('pm-search');
+if (pmSearch) {
+  pmSearch.addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.pm-row').forEach(r => {
+      r.style.display = r.dataset.name.includes(q) ? '' : 'none';
+    });
+  });
+}
+</script>
+{% endblock %}
