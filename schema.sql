@@ -114,6 +114,17 @@ CREATE TABLE IF NOT EXISTS programme_details (
     created_at TEXT DEFAULT (date('now'))
 );
 
+CREATE TABLE IF NOT EXISTS programme_master (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plant_id INTEGER NOT NULL REFERENCES plants(id),
+    name TEXT NOT NULL,
+    prog_type TEXT,
+    mode TEXT,
+    created_at TEXT DEFAULT (date('now')),
+    UNIQUE(plant_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_prog_master_plant ON programme_master(plant_id);
 CREATE INDEX IF NOT EXISTS idx_emp_plant ON employees(plant_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_emp_code ON employees(emp_code);
 CREATE INDEX IF NOT EXISTS idx_tni_plant ON tni(plant_id);
