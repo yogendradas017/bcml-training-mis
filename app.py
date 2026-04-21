@@ -336,16 +336,20 @@ def tni_data():
 
     join_sql = f'''
         FROM tni t
+        JOIN (SELECT MAX(id) as max_id FROM tni
+              WHERE plant_id=?
+              GROUP BY emp_code, programme_name) dedup ON t.id = dedup.max_id
         LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
         LEFT JOIN (SELECT DISTINCT emp_code, programme_name
                    FROM emp_training WHERE plant_id=?) et
                ON et.emp_code=t.emp_code AND et.programme_name=t.programme_name
         WHERE {where_clause}
-          AND t.id = (SELECT MAX(id) FROM tni WHERE plant_id=t.plant_id
-                      AND emp_code=t.emp_code AND programme_name=t.programme_name)
     '''
+    # join_sql has 2 leading plant_id params (dedup subquery + emp_training subquery)
+    join_params = [plant_id, plant_id] + params
+
     # total count — fast SQL COUNT
-    total = db.execute(f'SELECT COUNT(*) {join_sql}', [plant_id] + params).fetchone()[0]
+    total = db.execute(f'SELECT COUNT(*) {join_sql}', join_params).fetchone()[0]
 
     offset = (page - 1) * per_page
     rows_raw = db.execute(
@@ -355,7 +359,7 @@ def tni_data():
                    CASE WHEN et.emp_code IS NOT NULL THEN 'Yes' ELSE 'Pending' END AS completed
             {join_sql}
             ORDER BY t.id DESC LIMIT ? OFFSET ?''',
-        [plant_id] + params + [per_page, offset]
+        join_params + [per_page, offset]
     ).fetchall()
 
     rows = [{

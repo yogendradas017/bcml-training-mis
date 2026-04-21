@@ -128,6 +128,7 @@ CREATE INDEX IF NOT EXISTS idx_prog_master_plant ON programme_master(plant_id);
 CREATE INDEX IF NOT EXISTS idx_emp_plant ON employees(plant_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_emp_code ON employees(emp_code);
 CREATE INDEX IF NOT EXISTS idx_tni_plant ON tni(plant_id);
+CREATE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name);
 CREATE INDEX IF NOT EXISTS idx_cal_plant ON calendar(plant_id);
 CREATE INDEX IF NOT EXISTS idx_training_plant ON emp_training(plant_id);
 CREATE INDEX IF NOT EXISTS idx_prog_plant ON programme_details(plant_id);
