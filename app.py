@@ -281,7 +281,9 @@ def reactivate_employee(emp_id):
 def tni():
     plant_id = session['plant_id']
     db = get_db()
-    total = db.execute('SELECT COUNT(*) FROM tni WHERE plant_id=?', (plant_id,)).fetchone()[0]
+    total = db.execute(
+        'SELECT COUNT(DISTINCT emp_code || "|" || programme_name) FROM tni WHERE plant_id=?',
+        (plant_id,)).fetchone()[0]
     emps = db.execute('SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name', (plant_id,)).fetchall()
     programmes = _get_programme_names(plant_id, db)
     depts = [r[0] for r in db.execute(
@@ -335,6 +337,8 @@ def tni_data():
                    FROM emp_training WHERE plant_id=?) et
                ON et.emp_code=t.emp_code AND et.programme_name=t.programme_name
         WHERE {where_clause}
+          AND t.id = (SELECT MAX(id) FROM tni WHERE plant_id=t.plant_id
+                      AND emp_code=t.emp_code AND programme_name=t.programme_name)
     '''
     # total count — fast SQL COUNT
     total = db.execute(f'SELECT COUNT(*) {join_sql}', [plant_id] + params).fetchone()[0]
