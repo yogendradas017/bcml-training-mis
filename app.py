@@ -2266,9 +2266,17 @@ def tni_analyze_confirm():
     return redirect(url_for('tni'))
 
 
+# ─── TEMPORARY DEBUG — remove after fixing 500 ───────────────────────────────
+import traceback as _tb
+@app.errorhandler(500)
+def _err500(e):
+    return f'<pre style="font-size:13px;padding:20px;">{_tb.format_exc()}</pre>', 500
+
 # ─── ENTRY POINT ─────────────────────────────────────────────────────────────
-# Always initialize DB on startup — works with both gunicorn and direct run
-init_db()
+try:
+    init_db()
+except Exception as _e:
+    import logging; logging.error(f'init_db failed: {_e}')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
