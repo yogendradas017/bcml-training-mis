@@ -507,13 +507,18 @@ def programme_master_add():
         flash('Programme name is required.', 'danger')
         return redirect(url_for('programme_master'))
     db = get_db()
-    try:
+    existing = db.execute('SELECT id FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
+                          (plant_id, name)).fetchone()
+    if existing:
+        db.execute('UPDATE programme_master SET prog_type=?, mode=? WHERE id=?',
+                   (prog_type or None, mode or None, existing['id']))
+        db.commit()
+        flash(f'"{name}" updated in master list.', 'success')
+    else:
         db.execute('INSERT INTO programme_master(plant_id,name,prog_type,mode) VALUES(?,?,?,?)',
                    (plant_id, name, prog_type or None, mode or None))
         db.commit()
         flash(f'"{name}" added to master list.', 'success')
-    except Exception:
-        flash(f'"{name}" already exists in master list.', 'warning')
     return redirect(url_for('programme_master'))
 
 @app.route('/programme-master/<int:prog_id>/delete', methods=['POST'])

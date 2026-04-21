@@ -52,8 +52,7 @@
         <tr>
           <th style="width:44px;padding:10px 14px;">#</th>
           <th style="padding:10px 14px;">Programme Name</th>
-          <th style="padding:10px 14px;width:180px;">Type</th>
-          <th style="padding:10px 14px;width:120px;">Mode</th>
+          <th style="padding:10px 14px;">Type &amp; Mode</th>
           <th style="padding:10px 14px;width:60px;text-align:center;">Del</th>
         </tr>
       </thead>
@@ -62,8 +61,22 @@
         <tr class="pm-row" data-name="{{ p.name|lower }}">
           <td style="padding:8px 14px;color:#9ca3af;font-size:11px;">{{ loop.index }}</td>
           <td style="padding:8px 14px;font-weight:600;color:#111827;">{{ p.name }}</td>
-          <td style="padding:8px 14px;color:#6b7280;">{{ p.prog_type or '—' }}</td>
-          <td style="padding:8px 14px;color:#6b7280;">{{ p.mode or '—' }}</td>
+          <td style="padding:8px 14px;">
+            <form method="POST" action="{{ url_for('programme_master_add') }}" style="display:flex;gap:6px;align-items:center;">
+              <input type="hidden" name="name" value="{{ p.name }}">
+              <select name="prog_type" class="form-select form-select-sm" style="width:150px;font-size:12px;">
+                <option value="">— Type —</option>
+                {% for pt in prog_types %}<option {% if p.prog_type==pt %}selected{% endif %}>{{ pt }}</option>{% endfor %}
+              </select>
+              <select name="mode" class="form-select form-select-sm" style="width:110px;font-size:12px;">
+                <option value="">— Mode —</option>
+                {% for m in modes %}<option {% if p.mode==m %}selected{% endif %}>{{ m }}</option>{% endfor %}
+              </select>
+              <button class="btn btn-sm" style="background:#6366f1;color:#fff;padding:3px 10px;font-size:11px;" title="Save">
+                <i class="bi bi-check2"></i>
+              </button>
+            </form>
+          </td>
           <td style="padding:8px 14px;text-align:center;">
             <form method="POST" action="{{ url_for('programme_master_delete', prog_id=p.id) }}"
                   onsubmit="return confirm('Remove {{ p.name }}?');" style="display:inline;">
