@@ -1487,13 +1487,10 @@ def programme_intelligence():
     db       = get_db()
     fy       = _current_fy()
 
-    # unique programmes & sessions this FY
+    # ── Unique programmes in TNI & those still in demand ──────────────────────
     unique_progs = db.execute(
-        'SELECT COUNT(DISTINCT prog_code) FROM calendar WHERE plant_id=? AND session_code LIKE ?',
-        (plant_id, f'%/{fy}/%')).fetchone()[0]
-    total_sessions = db.execute(
-        'SELECT COUNT(*) FROM calendar WHERE plant_id=? AND session_code LIKE ?',
-        (plant_id, f'%/{fy}/%')).fetchone()[0]
+        'SELECT COUNT(DISTINCT programme_name) FROM tni WHERE plant_id=?',
+        (plant_id,)).fetchone()[0]
 
     # all TNI programmes with demand
     tni_rows = db.execute(
@@ -1512,26 +1509,49 @@ def programme_intelligence():
         sessions_map[r['programme_name']] = r['cnt']
 
     programmes = []
-    total_uncovered = 0
+    total_needs   = 0
+    total_covered = 0
     for r in tni_rows:
-        name     = r['programme_name']
-        demand   = r['demand']
-        covered  = covered_map.get(name, 0)
-        planned  = sessions_map.get(name, 0)
-        uncovered= max(0, demand - covered)
-        pct      = round(covered / demand * 100) if demand > 0 else 0
+        name      = r['programme_name']
+        demand    = r['demand']
+        covered   = covered_map.get(name, 0)
+        planned   = sessions_map.get(name, 0)
+        uncovered = max(0, demand - covered)
+        pct       = round(covered / demand * 100) if demand > 0 else 0
         if demand < 30:  status = 'Small Group'
         elif pct >= 80:  status = 'On Track'
         elif pct >= 30:  status = 'In Progress'
         else:            status = 'Big Ticket'
-        total_uncovered += uncovered
+        total_needs   += demand
+        total_covered += min(covered, demand)
         programmes.append({'name': name, 'demand': demand, 'covered': covered,
                            'planned': planned, 'uncovered': uncovered, 'pct': pct, 'status': status})
 
-    big_tickets = sum(1 for p in programmes if p['status'] == 'Big Ticket')
-    return render_template('intelligence.html', fy=fy, unique_progs=unique_progs,
-                           total_sessions=total_sessions, big_tickets=big_tickets,
-                           total_uncovered=total_uncovered, programmes=programmes)
+    total_uncovered  = max(0, total_needs - total_covered)
+    progs_in_demand  = sum(1 for p in programmes if p['uncovered'] > 0)
+    big_tickets      = sum(1 for p in programmes if p['status'] == 'Big Ticket')
+
+    # ── Sessions by mode this FY ───────────────────────────────────────────────
+    _mode_keys = ['Classroom', 'OJT', 'Online', 'SOP']
+    mode_map   = {m: {'planned': 0, 'conducted': 0} for m in _mode_keys}
+    mode_map['Other'] = {'planned': 0, 'conducted': 0}
+    for r in db.execute(
+            'SELECT mode, status, COUNT(*) as cnt FROM calendar WHERE plant_id=? AND session_code LIKE ? GROUP BY mode, status',
+            (plant_id, f'%/{fy}/%')):
+        key = r['mode'] if r['mode'] in _mode_keys else 'Other'
+        mode_map[key]['planned'] += r['cnt']
+        if r['status'] == 'Conducted':
+            mode_map[key]['conducted'] += r['cnt']
+    session_modes = [{'mode': k, **v, 'pct': round(v['conducted']/v['planned']*100) if v['planned'] else 0}
+                     for k, v in mode_map.items() if v['planned'] > 0]
+    total_sessions = sum(v['planned'] for v in mode_map.values())
+
+    return render_template('intelligence.html', fy=fy,
+                           unique_progs=unique_progs, progs_in_demand=progs_in_demand,
+                           total_needs=total_needs, total_covered=total_covered,
+                           total_uncovered=total_uncovered,
+                           total_sessions=total_sessions, session_modes=session_modes,
+                           big_tickets=big_tickets, programmes=programmes)
 
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -2273,12 +2293,6 @@ def tni_analyze_confirm():
     flash(f'{inserted} TNI entries imported successfully — all clean!', 'success')
     return redirect(url_for('tni'))
 
-
-# ─── TEMPORARY DEBUG — remove after fixing 500 ───────────────────────────────
-import traceback as _tb
-@app.errorhandler(500)
-def _err500(e):
-    return f'<pre style="font-size:13px;padding:20px;">{_tb.format_exc()}</pre>', 500
 
 # ─── ENTRY POINT ─────────────────────────────────────────────────────────────
 try:
