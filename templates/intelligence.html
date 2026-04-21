@@ -2,35 +2,86 @@
 {% block page_title %}Programme Intelligence{% endblock %}
 {% block content %}
 
-<div class="row g-3 mb-4">
-  <div class="col-md-3">
+{# ── Row 1: Unique Progs | Needs Breakdown | Big Ticket ── #}
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
     <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Unique Programmes — FY {{ fy }}</div>
-      <div class="sc-val" style="font-size:32px;font-weight:800;color:#6366f1;">{{ unique_progs }}</div>
+      <div class="sc-val" style="font-size:36px;font-weight:800;color:#6366f1;line-height:1;">{{ unique_progs }}</div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+        <span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">{{ progs_in_demand }} in demand</span>
+        <span style="font-size:11px;color:#9ca3af;">still uncovered</span>
+      </div>
     </div>
   </div>
-  <div class="col-md-3">
+
+  <div class="col-md-5">
     <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Total Sessions — FY {{ fy }}</div>
-      <div class="sc-val" style="font-size:32px;font-weight:800;color:#10b981;">{{ total_sessions }}</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:10px;">Employee Training Needs — FY {{ fy }}</div>
+      <div style="display:flex;gap:16px;align-items:flex-end;">
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#111827;line-height:1;">{{ total_needs }}</div>
+          <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-top:3px;">Total Needs</div>
+        </div>
+        <div style="color:#d1d5db;font-size:24px;font-weight:200;align-self:center;">/</div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#10b981;line-height:1;">{{ total_covered }}</div>
+          <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-top:3px;">Covered</div>
+        </div>
+        <div style="color:#d1d5db;font-size:24px;font-weight:200;align-self:center;">/</div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#ef4444;line-height:1;">{{ total_uncovered }}</div>
+          <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-top:3px;">Uncovered</div>
+        </div>
+      </div>
+      {% if total_needs > 0 %}
+      <div style="margin-top:12px;background:#f1f5f9;border-radius:99px;height:6px;overflow:hidden;">
+        <div style="width:{{ (total_covered / total_needs * 100)|round|int }}%;height:100%;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);"></div>
+      </div>
+      <div style="font-size:10px;color:#9ca3af;margin-top:3px;text-align:right;">{{ (total_covered / total_needs * 100)|round|int }}% overall coverage</div>
+      {% endif %}
     </div>
   </div>
+
   <div class="col-md-3">
     <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Big Ticket Items</div>
-      <div class="sc-val" style="font-size:32px;font-weight:800;color:#f59e0b;">{{ big_tickets }}</div>
-      <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Demand ≥ 30, coverage &lt; 30%</div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Employees Uncovered</div>
-      <div class="sc-val" style="font-size:32px;font-weight:800;color:#ef4444;">{{ total_uncovered }}</div>
-      <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Across all TNI programmes</div>
+      <div class="sc-val" style="font-size:36px;font-weight:800;color:#f59e0b;line-height:1;">{{ big_tickets }}</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:8px;">Demand ≥ 30 &amp; coverage &lt; 30%</div>
     </div>
   </div>
 </div>
 
+{# ── Row 2: Session mode breakdown ── #}
+{% if session_modes %}
+<div class="row g-3 mb-4">
+  {% for sm in session_modes %}
+  {% set color = '#6366f1' if sm.mode == 'Classroom' else '#10b981' if sm.mode == 'OJT' else '#3b82f6' if sm.mode == 'Online' else '#f59e0b' if sm.mode == 'SOP' else '#9ca3af' %}
+  <div class="col">
+    <div style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:16px 18px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">{{ sm.mode }}</div>
+      <div style="display:flex;align-items:baseline;gap:4px;">
+        <span style="font-size:26px;font-weight:800;color:{{ color }};line-height:1;">{{ sm.conducted }}</span>
+        <span style="font-size:13px;color:#9ca3af;">/ {{ sm.planned }}</span>
+      </div>
+      <div style="margin-top:8px;background:#f1f5f9;border-radius:99px;height:5px;overflow:hidden;">
+        <div style="width:{{ [sm.pct, 3]|max }}%;height:100%;border-radius:99px;background:{{ color }};"></div>
+      </div>
+      <div style="font-size:10px;color:#9ca3af;margin-top:3px;">{{ sm.pct }}% conducted</div>
+    </div>
+  </div>
+  {% endfor %}
+  <div class="col">
+    <div style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:16px 18px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Total Sessions</div>
+      <div style="font-size:26px;font-weight:800;color:#111827;line-height:1;">{{ total_sessions }}</div>
+      <div style="margin-top:8px;font-size:11px;color:#9ca3af;">FY {{ fy }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Programme table ── #}
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
     <span><i class="bi bi-bar-chart-fill"></i> Programme Demand vs Delivery — FY {{ fy }}</span>
@@ -59,6 +110,9 @@
       {% for p in programmes %}
       <div class="intel-row" data-name="{{ p.name|lower }}" data-status="{{ p.status }}"
            style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;">
+        <div style="width:36px;flex-shrink:0;text-align:center;font-size:11px;font-weight:700;color:#9ca3af;">
+          {{ loop.index }}
+        </div>
         <div style="width:220px;min-width:160px;">
           <div style="font-size:13px;font-weight:600;color:#111827;">{{ p.name }}</div>
           <div style="font-size:11px;color:#9ca3af;margin-top:1px;">{{ p.planned }} session{{ 's' if p.planned != 1 }} planned this FY</div>

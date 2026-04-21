@@ -825,7 +825,7 @@
         </div>
         <div class="user-dropdown">
           <div class="ud-header">
-            <div class="ud-avatar-lg">{{ session.username[0]|upper }}</div>
+            <div class="ud-avatar-lg">{{ (session.username or 'U')[0]|upper }}</div>
             <div class="ud-name">{{ session.username|title }}</div>
             <div class="ud-role">
               {% if session.role == 'admin' %}Administrator
