@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block page_title %}Duplicate TNI Entries{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h5 class="mb-0">Duplicate TNI Entries</h5>
+    <small class="text-muted">Same employee listed for the same programme more than once</small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('tni') }}" class="btn btn-outline-secondary btn-sm">← Back to TNI</a>
+    {% if rows %}
+    <form method="POST" action="{{ url_for('tni_duplicates_delete') }}"
+          onsubmit="return confirm('Remove {{ total_extra }} duplicate rows? The earliest entry for each pair will be kept.');">
+      <button class="btn btn-danger btn-sm">Remove All Duplicates (keep oldest)</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'warning' }} alert-dismissible fade show py-2">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}
+{% endwith %}
+
+{% if rows %}
+<div class="alert alert-warning py-2 mb-3">
+  <strong>{{ rows|length }} duplicate groups</strong> found — <strong>{{ total_extra }} extra rows</strong> that can be safely removed.
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th style="width:40px;padding:10px 12px;">#</th>
+          <th style="padding:10px 12px;">Emp Code</th>
+          <th style="padding:10px 12px;">Employee Name</th>
+          <th style="padding:10px 12px;">Programme Name</th>
+          <th style="padding:10px 12px;text-align:center;">Count</th>
+          <th style="padding:10px 12px;">Modes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td style="padding:9px 12px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:9px 12px;font-family:monospace;">{{ r.emp_code }}</td>
+          <td style="padding:9px 12px;font-weight:600;">{{ r.emp_name or '—' }}</td>
+          <td style="padding:9px 12px;">{{ r.programme_name }}</td>
+          <td style="padding:9px 12px;text-align:center;">
+            <span style="background:#fee2e2;color:#dc2626;font-weight:700;font-size:12px;padding:2px 10px;border-radius:20px;">{{ r.cnt }}×</span>
+          </td>
+          <td style="padding:9px 12px;color:#6b7280;font-size:11px;">{{ r.modes }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="card">
+  <div class="card-body text-center text-muted py-5">
+    <i class="bi bi-check-circle" style="font-size:36px;display:block;margin-bottom:10px;color:#10b981;"></i>
+    <strong>No duplicates found.</strong> All TNI entries are unique.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
