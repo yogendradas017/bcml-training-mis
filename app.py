@@ -2186,7 +2186,7 @@ def _smart_analyze_rows(df, plant_id, db):
     return results
 
 
-def _error_excel_for_tni(error_rows):
+def _error_excel_for_tni(error_rows, dup_rows=None):
     """Generate a pre-filled correction Excel for rows that couldn't be auto-fixed."""
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -2243,6 +2243,34 @@ def _error_excel_for_tni(error_rows):
         c = ws2.cell(row=ri, column=1, value=t)
         if ri == 1: c.font = Font(bold=True, color='7F1D1D', size=12)
         ws2.column_dimensions['A'].width = 80
+
+    # ── Duplicates sheet ──────────────────────────────────────────────────────
+    if dup_rows:
+        ws3 = wb.create_sheet('Duplicates')
+        dup_hdr_fill = PatternFill('solid', fgColor='92400E')
+        dup_headers  = ['Row #', 'Employee Code', 'Employee Name', 'Programme Name',
+                        'Type', 'Mode', 'Duplicate Type']
+        dup_col_w    = [7, 16, 28, 34, 22, 14, 28]
+        for ci, (h, w) in enumerate(zip(dup_headers, dup_col_w), 1):
+            c = ws3.cell(row=1, column=ci, value=h)
+            c.fill = dup_hdr_fill
+            c.font = Font(bold=True, color='FFFFFF', size=11)
+            c.alignment = Alignment(horizontal='center', vertical='center')
+            ws3.column_dimensions[get_column_letter(ci)].width = w
+        ws3.row_dimensions[1].height = 24
+        ws3.freeze_panes = 'A2'
+        dup_fill = PatternFill('solid', fgColor='FFFBEB')
+        for ri, r in enumerate(dup_rows, 2):
+            vals = [r.get('row_num', ''), r['emp_code'], r.get('emp_name', ''),
+                    r['programme_name'], r.get('prog_type', ''), r.get('mode', ''),
+                    r['dup_type']]
+            for ci, v in enumerate(vals, 1):
+                cell = ws3.cell(row=ri, column=ci, value=v)
+                cell.fill = dup_fill
+                if ci == 7:
+                    cell.font = Font(color='92400E', size=10, italic=True)
+        ws3.cell(row=len(dup_rows)+3, column=1,
+                 value='These rows were NOT imported. Fix or confirm before re-uploading.').font = Font(bold=True, color='92400E')
 
     buf = _io.BytesIO()
     wb.save(buf); buf.seek(0)
@@ -2318,22 +2346,42 @@ def tni_analyze_confirm():
     inserted  = 0
     err_rows  = [r for r in rows if r['status'] == 'error']
 
+    # ── Duplicate detection ───────────────────────────────────────────────────
+    # Build set of existing (emp_code, programme_name) already in DB
+    existing = set()
+    for er in db.execute('SELECT emp_code, programme_name FROM tni WHERE plant_id=?', (plant_id,)):
+        existing.add((er['emp_code'].strip().upper(), er['programme_name'].strip().lower()))
+
+    dup_rows   = []
+    seen_batch = set()  # within this upload
+
     for row in rows:
         if row['status'] == 'error':
             continue
-        db.execute('INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
-                   (plant_id, row['emp_code'], row['programme_name'],
-                    row['prog_type'], row['mode'], row['planned_hours']))
-        inserted += 1
+        key = (row['emp_code'].strip().upper(), row['programme_name'].strip().lower())
+        if key in existing:
+            dup_rows.append({**row, 'dup_type': 'Already in TMS'})
+        elif key in seen_batch:
+            dup_rows.append({**row, 'dup_type': 'Duplicate in upload file'})
+        else:
+            seen_batch.add(key)
+            db.execute('INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
+                       (plant_id, row['emp_code'], row['programme_name'],
+                        row['prog_type'], row['mode'], row['planned_hours']))
+            inserted += 1
+
     db.commit()
     try: os.remove(path)
     except: pass
 
-    if err_rows:
-        buf = _error_excel_for_tni(err_rows)
-        flash(f'{inserted} records imported. {len(err_rows)} errors — downloading correction file.', 'warning')
+    if err_rows or dup_rows:
+        buf = _error_excel_for_tni(err_rows, dup_rows=dup_rows)
+        parts = []
+        if err_rows:  parts.append(f'{len(err_rows)} errors')
+        if dup_rows:  parts.append(f'{len(dup_rows)} duplicates skipped')
+        flash(f'{inserted} records imported. {" & ".join(parts)} — downloading report.', 'warning')
         return send_file(buf, as_attachment=True,
-                         download_name='TNI_Errors_To_Fix.xlsx',
+                         download_name='TNI_Import_Issues.xlsx',
                          mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
     flash(f'{inserted} TNI entries imported successfully — all clean!', 'success')
