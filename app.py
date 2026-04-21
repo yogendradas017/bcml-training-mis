@@ -426,6 +426,52 @@ def tni_bulk_delete():
             flash(f'{deleted} TNI entries deleted.', 'warning')
     return redirect(url_for('tni'))
 
+@app.route('/tni/duplicates')
+@spoc_required
+def tni_duplicates():
+    plant_id = session['plant_id']
+    db = get_db()
+    rows = db.execute('''
+        SELECT t.emp_code,
+               MAX(e.name) as emp_name,
+               t.programme_name,
+               COUNT(*) as cnt,
+               GROUP_CONCAT(t.mode, ' / ') as modes,
+               GROUP_CONCAT(t.id) as ids
+        FROM tni t
+        LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+        WHERE t.plant_id=?
+        GROUP BY t.emp_code, t.programme_name
+        HAVING cnt > 1
+        ORDER BY cnt DESC, emp_name
+    ''', (plant_id,)).fetchall()
+    total_extra = sum(r['cnt'] - 1 for r in rows)
+    return render_template('tni_duplicates.html', rows=rows, total_extra=total_extra)
+
+@app.route('/tni/duplicates/delete', methods=['POST'])
+@spoc_required
+def tni_duplicates_delete():
+    plant_id = session['plant_id']
+    db = get_db()
+    deleted = 0
+    rows = db.execute('''
+        SELECT GROUP_CONCAT(id ORDER BY id) as ids
+        FROM tni
+        WHERE plant_id=?
+        GROUP BY emp_code, programme_name
+        HAVING COUNT(*) > 1
+    ''', (plant_id,)).fetchall()
+    for r in rows:
+        id_list = [int(x) for x in r['ids'].split(',')]
+        keep = id_list[0]
+        remove = id_list[1:]
+        ph = ','.join('?' * len(remove))
+        db.execute(f'DELETE FROM tni WHERE id IN ({ph}) AND plant_id=?', remove + [plant_id])
+        deleted += len(remove)
+    db.commit()
+    flash(f'{deleted} duplicate TNI entries removed.', 'success')
+    return redirect(url_for('tni'))
+
 @app.route('/tni/template')
 @spoc_required
 def tni_template():
