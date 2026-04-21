@@ -2202,8 +2202,10 @@ def tni_analyze():
     db       = get_db()
     try:
         rows = _smart_analyze_rows(df, plant_id, db)
-    except ValueError as e:
-        flash(str(e), 'danger')
+    except Exception as e:
+        import traceback, logging
+        logging.error(traceback.format_exc())
+        flash(f'Analysis error: {e}', 'danger')
         return render_template('tni_analyze.html', step='upload')
 
     if not rows:

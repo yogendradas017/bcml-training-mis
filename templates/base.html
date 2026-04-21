@@ -819,8 +819,8 @@
       {% endif %}
       <div class="user-menu" id="userMenu">
         <div class="user-btn" onclick="document.getElementById('userMenu').classList.toggle('open')">
-          <div class="user-avatar">{{ session.username[0]|upper }}</div>
-          <span class="uname user-text">{{ session.username }}</span>
+          <div class="user-avatar">{{ (session.username or 'U')[0]|upper }}</div>
+          <span class="uname user-text">{{ session.username or 'User' }}</span>
           <i class="bi bi-chevron-down" style="font-size:10px;color:#9ca3af;"></i>
         </div>
         <div class="user-dropdown">
