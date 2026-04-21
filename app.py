@@ -14,7 +14,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'bcml-tms-2627-xK9pQ')
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH  = os.path.join(BASE_DIR, 'data', 'training.db')
+DB_PATH  = os.environ.get('DATABASE_PATH', os.path.join(BASE_DIR, 'data', 'training.db'))
 
 PLANTS = [
     {'id': 1,  'name': 'Balrampur',  'unit_code': 'BCM'},
