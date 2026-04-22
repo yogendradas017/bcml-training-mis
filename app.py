@@ -69,11 +69,42 @@ def close_db(e=None):
     if db:
         db.close()
 
+def _migrate_tni_unique(db):
+    """Add UNIQUE(plant_id, emp_code, programme_name) to tni if not present."""
+    has_unique = db.execute(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='tni' "
+        "AND sql LIKE '%emp_code%' AND sql LIKE '%programme_name%'"
+    ).fetchone()[0]
+    if has_unique:
+        return
+    # Recreate tni with unique constraint, keeping one row per unique key (latest id)
+    db.executescript('''
+        CREATE TABLE tni_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plant_id INTEGER NOT NULL,
+            emp_code TEXT NOT NULL,
+            programme_name TEXT NOT NULL,
+            prog_type TEXT, mode TEXT, target_month TEXT,
+            planned_hours REAL DEFAULT 0,
+            created_at TEXT DEFAULT (date('now')),
+            UNIQUE(plant_id, emp_code, programme_name)
+        );
+        INSERT OR IGNORE INTO tni_new
+            (plant_id, emp_code, programme_name, prog_type, mode, target_month, planned_hours, created_at)
+        SELECT plant_id, emp_code, programme_name, prog_type, mode, target_month, planned_hours, created_at
+        FROM tni ORDER BY id;
+        DROP TABLE tni;
+        ALTER TABLE tni_new RENAME TO tni;
+        CREATE INDEX IF NOT EXISTS idx_tni_plant ON tni(plant_id);
+        CREATE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name);
+    ''')
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     db = sqlite3.connect(DB_PATH)
     with open(os.path.join(BASE_DIR, 'schema.sql')) as f:
         db.executescript(f.read())
+    _migrate_tni_unique(db)
     # Seed plants
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
@@ -384,7 +415,7 @@ def add_tni():
     plant_id = session['plant_id']
     f = request.form
     db = get_db()
-    db.execute('''INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours)
+    db.execute('''INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours)
                   VALUES(?,?,?,?,?,?)''',
                (plant_id, f['emp_code'], f['programme_name'].strip(),
                 f.get('prog_type',''), f.get('mode',''),
@@ -828,7 +859,7 @@ def tni_bulk_upload():
         if not emp:
             errors.append(f'Row {i+2}: Employee {emp_code} not found in your plant.')
             continue
-        db.execute('INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
+        db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
                    (plant_id, emp_code, prog_name, prog_type, mode, hours))
         inserted += 1
     db.commit()
@@ -2049,7 +2080,7 @@ def _parse_msforms_excel(file_storage, plant_id, db):
         if emp_code not in emp_map:
             errors.append(f'Row {i+2}: Employee code "{emp_code}" not found in your plant.')
             continue
-        db.execute('INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
+        db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
                    (plant_id, emp_code, prog_name, prog_type, mode, hours))
         inserted += 1
 
@@ -2549,19 +2580,26 @@ def tni_analyze_confirm():
         existing.add((er['emp_code'].strip().upper(), er['programme_name'].strip().lower()))
 
     dup_rows   = []
+    updated    = 0
     seen_batch = set()  # within this upload
 
     for row in rows:
         if row['status'] == 'error':
             continue
         key = (row['emp_code'].strip().upper(), row['programme_name'].strip().lower())
-        if key in existing:
-            dup_rows.append({**row, 'dup_type': 'Already in TMS'})
-        elif key in seen_batch:
+        if key in seen_batch:
             dup_rows.append({**row, 'dup_type': 'Duplicate in upload file'})
+            continue
+        seen_batch.add(key)
+        if key in existing:
+            # Update prog_type/mode/hours if already present
+            db.execute('''UPDATE tni SET prog_type=?, mode=?, planned_hours=?
+                          WHERE plant_id=? AND UPPER(emp_code)=? AND LOWER(programme_name)=?''',
+                       (row['prog_type'], row['mode'], row['planned_hours'],
+                        plant_id, row['emp_code'].upper(), row['programme_name'].lower()))
+            updated += 1
         else:
-            seen_batch.add(key)
-            db.execute('INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
+            db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
                        (plant_id, row['emp_code'], row['programme_name'],
                         row['prog_type'], row['mode'], row['planned_hours']))
             inserted += 1
@@ -2574,13 +2612,13 @@ def tni_analyze_confirm():
         buf = _error_excel_for_tni(err_rows, dup_rows=dup_rows)
         parts = []
         if err_rows:  parts.append(f'{len(err_rows)} errors')
-        if dup_rows:  parts.append(f'{len(dup_rows)} duplicates skipped')
-        flash(f'{inserted} records imported. {" & ".join(parts)} — downloading report.', 'warning')
+        if dup_rows:  parts.append(f'{len(dup_rows)} duplicates in file')
+        flash(f'{inserted} new + {updated} updated. {" & ".join(parts)} — downloading report.', 'warning')
         return send_file(buf, as_attachment=True,
                          download_name='TNI_Import_Issues.xlsx',
                          mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-    flash(f'{inserted} TNI entries imported successfully — all clean!', 'success')
+    flash(f'{inserted} new entries added, {updated} existing entries updated — all clean!', 'success')
     return redirect(url_for('tni'))
 
 
