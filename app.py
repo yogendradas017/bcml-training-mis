@@ -890,8 +890,31 @@ def training_calendar():
     tni_programmes = [r[0] for r in db.execute(
         'SELECT DISTINCT programme_name FROM tni WHERE plant_id=? ORDER BY programme_name', (plant_id,))]
 
+    # Coverage summary: per programme — demand vs total planned PAX vs conducted PAX
+    cov_rows = []
+    pax_map = {}   # programme → {planned_pax, conducted_pax, sessions}
+    for s in sessions:
+        p = s['programme_name']
+        if p not in pax_map:
+            pax_map[p] = {'sessions': 0, 'planned_pax': 0, 'conducted_pax': 0}
+        pax_map[p]['sessions']     += 1
+        pax_map[p]['planned_pax']  += (s['planned_pax'] or 0)
+        if s['status'] == 'Conducted':
+            pax_map[p]['conducted_pax'] += (s['planned_pax'] or 0)
+    for prog, d in demand_map.items():
+        pm = pax_map.get(prog, {'sessions': 0, 'planned_pax': 0, 'conducted_pax': 0})
+        planned_pax = pm['planned_pax']
+        gap         = max(0, d - planned_pax)
+        pct         = min(100, round(planned_pax / d * 100)) if d > 0 else 0
+        cov_rows.append({'name': prog, 'demand': d,
+                         'sessions': pm['sessions'], 'planned_pax': planned_pax,
+                         'conducted_pax': pm['conducted_pax'],
+                         'gap': gap, 'pct': pct,
+                         'over': max(0, planned_pax - d)})
+    cov_rows.sort(key=lambda x: x['gap'], reverse=True)  # biggest gap first
+
     return render_template('calendar.html', sessions=sessions, demand_map=demand_map,
-                           tni_programmes=tni_programmes,
+                           tni_programmes=tni_programmes, cov_rows=cov_rows,
                            prog_types=PROG_TYPES, modes=MODES, levels=LEVELS,
                            audiences=AUDIENCES, months=MONTHS_FY, statuses=STATUSES)
 
