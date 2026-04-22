@@ -2,125 +2,120 @@
 {% block page_title %}Monthly Summary{% endblock %}
 {% block content %}
 
-<div class="card mb-4">
-  <div class="card-body py-2">
-    <form method="GET" class="d-flex align-items-center gap-3">
-      <label class="form-label mb-0 fw-bold">Filter by Month:</label>
-      <select name="month" class="form-select" style="width:180px;" onchange="this.form.submit()">
-        <option value="">— Cumulative (All) —</option>
-        {% for mo in months %}
-        <option value="{{ mo }}" {% if mo == selected_month %}selected{% endif %}>{{ mo }}</option>
-        {% endfor %}
-      </select>
-      {% if selected_month %}
-      <a href="{{ url_for('monthly_summary') }}" class="btn btn-outline-secondary btn-sm">Clear Filter</a>
-      {% endif %}
-    </form>
-  </div>
-</div>
-
-<!-- Compliance Cards -->
-<div class="row g-3 mb-4">
-  <div class="col-md-4">
-    <div class="card p-3" style="border-left:5px solid #0d6efd;">
-      <div class="fw-bold text-primary" style="font-size:13px;">BLUE COLLAR COMPLIANCE</div>
-      <div style="font-size:2rem; font-weight:800; color:#0d6efd;">{{ compliance.bc_pct }}%</div>
-      <div class="text-muted" style="font-size:12px;">
-        {{ compliance.bc_actual }} hrs actual / {{ compliance.bc_mandate }} hrs mandate
-        ({{ compliance.bc_emp }} employees × 12 hrs)
-      </div>
-      <div class="progress mt-2" style="height:8px;">
-        <div class="progress-bar bg-primary" style="width:{{ [compliance.bc_pct, 100]|min }}%"></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card p-3" style="border-left:5px solid #198754;">
-      <div class="fw-bold text-success" style="font-size:13px;">WHITE COLLAR COMPLIANCE</div>
-      <div style="font-size:2rem; font-weight:800; color:#198754;">{{ compliance.wc_pct }}%</div>
-      <div class="text-muted" style="font-size:12px;">
-        {{ compliance.wc_actual }} hrs actual / {{ compliance.wc_mandate }} hrs mandate
-        ({{ compliance.wc_emp }} employees × 24 hrs)
-      </div>
-      <div class="progress mt-2" style="height:8px;">
-        <div class="progress-bar bg-success" style="width:{{ [compliance.wc_pct, 100]|min }}%"></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card p-3" style="border-left:5px solid #dc3545;">
-      <div class="fw-bold text-danger" style="font-size:13px;">OVERALL HOURS COMPLIANCE</div>
-      <div style="font-size:2rem; font-weight:800; color:#dc3545;">{{ compliance.total_pct }}%</div>
-      <div class="text-muted" style="font-size:12px;">
-        {{ compliance.bc_actual + compliance.wc_actual }} hrs actual /
-        {{ compliance.bc_mandate + compliance.wc_mandate }} hrs mandate
-      </div>
-      <div class="progress mt-2" style="height:8px;">
-        <div class="progress-bar bg-danger" style="width:{{ [compliance.total_pct, 100]|min }}%"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- MIS Summary Table -->
-<div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:#1a3a5c;color:#fff;">
-    <span><i class="bi bi-table"></i> Training MIS Summary
-      {% if selected_month %}— {{ selected_month }}{% else %}— Cumulative FY 2026-27{% endif %}
+{# ── Filter bar ── #}
+<div style="background:#fff;border-radius:12px;border:1px solid #e5e9f2;padding:14px 20px;margin-bottom:20px;box-shadow:0 1px 6px rgba(0,0,0,.05);">
+  <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
+    <span style="font-size:13px;font-weight:700;color:#374151;">Filter by Month:</span>
+    <select name="month" class="form-select form-select-sm" style="width:180px;" onchange="this.form.submit()">
+      <option value="">— Cumulative (All) —</option>
+      {% for mo in months %}
+      <option value="{{ mo }}" {% if mo == selected_month %}selected{% endif %}>{{ mo }}</option>
+      {% endfor %}
+    </select>
+    {% if selected_month %}
+    <a href="{{ url_for('monthly_summary') }}" class="btn btn-outline-secondary btn-sm">✕ Clear</a>
+    {% endif %}
+    <span style="font-size:12px;color:#9ca3af;margin-left:auto;">
+      FY 2026-27 · {{ session.plant_name }}
     </span>
-    <a href="{{ url_for('export_excel', plant_id=session.plant_id) }}"
-       class="btn btn-sm btn-light">
-      <i class="bi bi-file-earmark-excel"></i> Export Excel
+  </form>
+</div>
+
+{# ── Compliance cards ── #}
+<div class="row g-3 mb-4">
+  {% set cards = [
+    ('Blue Collar', compliance.bc_pct, compliance.bc_actual, compliance.bc_mandate, compliance.bc_emp, 12, '#3b82f6', '#1d4ed8'),
+    ('White Collar', compliance.wc_pct, compliance.wc_actual, compliance.wc_mandate, compliance.wc_emp, 24, '#10b981', '#065f46'),
+    ('Overall', compliance.total_pct, compliance.bc_actual + compliance.wc_actual, compliance.bc_mandate + compliance.wc_mandate, compliance.bc_emp + compliance.wc_emp, '—', '#8b5cf6', '#5b21b6'),
+  ] %}
+  {% for label, pct, actual, mandate, emp, hrs, c1, c2 in cards %}
+  <div class="col-md-4">
+    <div style="background:linear-gradient(135deg,{{ c1 }},{{ c2 }});border-radius:14px;padding:20px 22px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.8;margin-bottom:6px;">
+        {{ label }} Compliance
+      </div>
+      <div style="font-size:42px;font-weight:900;line-height:1;">{{ pct }}%</div>
+      <div style="margin-top:10px;background:rgba(255,255,255,.2);border-radius:99px;height:6px;overflow:hidden;">
+        <div style="width:{{ [pct,100]|min }}%;height:100%;border-radius:99px;background:#fff;"></div>
+      </div>
+      <div style="font-size:11px;opacity:.85;margin-top:6px;">
+        {{ actual }} hrs actual &nbsp;/&nbsp; {{ mandate }} hrs mandate
+        {% if hrs != '—' %}&nbsp;·&nbsp; {{ emp }} emp × {{ hrs }} hrs{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# ── MIS table ── #}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center"
+       style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
+    <span>
+      <i class="bi bi-table me-1"></i> Training MIS Summary —
+      <strong>{% if selected_month %}{{ selected_month }}{% else %}Cumulative FY 2026-27{% endif %}</strong>
+    </span>
+    <a href="{{ url_for('export_excel', plant_id=session.plant_id) }}" class="btn btn-sm btn-light">
+      <i class="bi bi-file-earmark-excel" style="color:#059669;"></i> Export Excel
     </a>
   </div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-bordered mb-0" style="font-size:13px;">
-        <thead>
-          <tr style="background:#2e6da4;color:#fff;">
-            <th rowspan="2" class="align-middle">Programme Type</th>
-            <th colspan="4" class="text-center">No. of Programmes</th>
-            <th colspan="3" class="text-center">Person Seats Trained</th>
-            <th colspan="3" class="text-center">Man-Hours</th>
-          </tr>
-          <tr style="background:#3a7dbf;color:#fff;">
-            <th>Blue Collar</th><th>White Collar</th><th>Internal</th><th>External</th>
-            <th>Blue Collar</th><th>White Collar</th><th>Total</th>
-            <th>Blue Collar</th><th>White Collar</th><th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in summary_rows %}
-          <tr {% if loop.last %}style="font-weight:bold;background:#f0f4ff;"{% endif %}>
-            <td><strong>{{ row.prog_type }}</strong></td>
-            <td class="text-center">{{ row.bc_progs or '—' }}</td>
-            <td class="text-center">{{ row.wc_progs or '—' }}</td>
-            <td class="text-center">{{ row.int_prog or '—' }}</td>
-            <td class="text-center">{{ row.ext_prog or '—' }}</td>
-            <td class="text-center">{{ row.bc_seats or '—' }}</td>
-            <td class="text-center">{{ row.wc_seats or '—' }}</td>
-            <td class="text-center"><strong>{{ row.total_seats or '—' }}</strong></td>
-            <td class="text-center">{{ row.bc_hrs or '—' }}</td>
-            <td class="text-center">{{ row.wc_hrs or '—' }}</td>
-            <td class="text-center"><strong>{{ row.total_hrs or '—' }}</strong></td>
-          </tr>
-          {% endfor %}
-          <tr style="background:#1a3a5c;color:#fff;font-weight:bold;">
-            <td>TOTAL</td>
-            <td class="text-center">{{ totals.bc_progs }}</td>
-            <td class="text-center">{{ totals.wc_progs }}</td>
-            <td class="text-center">{{ totals.int_prog }}</td>
-            <td class="text-center">{{ totals.ext_prog }}</td>
-            <td class="text-center">{{ totals.bc_seats }}</td>
-            <td class="text-center">{{ totals.wc_seats }}</td>
-            <td class="text-center">{{ totals.total_seats }}</td>
-            <td class="text-center">{{ totals.bc_hrs }}</td>
-            <td class="text-center">{{ totals.wc_hrs }}</td>
-            <td class="text-center">{{ totals.total_hrs }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+
+  {% set has_data = totals.total_seats > 0 %}
+  {% if not has_data %}
+  <div style="padding:40px;text-align:center;color:#9ca3af;">
+    <i class="bi bi-clipboard-data" style="font-size:40px;display:block;margin-bottom:12px;color:#d1d5db;"></i>
+    <div style="font-size:15px;font-weight:600;color:#6b7280;margin-bottom:6px;">No training records yet</div>
+    <div style="font-size:13px;">Data populates from <strong>Training Records (2A)</strong>.
+      Once sessions are conducted and records are uploaded, this summary will fill automatically.</div>
   </div>
+  {% else %}
+  <div class="table-responsive">
+    <table class="table table-bordered mb-0" style="font-size:12.5px;">
+      <thead>
+        <tr style="background:#1e3a5f;color:#fff;text-align:center;">
+          <th rowspan="2" class="align-middle text-start" style="min-width:170px;padding:10px 14px;">Programme Type</th>
+          <th colspan="4" style="border-bottom:1px solid rgba(255,255,255,.2);">No. of Programmes</th>
+          <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);">Person Seats Trained</th>
+          <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);">Man-Hours</th>
+        </tr>
+        <tr style="background:#2e5585;color:#fff;text-align:center;font-size:11px;">
+          <th>Blue Collar</th><th>White Collar</th><th>Internal</th><th>External</th>
+          <th>Blue Collar</th><th>White Collar</th><th>Total</th>
+          <th>Blue Collar</th><th>White Collar</th><th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in summary_rows %}
+        <tr style="{% if loop.last %}font-weight:700;background:#f0f4ff;{% endif %}">
+          <td style="padding:9px 14px;font-weight:600;color:#1e3a5f;">{{ row.prog_type }}</td>
+          {% for val in [row.bc_progs, row.wc_progs, row.int_prog, row.ext_prog,
+                         row.bc_seats, row.wc_seats, row.total_seats,
+                         row.bc_hrs, row.wc_hrs, row.total_hrs] %}
+          <td style="text-align:center;padding:9px 10px;color:{% if val %}#111827{% else %}#d1d5db{% endif %};">
+            {% if val %}{{ val }}{% else %}—{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background:#1a1f35;color:#fff;font-weight:700;text-align:center;">
+          <td style="padding:10px 14px;text-align:left;">TOTAL</td>
+          <td>{{ totals.bc_progs or 0 }}</td>
+          <td>{{ totals.wc_progs or 0 }}</td>
+          <td>{{ totals.int_prog or 0 }}</td>
+          <td>{{ totals.ext_prog or 0 }}</td>
+          <td>{{ totals.bc_seats or 0 }}</td>
+          <td>{{ totals.wc_seats or 0 }}</td>
+          <td style="font-size:14px;">{{ totals.total_seats or 0 }}</td>
+          <td>{{ totals.bc_hrs or 0 }}</td>
+          <td>{{ totals.wc_hrs or 0 }}</td>
+          <td style="font-size:14px;">{{ totals.total_hrs or 0 }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% endif %}
 </div>
+
 {% endblock %}
