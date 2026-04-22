@@ -1792,8 +1792,33 @@ def api_tni_coverage():
                                  (plant_id, prog_name)).fetchone()[0]
     uncovered = max(0, demand - covered)
     pct       = round(covered / demand * 100) if demand > 0 else 0
-    return jsonify({'demand': demand, 'sessions_planned': sessions_planned,
-                    'covered': covered, 'uncovered': uncovered, 'pct': pct})
+
+    # Auto-fill fields from TNI data (most common value for this programme)
+    meta = db.execute('''
+        SELECT t.prog_type, t.mode,
+               e.collar,
+               COUNT(*) as cnt
+        FROM tni t
+        LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+        WHERE t.plant_id=? AND t.programme_name=?
+        GROUP BY t.prog_type, t.mode, e.collar
+        ORDER BY cnt DESC LIMIT 1
+    ''', (plant_id, prog_name)).fetchone()
+
+    # Derive audience from dominant collar
+    collar_map = {'Blue Collared': 'Blue Collared', 'White Collared': 'White Collared'}
+    audience = ''
+    if meta:
+        collar = meta['collar'] or ''
+        audience = collar_map.get(collar, 'Common')
+
+    return jsonify({
+        'demand': demand, 'sessions_planned': sessions_planned,
+        'covered': covered, 'uncovered': uncovered, 'pct': pct,
+        'prog_type': meta['prog_type'] if meta else '',
+        'mode':      meta['mode']      if meta else '',
+        'audience':  audience,
+    })
 
 @app.route('/intelligence')
 @spoc_required
