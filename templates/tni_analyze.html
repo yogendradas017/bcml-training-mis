@@ -77,8 +77,9 @@
 
 {% elif step == 'review' %}
 
-{% set total = ok_count + fixed_count + err_count %}
-{% set import_count = ok_count + fixed_count %}
+{% set warn_count = rows | selectattr('status','equalto','warning') | list | length %}
+{% set total = ok_count + fixed_count + warn_count + err_count %}
+{% set import_count = ok_count + fixed_count + warn_count %}
 {% set pct = ((import_count / total) * 100)|round|int if total > 0 else 0 %}
 
 <!-- Score card -->
@@ -101,6 +102,11 @@
       </div>
       <div style="width:1px;height:44px;background:rgba(255,255,255,.2);"></div>
       <div style="text-align:center;">
+        <div style="font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:1px;">Verify</div>
+        <div style="font-size:30px;font-weight:800;color:#fb923c;">{{ warn_count }}</div>
+      </div>
+      <div style="width:1px;height:44px;background:rgba(255,255,255,.2);"></div>
+      <div style="text-align:center;">
         <div style="font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:1px;">Errors</div>
         <div style="font-size:30px;font-weight:800;color:#f87171;">{{ err_count }}</div>
       </div>
@@ -115,7 +121,7 @@
       </div>
       <div class="d-flex gap-2 align-items-center flex-wrap">
         <label class="d-flex align-items-center gap-2" style="font-size:12px;cursor:pointer;">
-          <input type="checkbox" id="show-errors-only" class="form-check-input" style="cursor:pointer;"> Errors only
+          <input type="checkbox" id="show-errors-only" class="form-check-input" style="cursor:pointer;"> Errors &amp; Warnings only
         </label>
         <a href="{{ url_for('tni_analyze') }}" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:none;">
           <i class="bi bi-arrow-repeat"></i> Re-upload
@@ -125,13 +131,23 @@
   </div>
 </div>
 
+{% if warn_count > 0 %}
+<div class="alert d-flex gap-2 align-items-start py-2 mb-2" style="background:#fff7ed;border:1px solid #fed7aa;font-size:13px;color:#c2410c;">
+  <i class="bi bi-exclamation-circle-fill mt-1" style="flex-shrink:0;"></i>
+  <div>
+    <strong>{{ warn_count }} programme name(s) not found in Programme Master.</strong>
+    These rows will import but may contain spelling mistakes. Please verify the orange rows below before confirming —
+    or add the correct names to <a href="{{ url_for('programme_master') }}" target="_blank">Programme Master</a> first.
+  </div>
+</div>
+{% endif %}
 {% if err_count > 0 %}
 <div class="alert d-flex gap-2 align-items-start py-2 mb-3" style="background:#fef2f2;border:1px solid #fecaca;font-size:13px;color:#dc2626;">
   <i class="bi bi-exclamation-triangle-fill mt-1" style="flex-shrink:0;"></i>
   <div>
     <strong>{{ err_count }} rows could not be auto-fixed</strong> — they will be skipped from import and downloaded as a correction Excel.
     Fix them in Excel and re-upload.
-    <strong>{{ import_count }} rows (green + amber) will import immediately.</strong>
+    <strong>{{ import_count }} rows (green + amber + orange) will import immediately.</strong>
   </div>
 </div>
 {% endif %}
@@ -182,6 +198,33 @@
               <i class="bi bi-arrow-right" style="color:#d97706;font-size:10px;margin:0 2px;"></i>
               <span style="color:#065f46;font-weight:600;">{{ fix.fixed }}</span>
               <span style="color:#9ca3af;font-size:10px;"> ({{ fix.how }})</span>
+            </div>
+            {% endfor %}
+          </td>
+        </tr>
+
+        {% elif r.status == 'warning' %}
+        <tr class="an-row an-warning" style="background:#fff7ed;">
+          <td style="color:#9ca3af;font-size:11px;">{{ r.row_num }}</td>
+          <td><span style="background:#fed7aa;color:#c2410c;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;"><i class="bi bi-exclamation-circle"></i> Verify</span></td>
+          <td style="font-weight:600;">{{ r.emp_code }}</td>
+          <td style="color:#6b7280;">{{ r.emp_name }}</td>
+          <td style="color:#c2410c;font-weight:600;">{{ r.programme_name }}</td>
+          <td>{{ r.prog_type or '—' }}</td>
+          <td>{{ r.mode or '—' }}</td>
+          <td>{{ r.planned_hours }}</td>
+          <td style="min-width:220px;">
+            {% for fix in r.fixes %}
+            <div style="font-size:11px;margin-bottom:2px;">
+              <span style="color:#92400e;font-weight:600;">{{ fix.field }}:</span>
+              <del style="color:#d1d5db;">{{ fix.original }}</del>
+              <i class="bi bi-arrow-right" style="color:#d97706;font-size:10px;margin:0 2px;"></i>
+              <span style="color:#065f46;font-weight:600;">{{ fix.fixed }}</span>
+            </div>
+            {% endfor %}
+            {% for issue in r.issues %}
+            <div style="font-size:11px;color:#c2410c;margin-bottom:2px;">
+              <i class="bi bi-search me-1"></i>{{ issue }}
             </div>
             {% endfor %}
           </td>
@@ -240,6 +283,9 @@
 document.getElementById('show-errors-only').addEventListener('change', function() {
   document.querySelectorAll('.an-ok,.an-fixed').forEach(tr => {
     tr.style.display = this.checked ? 'none' : '';
+  });
+  document.querySelectorAll('.an-warning').forEach(tr => {
+    tr.style.display = '';
   });
 });
 {% endif %}

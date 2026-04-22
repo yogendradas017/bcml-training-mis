@@ -752,6 +752,15 @@ def tni_template():
     for r, v in enumerate(modes, 1):      ws_vals.cell(row=r, column=2, value=v)
     for r, v in enumerate(months, 1):     ws_vals.cell(row=r, column=3, value=v)
 
+    # ── Sheet 4: Programme Master (hidden) ───────────────────────
+    master_progs = [r[0] for r in db.execute(
+        'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
+    ).fetchall()] or MASTER_PROGRAMMES
+    ws_prog = wb.create_sheet('_ProgList')
+    ws_prog.sheet_state = 'hidden'
+    for r, v in enumerate(master_progs, 1):
+        ws_prog.cell(row=r, column=1, value=v)
+
     # named ranges for validation
     wb.defined_names['EmpCodes']   = openpyxl.workbook.defined_name.DefinedName(
         'EmpCodes',   attr_text=f'_EmpList!$A$1:$A${emp_count}')
@@ -761,6 +770,8 @@ def tni_template():
         'ModeList',   attr_text=f'_ValidValues!$B$1:$B${len(modes)}')
     wb.defined_names['MonthList']  = openpyxl.workbook.defined_name.DefinedName(
         'MonthList',  attr_text=f'_ValidValues!$C$1:$C${len(months)}')
+    wb.defined_names['ProgList']   = openpyxl.workbook.defined_name.DefinedName(
+        'ProgList',   attr_text=f'_ProgList!$A$1:$A${len(master_progs)}')
 
     # ── Data Validations ─────────────────────────────────────────
     max_rows = 2000
@@ -772,6 +783,15 @@ def tni_template():
                             showDropDown=False)
     dv_emp.sqref = f'A2:A{max_rows}'
     ws.add_data_validation(dv_emp)
+
+    # Col C — Programme Name dropdown (from master list)
+    if master_progs:
+        dv_prog = DataValidation(type='list', formula1='ProgList', allow_blank=False,
+                                 showErrorMessage=True, errorTitle='Programme Not in Master',
+                                 error='Select a programme from the dropdown. If missing, add it to Programme Master first.',
+                                 showDropDown=False)
+        dv_prog.sqref = f'C2:C{max_rows}'
+        ws.add_data_validation(dv_prog)
 
     # Col D — Type of Programme
     dv_type = DataValidation(type='list', formula1='ProgTypes', allow_blank=False,
@@ -2360,7 +2380,7 @@ def _smart_analyze_rows(df, plant_id, db):
     def _match_master(raw_lower):
         if raw_lower in _prog_cache:
             return _prog_cache[raw_lower]
-        m = gcm(raw_lower, _active_master_lower, n=1, cutoff=0.72)
+        m = gcm(raw_lower, _active_master_lower, n=1, cutoff=0.65)
         result = _active_master[_active_master_lower.index(m[0])] if m else None
         _prog_cache[raw_lower] = result
         return result
@@ -2450,6 +2470,10 @@ def _smart_analyze_rows(df, plant_id, db):
                     fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'Title case applied (not in master list)'})
                     clean_prog = titled
                     if status == 'ok': status = 'fixed'
+                # Flag: not found in master list at all
+                if status not in ('error',):
+                    issues.append(f'"{clean_prog}" not found in Programme Master — verify spelling or add it to master list')
+                    if status == 'ok': status = 'warning'
 
         # ── Programme Type ─────────────────────────────────────────
         clean_type, type_changed = _fuzzy_fix(raw_type, PROG_TYPES) if raw_type else ('', False)
@@ -2486,7 +2510,7 @@ def _smart_analyze_rows(df, plant_id, db):
     return results
 
 
-def _error_excel_for_tni(error_rows, dup_rows=None):
+def _error_excel_for_tni(error_rows, dup_rows=None, plant_id=None, db=None):
     """Generate a pre-filled correction Excel for rows that couldn't be auto-fixed."""
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -2518,11 +2542,31 @@ def _error_excel_for_tni(error_rows, dup_rows=None):
                 cell.font = Font(color='DC2626', size=10, italic=True)
                 cell.alignment = Alignment(wrap_text=True)
 
+    last_row = len(error_rows) + 1
+
+    # Programme Name dropdown from master list
+    if plant_id and db:
+        master_progs = [r[0] for r in db.execute(
+            'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
+        ).fetchall()] or MASTER_PROGRAMMES
+        ws_pl = wb.create_sheet('_ProgList')
+        ws_pl.sheet_state = 'hidden'
+        for r, v in enumerate(master_progs, 1):
+            ws_pl.cell(row=r, column=1, value=v)
+        wb.defined_names['ProgList'] = openpyxl.workbook.defined_name.DefinedName(
+            'ProgList', attr_text=f'_ProgList!$A$1:$A${len(master_progs)}')
+        dv_prog = DataValidation(type='list', formula1='ProgList', allow_blank=True,
+                                 showErrorMessage=True, errorTitle='Not in Master List',
+                                 error='Select a programme from the dropdown. If the programme is new, add it to Programme Master first.',
+                                 showDropDown=False)
+        dv_prog.sqref = f'C2:C{last_row}'
+        ws.add_data_validation(dv_prog)
+
     # Dropdowns
     dv_type = DataValidation(type='list', formula1=f'"{",".join(PROG_TYPES)}"', allow_blank=True)
     dv_mode = DataValidation(type='list', formula1=f'"{",".join(MODES)}"',      allow_blank=True)
-    dv_type.sqref = f'D2:D{len(error_rows)+1}'
-    dv_mode.sqref = f'E2:E{len(error_rows)+1}'
+    dv_type.sqref = f'D2:D{last_row}'
+    dv_mode.sqref = f'E2:E{last_row}'
     ws.add_data_validation(dv_type)
     ws.add_data_validation(dv_mode)
 
@@ -2532,7 +2576,7 @@ def _error_excel_for_tni(error_rows, dup_rows=None):
         'These rows could NOT be auto-fixed. Please correct column by column:',
         '',
         'Employee Code — must exactly match the code in TMS employee master',
-        'Programme Name — enter the correct training programme name',
+        'Programme Name — use the dropdown (click the cell) to pick from the master list',
         'Type of Programme — use the dropdown (click the cell)',
         'Mode — use the dropdown',
         '',
@@ -2683,7 +2727,7 @@ def tni_analyze_confirm():
     except: pass
 
     if err_rows or dup_rows:
-        buf = _error_excel_for_tni(err_rows, dup_rows=dup_rows)
+        buf = _error_excel_for_tni(err_rows, dup_rows=dup_rows, plant_id=plant_id, db=db)
         parts = []
         if err_rows:  parts.append(f'{len(err_rows)} errors')
         if dup_rows:  parts.append(f'{len(dup_rows)} duplicates in file')
