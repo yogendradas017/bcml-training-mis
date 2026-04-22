@@ -2477,7 +2477,7 @@ def _error_excel_for_tni(error_rows, dup_rows=None):
         dup_hdr_fill = PatternFill('solid', fgColor='92400E')
         dup_headers  = ['Row #', 'Employee Code', 'Employee Name', 'Programme Name',
                         'Type', 'Mode', 'Duplicate Type']
-        dup_col_w    = [7, 16, 28, 34, 22, 14, 28]
+        dup_col_w    = [7, 16, 28, 34, 22, 14, 60]
         for ci, (h, w) in enumerate(zip(dup_headers, dup_col_w), 1):
             c = ws3.cell(row=1, column=ci, value=h)
             c.fill = dup_hdr_fill
@@ -2579,18 +2579,19 @@ def tni_analyze_confirm():
     for er in db.execute('SELECT emp_code, programme_name FROM tni WHERE plant_id=?', (plant_id,)):
         existing.add((er['emp_code'].strip().upper(), er['programme_name'].strip().lower()))
 
-    dup_rows   = []
-    updated    = 0
-    seen_batch = set()  # within this upload
+    dup_rows    = []
+    updated     = 0
+    seen_batch  = {}  # key → first row_num where this emp+prog appeared
 
     for row in rows:
         if row['status'] == 'error':
             continue
         key = (row['emp_code'].strip().upper(), row['programme_name'].strip().lower())
         if key in seen_batch:
-            dup_rows.append({**row, 'dup_type': 'Duplicate in upload file'})
+            dup_rows.append({**row,
+                'dup_type': f'Same employee+programme already at Row {seen_batch[key]} in this file — first entry was imported, this row skipped'})
             continue
-        seen_batch.add(key)
+        seen_batch[key] = row['row_num']
         if key in existing:
             # Update prog_type/mode/hours if already present
             db.execute('''UPDATE tni SET prog_type=?, mode=?, planned_hours=?
