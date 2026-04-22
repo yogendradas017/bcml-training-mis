@@ -882,9 +882,9 @@ def training_calendar():
     _sync_calendar_from_2c(plant_id, db)
 
     sessions = db.execute('SELECT * FROM calendar WHERE plant_id=? ORDER BY id DESC', (plant_id,)).fetchall()
-    # TNI programme demand counts
+    # TNI programme demand — distinct employees per programme (deduped)
     demand_map = {}
-    for row in db.execute('SELECT programme_name, COUNT(*) as cnt FROM tni WHERE plant_id=? GROUP BY programme_name', (plant_id,)):
+    for row in db.execute('SELECT programme_name, COUNT(DISTINCT emp_code) as cnt FROM tni WHERE plant_id=? GROUP BY programme_name', (plant_id,)):
         demand_map[row['programme_name']] = row['cnt']
 
     tni_programmes = [r[0] for r in db.execute(
