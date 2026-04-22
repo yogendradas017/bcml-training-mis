@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS tni (
     mode TEXT,
     target_month TEXT,
     planned_hours REAL DEFAULT 0,
-    created_at TEXT DEFAULT (date('now'))
+    created_at TEXT DEFAULT (date('now')),
+    UNIQUE(plant_id, emp_code, programme_name)
 );
 
 CREATE TABLE IF NOT EXISTS calendar (
