@@ -935,6 +935,31 @@ def delete_calendar(cal_id):
     flash('Calendar entry deleted.', 'warning')
     return redirect(url_for('training_calendar'))
 
+@app.route('/calendar/<int:cal_id>/edit', methods=['POST'])
+@spoc_required
+def edit_calendar(cal_id):
+    plant_id = session['plant_id']
+    f = request.form
+    db = get_db()
+    db.execute('''UPDATE calendar SET
+        programme_name=?, prog_type=?, source=?, planned_month=?,
+        plan_start=?, plan_end=?, time_from=?, time_to=?,
+        duration_hrs=?, level=?, mode=?, target_audience=?,
+        planned_pax=?, trainer_vendor=?, status=?
+        WHERE id=? AND plant_id=?''',
+        (f.get('programme_name','').strip(), f.get('prog_type',''),
+         f.get('source','TNI'), f.get('planned_month',''),
+         f.get('plan_start',''), f.get('plan_end',''),
+         f.get('time_from',''), f.get('time_to',''),
+         float(f.get('duration_hrs') or 0), f.get('level',''),
+         f.get('mode',''), f.get('target_audience',''),
+         int(f.get('planned_pax') or 0), f.get('trainer_vendor',''),
+         f.get('status','To Be Planned'),
+         cal_id, plant_id))
+    db.commit()
+    flash('Session updated.', 'success')
+    return redirect(url_for('training_calendar'))
+
 @app.route('/calendar/bulk-delete', methods=['POST'])
 @spoc_required
 def calendar_bulk_delete():
