@@ -449,6 +449,25 @@ document.getElementById('cal_prog_name').addEventListener('input', function() {
           : `100% covered · All TNI demand met`;
         document.getElementById('tni-cp-hint').textContent = hint;
         document.getElementById('tni-coverage-panel').style.display = '';
+
+        // Auto-fill form fields from TNI data
+        if (d.prog_type) {
+          const pt = document.querySelector('select[name="prog_type"]');
+          if (pt) { pt.value = d.prog_type; }
+        }
+        if (d.mode) {
+          const md = document.querySelector('select[name="mode"]');
+          if (md) { md.value = d.mode; }
+        }
+        if (d.audience) {
+          const au = document.querySelector('select[name="target_audience"]');
+          if (au) { au.value = d.audience; }
+        }
+        // Suggest planned pax = uncovered employees
+        if (d.uncovered > 0) {
+          const px = document.querySelector('input[name="planned_pax"]');
+          if (px && (!px.value || px.value == '0')) px.value = d.uncovered;
+        }
       });
   }, 400);
 });
