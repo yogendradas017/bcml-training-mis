@@ -221,7 +221,11 @@
               {% elif s.status == 'Re-Scheduled' %}<span class="badge badge-rescheduled">Re-Scheduled</span>
               {% else %}<span class="badge bg-secondary">{{ s.status }}</span>{% endif %}
             </td>
-            <td>
+            <td style="white-space:nowrap;">
+              <button class="btn btn-sm btn-outline-primary me-1" title="Edit"
+                onclick="openEdit({{ s.id }},'{{ s.programme_name|replace("'","\\'") }}','{{ s.prog_type or '' }}','{{ s.source or 'TNI' }}','{{ s.planned_month or '' }}','{{ s.plan_start or '' }}','{{ s.plan_end or '' }}','{{ s.time_from or '' }}','{{ s.time_to or '' }}','{{ s.duration_hrs }}','{{ s.level or '' }}','{{ s.mode or '' }}','{{ s.target_audience or '' }}','{{ s.planned_pax }}','{{ s.trainer_vendor or '' }}','{{ s.status }}')">
+                <i class="bi bi-pencil"></i>
+              </button>
               <form method="POST" action="{{ url_for('delete_calendar', cal_id=s.id) }}" style="display:inline;">
                 <button type="button" class="btn btn-sm btn-outline-danger"
                         onclick="ajaxDelete(this,'Delete session {{ s.session_code }}?')">
@@ -238,6 +242,112 @@
     </div>
   </div>
 </div>
+{# ── Edit Modal ── #}
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form method="POST" id="editForm">
+      <div class="modal-content">
+        <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#2563a8);color:#fff;">
+          <h5 class="modal-title fs-6"><i class="bi bi-pencil-square me-1"></i> Edit Calendar Session</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:13px;">Programme Name</label>
+              <input type="text" name="programme_name" id="e_prog" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Type</label>
+              <select name="prog_type" id="e_type" class="form-select form-select-sm">
+                <option value="">— Select —</option>
+                {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Source</label>
+              <select name="source" id="e_source" class="form-select form-select-sm">
+                <option value="TNI">TNI</option>
+                <option value="Management">Management</option>
+                <option value="Statutory">Statutory</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Planned Month</label>
+              <select name="planned_month" id="e_month" class="form-select form-select-sm">
+                <option value="">— Select —</option>
+                {% for mo in months %}<option>{{ mo }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Plan Start</label>
+              <input type="date" name="plan_start" id="e_start" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Plan End</label>
+              <input type="date" name="plan_end" id="e_end" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Duration (Hrs)</label>
+              <input type="number" name="duration_hrs" id="e_hrs" class="form-control form-control-sm" step="0.5" min="0">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Time From</label>
+              <input type="time" name="time_from" id="e_tfrom" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Time To</label>
+              <input type="time" name="time_to" id="e_tto" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Mode</label>
+              <select name="mode" id="e_mode" class="form-select form-select-sm">
+                <option value="">— Select —</option>
+                {% for m in modes %}<option>{{ m }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Level</label>
+              <select name="level" id="e_level" class="form-select form-select-sm">
+                <option value="">— Select —</option>
+                {% for l in levels %}<option>{{ l }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Audience</label>
+              <select name="target_audience" id="e_audience" class="form-select form-select-sm">
+                <option value="">— Select —</option>
+                {% for a in audiences %}<option>{{ a }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:13px;">Planned Pax</label>
+              <input type="number" name="planned_pax" id="e_pax" class="form-control form-control-sm" min="0">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label fw-semibold" style="font-size:13px;">Trainer / Vendor</label>
+              <input type="text" name="trainer_vendor" id="e_trainer" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:13px;">Status</label>
+              <select name="status" id="e_status" class="form-select form-select-sm">
+                <option>To Be Planned</option>
+                <option>Conducted</option>
+                <option>Re-Scheduled</option>
+                <option>Cancelled</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check2"></i> Save Changes</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}
 <script>
@@ -273,5 +383,25 @@ document.getElementById('cal_prog_name').addEventListener('input', function() {
   }, 400);
 });
 BulkSelect.init('calTable', '{{ url_for("calendar_bulk_delete") }}');
+
+function openEdit(id, prog, type, source, month, start, end, tfrom, tto, hrs, level, mode, audience, pax, trainer, status) {
+  const f = document.getElementById('editForm');
+  f.action = '/calendar/' + id + '/edit';
+  document.getElementById('e_prog').value     = prog;
+  document.getElementById('e_start').value    = start;
+  document.getElementById('e_end').value      = end;
+  document.getElementById('e_tfrom').value    = tfrom;
+  document.getElementById('e_tto').value      = tto;
+  document.getElementById('e_hrs').value      = hrs;
+  document.getElementById('e_pax').value      = pax;
+  document.getElementById('e_trainer').value  = trainer;
+  ['e_type','e_source','e_month','e_mode','e_level','e_audience','e_status'].forEach((id,i) => {
+    const val = [type, source, month, mode, level, audience, status][i];
+    const el  = document.getElementById(id);
+    el.value  = val;
+    if (!el.value) el.selectedIndex = 0;
+  });
+  new bootstrap.Modal(document.getElementById('editModal')).show();
+}
 </script>
 {% endblock %}
