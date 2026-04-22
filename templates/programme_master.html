@@ -105,7 +105,9 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label fw-semibold" style="font-size:13px;">Programme Name <span class="text-danger">*</span></label>
-            <input type="text" name="name" class="form-control form-control-sm" placeholder="e.g. Fire Safety" required>
+            <input type="text" id="addNameInput" name="name" class="form-control form-control-sm" placeholder="e.g. Fire Safety" required autocomplete="off">
+            <div id="addSuggestions" style="display:none;border:1px solid #e5e9f2;border-radius:8px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:180px;overflow-y:auto;margin-top:2px;z-index:9999;position:relative;"></div>
+            <div id="addMatchHint" style="display:none;margin-top:6px;"></div>
           </div>
           <div class="mb-3">
             <label class="form-label fw-semibold" style="font-size:13px;">Type of Programme</label>
@@ -163,6 +165,7 @@
 {% endblock %}
 {% block scripts %}
 <script>
+// ── Table search ──────────────────────────────────────────────────────────────
 const pmSearch = document.getElementById('pm-search');
 if (pmSearch) {
   pmSearch.addEventListener('input', function() {
@@ -170,6 +173,95 @@ if (pmSearch) {
     document.querySelectorAll('.pm-row').forEach(r => {
       r.style.display = r.dataset.name.includes(q) ? '' : 'none';
     });
+  });
+}
+
+// ── Master list for fuzzy match ───────────────────────────────────────────────
+const MASTER = [{% for p in progs %}"{{ p.name|replace('"', '\\"') }}"{% if not loop.last %},{% endif %}{% endfor %}];
+
+// Levenshtein similarity (0–1)
+function similarity(a, b) {
+  a = a.toLowerCase(); b = b.toLowerCase();
+  if (a === b) return 1;
+  if (!a.length || !b.length) return 0;
+  const dp = Array.from({length: b.length + 1}, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const val = a[i-1] === b[j-1] ? dp[j-1] : 1 + Math.min(dp[j-1], dp[j], prev);
+      dp[j-1] = prev; prev = val;
+    }
+    dp[b.length] = prev;
+  }
+  return 1 - dp[b.length] / Math.max(a.length, b.length);
+}
+
+// ── Add modal spell correction ────────────────────────────────────────────────
+const nameInput   = document.getElementById('addNameInput');
+const suggestBox  = document.getElementById('addSuggestions');
+const matchHint   = document.getElementById('addMatchHint');
+
+if (nameInput) {
+  nameInput.addEventListener('input', function() {
+    const q = this.value.trim();
+    suggestBox.innerHTML = ''; suggestBox.style.display = 'none';
+    matchHint.innerHTML  = ''; matchHint.style.display  = 'none';
+    if (q.length < 3) return;
+
+    const ql = q.toLowerCase();
+    // Score all master entries
+    const scored = MASTER.map(m => ({name: m, score: similarity(ql, m.toLowerCase())}))
+                         .filter(x => x.score > 0.35 || m => m.name.toLowerCase().includes(ql))
+                         .sort((a, b) => b.score - a.score)
+                         .slice(0, 6);
+
+    // Exact match?
+    const exact = MASTER.find(m => m.toLowerCase() === ql);
+    if (exact) {
+      matchHint.innerHTML = `<span style="background:#fef3c7;color:#92400e;font-size:12px;padding:4px 10px;border-radius:6px;display:inline-block;">
+        <i class="bi bi-pencil-square"></i> Already in master — clicking Add will <strong>update</strong> its type/mode.</span>`;
+      matchHint.style.display = 'block';
+      return;
+    }
+
+    // Close matches
+    const close = scored.filter(x => x.score >= 0.65);
+    if (close.length) {
+      matchHint.innerHTML = `<span style="font-size:12px;color:#6b7280;"><i class="bi bi-magic"></i> Similar entries found — click to use:</span>`;
+      matchHint.style.display = 'block';
+    }
+
+    // Show suggestion dropdown for contains + fuzzy
+    const shown = MASTER.filter(m => m.toLowerCase().includes(ql))
+                        .concat(scored.filter(x => x.score >= 0.55).map(x => x.name))
+                        .filter((v, i, a) => a.indexOf(v) === i)
+                        .slice(0, 8);
+
+    if (shown.length) {
+      shown.forEach(name => {
+        const sim = similarity(ql, name.toLowerCase());
+        const tag = name.toLowerCase() === ql ? '' :
+                    sim >= 0.75 ? `<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;margin-left:6px;">similar</span>` : '';
+        const div = document.createElement('div');
+        div.innerHTML = `<span style="font-size:13px;">${name}</span>${tag}`;
+        div.style.cssText = 'padding:8px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;';
+        div.onmouseenter = () => div.style.background = '#f8fafc';
+        div.onmouseleave = () => div.style.background = '';
+        div.onclick = () => {
+          nameInput.value = name;
+          suggestBox.style.display = 'none';
+          nameInput.dispatchEvent(new Event('input'));
+        };
+        suggestBox.appendChild(div);
+      });
+      suggestBox.style.display = 'block';
+    }
+  });
+
+  // Hide suggestions on outside click
+  document.addEventListener('click', e => {
+    if (!nameInput.contains(e.target) && !suggestBox.contains(e.target))
+      suggestBox.style.display = 'none';
   });
 }
 </script>
