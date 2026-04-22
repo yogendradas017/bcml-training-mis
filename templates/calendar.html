@@ -132,6 +132,76 @@
   </div>
 </div>
 
+<!-- Coverage Summary -->
+{% if cov_rows %}
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#065f46,#059669);color:#fff;cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('d-none')">
+    <span><i class="bi bi-bullseye me-1"></i> TNI Coverage Plan — Are all demand employees covered?</span>
+    <div class="d-flex gap-2 align-items-center" style="font-size:12px;">
+      {% set fully = cov_rows|selectattr('gap','equalto',0)|list|length %}
+      {% set partial = cov_rows|selectattr('gap','greaterthan',0)|list|length %}
+      <span style="background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:20px;font-weight:700;">{{ fully }} Fully Covered</span>
+      <span style="background:#fee2e2;color:#dc2626;padding:2px 10px;border-radius:20px;font-weight:700;">{{ partial }} Have Gap</span>
+      <i class="bi bi-chevron-down"></i>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0" style="font-size:12px;">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th style="padding:9px 14px;">#</th>
+          <th style="padding:9px 14px;">Programme</th>
+          <th style="padding:9px 14px;text-align:center;">TNI Demand</th>
+          <th style="padding:9px 14px;text-align:center;">Sessions Planned</th>
+          <th style="padding:9px 14px;text-align:center;">Total PAX Planned</th>
+          <th style="padding:9px 14px;min-width:160px;">Coverage</th>
+          <th style="padding:9px 14px;text-align:center;">Gap</th>
+          <th style="padding:9px 14px;text-align:center;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in cov_rows %}
+        <tr>
+          <td style="padding:8px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:8px 14px;font-weight:600;color:#111827;">{{ r.name }}</td>
+          <td style="padding:8px 14px;text-align:center;font-weight:700;">{{ r.demand }}</td>
+          <td style="padding:8px 14px;text-align:center;color:#6b7280;">{{ r.sessions }}</td>
+          <td style="padding:8px 14px;text-align:center;font-weight:600;
+              color:{% if r.planned_pax >= r.demand %}#059669{% elif r.planned_pax > 0 %}#d97706{% else %}#dc2626{% endif %};">
+            {{ r.planned_pax }}
+            {% if r.over > 0 %}<span style="font-size:10px;color:#059669;"> (+{{ r.over }} extra)</span>{% endif %}
+          </td>
+          <td style="padding:8px 14px;">
+            <div style="background:#f1f5f9;border-radius:99px;height:8px;overflow:hidden;">
+              <div style="width:{{ r.pct }}%;height:100%;border-radius:99px;
+                background:{% if r.pct >= 100 %}linear-gradient(90deg,#10b981,#34d399){% elif r.pct >= 50 %}linear-gradient(90deg,#f59e0b,#fbbf24){% else %}linear-gradient(90deg,#ef4444,#f87171){% endif %};"></div>
+            </div>
+            <div style="font-size:10px;color:#9ca3af;margin-top:2px;">{{ r.pct }}% planned</div>
+          </td>
+          <td style="padding:8px 14px;text-align:center;">
+            {% if r.gap > 0 %}
+            <span style="color:#dc2626;font-weight:700;">{{ r.gap }} short</span>
+            {% else %}
+            <span style="color:#059669;font-weight:700;">✓ OK</span>
+            {% endif %}
+          </td>
+          <td style="padding:8px 14px;text-align:center;">
+            {% if r.sessions == 0 %}
+              <span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;">Not Planned</span>
+            {% elif r.gap > 0 %}
+              <span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;">Under Planned</span>
+            {% else %}
+              <span style="background:#d1fae5;color:#065f46;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;">Fully Covered</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 <!-- Calendar Table -->
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
