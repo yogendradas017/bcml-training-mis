@@ -220,7 +220,7 @@
     /* ══════════════════════════════════════════════════════════════
        MAIN LAYOUT
     ══════════════════════════════════════════════════════════════ */
-    .main-wrap { margin-left: var(--sb-w); min-height: 100vh; display: flex; flex-direction: column; max-width: calc(100vw - var(--sb-w)); overflow-x: hidden; }
+    .main-wrap { margin-left: var(--sb-w); min-height: 100vh; display: flex; flex-direction: column; width: calc(100vw - var(--sb-w)); overflow-x: auto; }
 
     /* ── TOPBAR ────────────────────────────────────────────────── */
     .topbar {
@@ -672,7 +672,7 @@
       :root { --sb-w: 260px; }
       .sidebar { transform: translateX(-100%); }
       .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
-      .main-wrap { margin-left: 0; }
+      .main-wrap { margin-left: 0; width: 100vw; }
       .topbar { padding: 0 16px; }
       .page-body { padding: 16px; }
       #menu-btn { display: flex; }
