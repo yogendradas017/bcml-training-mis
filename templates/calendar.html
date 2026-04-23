@@ -35,9 +35,13 @@
       <div class="row g-3">
         <div class="col-md-5">
           <label class="form-label">Programme Name <span class="required-star">*</span></label>
-          <input type="text" name="programme_name" id="cal_prog_name" class="form-control" required
-                 placeholder="e.g. Fire Safety Awareness" autocomplete="off">
-          <div class="form-text">Session Code auto-generates. Type to see TNI demand.</div>
+          <select name="programme_name" id="cal_prog_name" required>
+            <option value="">— Select programme —</option>
+            {% for p in all_cal_programmes %}
+            <option value="{{ p }}"{% if p in tni_programmes %} data-tni="1"{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Type to search. TNI demand loads automatically when selected.</div>
         </div>
 
         <!-- TNI Coverage Panel — shown when programme name matches TNI -->
@@ -422,13 +426,26 @@
 <script>
 TBL.init('calTable', 30);
 
+/* Programme Name — searchable select */
+const _calProgTs = new TomSelect('#cal_prog_name', {
+  placeholder: 'Type to search or scroll…',
+  allowEmptyOption: true,
+  maxOptions: 300,
+  render: {
+    option: function(data) {
+      const hasTni = data.element && data.element.dataset.tni;
+      const badge = hasTni ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:10px;margin-left:6px;">TNI</span>' : '';
+      return `<div>${data.text}${badge}</div>`;
+    }
+  },
+  onChange: function(val) {
+    _fetchCoverage(val);
+  }
+});
+
 /* TNI Coverage Panel */
-let _cpTimer;
-document.getElementById('cal_prog_name').addEventListener('input', function() {
-  clearTimeout(_cpTimer);
-  const val = this.value.trim();
+function _fetchCoverage(val) {
   if (!val) { document.getElementById('tni-coverage-panel').style.display='none'; return; }
-  _cpTimer = setTimeout(() => {
     fetch('/api/tni-coverage?q=' + encodeURIComponent(val))
       .then(r => r.json())
       .then(d => {
@@ -468,8 +485,7 @@ document.getElementById('cal_prog_name').addEventListener('input', function() {
         if (d.avg_hrs > 0) _setInput('duration_hrs', d.avg_hrs);
         if (d.uncovered > 0) _setInput('planned_pax', d.uncovered);
       });
-  }, 400);
-});
+}
 BulkSelect.init('calTable', '{{ url_for("calendar_bulk_delete") }}');
 
 function openEdit(id, prog, type, source, month, start, end, tfrom, tto, hrs, level, mode, audience, pax, trainer, status) {
@@ -492,7 +508,6 @@ function openEdit(id, prog, type, source, month, start, end, tfrom, tto, hrs, le
   new bootstrap.Modal(document.getElementById('editModal')).show();
 }
 
-PROG_AC.setup(document.getElementById('cal_prog_name'));
 PROG_AC.setup(document.getElementById('e_prog'));
 </script>
 {% endblock %}

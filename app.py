@@ -927,6 +927,11 @@ def training_calendar():
 
     tni_programmes = [r[0] for r in db.execute(
         'SELECT DISTINCT programme_name FROM tni WHERE plant_id=? ORDER BY programme_name', (plant_id,))]
+    master_programmes = [r[0] for r in db.execute(
+        'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()] or MASTER_PROGRAMMES
+    # Merge: TNI programmes first (have demand data), then master-only entries
+    tni_set = set(p.lower() for p in tni_programmes)
+    all_cal_programmes = tni_programmes + [p for p in master_programmes if p.lower() not in tni_set]
 
     # Coverage summary: per programme — demand vs total planned PAX vs conducted PAX
     cov_rows = []
@@ -952,7 +957,8 @@ def training_calendar():
     cov_rows.sort(key=lambda x: x['gap'], reverse=True)  # biggest gap first
 
     return render_template('calendar.html', sessions=sessions, demand_map=demand_map,
-                           tni_programmes=tni_programmes, cov_rows=cov_rows,
+                           tni_programmes=tni_programmes,
+                           all_cal_programmes=all_cal_programmes, cov_rows=cov_rows,
                            prog_types=PROG_TYPES, modes=MODES, levels=LEVELS,
                            audiences=AUDIENCES, months=MONTHS_FY, statuses=STATUSES)
 
