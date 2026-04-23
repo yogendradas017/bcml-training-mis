@@ -1,4 +1,6 @@
 import os
+import re
+import secrets
 import sqlite3
 import io
 from datetime import date, datetime
@@ -24,6 +26,7 @@ if _env_db:
         DB_PATH = _default_db  # fallback if path is invalid
 else:
     DB_PATH = _default_db
+TEMP_UPLOAD_DIR = os.path.join(BASE_DIR, 'data', 'tmp_uploads')
 
 PLANTS = [
     {'id': 1,  'name': 'Balrampur',  'unit_code': 'BCM'},
@@ -1028,6 +1031,91 @@ def tni_bulk_upload():
         return _error_excel_response(errors, inserted, 'TNI_Upload_Errors.xlsx')
     flash(f'Bulk upload complete: {inserted} TNI entries added successfully.', 'success')
     return redirect(url_for('tni'))
+
+@app.route('/tni/fresh-upload', methods=['GET', 'POST'])
+@spoc_required
+def tni_fresh_upload():
+    plant_id = session['plant_id']
+    db = get_db()
+
+    if request.method == 'GET':
+        return render_template('tni_fresh_upload.html')
+
+    # ── Step 2: User clicked Confirm ──────────────────────────────────────────
+    confirm_token = request.form.get('confirm')
+    if confirm_token:
+        ext      = session.get('fresh_upload_ext', '.xlsx')
+        tmp_path = os.path.join(TEMP_UPLOAD_DIR, f'tni_fresh_{confirm_token}{ext}')
+        if not os.path.exists(tmp_path):
+            flash('Session expired — please re-upload the file.', 'danger')
+            return redirect(url_for('tni_fresh_upload'))
+        try:
+            df = _read_upload_file_path(tmp_path)
+        except Exception as e:
+            flash(f'Could not read file: {e}', 'danger')
+            return redirect(url_for('tni_fresh_upload'))
+
+        result = _process_fresh_tni(df, plant_id, db)
+        rows   = result['valid_rows']
+
+        db.execute('DELETE FROM tni WHERE plant_id=?', (plant_id,))
+        db.execute('DELETE FROM programme_master WHERE plant_id=?', (plant_id,))
+
+        for r in rows:
+            db.execute(
+                'INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
+                (plant_id, r['emp_code'], r['programme_name'], r['prog_type'], r['mode'], r['hours'])
+            )
+        for prog in result['unique_progs']:
+            db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(?,?)', (plant_id, prog))
+        db.commit()
+
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+
+        flash(
+            f'Fresh upload complete: {len(rows)} TNI entries saved. '
+            f'{len(result["unique_progs"])} unique programmes are now your master list.',
+            'success'
+        )
+        return redirect(url_for('tni'))
+
+    # ── Step 1: File uploaded → parse, show preview ────────────────────────────
+    f = request.files.get('file')
+    if not f or f.filename == '':
+        flash('No file selected.', 'danger')
+        return redirect(url_for('tni_fresh_upload'))
+
+    os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
+    token    = secrets.token_hex(16)
+    ext      = os.path.splitext(f.filename)[1].lower() or '.xlsx'
+    tmp_path = os.path.join(TEMP_UPLOAD_DIR, f'tni_fresh_{token}{ext}')
+    f.save(tmp_path)
+    session['fresh_upload_token'] = token
+    session['fresh_upload_ext']   = ext
+
+    try:
+        df = _read_upload_file_path(tmp_path)
+    except Exception as e:
+        try: os.remove(tmp_path)
+        except Exception: pass
+        flash(f'Could not read file: {e}', 'danger')
+        return redirect(url_for('tni_fresh_upload'))
+
+    result = _process_fresh_tni(df, plant_id, db)
+    return render_template(
+        'tni_fresh_upload.html',
+        preview=True,
+        token=token,
+        total_rows=result['total_rows'],
+        valid_rows=result['valid_rows'],
+        error_rows=result['error_rows'],
+        name_corrections=result['name_corrections'],
+        unique_progs=result['unique_progs'],
+        duplicate_count=result['duplicate_count'],
+    )
 
 # ─── TRAINING CALENDAR ────────────────────────────────────────────────────────
 
@@ -2131,6 +2219,100 @@ def _read_upload_file(file_storage):
         return pd.read_csv(file_storage, dtype=str).fillna('')
     else:
         return pd.read_excel(file_storage, dtype=str).fillna('')
+
+def _read_upload_file_path(path):
+    import pandas as pd
+    if path.lower().endswith('.csv'):
+        return pd.read_csv(path, dtype=str).fillna('')
+    else:
+        return pd.read_excel(path, dtype=str).fillna('')
+
+def _poka_yoke_clean_prog(name):
+    """Normalize a programme name: strip, collapse spaces, remove control chars, smart title case."""
+    if not name:
+        return ''
+    s = re.sub(r'[\x00-\x1f\x7f]', '', str(name).strip())
+    s = re.sub(r'\s+', ' ', s).strip()
+    return _smart_title(s)
+
+def _process_fresh_tni(df, plant_id, db):
+    """
+    Parse a TNI DataFrame with 100% poka-yoke cleaning.
+    Returns dict: total_rows, valid_rows, error_rows, name_corrections, unique_progs, duplicate_count.
+    """
+    emp_rows = db.execute(
+        'SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)
+    ).fetchall()
+    emp_map   = {r['emp_code']: r['name'] for r in emp_rows}
+    emp_upper = {k.upper(): k for k in emp_map}
+
+    cols     = df.columns.tolist()
+    col_emp  = _detect_col(cols, ['emp code','employee code','empcode','staff code','emp id','employee id','code'])
+    col_prog = _detect_col(cols, ['programme name','program name','training name','course name','training need','training'])
+    col_type = _detect_col(cols, ['type of programme','type','programme type','prog type','training type','category'])
+    col_mode = _detect_col(cols, ['mode','training mode','delivery mode'])
+    col_hrs  = _detect_col(cols, ['planned hours','hours','hrs','duration'])
+
+    def gv(row, col):
+        if not col: return ''
+        v = str(row.get(col, '') or '').strip()
+        return '' if v.lower() in ('nan', 'none', '0', '') else v
+
+    valid_rows       = []
+    error_rows       = []
+    name_corrections = {}
+    seen             = set()
+    duplicate_count  = 0
+
+    for i, row in df.iterrows():
+        raw_emp  = gv(row, col_emp)
+        raw_prog = gv(row, col_prog)
+        prog_type = gv(row, col_type)
+        mode      = gv(row, col_mode)
+        hours     = _safe_float(gv(row, col_hrs)) or 0
+
+        if not raw_emp and not raw_prog:
+            continue
+
+        if not raw_emp:
+            error_rows.append({'row': i+2, 'emp_code': '', 'prog_name': raw_prog, 'reason': 'Employee Code missing'})
+            continue
+        if not raw_prog:
+            error_rows.append({'row': i+2, 'emp_code': raw_emp, 'prog_name': '', 'reason': 'Programme Name missing'})
+            continue
+
+        clean_emp = raw_emp
+        if raw_emp not in emp_map:
+            if raw_emp.upper() in emp_upper:
+                clean_emp = emp_upper[raw_emp.upper()]
+            else:
+                error_rows.append({'row': i+2, 'emp_code': raw_emp, 'prog_name': raw_prog,
+                                   'reason': f'Employee "{raw_emp}" not found in this plant'})
+                continue
+
+        cleaned = _poka_yoke_clean_prog(raw_prog)
+        if cleaned != raw_prog:
+            name_corrections[raw_prog] = cleaned
+
+        key = (clean_emp, cleaned.lower())
+        if key in seen:
+            duplicate_count += 1
+            continue
+        seen.add(key)
+
+        valid_rows.append({
+            'emp_code': clean_emp, 'programme_name': cleaned,
+            'prog_type': prog_type, 'mode': mode, 'hours': hours,
+        })
+
+    return {
+        'total_rows':       len(df),
+        'valid_rows':       valid_rows,
+        'error_rows':       error_rows,
+        'name_corrections': name_corrections,
+        'unique_progs':     sorted(set(r['programme_name'] for r in valid_rows)),
+        'duplicate_count':  duplicate_count,
+    }
 
 def _clean(row, keys):
     for k in keys:

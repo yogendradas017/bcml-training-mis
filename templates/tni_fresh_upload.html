@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block page_title %}Fresh TNI Upload{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0">Fresh TNI Upload — 100% Poka Yoke</h5>
+    <small class="text-muted">Cleans every row automatically. Zero garbage allowed. Unique programmes become your master list.</small>
+  </div>
+  <a href="{{ url_for('tni') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to TNI
+  </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="alert alert-{{ cat }} alert-dismissible fade show py-2">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endwith %}
+
+{% if not preview %}
+{# ──────────────────────────── UPLOAD FORM ──────────────────────────────── #}
+<div class="card" style="max-width:600px;">
+  <div class="card-header d-flex align-items-center gap-2" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
+    <i class="bi bi-shield-check-fill"></i>
+    <span>Upload TNI Excel / CSV</span>
+  </div>
+  <div class="card-body">
+
+    <div class="alert mb-3 d-flex gap-2 align-items-start py-2"
+         style="background:#fff7ed;border:1px solid #fed7aa;font-size:13px;color:#c2410c;">
+      <i class="bi bi-exclamation-triangle-fill mt-1" style="flex-shrink:0;"></i>
+      <div>
+        <strong>Replaces existing TNI &amp; Master List for {{ session.plant_name }}.</strong><br>
+        All current TNI rows and the programme master list for this plant will be wiped and rebuilt from your upload.
+      </div>
+    </div>
+
+    <ul style="font-size:13px;color:#374151;padding-left:18px;margin-bottom:18px;">
+      <li>Programme names auto-normalized (casing, spaces, special chars)</li>
+      <li>Duplicate rows (same employee + programme) automatically removed</li>
+      <li>Rows with unknown employee codes shown as errors — <strong>not saved</strong></li>
+      <li>Unique cleaned programme names → become Programme Master list</li>
+    </ul>
+
+    <form method="POST" enctype="multipart/form-data">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Select TNI File</label>
+        <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+        <div class="form-text">Accepted: .xlsx, .xls, .csv — must have Employee Code &amp; Programme Name columns</div>
+      </div>
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-search me-1"></i> Analyze &amp; Preview
+      </button>
+    </form>
+
+  </div>
+</div>
+
+{% else %}
+{# ──────────────────────────── PREVIEW ──────────────────────────────────── #}
+
+{# Summary scorecard #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid #6366f1;">
+      <div class="card-body py-3">
+        <div style="font-size:30px;font-weight:700;color:#6366f1;">{{ valid_rows|length }}</div>
+        <div style="font-size:12px;color:#6b7280;font-weight:500;">Valid Rows</div>
+        <div style="font-size:11px;color:#9ca3af;">will be saved</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid #10b981;">
+      <div class="card-body py-3">
+        <div style="font-size:30px;font-weight:700;color:#10b981;">{{ unique_progs|length }}</div>
+        <div style="font-size:12px;color:#6b7280;font-weight:500;">Unique Programmes</div>
+        <div style="font-size:11px;color:#9ca3af;">→ new master list</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid {% if name_corrections %}#f59e0b{% else %}#d1d5db{% endif %};">
+      <div class="card-body py-3">
+        <div style="font-size:30px;font-weight:700;color:{% if name_corrections %}#d97706{% else %}#9ca3af{% endif %};">{{ name_corrections|length }}</div>
+        <div style="font-size:12px;color:#6b7280;font-weight:500;">Names Cleaned</div>
+        <div style="font-size:11px;color:#9ca3af;">auto-corrected</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid {% if error_rows %}#dc2626{% else %}#d1d5db{% endif %};">
+      <div class="card-body py-3">
+        <div style="font-size:30px;font-weight:700;color:{% if error_rows %}#dc2626{% else %}#9ca3af{% endif %};">{{ error_rows|length }}</div>
+        <div style="font-size:12px;color:#6b7280;font-weight:500;">Rejected Rows</div>
+        <div style="font-size:11px;color:#9ca3af;">not saved</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if duplicate_count > 0 %}
+<div class="alert d-flex gap-2 align-items-center py-2 mb-3"
+     style="background:#eff6ff;border:1px solid #bfdbfe;font-size:13px;color:#1d4ed8;">
+  <i class="bi bi-arrow-repeat"></i>
+  <span><strong>{{ duplicate_count }} duplicate row(s)</strong> detected (same employee + programme) — automatically removed.</span>
+</div>
+{% endif %}
+
+{# Programme master preview #}
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2"
+       style="background:linear-gradient(135deg,#065f46,#10b981);color:#fff;font-size:14px;">
+    <i class="bi bi-list-check"></i>
+    <span>{{ unique_progs|length }} Programmes → will become Programme Master List</span>
+  </div>
+  <div class="card-body" style="padding:14px 16px;">
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      {% for p in unique_progs %}
+      <span style="background:#d1fae5;color:#065f46;font-size:12px;font-weight:500;
+                   padding:3px 10px;border-radius:12px;border:1px solid #a7f3d0;">{{ p }}</span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{# Name corrections (only if any) #}
+{% if name_corrections %}
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2"
+       style="background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e;font-size:14px;">
+    <i class="bi bi-magic"></i>
+    <span>{{ name_corrections|length }} Programme Name(s) Auto-Cleaned</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered mb-0" style="font-size:13px;">
+      <thead style="background:#fef9c3;">
+        <tr>
+          <th style="padding:8px 14px;width:36px;">#</th>
+          <th style="padding:8px 14px;">Original (in your file)</th>
+          <th style="padding:8px 14px;">Saved as</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for orig, cleaned in name_corrections.items() %}
+        <tr>
+          <td style="padding:6px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:6px 14px;">
+            <span style="background:#fee2e2;color:#dc2626;font-weight:600;padding:2px 8px;border-radius:4px;">{{ orig }}</span>
+          </td>
+          <td style="padding:6px 14px;">
+            <span style="background:#d1fae5;color:#065f46;font-weight:600;padding:2px 8px;border-radius:4px;">{{ cleaned }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# Rejected rows (only if any) #}
+{% if error_rows %}
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2"
+       style="background:#fef2f2;border-bottom:1px solid #fecaca;color:#dc2626;font-size:14px;">
+    <i class="bi bi-x-circle-fill"></i>
+    <span>{{ error_rows|length }} Row(s) Rejected — will NOT be saved</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered mb-0" style="font-size:13px;">
+      <thead style="background:#fef2f2;">
+        <tr>
+          <th style="padding:8px 14px;">File Row</th>
+          <th style="padding:8px 14px;">Employee Code</th>
+          <th style="padding:8px 14px;">Programme Name</th>
+          <th style="padding:8px 14px;">Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in error_rows %}
+        <tr>
+          <td style="padding:6px 14px;color:#9ca3af;">{{ r.row }}</td>
+          <td style="padding:6px 14px;">{{ r.emp_code or '—' }}</td>
+          <td style="padding:6px 14px;">{{ r.prog_name or '—' }}</td>
+          <td style="padding:6px 14px;color:#dc2626;">{{ r.reason }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# Confirm / Cancel #}
+{% if valid_rows %}
+<div class="alert d-flex gap-2 align-items-start py-2 mb-3"
+     style="background:#fff7ed;border:1px solid #fed7aa;font-size:13px;color:#c2410c;">
+  <i class="bi bi-exclamation-triangle-fill mt-1" style="flex-shrink:0;"></i>
+  <div>
+    <strong>Confirming will permanently replace</strong> all existing TNI data and programme master list for
+    <strong>{{ session.plant_name }}</strong>. This cannot be undone.
+  </div>
+</div>
+<form method="POST">
+  <input type="hidden" name="confirm" value="{{ token }}">
+  <div class="d-flex gap-2 flex-wrap">
+    <button type="submit" class="btn btn-success px-4 fw-semibold">
+      <i class="bi bi-check2-circle me-1"></i>
+      Confirm — Save {{ valid_rows|length }} Rows &amp; Build Master List ({{ unique_progs|length }} programmes)
+    </button>
+    <a href="{{ url_for('tni_fresh_upload') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-repeat me-1"></i> Upload Different File
+    </a>
+    <a href="{{ url_for('tni') }}" class="btn btn-outline-danger">Cancel</a>
+  </div>
+</form>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-4">
+    <i class="bi bi-exclamation-circle" style="font-size:36px;color:#dc2626;display:block;margin-bottom:10px;"></i>
+    <div style="font-weight:600;color:#111827;margin-bottom:6px;">No valid rows found</div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:16px;">
+      Every row was either rejected or a duplicate. Fix the issues above and re-upload.
+    </div>
+    <a href="{{ url_for('tni_fresh_upload') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-arrow-repeat me-1"></i> Upload Different File
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+
+{% endblock %}
