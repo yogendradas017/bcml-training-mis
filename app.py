@@ -385,10 +385,20 @@ def tni():
     depts = [r[0] for r in db.execute(
         'SELECT DISTINCT department FROM employees WHERE plant_id=? AND department IS NOT NULL AND department != "" ORDER BY department',
         (plant_id,)).fetchall()]
+
+    # Count programme names in TNI that don't exactly match the master list
+    master_lower = set(r[0].lower() for r in db.execute(
+        'SELECT name FROM programme_master WHERE plant_id=?', (plant_id,)).fetchall())
+    dirty_names = []
+    if master_lower:
+        tni_names = [r[0] for r in db.execute(
+            'SELECT DISTINCT programme_name FROM tni WHERE plant_id=?', (plant_id,)).fetchall()]
+        dirty_names = [n for n in tni_names if n.lower() not in master_lower]
+
     return render_template('tni.html', total=total,
                            employees=emps, programmes=programmes,
                            prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY,
-                           departments=depts)
+                           departments=depts, dirty_names=dirty_names)
 
 def _tni_filters(plant_id):
     """Build WHERE clause + params from current request args for TNI queries."""
@@ -536,6 +546,14 @@ def tni_bulk_delete():
 def tni_cleanse():
     plant_id = session['plant_id']
     db = get_db()
+
+    # quick=1 applies immediately without preview (used from warning banner)
+    if request.args.get('quick') == '1':
+        result = _cleanse_programme_names(db, plant_id=plant_id)
+        r = result.get(plant_id, {'fixed': 0, 'merged': 0})
+        flash(f'Data cleanse complete: {r["fixed"]} programme name(s) corrected, '
+              f'{r["merged"]} duplicate(s) merged.', 'success')
+        return redirect(url_for('tni'))
 
     if request.method == 'POST':
         result = _cleanse_programme_names(db, plant_id=plant_id)
