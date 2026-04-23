@@ -1028,13 +1028,14 @@ def training_calendar():
     for row in db.execute('SELECT programme_name, COUNT(DISTINCT emp_code) as cnt FROM tni WHERE plant_id=? GROUP BY programme_name', (plant_id,)):
         demand_map[row['programme_name']] = row['cnt']
 
-    tni_programmes = [r[0] for r in db.execute(
-        'SELECT DISTINCT programme_name FROM tni WHERE plant_id=? ORDER BY programme_name', (plant_id,))]
+    # Dropdown uses master list only (canonical names); TNI demand shown via badge
     master_programmes = [r[0] for r in db.execute(
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()] or MASTER_PROGRAMMES
-    # Merge: TNI programmes first (have demand data), then master-only entries
+    all_cal_programmes = master_programmes
+    # TNI programmes still needed for demand_map and coverage panel
+    tni_programmes = [r[0] for r in db.execute(
+        'SELECT DISTINCT programme_name FROM tni WHERE plant_id=? ORDER BY programme_name', (plant_id,))]
     tni_set = set(p.lower() for p in tni_programmes)
-    all_cal_programmes = tni_programmes + [p for p in master_programmes if p.lower() not in tni_set]
 
     # Coverage summary: per programme — demand vs total planned PAX vs conducted PAX
     cov_rows = []
