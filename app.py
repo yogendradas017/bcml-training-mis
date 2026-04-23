@@ -102,6 +102,21 @@ def _migrate_tni_unique(db):
         CREATE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name);
     ''')
 
+def _cleanse_master_spelling(db):
+    """Fix known misspelled words inside programme_master entries using _WORD_FIXES."""
+    rows = db.execute('SELECT id, name FROM programme_master').fetchall()
+    for row in rows:
+        cleaned = _smart_title(_apply_word_fixes(row['name']))
+        if cleaned != row['name']:
+            # Check no duplicate already exists before renaming
+            clash = db.execute(
+                'SELECT id FROM programme_master WHERE plant_id=(SELECT plant_id FROM programme_master WHERE id=?) AND LOWER(name)=LOWER(?) AND id!=?',
+                (row['id'], cleaned, row['id'])
+            ).fetchone()
+            if not clash:
+                db.execute('UPDATE programme_master SET name=? WHERE id=?', (cleaned, row['id']))
+    db.commit()
+
 def _migrate_tni_source(db):
     """Add source column to tni table if not present (migration for existing DBs)."""
     cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
@@ -191,7 +206,8 @@ def init_db():
         for name in MASTER_PROGRAMMES:
             db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(1,?)', (name,))
     db.commit()
-    # Auto-cleanse existing dirty data against master list on every startup
+    # Fix spelling in master list first, then cleanse TNI/calendar against it
+    _cleanse_master_spelling(db)
     _cleanse_programme_names(db)
     db.commit()
     db.close()
@@ -2267,11 +2283,12 @@ def _read_upload_file_path(path):
         return pd.read_excel(path, dtype=str).fillna('')
 
 def _poka_yoke_clean_prog(name):
-    """Normalize a programme name: strip, collapse spaces, remove control chars, smart title case."""
+    """Normalize a programme name: strip, collapse spaces, word-spell-fix, smart title case."""
     if not name:
         return ''
     s = re.sub(r'[\x00-\x1f\x7f]', '', str(name).strip())
     s = re.sub(r'\s+', ' ', s).strip()
+    s = _apply_word_fixes(s)   # fix known misspellings word-by-word
     return _smart_title(s)
 
 def _process_fresh_tni(df, plant_id, db):
@@ -2654,13 +2671,15 @@ def _canonical_prog(raw_name, plant_id, db):
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
     ).fetchall()] or MASTER_PROGRAMMES
     master_lower = [m.lower() for m in master]
-    raw_lower = raw_name.strip().lower()
+    # Word-correct the raw name before matching so misspellings find their master entry
+    corrected = _apply_word_fixes(raw_name.strip())
+    raw_lower  = corrected.lower()
     if raw_lower in master_lower:
         return master[master_lower.index(raw_lower)]
     m = gcm(raw_lower, master_lower, n=1, cutoff=0.65)
     if m:
         return master[master_lower.index(m[0])]
-    return _smart_title(raw_name)
+    return _smart_title(corrected)
 
 def _fuzzy_fix(val, valid_list):
     """Return (fixed_val, was_changed). None if no confident match."""
@@ -2692,17 +2711,97 @@ _ACRONYMS = {
     'STD2SD','FCS','RTD','TC','KNO3','MOP','PDM','5S','5-S','JCB','PM','R&M',
 }
 
-def _smart_title(s):
-    """Title case that preserves known acronyms."""
-    result = []
-    for w in s.split():
+# Common domain-specific misspellings — word-level (lowercase key → correct form)
+_WORD_FIXES = {
+    # Technique variants
+    'techqnique':'Technique','tecnique':'Technique','techique':'Technique',
+    'technqiue':'Technique','teqnique':'Technique','techiquie':'Technique',
+    'technque':'Technique','technnique':'Technique',
+    # Grinding
+    'grainding':'Grinding','graining':'Grinding','granding':'Grinding',
+    'grindng':'Grinding','grindding':'Grinding','grindig':'Grinding',
+    # Hygiene
+    'hyigene':'Hygiene','hyegiene':'Hygiene','hygeine':'Hygiene',
+    'hygeiene':'Hygiene','higiene':'Hygiene','hygene':'Hygiene',
+    # Maintenance
+    'maitenance':'Maintenance','maintenace':'Maintenance','maintainance':'Maintenance',
+    'mantenance':'Maintenance','mainteance':'Maintenance',
+    # Safety
+    'safty':'Safety','saftey':'Safety','safetey':'Safety',
+    # Operation / Operations
+    'operartion':'Operation','operetion':'Operation','opertion':'Operation',
+    # Management
+    'managment':'Management','managament':'Management','mangement':'Management',
+    # Training
+    'trainning':'Training','traning':'Training','traing':'Training',
+    # Awareness
+    'awarness':'Awareness','awreness':'Awareness','awarenes':'Awareness',
+    # Handling
+    'handeling':'Handling','handlng':'Handling','handlig':'Handling',
+    # Electrical
+    'electrcial':'Electrical','eletrical':'Electrical','electical':'Electrical',
+    # Chemical
+    'chemcial':'Chemical','chemicle':'Chemical','chemicla':'Chemical',
+    # Equipment
+    'equpiment':'Equipment','equipement':'Equipment','equipmnet':'Equipment',
+    # Procedure
+    'proceudre':'Procedure','proceedure':'Procedure','procedrue':'Procedure',
+    # Compliance
+    'complience':'Compliance','compliace':'Compliance','complaince':'Compliance',
+    # Environment / Environmental
+    'enviroment':'Environment','enviromental':'Environmental',
+    # Knowledge
+    'knowlege':'Knowledge','knwoledge':'Knowledge','knoweldge':'Knowledge',
+    # Monitoring
+    'monitorng':'Monitoring','monitering':'Monitoring',
+    # Building
+    'buidling':'Building','buldling':'Building',
+    # Cutting
+    'cuttiing':'Cutting','cuting':'Cutting',
+}
+
+def _apply_word_fixes(s):
+    """Correct known misspelled words in a programme name string."""
+    if not s:
+        return s
+    words = s.split()
+    out = []
+    for w in words:
         core = w.strip('.,;:()')
         suffix = w[len(core):]
-        if core.upper() in _ACRONYMS:
-            result.append(core.upper() + suffix)
-        elif core.lower() == 'ph':
-            result.append('pH' + suffix)
+        fix = _WORD_FIXES.get(core.lower())
+        out.append((fix + suffix) if fix else w)
+    return ' '.join(out)
+
+def _smart_title(s):
+    """Title case preserving acronyms; small connective words stay lowercase (unless first)."""
+    _SMALL = frozenset({
+        'a','an','the','and','or','but','nor','for','yet','so',
+        'at','by','in','of','on','to','as','is','it',
+        'with','from','into','onto','off','per','via',
+    })
+    result = []
+    words = s.split()
+    for i, w in enumerate(words):
+        # Strip BOTH ends to find the core word; capture trailing punct for reconstruction
+        core     = w.strip('.,;:()')
+        # suffix = only the trailing punctuation (w.title() handles leading punct correctly)
+        core_up  = core.upper()
+        core_low = core.lower()
+        if core_up in _ACRONYMS:
+            # Re-insert leading punct if any, then acronym, then trailing punct
+            leading  = len(w) - len(w.lstrip('.,;:(}'))
+            trailing = w[leading + len(core):]
+            result.append(w[:leading] + core_up + trailing)
+        elif core_low == 'ph':
+            leading  = len(w) - len(w.lstrip('.,;:(}'))
+            trailing = w[leading + len(core):]
+            result.append(w[:leading] + 'pH' + trailing)
+        elif i > 0 and core_low in _SMALL and '(' not in w and ')' not in w:
+            # Keep small connective words lowercase mid-title (no punct wrapper)
+            result.append(core_low)
         else:
+            # Default: use str.title() which correctly handles leading/trailing punctuation
             result.append(w.title())
     return ' '.join(result)
 
@@ -2897,23 +2996,26 @@ def _smart_analyze_rows(df, plant_id, db):
             issues.append('Programme Name is missing')
             status = 'error'
         else:
-            raw_lower = raw_prog.strip().lower()
+            # Apply word-level spell fixes BEFORE fuzzy matching so e.g.
+            # "techqnique" → "Technique" before comparing against master
+            word_fixed = _apply_word_fixes(raw_prog.strip())
+            raw_lower  = word_fixed.lower()
             # Step 1: fuzzy match against master list (cached)
             best = _match_master(raw_lower)
             if best is not None:
-                if best.lower() != raw_lower:
+                if best.lower() != raw_prog.strip().lower():
                     fixes.append({'field':'Programme Name','original':raw_prog,'fixed':best,'how':'Matched to master list'})
-                    clean_prog = best
                     if status == 'ok': status = 'fixed'
-                else:
-                    clean_prog = best
+                clean_prog = best
             else:
-                # Step 2: fallback — smart title case preserving acronyms
-                titled = _smart_title(raw_prog)
+                # Step 2: fallback — apply word fixes + smart title case
+                titled = _smart_title(word_fixed)
                 if titled != raw_prog:
-                    fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'Title case applied (not in master list)'})
+                    fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'Spelling/case corrected (not in master list)'})
                     clean_prog = titled
                     if status == 'ok': status = 'fixed'
+                else:
+                    clean_prog = titled
                 # Flag: not found in master list at all
                 if status not in ('error',):
                     issues.append(f'"{clean_prog}" not found in Programme Master — verify spelling or add it to master list')
