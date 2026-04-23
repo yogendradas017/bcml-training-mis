@@ -92,10 +92,22 @@
           <label class="form-label">Department</label>
           <input type="text" id="tni_dept" class="form-control" placeholder="Auto-fill" readonly style="background:#f8f9fa;">
         </div>
-        <div class="col-md-5">
+        <div class="col-md-4">
           <label class="form-label">Programme Name <span class="required-star">*</span></label>
           <input type="text" name="programme_name" id="tni_prog_input" class="form-control" required
                  placeholder="Type or select programme name">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Source <span class="required-star">*</span></label>
+          <select name="source" id="tni_source_sel" class="form-select" required onchange="toggleTniProgField(this.value)">
+            <option value="TNI Driven" selected>TNI Driven</option>
+            <option value="Corp Driven">Corp Driven</option>
+            <option value="Unit Driven">Unit Driven</option>
+            <option value="Compliance Driven">Compliance Driven</option>
+          </select>
+          <div id="tni-new-prog-hint" style="display:none;font-size:11px;color:#10b981;margin-top:3px;">
+            <i class="bi bi-info-circle me-1"></i>New programme will be added to Master List automatically.
+          </div>
         </div>
         <div class="col-md-3">
           <label class="form-label">Type of Programme <span class="required-star">*</span></label>
@@ -127,10 +139,14 @@
 
 <!-- TNI Records -->
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
+  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
     <span><i class="bi bi-clipboard-data"></i> TNI Records — <strong id="tni-total">{{ total }}</strong> entries</span>
-    <div class="d-flex gap-2 align-items-center">
+    <div class="d-flex gap-2 align-items-center flex-wrap">
       <span class="badge" style="background:#d1fae5;color:#065f46;" id="tni-showing">Loading...</span>
+      <button id="mass-delete-btn" type="button" class="btn btn-danger btn-sm"
+              style="display:none;" onclick="TNI._bulkDelete()">
+        <i class="bi bi-trash-fill me-1"></i> Delete Selected (<span id="mass-del-count">0</span>)
+      </button>
     </div>
   </div>
   <div class="card-body pb-2 pt-3">
@@ -179,11 +195,11 @@
             <th><input type="checkbox" id="tni-cb-all" class="cb-all"></th>
             <th>#</th><th>Employee</th><th>Collar</th><th>Department</th>
             <th>Programme Name</th><th>Type</th><th>Mode</th>
-            <th>Hrs</th><th>Completed?</th><th>Action</th>
+            <th>Source</th><th>Hrs</th><th>Completed?</th><th>Action</th>
           </tr>
         </thead>
         <tbody id="tniBody">
-          <tr><td colspan="11" class="text-center py-4">
+          <tr><td colspan="12" class="text-center py-4">
             <span class="spinner-border spinner-border-sm me-2"></span>Loading...
           </td></tr>
         </tbody>
@@ -246,10 +262,18 @@ const TNI = {
       total === 0 ? '0 entries' : `Showing ${(page-1)*perPage+1}–${Math.min(page*perPage,total)} of ${total}`;
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">No TNI entries found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">No TNI entries found.</td></tr>';
       document.getElementById('tni-pager').innerHTML = '';
       this._updateBulkBar(); return;
     }
+
+    const NON_TNI_SRCS = ['Corp Driven', 'Unit Driven', 'Compliance Driven'];
+    const SRC_COLORS = {
+      'TNI Driven':        ['#d1fae5','#065f46'],
+      'Corp Driven':       ['#dbeafe','#1d4ed8'],
+      'Unit Driven':       ['#fef3c7','#92400e'],
+      'Compliance Driven': ['#fce7f3','#9d174d'],
+    };
 
     const offset = (page - 1) * perPage;
     tbody.innerHTML = rows.map((r, i) => {
@@ -262,6 +286,18 @@ const TNI = {
         ? '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>'
         : '<span class="badge bg-secondary">Pending</span>';
       const chk = (this.selectAll || this.selectedIds.has(r.id)) ? 'checked' : '';
+      const src = r.source || 'TNI Driven';
+      const [bg, fg] = SRC_COLORS[src] || ['#e5e7eb','#374151'];
+      const srcCell = src === 'TNI Driven'
+        ? `<span style="background:${bg};color:${fg};font-size:10px;font-weight:700;
+                        padding:2px 8px;border-radius:99px;white-space:nowrap;">
+             <i class="bi bi-lock-fill"></i> TNI
+           </span>`
+        : `<select class="form-select form-select-sm tni-src-sel" data-id="${r.id}"
+                   style="font-size:11px;padding:2px 4px;min-width:140px;
+                          background:${bg};color:${fg};border-color:${fg}40;">
+             ${NON_TNI_SRCS.map(s=>`<option value="${s}"${s===src?' selected':''}>${s}</option>`).join('')}
+           </select>`;
       return `<tr>
         <td><input type="checkbox" class="cb-row tni-cb-row" data-id="${r.id}" ${chk}></td>
         <td>${offset+i+1}</td>
@@ -271,6 +307,7 @@ const TNI = {
         <td><strong>${r.programme_name}</strong></td>
         <td><span class="badge bg-secondary" style="font-size:11px;">${r.prog_type||'—'}</span></td>
         <td style="font-size:13px;">${r.mode||'—'}</td>
+        <td>${srcCell}</td>
         <td>${r.planned_hours}</td>
         <td>${doneBadge}</td>
         <td><form method="POST" action="${r.delete_url}" style="display:inline;">
@@ -285,6 +322,32 @@ const TNI = {
         const id = parseInt(cb.dataset.id);
         if (cb.checked) this.selectedIds.add(id); else this.selectedIds.delete(id);
         this._updateBulkBar();
+      });
+    });
+
+    // Source dropdown AJAX handler
+    tbody.querySelectorAll('.tni-src-sel').forEach(sel => {
+      sel.addEventListener('change', function() {
+        const id = this.dataset.id;
+        const src = this.value;
+        fetch(`/tni/${id}/set-source`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({source: src})
+        }).then(r => r.json()).then(d => {
+          if (d.ok) {
+            const [bg, fg] = ({
+              'Corp Driven':       ['#dbeafe','#1d4ed8'],
+              'Unit Driven':       ['#fef3c7','#92400e'],
+              'Compliance Driven': ['#fce7f3','#9d174d'],
+            })[src] || ['#e5e7eb','#374151'];
+            sel.style.background = bg;
+            sel.style.color = fg;
+            sel.style.borderColor = fg + '40';
+          } else {
+            alert('Failed to update source: ' + (d.error||'unknown error'));
+          }
+        });
       });
     });
 
@@ -324,6 +387,13 @@ const TNI = {
 
     document.getElementById('bulk-count').textContent = selCount + ' selected';
     if (selCount > 0) bar.classList.add('show'); else bar.classList.remove('show');
+    // Also update the card-header mass delete button
+    const massBtn = document.getElementById('mass-delete-btn');
+    const massCount = document.getElementById('mass-del-count');
+    if (massBtn) {
+      massBtn.style.display = selCount > 0 ? '' : 'none';
+      if (massCount) massCount.textContent = selCount;
+    }
 
     // show/hide "select all N" banner
     let banner = document.getElementById('tni-select-all-banner');
@@ -332,7 +402,7 @@ const TNI = {
       if (!banner) {
         banner = document.createElement('tr');
         banner.id = 'tni-select-all-banner';
-        banner.innerHTML = `<td colspan="11" class="text-center py-2" style="background:#eff6ff;font-size:13px;">
+        banner.innerHTML = `<td colspan="12" class="text-center py-2" style="background:#eff6ff;font-size:13px;">
           All ${allCbs.length} records on this page selected.
           <a href="#" onclick="TNI._selectAllRecords();return false;" style="font-weight:600;">
             Select all ${this.total} records in this list</a>
@@ -345,7 +415,7 @@ const TNI = {
         banner.id = 'tni-select-all-banner';
         document.getElementById('tniBody').prepend(banner);
       }
-      banner.innerHTML = `<td colspan="11" class="text-center py-2" style="background:#fef9c3;font-size:13px;">
+      banner.innerHTML = `<td colspan="12" class="text-center py-2" style="background:#fef9c3;font-size:13px;">
         <strong>All ${this.total} records selected.</strong>
         <a href="#" onclick="TNI.clear();return false;" style="color:#dc2626;font-weight:600;margin-left:8px;">Clear selection</a>
       </td>`;
@@ -405,5 +475,10 @@ const TNI = {
 
 TNI.init();
 PROG_AC.setup(document.getElementById('tni_prog_input'));
+
+function toggleTniProgField(src) {
+  const hint = document.getElementById('tni-new-prog-hint');
+  if (hint) hint.style.display = (src !== 'TNI Driven') ? '' : 'none';
+}
 </script>
 {% endblock %}
