@@ -449,24 +449,24 @@ document.getElementById('cal_prog_name').addEventListener('input', function() {
         document.getElementById('tni-cp-hint').textContent = hint;
         document.getElementById('tni-coverage-panel').style.display = '';
 
-        // Auto-fill form fields from TNI data
-        if (d.prog_type) {
-          const pt = document.querySelector('select[name="prog_type"]');
-          if (pt) { pt.value = d.prog_type; }
+        // Auto-fill all form fields from TNI data
+        function _setSelect(name, val) {
+          if (!val) return;
+          const el = document.querySelector(`select[name="${name}"]`);
+          if (el) el.value = val;
         }
-        if (d.mode) {
-          const md = document.querySelector('select[name="mode"]');
-          if (md) { md.value = d.mode; }
+        function _setInput(name, val) {
+          if (!val && val !== 0) return;
+          const el = document.querySelector(`input[name="${name}"]`);
+          if (el && (!el.value || el.value == '0')) el.value = val;
         }
-        if (d.audience) {
-          const au = document.querySelector('select[name="target_audience"]');
-          if (au) { au.value = d.audience; }
-        }
-        // Suggest planned pax = uncovered employees
-        if (d.uncovered > 0) {
-          const px = document.querySelector('input[name="planned_pax"]');
-          if (px && (!px.value || px.value == '0')) px.value = d.uncovered;
-        }
+        _setSelect('prog_type',       d.prog_type);
+        _setSelect('mode',            d.mode);
+        _setSelect('target_audience', d.audience);
+        _setSelect('source',          d.source);
+        _setSelect('planned_month',   d.target_month);
+        if (d.avg_hrs > 0) _setInput('duration_hrs', d.avg_hrs);
+        if (d.uncovered > 0) _setInput('planned_pax', d.uncovered);
       });
   }, 400);
 });

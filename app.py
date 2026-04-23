@@ -1829,46 +1829,90 @@ def api_programme_list():
 @app.route('/api/tni-coverage')
 @spoc_required
 def api_tni_coverage():
+    from difflib import get_close_matches as gcm
     plant_id  = session['plant_id']
     prog_name = request.args.get('q', '').strip()
     if not prog_name:
         return jsonify({})
     db  = get_db()
     fy  = _current_fy()
-    demand          = db.execute('SELECT COUNT(DISTINCT emp_code) FROM tni WHERE plant_id=? AND programme_name=?',
-                                 (plant_id, prog_name)).fetchone()[0]
-    sessions_planned= db.execute('SELECT COUNT(*) FROM calendar WHERE plant_id=? AND programme_name=? AND session_code LIKE ?',
-                                 (plant_id, prog_name, f'%/{fy}/%')).fetchone()[0]
-    covered         = db.execute('SELECT COUNT(DISTINCT emp_code) FROM emp_training WHERE plant_id=? AND programme_name=?',
-                                 (plant_id, prog_name)).fetchone()[0]
+
+    # Fuzzy-resolve name against TNI if exact not found
+    canonical = prog_name
+    exact = db.execute('SELECT 1 FROM tni WHERE plant_id=? AND programme_name=? LIMIT 1',
+                       (plant_id, prog_name)).fetchone()
+    if not exact:
+        all_names = [r[0] for r in db.execute(
+            'SELECT DISTINCT programme_name FROM tni WHERE plant_id=?', (plant_id,))]
+        m = gcm(prog_name.lower(), [n.lower() for n in all_names], n=1, cutoff=0.65)
+        if m:
+            canonical = all_names[[n.lower() for n in all_names].index(m[0])]
+
+    demand           = db.execute('SELECT COUNT(DISTINCT emp_code) FROM tni WHERE plant_id=? AND programme_name=?',
+                                  (plant_id, canonical)).fetchone()[0]
+    sessions_planned = db.execute('SELECT COUNT(*) FROM calendar WHERE plant_id=? AND programme_name=? AND session_code LIKE ?',
+                                  (plant_id, canonical, f'%/{fy}/%')).fetchone()[0]
+    covered          = db.execute('SELECT COUNT(DISTINCT emp_code) FROM emp_training WHERE plant_id=? AND programme_name=?',
+                                  (plant_id, canonical)).fetchone()[0]
     uncovered = max(0, demand - covered)
     pct       = round(covered / demand * 100) if demand > 0 else 0
 
-    # Auto-fill fields from TNI data (most common value for this programme)
+    # Most common prog_type, mode, collar combination
     meta = db.execute('''
-        SELECT t.prog_type, t.mode,
-               e.collar,
-               COUNT(*) as cnt
+        SELECT t.prog_type, t.mode, e.collar, COUNT(*) as cnt
         FROM tni t
         LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
         WHERE t.plant_id=? AND t.programme_name=?
         GROUP BY t.prog_type, t.mode, e.collar
         ORDER BY cnt DESC LIMIT 1
-    ''', (plant_id, prog_name)).fetchone()
+    ''', (plant_id, canonical)).fetchone()
 
-    # Derive audience from dominant collar
+    # Most common target_month
+    month_row = db.execute('''
+        SELECT target_month, COUNT(*) as cnt FROM tni
+        WHERE plant_id=? AND programme_name=? AND target_month IS NOT NULL AND target_month != ''
+        GROUP BY target_month ORDER BY cnt DESC LIMIT 1
+    ''', (plant_id, canonical)).fetchone()
+
+    # Average planned hours
+    hrs_row = db.execute('''
+        SELECT AVG(planned_hours) as avg_hrs FROM tni
+        WHERE plant_id=? AND programme_name=? AND planned_hours > 0
+    ''', (plant_id, canonical)).fetchone()
+
+    # Fallback to programme_master for prog_type/mode if TNI has no data
+    if not meta or not meta['prog_type']:
+        pm = db.execute('SELECT prog_type, mode FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
+                        (plant_id, canonical)).fetchone()
+    else:
+        pm = None
+
+    prog_type = (meta['prog_type'] if meta else '') or (pm['prog_type'] if pm else '')
+    mode      = (meta['mode']      if meta else '') or (pm['mode']      if pm else '')
+
     collar_map = {'Blue Collared': 'Blue Collared', 'White Collared': 'White Collared'}
-    audience = ''
-    if meta:
-        collar = meta['collar'] or ''
-        audience = collar_map.get(collar, 'Common')
+    audience  = collar_map.get((meta['collar'] or '') if meta else '', 'Common') if meta else ''
+
+    # Derive source from prog_type
+    pt_lower = prog_type.lower() if prog_type else ''
+    if 'statutory' in pt_lower or 'compliance' in pt_lower or 'legal' in pt_lower:
+        source = 'Compliance Driven'
+    elif demand > 0:
+        source = 'TNI Driven'
+    else:
+        source = ''
+
+    avg_hrs = round(hrs_row['avg_hrs'], 1) if hrs_row and hrs_row['avg_hrs'] else 0
 
     return jsonify({
         'demand': demand, 'sessions_planned': sessions_planned,
         'covered': covered, 'uncovered': uncovered, 'pct': pct,
-        'prog_type': meta['prog_type'] if meta else '',
-        'mode':      meta['mode']      if meta else '',
-        'audience':  audience,
+        'prog_type':    prog_type,
+        'mode':         mode,
+        'audience':     audience,
+        'source':       source,
+        'target_month': month_row['target_month'] if month_row else '',
+        'avg_hrs':      avg_hrs,
     })
 
 @app.route('/intelligence')
