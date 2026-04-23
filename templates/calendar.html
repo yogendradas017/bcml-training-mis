@@ -36,10 +36,7 @@
         <div class="col-md-5">
           <label class="form-label">Programme Name <span class="required-star">*</span></label>
           <input type="text" name="programme_name" id="cal_prog_name" class="form-control" required
-                 placeholder="e.g. Fire Safety Awareness" list="tni_prog_list" autocomplete="off">
-          <datalist id="tni_prog_list">
-            {% for p in tni_programmes %}<option value="{{ p }}">{% endfor %}
-          </datalist>
+                 placeholder="e.g. Fire Safety Awareness" autocomplete="off">
           <div class="form-text">Session Code auto-generates. Type to see TNI demand.</div>
         </div>
 
@@ -492,5 +489,8 @@ function openEdit(id, prog, type, source, month, start, end, tfrom, tto, hrs, le
   });
   new bootstrap.Modal(document.getElementById('editModal')).show();
 }
+
+PROG_AC.setup(document.getElementById('cal_prog_name'));
+PROG_AC.setup(document.getElementById('e_prog'));
 </script>
 {% endblock %}

@@ -215,5 +215,7 @@ new TomSelect('#tr_session_code', {
   placeholder: 'Type session code or programme name...',
   onChange: function(val) { fillSessionDetails(val); }
 });
+
+PROG_AC.setup(document.getElementById('tr_prog_name'));
 </script>
 {% endblock %}

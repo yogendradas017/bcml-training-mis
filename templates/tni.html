@@ -53,11 +53,8 @@
         </div>
         <div class="col-md-5">
           <label class="form-label">Programme Name <span class="required-star">*</span></label>
-          <input type="text" name="programme_name" class="form-control" required
-                 list="prog_list" placeholder="Type or select programme name">
-          <datalist id="prog_list">
-            {% for p in programmes %}<option value="{{ p }}">{% endfor %}
-          </datalist>
+          <input type="text" name="programme_name" id="tni_prog_input" class="form-control" required
+                 placeholder="Type or select programme name">
         </div>
         <div class="col-md-3">
           <label class="form-label">Type of Programme <span class="required-star">*</span></label>
@@ -366,5 +363,6 @@ const TNI = {
 };
 
 TNI.init();
+PROG_AC.setup(document.getElementById('tni_prog_input'));
 </script>
 {% endblock %}
