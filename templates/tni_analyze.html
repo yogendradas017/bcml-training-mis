@@ -229,25 +229,29 @@
         {% elif r.status == 'warning' %}
         <tr class="an-row an-warning" style="background:#fff7ed;">
           <td style="color:#9ca3af;font-size:11px;">{{ r.row_num }}</td>
-          <td><span style="background:#fed7aa;color:#c2410c;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;"><i class="bi bi-exclamation-circle"></i> Verify</span></td>
+          <td><span style="background:#fed7aa;color:#c2410c;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;"><i class="bi bi-ban"></i> Blocked</span></td>
           <td style="font-weight:600;">{{ r.emp_code }}</td>
           <td style="color:#6b7280;">{{ r.emp_name }}</td>
-          <td style="color:#c2410c;font-weight:600;">{{ r.programme_name }}</td>
+          <td style="min-width:260px;">
+            <div style="font-size:11px;color:#c2410c;margin-bottom:4px;">
+              <i class="bi bi-exclamation-circle me-1"></i>In file: <strong>"{{ r.programme_name }}"</strong>
+            </div>
+            <select name="fix_prog_{{ r.row_num }}" class="form-select form-select-sm fix-prog-ts"
+                    style="font-size:12px;">
+              <option value="">— fix: pick correct programme —</option>
+              {% for p in master_progs %}
+              <option value="{{ p }}">{{ p }}</option>
+              {% endfor %}
+            </select>
+            <div style="font-size:10px;color:#9ca3af;margin-top:3px;">Select = row will import with corrected name</div>
+          </td>
           <td>{{ r.prog_type or '—' }}</td>
           <td>{{ r.mode or '—' }}</td>
           <td>{{ r.planned_hours }}</td>
-          <td style="min-width:220px;">
-            {% for fix in r.fixes %}
-            <div style="font-size:11px;margin-bottom:2px;">
-              <span style="color:#92400e;font-weight:600;">{{ fix.field }}:</span>
-              <del style="color:#d1d5db;">{{ fix.original }}</del>
-              <i class="bi bi-arrow-right" style="color:#d97706;font-size:10px;margin:0 2px;"></i>
-              <span style="color:#065f46;font-weight:600;">{{ fix.fixed }}</span>
-            </div>
-            {% endfor %}
+          <td style="min-width:200px;">
             {% for issue in r.issues %}
             <div style="font-size:11px;color:#c2410c;margin-bottom:2px;">
-              <i class="bi bi-search me-1"></i>{{ issue }}
+              <i class="bi bi-x-circle me-1"></i>{{ issue }}
             </div>
             {% endfor %}
           </td>
@@ -281,24 +285,90 @@
   </div>
 </div>
 
+<!-- ── Master List vs This Upload ─────────────────────────────────────── -->
+{% set matched_count = master_progs | selectattr('lower' , 'defined') | list | length %}
+<div class="card mb-4" style="border-left:4px solid #6366f1;">
+  <div class="card-header d-flex align-items-center gap-2"
+       style="background:#f8fafc;font-size:13px;font-weight:600;color:#1e293b;">
+    <i class="bi bi-list-check" style="color:#6366f1;"></i>
+    Programme Master vs This Upload
+    <span style="font-weight:400;color:#6b7280;font-size:12px;margin-left:4px;">
+      — green = found in upload &nbsp;|&nbsp; orange = NOT in this upload
+    </span>
+  </div>
+  <div class="card-body" style="padding:12px 16px;">
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      {% for p in master_progs %}
+        {% if p.lower() in upload_progs_lower %}
+        <span style="background:#d1fae5;color:#065f46;font-size:11px;font-weight:500;
+                     padding:3px 10px;border-radius:12px;border:1px solid #a7f3d0;
+                     display:inline-flex;align-items:center;gap:4px;">
+          <i class="bi bi-check2"></i>{{ p }}
+        </span>
+        {% else %}
+        <span style="background:#fff7ed;color:#c2410c;font-size:11px;font-weight:500;
+                     padding:3px 10px;border-radius:12px;border:1px solid #fed7aa;
+                     display:inline-flex;align-items:center;gap:4px;">
+          <i class="bi bi-dash"></i>{{ p }}
+        </span>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <div style="font-size:11px;color:#9ca3af;margin-top:10px;">
+      {{ master_progs | length }} programmes in master.
+      Green = demand exists in this TNI upload. Orange = no demand recorded yet for this programme.
+    </div>
+  </div>
+</div>
+
 <!-- Action bar -->
 <form method="POST" action="{{ url_for('tni_analyze_confirm') }}">
   <input type="hidden" name="aid" value="{{ aid }}">
   <div class="d-flex gap-3 align-items-center flex-wrap">
     <button type="submit" class="btn px-5 py-2 fw-semibold" style="background:#10b981;color:#fff;border:none;font-size:14px;">
       <i class="bi bi-check2-all me-1"></i>
-      Confirm — Import {{ import_count }} Records
+      Confirm &amp; Import
       {% if blocked_count > 0 %}
-      <span style="font-size:12px;opacity:.8;margin-left:4px;">+ Download {{ blocked_count }} Blocked/Error Rows</span>
+      <span style="font-size:12px;opacity:.8;margin-left:4px;">+ Download {{ blocked_count }} still-blocked rows</span>
       {% endif %}
     </button>
     <a href="{{ url_for('tni_analyze') }}" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-left"></i> Upload Different File
     </a>
   </div>
+  <div style="font-size:12px;color:#6b7280;margin-top:8px;">
+    <i class="bi bi-info-circle me-1"></i>
+    Orange rows where you selected a correction above will be imported. Uncorrected orange + red rows download as Excel for re-upload.
+  </div>
 </form>
 
 {% endif %}
 {% endblock %}
 
-{% block scripts %}{% endblock %}
+{% block scripts %}
+{% if step == 'review' %}
+<script>
+// Initialise TomSelect on all programme-fix dropdowns in orange rows
+document.querySelectorAll('.fix-prog-ts').forEach(function(el) {
+  new TomSelect(el, {
+    create: false,
+    maxOptions: 300,
+    placeholder: '— fix: pick correct programme —',
+    onItemAdd: function() {
+      // Visually mark the row as "fixed" when user selects
+      var row = el.closest('tr');
+      if (row) {
+        row.style.background = '#f0fdf4';
+        var badge = row.querySelector('td:nth-child(2) span');
+        if (badge) {
+          badge.style.background = '#d1fae5';
+          badge.style.color = '#065f46';
+          badge.innerHTML = '<i class="bi bi-check2"></i> Fixed';
+        }
+      }
+    }
+  });
+});
+</script>
+{% endif %}
+{% endblock %}
