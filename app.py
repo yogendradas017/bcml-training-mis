@@ -3071,10 +3071,12 @@ def tni_analyze():
 
     ok_count    = sum(1 for r in rows if r['status'] == 'ok')
     fixed_count = sum(1 for r in rows if r['status'] == 'fixed')
+    warn_count  = sum(1 for r in rows if r['status'] == 'warning')
     err_count   = sum(1 for r in rows if r['status'] == 'error')
     return render_template('tni_analyze.html', step='review',
                            rows=rows, aid=aid,
-                           ok_count=ok_count, fixed_count=fixed_count, err_count=err_count,
+                           ok_count=ok_count, fixed_count=fixed_count,
+                           warn_count=warn_count, err_count=err_count,
                            prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY)
 
 
@@ -3093,7 +3095,8 @@ def tni_analyze_confirm():
     plant_id  = session['plant_id']
     db        = get_db()
     inserted  = 0
-    err_rows  = [r for r in rows if r['status'] == 'error']
+    # Both error and warning rows are blocked from import
+    err_rows  = [r for r in rows if r['status'] in ('error', 'warning')]
 
     # ── Duplicate detection ───────────────────────────────────────────────────
     # Build set of existing (emp_code, programme_name) already in DB
@@ -3106,7 +3109,7 @@ def tni_analyze_confirm():
     seen_batch  = {}  # key → first row_num where this emp+prog appeared
 
     for row in rows:
-        if row['status'] == 'error':
+        if row['status'] in ('error', 'warning'):
             continue
         key = (row['emp_code'].strip().upper(), row['programme_name'].strip().lower())
         if key in seen_batch:
