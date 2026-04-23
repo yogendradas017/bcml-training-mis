@@ -415,9 +415,10 @@ def add_tni():
     plant_id = session['plant_id']
     f = request.form
     db = get_db()
+    prog_name = _canonical_prog(f['programme_name'].strip(), plant_id, db)
     db.execute('''INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours)
                   VALUES(?,?,?,?,?,?)''',
-               (plant_id, f['emp_code'], f['programme_name'].strip(),
+               (plant_id, f['emp_code'], prog_name,
                 f.get('prog_type',''), f.get('mode',''),
                 float(f.get('planned_hours') or 0)))
     db.commit()
@@ -575,6 +576,22 @@ def programme_master_add():
         import logging; logging.error(f'programme_master_add error: {e}')
         flash(f'Error: {e}', 'danger')
     return redirect(url_for('programme_master'))
+
+@app.route('/programme-master/<int:prog_id>/rename', methods=['POST'])
+@spoc_required
+def programme_master_rename(prog_id):
+    plant_id = session['plant_id']
+    new_name = request.json.get('name', '').strip() if request.is_json else request.form.get('name', '').strip()
+    if not new_name:
+        return jsonify(ok=False, error='Name cannot be empty'), 400
+    db = get_db()
+    clash = db.execute('SELECT id FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?) AND id!=?',
+                       (plant_id, new_name, prog_id)).fetchone()
+    if clash:
+        return jsonify(ok=False, error=f'"{new_name}" already exists in master list'), 409
+    db.execute('UPDATE programme_master SET name=? WHERE id=? AND plant_id=?', (new_name, prog_id, plant_id))
+    db.commit()
+    return jsonify(ok=True, name=new_name)
 
 @app.route('/programme-master/<int:prog_id>/delete', methods=['POST'])
 @spoc_required
@@ -879,6 +896,7 @@ def tni_bulk_upload():
         if not emp:
             errors.append(f'Row {i+2}: Employee {emp_code} not found in your plant.')
             continue
+        prog_name = _canonical_prog(prog_name, plant_id, db)
         db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
                    (plant_id, emp_code, prog_name, prog_type, mode, hours))
         inserted += 1
@@ -944,7 +962,7 @@ def add_calendar():
     plant_id = session['plant_id']
     f = request.form
     db = get_db()
-    prog_name = f['programme_name'].strip()
+    prog_name = _canonical_prog(f['programme_name'].strip(), plant_id, db)
     prog_type = f.get('prog_type', '')
 
     prog_code    = _get_or_create_prog_code(plant_id, prog_name, prog_type, db)
@@ -990,7 +1008,7 @@ def edit_calendar(cal_id):
         duration_hrs=?, level=?, mode=?, target_audience=?,
         planned_pax=?, trainer_vendor=?, status=?
         WHERE id=? AND plant_id=?''',
-        (f.get('programme_name','').strip(), f.get('prog_type',''),
+        (_canonical_prog(f.get('programme_name','').strip(), plant_id, db), f.get('prog_type',''),
          f.get('source','TNI'), f.get('planned_month',''),
          f.get('plan_start',''), f.get('plan_end',''),
          f.get('time_from',''), f.get('time_to',''),
@@ -1053,7 +1071,7 @@ def add_emp_training():
     end_date     = f.get('end_date', '')
 
     # Auto-fill from calendar
-    prog_name = f.get('programme_name', '').strip()
+    prog_name = _canonical_prog(f.get('programme_name', '').strip(), plant_id, db)
     prog_type = level = mode = cal_new = ''
     if session_code:
         cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
@@ -1196,6 +1214,8 @@ def training_bulk_upload():
             errors.append(f'Row {i+2}: Programme Name required (no session code matched).')
             continue
 
+        if not cal_new:
+            prog_name = _canonical_prog(prog_name, plant_id, db)
         month = _date_to_month(start_date)
         db.execute('''INSERT INTO emp_training
             (plant_id,emp_code,session_code,programme_name,start_date,end_date,
@@ -1630,6 +1650,7 @@ def calendar_bulk_upload():
         if not prog_type:
             errors.append(f'Row {i+2}: Type of Programme is required.')
             continue
+        prog_name    = _canonical_prog(prog_name, plant_id, db)
         prog_code    = _get_or_create_prog_code(plant_id, prog_name, prog_type, db)
         session_code = _new_session_code(plant_id, prog_code, db)
         db.execute('''INSERT INTO calendar
@@ -1794,6 +1815,16 @@ def api_emp_lookup():
     emp = db.execute('SELECT name FROM employees WHERE emp_code=? AND plant_id=? AND is_active=1',
                      (code, plant_id)).fetchone()
     return jsonify({'name': emp['name'] if emp else None})
+
+@app.route('/api/programme-list')
+@spoc_required
+def api_programme_list():
+    plant_id = session['plant_id']
+    db = get_db()
+    master = [r[0] for r in db.execute(
+        'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
+    ).fetchall()] or MASTER_PROGRAMMES
+    return jsonify(master)
 
 @app.route('/api/tni-coverage')
 @spoc_required
@@ -2217,6 +2248,23 @@ def tni_msforms_import():
 # ─── SMART TNI ANALYZER ──────────────────────────────────────────────────────
 import json as _json, uuid as _uuid, io as _io
 from difflib import get_close_matches
+
+def _canonical_prog(raw_name, plant_id, db):
+    """Return best canonical programme name from master, falling back to smart title case."""
+    if not raw_name or not raw_name.strip():
+        return raw_name
+    from difflib import get_close_matches as gcm
+    master = [r[0] for r in db.execute(
+        'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
+    ).fetchall()] or MASTER_PROGRAMMES
+    master_lower = [m.lower() for m in master]
+    raw_lower = raw_name.strip().lower()
+    if raw_lower in master_lower:
+        return master[master_lower.index(raw_lower)]
+    m = gcm(raw_lower, master_lower, n=1, cutoff=0.65)
+    if m:
+        return master[master_lower.index(m[0])]
+    return _smart_title(raw_name)
 
 def _fuzzy_fix(val, valid_list):
     """Return (fixed_val, was_changed). None if no confident match."""

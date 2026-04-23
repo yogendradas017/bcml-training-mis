@@ -1018,6 +1018,113 @@ document.querySelectorAll('input[required], select[required], textarea[required]
 });
 
 /* ═══════════════════════════════════════════════════
+   PROG_AC — Programme Name Autocomplete (shared)
+   Usage: PROG_AC.setup(inputEl)
+   Fetches master list once, shows dropdown + warns
+   if value is not in master list.
+═══════════════════════════════════════════════════ */
+const PROG_AC = (() => {
+  let _list = null;
+  async function _load() {
+    if (_list) return _list;
+    try {
+      const r = await fetch('/api/programme-list');
+      _list = await r.json();
+    } catch(e) { _list = []; }
+    return _list;
+  }
+
+  function _sim(a, b) {
+    a = a.toLowerCase(); b = b.toLowerCase();
+    if (a === b) return 1;
+    if (!a.length || !b.length) return 0;
+    if (b.includes(a) || a.includes(b)) return 0.85;
+    const dp = Array.from({length: b.length+1}, (_,i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      let prev = i;
+      for (let j = 1; j <= b.length; j++) {
+        const v = a[i-1]===b[j-1] ? dp[j-1] : 1 + Math.min(dp[j-1],dp[j],prev);
+        dp[j-1]=prev; prev=v;
+      }
+      dp[b.length]=prev;
+    }
+    return 1 - dp[b.length]/Math.max(a.length,b.length);
+  }
+
+  function setup(input) {
+    if (!input) return;
+    input.setAttribute('autocomplete','off');
+
+    // Wrap input to position dropdown
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:block;';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+
+    const drop = document.createElement('div');
+    drop.style.cssText = 'display:none;position:absolute;top:100%;left:0;right:0;z-index:9999;background:#fff;border:1px solid #e5e9f2;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;';
+    wrap.appendChild(drop);
+
+    const warn = document.createElement('div');
+    warn.style.cssText = 'display:none;font-size:11px;color:#c2410c;margin-top:3px;';
+    warn.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Not in Programme Master — check spelling or add to master list first.';
+    wrap.appendChild(warn);
+
+    let _chosen = false;
+
+    input.addEventListener('input', async function() {
+      _chosen = false;
+      warn.style.display = 'none';
+      const q = this.value.trim();
+      drop.innerHTML = ''; drop.style.display = 'none';
+      if (q.length < 2) return;
+      const list = await _load();
+      const ql = q.toLowerCase();
+      const scored = list
+        .map(n => ({n, s: _sim(ql, n.toLowerCase())}))
+        .filter(x => x.s > 0.35 || x.n.toLowerCase().includes(ql))
+        .sort((a,b) => b.s - a.s)
+        .slice(0, 8);
+      if (!scored.length) return;
+      scored.forEach(({n, s}) => {
+        const d = document.createElement('div');
+        const isExact = n.toLowerCase() === ql;
+        const tag = isExact ? '' : s >= 0.75
+          ? '<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;margin-left:6px;">similar</span>' : '';
+        d.innerHTML = `<span style="font-size:13px;">${n}</span>${tag}`;
+        d.style.cssText = 'padding:8px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        d.onmouseenter = () => d.style.background='#f8fafc';
+        d.onmouseleave = () => d.style.background='';
+        d.onmousedown = (e) => { e.preventDefault(); input.value=n; _chosen=true; drop.style.display='none'; warn.style.display='none'; input.dispatchEvent(new Event('input')); };
+        drop.appendChild(d);
+      });
+      drop.style.display = 'block';
+    });
+
+    input.addEventListener('blur', async function() {
+      setTimeout(async () => {
+        drop.style.display = 'none';
+        if (_chosen || !this.value.trim()) { warn.style.display='none'; return; }
+        const list = await _load();
+        if (!list.length) return;
+        const exact = list.find(n => n.toLowerCase() === this.value.trim().toLowerCase());
+        warn.style.display = exact ? 'none' : 'block';
+        if (!exact) input.style.borderColor = '#f97316';
+        else input.style.borderColor = '';
+      }, 150);
+    });
+
+    input.addEventListener('focus', () => { input.style.borderColor=''; warn.style.display='none'; });
+
+    document.addEventListener('click', e => {
+      if (!wrap.contains(e.target)) drop.style.display='none';
+    });
+  }
+
+  return { setup };
+})();
+
+/* ═══════════════════════════════════════════════════
    TBL — Universal table search + pagination engine
 ═══════════════════════════════════════════════════ */
 const TBL = {
