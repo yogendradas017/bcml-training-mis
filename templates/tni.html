@@ -4,11 +4,16 @@
 
 <!-- TNI Analyzer — primary upload path -->
 <div class="card mb-4" style="border-left:5px solid #6366f1;">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;">
+  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;">
     <span><i class="bi bi-search me-1"></i> Bulk Upload TNI — with Data Analyzer</span>
-    <a href="{{ url_for('tni_template') }}" class="btn btn-warning btn-sm fw-bold">
-      <i class="bi bi-file-earmark-arrow-down"></i> Download Template First
-    </a>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('tni_cleanse') }}" class="btn btn-sm fw-bold" style="background:#fef3c7;color:#92400e;border:none;">
+        <i class="bi bi-brush"></i> Fix Existing Data
+      </a>
+      <a href="{{ url_for('tni_template') }}" class="btn btn-warning btn-sm fw-bold">
+        <i class="bi bi-file-earmark-arrow-down"></i> Download Template First
+      </a>
+    </div>
   </div>
   <div class="card-body">
     <p style="font-size:13px;color:#6b7280;margin-bottom:14px;">

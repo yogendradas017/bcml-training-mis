@@ -99,9 +99,67 @@ def _migrate_tni_unique(db):
         CREATE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name);
     ''')
 
+def _cleanse_programme_names(db, plant_id=None):
+    """Fix programme name casing/typos in tni, emp_training, calendar against master lists.
+    Exact case-insensitive fixes applied automatically; fuzzy fixes only at 0.88+ confidence.
+    Returns dict of {plant_id: {fixed, merged}} counts.
+    """
+    from difflib import get_close_matches as gcm
+    report = {}
+    plants = [plant_id] if plant_id else [
+        r[0] for r in db.execute('SELECT DISTINCT plant_id FROM programme_master').fetchall()]
+
+    for pid in plants:
+        master = [r[0] for r in db.execute(
+            'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (pid,)).fetchall()]
+        if not master:
+            continue
+        master_lower_map = {m.lower(): m for m in master}
+        master_lower = list(master_lower_map.keys())
+        fixed = 0; merged = 0
+
+        for table in ('tni', 'emp_training', 'calendar'):
+            rows = db.execute(f'SELECT id, programme_name FROM {table} WHERE plant_id=?', (pid,)).fetchall()
+            for row in rows:
+                raw = row['programme_name'] or ''
+                if not raw:
+                    continue
+                raw_lower = raw.lower()
+
+                # Exact case-insensitive match
+                if raw_lower in master_lower_map:
+                    canonical = master_lower_map[raw_lower]
+                    if canonical != raw:
+                        db.execute(f'UPDATE {table} SET programme_name=? WHERE id=?', (canonical, row['id']))
+                        fixed += 1
+                else:
+                    # High-confidence fuzzy only (0.88+) to avoid wrong bulk changes
+                    m = gcm(raw_lower, master_lower, n=1, cutoff=0.88)
+                    if m:
+                        canonical = master_lower_map[m[0]]
+                        db.execute(f'UPDATE {table} SET programme_name=? WHERE id=?', (canonical, row['id']))
+                        fixed += 1
+
+        # Merge duplicate TNI entries created by the name fix
+        dupes = db.execute('''
+            SELECT emp_code, programme_name, MIN(id) as keep_id, COUNT(*) as cnt
+            FROM tni WHERE plant_id=?
+            GROUP BY emp_code, programme_name HAVING cnt > 1
+        ''', (pid,)).fetchall()
+        for d in dupes:
+            db.execute('DELETE FROM tni WHERE plant_id=? AND emp_code=? AND programme_name=? AND id != ?',
+                       (pid, d['emp_code'], d['programme_name'], d['keep_id']))
+            merged += 1
+
+        db.commit()
+        report[pid] = {'fixed': fixed, 'merged': merged}
+
+    return report
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     db = sqlite3.connect(DB_PATH)
+    db.row_factory = sqlite3.Row
     with open(os.path.join(BASE_DIR, 'schema.sql')) as f:
         db.executescript(f.read())
     _migrate_tni_unique(db)
@@ -121,6 +179,9 @@ def init_db():
     if db.execute('SELECT COUNT(*) FROM programme_master WHERE plant_id=1').fetchone()[0] == 0:
         for name in MASTER_PROGRAMMES:
             db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(1,?)', (name,))
+    db.commit()
+    # Auto-cleanse existing dirty data against master list on every startup
+    _cleanse_programme_names(db)
     db.commit()
     db.close()
 
@@ -469,6 +530,48 @@ def tni_bulk_delete():
             db.commit()
             flash(f'{deleted} TNI entries deleted.', 'warning')
     return redirect(url_for('tni'))
+
+@app.route('/tni/cleanse', methods=['GET', 'POST'])
+@spoc_required
+def tni_cleanse():
+    plant_id = session['plant_id']
+    db = get_db()
+
+    if request.method == 'POST':
+        result = _cleanse_programme_names(db, plant_id=plant_id)
+        r = result.get(plant_id, {'fixed': 0, 'merged': 0})
+        flash(f'Data cleanse complete: {r["fixed"]} programme name(s) corrected, '
+              f'{r["merged"]} duplicate(s) merged.', 'success')
+        return redirect(url_for('tni'))
+
+    # Preview: show what will be fixed before confirming
+    from difflib import get_close_matches as gcm
+    master = [r[0] for r in db.execute(
+        'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()]
+    preview = []
+    if master:
+        master_lower_map = {m.lower(): m for m in master}
+        master_lower = list(master_lower_map.keys())
+        seen = set()
+        rows = db.execute(
+            'SELECT DISTINCT programme_name FROM tni WHERE plant_id=?', (plant_id,)).fetchall()
+        for row in rows:
+            raw = row['programme_name'] or ''
+            if not raw or raw in seen:
+                continue
+            seen.add(raw)
+            raw_lower = raw.lower()
+            if raw_lower in master_lower_map:
+                canonical = master_lower_map[raw_lower]
+                if canonical != raw:
+                    preview.append({'original': raw, 'fixed': canonical, 'how': 'Case correction'})
+            else:
+                m = gcm(raw_lower, master_lower, n=1, cutoff=0.88)
+                if m:
+                    canonical = master_lower_map[m[0]]
+                    preview.append({'original': raw, 'fixed': canonical, 'how': 'Spelling correction'})
+
+    return render_template('tni_cleanse.html', preview=preview)
 
 @app.route('/tni/duplicates')
 @spoc_required

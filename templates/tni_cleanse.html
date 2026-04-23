@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block page_title %}TNI Data Cleanse{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0">TNI Data Cleanse — {{ session.plant_name }}</h5>
+    <small class="text-muted">Fixes programme name spelling and casing in TNI, Training Records, and Calendar against your master list.</small>
+  </div>
+  <a href="{{ url_for('tni') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to TNI
+  </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="alert alert-{{ cat }} alert-dismissible fade show py-2">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endwith %}
+
+{% if not preview %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-check-circle-fill" style="font-size:40px;color:#10b981;display:block;margin-bottom:12px;"></i>
+    <div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:6px;">All programme names look clean!</div>
+    <div style="font-size:13px;color:#6b7280;">Every entry in TNI matches the Programme Master list exactly.</div>
+  </div>
+</div>
+
+{% else %}
+<div class="alert d-flex gap-2 align-items-start py-2 mb-3"
+     style="background:#fff7ed;border:1px solid #fed7aa;font-size:13px;color:#c2410c;">
+  <i class="bi bi-exclamation-circle-fill mt-1" style="flex-shrink:0;"></i>
+  <div>
+    <strong>{{ preview|length }} programme name(s) will be corrected</strong> across TNI, Training Records, and Calendar.
+    Duplicates created by the fix will be auto-merged keeping the oldest entry.
+    <strong>This action cannot be undone — review carefully before confirming.</strong>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
+    <i class="bi bi-pencil-fill me-1"></i> Corrections Preview
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered mb-0" style="font-size:13px;">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th style="padding:10px 14px;width:44px;">#</th>
+          <th style="padding:10px 14px;">Current (Wrong)</th>
+          <th style="padding:10px 14px;">Will be changed to</th>
+          <th style="padding:10px 14px;">How</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in preview %}
+        <tr>
+          <td style="padding:8px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:8px 14px;">
+            <span style="background:#fee2e2;color:#dc2626;font-weight:600;padding:2px 8px;border-radius:4px;">{{ p.original }}</span>
+          </td>
+          <td style="padding:8px 14px;">
+            <span style="background:#d1fae5;color:#065f46;font-weight:600;padding:2px 8px;border-radius:4px;">{{ p.fixed }}</span>
+          </td>
+          <td style="padding:8px 14px;color:#6b7280;font-size:12px;">
+            <i class="bi bi-{% if p.how == 'Case correction' %}fonts{% else %}magic{% endif %} me-1"></i>{{ p.how }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<form method="POST" action="{{ url_for('tni_cleanse') }}">
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-danger px-4">
+      <i class="bi bi-check2-circle me-1"></i> Confirm & Fix {{ preview|length }} Record(s)
+    </button>
+    <a href="{{ url_for('tni') }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
+{% endif %}
+
+{% endblock %}
