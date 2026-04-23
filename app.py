@@ -102,6 +102,13 @@ def _migrate_tni_unique(db):
         CREATE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name);
     ''')
 
+def _migrate_tni_source(db):
+    """Add source column to tni table if not present (migration for existing DBs)."""
+    cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
+    if 'source' not in cols:
+        db.execute("ALTER TABLE tni ADD COLUMN source TEXT DEFAULT 'TNI Driven'")
+        db.commit()
+
 def _cleanse_programme_names(db, plant_id=None):
     """Fix programme name casing/typos in tni, emp_training, calendar against master lists.
     Exact case-insensitive fixes applied automatically; fuzzy fixes only at 0.88+ confidence.
@@ -166,6 +173,7 @@ def init_db():
     with open(os.path.join(BASE_DIR, 'schema.sql')) as f:
         db.executescript(f.read())
     _migrate_tni_unique(db)
+    _migrate_tni_source(db)
     # Seed plants
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
@@ -459,7 +467,7 @@ def tni_data():
     offset = (page - 1) * per_page
     rows_raw = db.execute(
         f'''SELECT t.id, t.emp_code, t.programme_name, t.prog_type, t.mode,
-                   t.planned_hours,
+                   t.planned_hours, t.source,
                    e.name, e.collar, e.department,
                    CASE WHEN et.emp_code IS NOT NULL THEN 'Yes' ELSE 'Pending' END AS completed
             {join_sql}
@@ -477,6 +485,7 @@ def tni_data():
         'prog_type':      r['prog_type'] or '',
         'mode':           r['mode'] or '',
         'planned_hours':  r['planned_hours'],
+        'source':         r['source'] or 'TNI Driven',
         'completed':      r['completed'],
         'delete_url':     url_for('delete_tni', tni_id=r['id']),
     } for r in rows_raw]
@@ -489,15 +498,45 @@ def add_tni():
     plant_id = session['plant_id']
     f = request.form
     db = get_db()
+    source    = f.get('source', 'TNI Driven').strip() or 'TNI Driven'
     prog_name = _canonical_prog(f['programme_name'].strip(), plant_id, db)
-    db.execute('''INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours)
-                  VALUES(?,?,?,?,?,?)''',
-               (plant_id, f['emp_code'], prog_name,
-                f.get('prog_type',''), f.get('mode',''),
-                float(f.get('planned_hours') or 0)))
+    db.execute(
+        '''INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,source)
+           VALUES(?,?,?,?,?,?,?)''',
+        (plant_id, f['emp_code'], prog_name,
+         f.get('prog_type',''), f.get('mode',''),
+         float(f.get('planned_hours') or 0), source)
+    )
+    # Non-TNI sources: ensure programme exists in master list
+    if source != 'TNI Driven':
+        db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(?,?)',
+                   (plant_id, prog_name))
     db.commit()
     flash('TNI entry added.', 'success')
     return redirect(url_for('tni'))
+
+_NON_TNI_SOURCES = ('Corp Driven', 'Unit Driven', 'Compliance Driven')
+
+@app.route('/tni/<int:tni_id>/set-source', methods=['POST'])
+@spoc_required
+def tni_set_source(tni_id):
+    plant_id = session['plant_id']
+    data     = request.get_json(silent=True) or {}
+    source   = (data.get('source') or '').strip()
+    if source not in _NON_TNI_SOURCES:
+        return jsonify({'ok': False, 'error': 'Invalid source'}), 400
+    db  = get_db()
+    row = db.execute('SELECT programme_name FROM tni WHERE id=? AND plant_id=?',
+                     (tni_id, plant_id)).fetchone()
+    if not row:
+        return jsonify({'ok': False, 'error': 'Not found'}), 404
+    db.execute('UPDATE tni SET source=? WHERE id=? AND plant_id=?',
+               (source, tni_id, plant_id))
+    # Ensure programme is in master list when given a non-TNI source
+    db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(?,?)',
+               (plant_id, row['programme_name']))
+    db.commit()
+    return jsonify({'ok': True})
 
 @app.route('/tni/<int:tni_id>/delete', methods=['POST'])
 @spoc_required

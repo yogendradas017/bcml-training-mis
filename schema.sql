@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS tni (
     mode TEXT,
     target_month TEXT,
     planned_hours REAL DEFAULT 0,
+    source TEXT DEFAULT 'TNI Driven',
     created_at TEXT DEFAULT (date('now')),
     UNIQUE(plant_id, emp_code, programme_name)
 );
