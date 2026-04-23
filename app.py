@@ -3073,10 +3073,22 @@ def tni_analyze():
     fixed_count = sum(1 for r in rows if r['status'] == 'fixed')
     warn_count  = sum(1 for r in rows if r['status'] == 'warning')
     err_count   = sum(1 for r in rows if r['status'] == 'error')
+
+    plant_id_r  = session['plant_id']
+    db_r        = get_db()
+    master_progs = [r[0] for r in db_r.execute(
+        'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id_r,)
+    ).fetchall()] or MASTER_PROGRAMMES
+    # Programmes confirmed clean in this upload (ok + fixed rows)
+    upload_progs_lower = set(
+        r['programme_name'].lower() for r in rows if r['status'] in ('ok', 'fixed')
+    )
     return render_template('tni_analyze.html', step='review',
                            rows=rows, aid=aid,
                            ok_count=ok_count, fixed_count=fixed_count,
                            warn_count=warn_count, err_count=err_count,
+                           master_progs=master_progs,
+                           upload_progs_lower=upload_progs_lower,
                            prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY)
 
 
@@ -3095,38 +3107,60 @@ def tni_analyze_confirm():
     plant_id  = session['plant_id']
     db        = get_db()
     inserted  = 0
-    # Both error and warning rows are blocked from import
-    err_rows  = [r for r in rows if r['status'] in ('error', 'warning')]
+
+    # ── Collect inline programme corrections submitted by user ─────────────────
+    # fix_prog_{row_num} = corrected programme name chosen from dropdown
+    corrections = {}
+    for k, v in request.form.items():
+        if k.startswith('fix_prog_') and v.strip():
+            try:
+                corrections[int(k[9:])] = v.strip()
+            except ValueError:
+                pass
+
+    # ── Categorise blocked rows (errors + uncorrected warnings) ───────────────
+    err_rows = []
+    for r in rows:
+        if r['status'] == 'error':
+            err_rows.append(r)
+        elif r['status'] == 'warning' and r['row_num'] not in corrections:
+            err_rows.append(r)
 
     # ── Duplicate detection ───────────────────────────────────────────────────
-    # Build set of existing (emp_code, programme_name) already in DB
     existing = set()
     for er in db.execute('SELECT emp_code, programme_name FROM tni WHERE plant_id=?', (plant_id,)):
         existing.add((er['emp_code'].strip().upper(), er['programme_name'].strip().lower()))
 
     dup_rows    = []
     updated     = 0
-    seen_batch  = {}  # key → first row_num where this emp+prog appeared
+    seen_batch  = {}
 
     for row in rows:
-        if row['status'] in ('error', 'warning'):
+        if row['status'] == 'error':
             continue
-        key = (row['emp_code'].strip().upper(), row['programme_name'].strip().lower())
+        if row['status'] == 'warning':
+            fix = corrections.get(row['row_num'])
+            if not fix:
+                continue   # still blocked
+            prog_name = fix
+        else:
+            prog_name = row['programme_name']
+
+        key = (row['emp_code'].strip().upper(), prog_name.strip().lower())
         if key in seen_batch:
-            dup_rows.append({**row,
+            dup_rows.append({**row, 'programme_name': prog_name,
                 'dup_type': f'Same employee+programme already at Row {seen_batch[key]} in this file — first entry was imported, this row skipped'})
             continue
         seen_batch[key] = row['row_num']
         if key in existing:
-            # Update prog_type/mode/hours if already present
             db.execute('''UPDATE tni SET prog_type=?, mode=?, planned_hours=?
                           WHERE plant_id=? AND UPPER(emp_code)=? AND LOWER(programme_name)=?''',
                        (row['prog_type'], row['mode'], row['planned_hours'],
-                        plant_id, row['emp_code'].upper(), row['programme_name'].lower()))
+                        plant_id, row['emp_code'].upper(), prog_name.lower()))
             updated += 1
         else:
             db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
-                       (plant_id, row['emp_code'], row['programme_name'],
+                       (plant_id, row['emp_code'], prog_name,
                         row['prog_type'], row['mode'], row['planned_hours']))
             inserted += 1
 
