@@ -120,9 +120,6 @@
         <div style="font-size:12px;margin-top:4px;opacity:.8;">{{ pct }}% importable</div>
       </div>
       <div class="d-flex gap-2 align-items-center flex-wrap">
-        <label class="d-flex align-items-center gap-2" style="font-size:12px;cursor:pointer;">
-          <input type="checkbox" id="show-errors-only" class="form-check-input" style="cursor:pointer;"> Errors &amp; Warnings only
-        </label>
         <a href="{{ url_for('tni_analyze') }}" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:none;">
           <i class="bi bi-arrow-repeat"></i> Re-upload
         </a>
@@ -152,9 +149,27 @@
 </div>
 {% endif %}
 
-<!-- Table -->
+<!-- OK rows summary (not rendered in DOM — browser would hang on 6000+ rows) -->
+{% if ok_count > 0 %}
+<div class="alert d-flex gap-2 align-items-center py-2 mb-3"
+     style="background:#f0fdf4;border:1px solid #bbf7d0;font-size:13px;color:#065f46;">
+  <i class="bi bi-check-circle-fill" style="flex-shrink:0;"></i>
+  <div>
+    <strong>{{ ok_count }} rows are perfectly clean</strong> — no issues, no changes. They will import automatically. Not shown below to keep this page fast.
+  </div>
+</div>
+{% endif %}
+
+<!-- Table — only fixed / warning / error rows rendered -->
+{% set review_rows = rows | rejectattr('status','equalto','ok') | list %}
 <div class="card mb-3">
   <div class="card-body p-0">
+    {% if not review_rows %}
+    <div style="padding:32px;text-align:center;color:#10b981;">
+      <i class="bi bi-check-circle-fill" style="font-size:36px;display:block;margin-bottom:10px;"></i>
+      <strong>All rows are clean — nothing to review.</strong>
+    </div>
+    {% else %}
     <div class="table-responsive" style="max-height:62vh;overflow-y:auto;">
       <table class="table table-sm mb-0" style="font-size:12px;">
         <thead style="position:sticky;top:0;z-index:10;background:#1e3a5f;color:#fff;">
@@ -165,7 +180,7 @@
           </tr>
         </thead>
         <tbody>
-        {% for r in rows %}
+        {% for r in review_rows %}
 
         {% if r.status == 'ok' %}
         <tr class="an-row an-ok" style="background:#f0fdf4;">
@@ -254,6 +269,7 @@
         </tbody>
       </table>
     </div>
+    {% endif %}
   </div>
 </div>
 
@@ -277,17 +293,4 @@
 {% endif %}
 {% endblock %}
 
-{% block scripts %}
-<script>
-{% if step == 'review' %}
-document.getElementById('show-errors-only').addEventListener('change', function() {
-  document.querySelectorAll('.an-ok,.an-fixed').forEach(tr => {
-    tr.style.display = this.checked ? 'none' : '';
-  });
-  document.querySelectorAll('.an-warning').forEach(tr => {
-    tr.style.display = '';
-  });
-});
-{% endif %}
-</script>
-{% endblock %}
+{% block scripts %}{% endblock %}
