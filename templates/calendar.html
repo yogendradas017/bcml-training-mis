@@ -38,7 +38,7 @@
           <select name="programme_name" id="cal_prog_name" required>
             <option value="">— Select programme —</option>
             {% for p in all_cal_programmes %}
-            <option value="{{ p }}"{% if p in tni_programmes %} data-tni="1"{% endif %}>{{ p }}</option>
+            <option value="{{ p }}"{% if demand_map.get(p, 0) > 0 %} data-tni="1"{% endif %}>{{ p }}</option>
             {% endfor %}
           </select>
           <div class="form-text">Type to search. TNI demand loads automatically when selected.</div>
