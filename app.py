@@ -1922,6 +1922,9 @@ def programme_intelligence():
     progs_in_demand  = sum(1 for p in programmes if p['uncovered'] > 0)
     big_tickets      = sum(1 for p in programmes if p['status'] == 'Big Ticket')
 
+    _status_order = {'Big Ticket': 0, 'In Progress': 1, 'On Track': 2, 'Small Group': 3}
+    programmes.sort(key=lambda p: (_status_order.get(p['status'], 9), -p['demand']))
+
     # ── Sessions by mode this FY ───────────────────────────────────────────────
     _mode_keys = ['Classroom', 'OJT', 'Online', 'SOP']
     mode_map   = {m: {'planned': 0, 'conducted': 0} for m in _mode_keys}
