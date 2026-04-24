@@ -36,8 +36,7 @@
   <div class="card-body text-center py-5 text-muted">
     <i class="bi bi-journal-plus" style="font-size:36px;display:block;margin-bottom:10px;color:#6366f1;"></i>
     <strong>No programmes in master list yet.</strong><br>
-    Add programmes manually or bulk upload an Excel file.<br>
-    <small>Until a master list exists, the TNI Analyzer will still clean names using title-case rules.</small>
+    Add programmes manually or bulk upload an Excel file.
   </div>
 </div>
 {% else %}
@@ -46,18 +45,13 @@
   <div class="card-body pb-2 pt-3">
     <input type="text" id="pm-search" class="form-control" placeholder="Search programme..." style="max-width:300px;font-size:13px;">
   </div>
-  <!-- Bulk delete bar (shown when rows selected) -->
-  <form method="POST" action="{{ url_for('programme_master_bulk_delete') }}" id="pm-bulk-form" onsubmit="return pmConfirmDel();" style="display:none;background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 16px;align-items:center;gap:12px;flex-wrap:wrap;">
-    <div id="pm-hidden-ids"></div>
-    <span id="pm-sel-count" style="font-size:13px;font-weight:700;color:#dc2626;"></span>
-    <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash3-fill me-1"></i> Delete Selected</button>
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="pmClear()">Clear</button>
-  </form>
   <div class="card-body p-0">
     <table id="pm-table" class="table table-sm table-hover mb-0" style="font-size:13px;">
       <thead style="background:#1a1f35;color:#fff;border-bottom:2px solid #6366f1;">
         <tr>
-          <th style="width:38px;padding:10px 14px;"><input type="checkbox" id="pm-cb-all" style="cursor:pointer;width:16px;height:16px;accent-color:#6366f1;"></th>
+          <th style="width:38px;padding:10px 14px;">
+            <input type="checkbox" class="cb-all" style="cursor:pointer;width:16px;height:16px;accent-color:#6366f1;">
+          </th>
           <th style="padding:10px 14px;width:44px;color:#9ca3af;">#</th>
           <th style="padding:10px 14px;">Programme Name</th>
           <th style="padding:10px 14px;">Type &amp; Mode</th>
@@ -67,12 +61,15 @@
       <tbody id="pm-body">
         {% for p in progs %}
         <tr class="pm-row" data-name="{{ p.name|lower }}">
-          <td style="padding:8px 14px;"><input type="checkbox" class="pm-cb-row" data-id="{{ p.id }}" style="cursor:pointer;width:16px;height:16px;accent-color:#6366f1;"></td>
+          <td style="padding:8px 14px;">
+            <input type="checkbox" class="cb-row" value="{{ p.id }}" data-id="{{ p.id }}"
+                   style="cursor:pointer;width:16px;height:16px;accent-color:#6366f1;">
+          </td>
           <td style="padding:8px 14px;color:#9ca3af;font-size:11px;">{{ loop.index }}</td>
           <td style="padding:8px 14px;font-weight:600;color:#111827;"
               class="pm-name-cell" data-id="{{ p.id }}" data-name="{{ p.name }}"
               title="Click to edit name">{{ p.name }}
-            <i class="bi bi-pencil" style="font-size:10px;color:#9ca3af;margin-left:6px;opacity:0;" class="pm-edit-icon"></i>
+            <i class="bi bi-pencil" style="font-size:10px;color:#9ca3af;margin-left:6px;opacity:0;"></i>
           </td>
           <td style="padding:8px 14px;">
             <form method="POST" action="{{ url_for('programme_master_add') }}" style="display:flex;gap:6px;align-items:center;">
@@ -92,7 +89,7 @@
           </td>
           <td style="padding:8px 14px;text-align:center;">
             <form method="POST" action="{{ url_for('programme_master_delete', prog_id=p.id) }}"
-                  onsubmit="return confirm('Remove {{ p.name }}?');" style="display:inline;">
+                  onsubmit="return confirm('Remove {{ p.name|replace("'", "\\'") }}?');" style="display:inline;">
               <button class="btn btn-link p-0" style="color:#ef4444;font-size:15px;" title="Delete">
                 <i class="bi bi-trash3"></i>
               </button>
@@ -105,54 +102,6 @@
   </div>
 </div>
 {% endif %}
-
-<script>
-(function() {
-  var tbl   = document.getElementById('pm-table');
-  var cbAll = document.getElementById('pm-cb-all');
-  var form  = document.getElementById('pm-bulk-form');
-  if (!tbl) return;
-
-  /* Event delegation on the table — same pattern as TNI */
-  tbl.addEventListener('change', function(e) {
-    if (e.target === cbAll) {
-      /* Header checkbox changed → set all rows to match */
-      tbl.querySelectorAll('.pm-cb-row').forEach(function(c) {
-        c.checked = cbAll.checked;
-      });
-    }
-    _pmUpdate();
-  });
-
-  function _pmUpdate() {
-    var all     = tbl.querySelectorAll('.pm-cb-row');
-    var checked = [].filter.call(all, function(c) { return c.checked; });
-    if (form) {
-      form.style.display = checked.length > 0 ? 'flex' : 'none';
-      var cntEl = document.getElementById('pm-sel-count');
-      var idsEl = document.getElementById('pm-hidden-ids');
-      if (cntEl) cntEl.textContent = checked.length + ' selected';
-      if (idsEl) idsEl.innerHTML = checked.map(function(c) {
-        return '<input type="hidden" name="ids[]" value="' + c.dataset.id + '">';
-      }).join('');
-    }
-    if (cbAll) {
-      cbAll.checked       = all.length > 0 && checked.length === all.length;
-      cbAll.indeterminate = checked.length > 0 && checked.length < all.length;
-    }
-  }
-
-  /* Expose helpers needed by bulk-form buttons */
-  window.pmClear = function() {
-    tbl.querySelectorAll('.pm-cb-row').forEach(function(c) { c.checked = false; });
-    _pmUpdate();
-  };
-  window.pmConfirmDel = function() {
-    var n = tbl.querySelectorAll('.pm-cb-row:checked').length;
-    return confirm('Permanently delete ' + n + ' programme(s)? This cannot be undone.');
-  };
-})();
-</script>
 
 {# ── Add Single Modal ── #}
 <div class="modal fade" id="addModal" tabindex="-1">
@@ -226,6 +175,8 @@
 {% endblock %}
 {% block scripts %}
 <script>
+// ── Initialise base.html BulkSelect (same system as TNI) ──────────────────────
+BulkSelect.init('pm-table', '{{ url_for("programme_master_bulk_delete") }}');
 
 // ── Table search ──────────────────────────────────────────────────────────────
 const pmSearch = document.getElementById('pm-search');
@@ -238,11 +189,10 @@ if (pmSearch) {
   });
 }
 
-// ── Master list for fuzzy match ───────────────────────────────────────────────
-const MASTER = [{% for p in progs %}"{{ p.name|replace('"', '\\"') }}"{% if not loop.last %},{% endif %}{% endfor %}];
+// ── Master list for add-modal suggestions ─────────────────────────────────────
+const MASTER = {{ progs|map(attribute='name')|list|tojson }};
 
-// Levenshtein similarity (0–1)
-function similarity(a, b) {
+function pmSimilarity(a, b) {
   a = a.toLowerCase(); b = b.toLowerCase();
   if (a === b) return 1;
   if (!a.length || !b.length) return 0;
@@ -258,10 +208,9 @@ function similarity(a, b) {
   return 1 - dp[b.length] / Math.max(a.length, b.length);
 }
 
-// ── Add modal spell correction ────────────────────────────────────────────────
-const nameInput   = document.getElementById('addNameInput');
-const suggestBox  = document.getElementById('addSuggestions');
-const matchHint   = document.getElementById('addMatchHint');
+const nameInput  = document.getElementById('addNameInput');
+const suggestBox = document.getElementById('addSuggestions');
+const matchHint  = document.getElementById('addMatchHint');
 
 if (nameInput) {
   nameInput.addEventListener('input', function() {
@@ -269,15 +218,8 @@ if (nameInput) {
     suggestBox.innerHTML = ''; suggestBox.style.display = 'none';
     matchHint.innerHTML  = ''; matchHint.style.display  = 'none';
     if (q.length < 3) return;
-
     const ql = q.toLowerCase();
-    // Score all master entries
-    const scored = MASTER.map(m => ({name: m, score: similarity(ql, m.toLowerCase())}))
-                         .filter(x => x.score > 0.35 || m => m.name.toLowerCase().includes(ql))
-                         .sort((a, b) => b.score - a.score)
-                         .slice(0, 6);
 
-    // Exact match?
     const exact = MASTER.find(m => m.toLowerCase() === ql);
     if (exact) {
       matchHint.innerHTML = `<span style="background:#fef3c7;color:#92400e;font-size:12px;padding:4px 10px;border-radius:6px;display:inline-block;">
@@ -286,41 +228,36 @@ if (nameInput) {
       return;
     }
 
-    // Close matches
-    const close = scored.filter(x => x.score >= 0.65);
-    if (close.length) {
-      matchHint.innerHTML = `<span style="font-size:12px;color:#6b7280;"><i class="bi bi-magic"></i> Similar entries found — click to use:</span>`;
+    const scored = MASTER.map(m => ({name: m, score: pmSimilarity(ql, m.toLowerCase())}))
+                         .filter(x => x.score > 0.35)
+                         .sort((a, b) => b.score - a.score);
+
+    const shown = [...new Set([
+      ...MASTER.filter(m => m.toLowerCase().includes(ql)),
+      ...scored.filter(x => x.score >= 0.55).map(x => x.name)
+    ])].slice(0, 8);
+
+    if (scored.filter(x => x.score >= 0.65).length) {
+      matchHint.innerHTML = `<span style="font-size:12px;color:#6b7280;"><i class="bi bi-magic"></i> Similar entries — click to use:</span>`;
       matchHint.style.display = 'block';
     }
 
-    // Show suggestion dropdown for contains + fuzzy
-    const shown = MASTER.filter(m => m.toLowerCase().includes(ql))
-                        .concat(scored.filter(x => x.score >= 0.55).map(x => x.name))
-                        .filter((v, i, a) => a.indexOf(v) === i)
-                        .slice(0, 8);
-
     if (shown.length) {
       shown.forEach(name => {
-        const sim = similarity(ql, name.toLowerCase());
-        const tag = name.toLowerCase() === ql ? '' :
-                    sim >= 0.75 ? `<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;margin-left:6px;">similar</span>` : '';
+        const sim = pmSimilarity(ql, name.toLowerCase());
+        const tag = sim >= 0.75 && name.toLowerCase() !== ql
+          ? `<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;margin-left:6px;">similar</span>` : '';
         const div = document.createElement('div');
         div.innerHTML = `<span style="font-size:13px;">${name}</span>${tag}`;
         div.style.cssText = 'padding:8px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;';
         div.onmouseenter = () => div.style.background = '#f8fafc';
         div.onmouseleave = () => div.style.background = '';
-        div.onclick = () => {
-          nameInput.value = name;
-          suggestBox.style.display = 'none';
-          nameInput.dispatchEvent(new Event('input'));
-        };
+        div.onclick = () => { nameInput.value = name; suggestBox.style.display = 'none'; nameInput.dispatchEvent(new Event('input')); };
         suggestBox.appendChild(div);
       });
       suggestBox.style.display = 'block';
     }
   });
-
-  // Hide suggestions on outside click
   document.addEventListener('click', e => {
     if (!nameInput.contains(e.target) && !suggestBox.contains(e.target))
       suggestBox.style.display = 'none';
@@ -330,14 +267,9 @@ if (nameInput) {
 // ── Inline name editing ───────────────────────────────────────────────────────
 document.querySelectorAll('.pm-name-cell').forEach(cell => {
   cell.style.cursor = 'pointer';
-
-  cell.addEventListener('mouseenter', () => {
-    cell.querySelector('.bi-pencil').style.opacity = '1';
-  });
-  cell.addEventListener('mouseleave', () => {
-    const pencil = cell.querySelector('.bi-pencil');
-    if (pencil) pencil.style.opacity = '0';
-  });
+  const pencil = cell.querySelector('.bi-pencil');
+  cell.addEventListener('mouseenter', () => { if (pencil) pencil.style.opacity = '1'; });
+  cell.addEventListener('mouseleave', () => { if (pencil) pencil.style.opacity = '0'; });
 
   cell.addEventListener('click', function() {
     if (cell.querySelector('input')) return;
@@ -346,17 +278,14 @@ document.querySelectorAll('.pm-name-cell').forEach(cell => {
 
     cell.innerHTML = '';
     const inp = document.createElement('input');
-    inp.type  = 'text';
-    inp.value = origName;
+    inp.type = 'text'; inp.value = origName;
     inp.className = 'form-control form-control-sm';
     inp.style.cssText = 'font-weight:600;display:inline-block;width:calc(100% - 8px);';
-    inp.title = 'Press Enter to save, Esc to cancel';
     cell.appendChild(inp);
     inp.focus(); inp.select();
 
     const restore = () => {
-      cell.innerHTML = origName +
-        ' <i class="bi bi-pencil" style="font-size:10px;color:#9ca3af;margin-left:6px;opacity:0;"></i>';
+      cell.innerHTML = origName + ' <i class="bi bi-pencil" style="font-size:10px;color:#9ca3af;margin-left:6px;opacity:0;"></i>';
       cell.dataset.name = origName;
       cell.closest('tr').dataset.name = origName.toLowerCase();
     };
@@ -366,24 +295,18 @@ document.querySelectorAll('.pm-name-cell').forEach(cell => {
       if (!newName || newName === origName) { restore(); return; }
       inp.disabled = true;
       try {
-        const res = await fetch(`/programme-master/${progId}/rename`, {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
+        const res  = await fetch(`/programme-master/${progId}/rename`, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({name: newName})
         });
         const data = await res.json();
         if (data.ok) {
-          cell.innerHTML = data.name +
-            ' <i class="bi bi-pencil" style="font-size:10px;color:#9ca3af;margin-left:6px;opacity:0;"></i>';
+          cell.innerHTML = data.name + ' <i class="bi bi-pencil" style="font-size:10px;color:#9ca3af;margin-left:6px;opacity:0;"></i>';
           cell.dataset.name = data.name;
           cell.closest('tr').dataset.name = data.name.toLowerCase();
-          // update hidden name field in type/mode form on same row
           const hidden = cell.closest('tr').querySelector('input[name="name"]');
           if (hidden) hidden.value = data.name;
-        } else {
-          alert(data.error || 'Could not rename.');
-          restore();
-        }
+        } else { alert(data.error || 'Could not rename.'); restore(); }
       } catch(e) { alert('Network error.'); restore(); }
     };
 
