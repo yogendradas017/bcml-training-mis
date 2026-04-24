@@ -54,10 +54,10 @@
     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="pmClear()">Clear</button>
   </form>
   <div class="card-body p-0">
-    <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+    <table id="pm-table" class="table table-sm table-hover mb-0" style="font-size:13px;">
       <thead style="background:#1a1f35;color:#fff;border-bottom:2px solid #6366f1;">
         <tr>
-          <th style="width:38px;padding:10px 14px;"><input type="checkbox" id="pm-cb-all" onclick="pmSelectAll(this)" style="cursor:pointer;width:16px;height:16px;accent-color:#6366f1;"></th>
+          <th style="width:38px;padding:10px 14px;"><input type="checkbox" id="pm-cb-all" style="cursor:pointer;width:16px;height:16px;accent-color:#6366f1;"></th>
           <th style="padding:10px 14px;width:44px;color:#9ca3af;">#</th>
           <th style="padding:10px 14px;">Programme Name</th>
           <th style="padding:10px 14px;">Type &amp; Mode</th>
@@ -107,45 +107,51 @@
 {% endif %}
 
 <script>
-/* Bulk-select core — defined inline so it is always available */
-function pmRefresh() {
-  var all     = document.querySelectorAll('.pm-cb-row');
-  var checked = [].filter.call(all, function(c){ return c.checked; });
-  var form    = document.getElementById('pm-bulk-form');
-  var countEl = document.getElementById('pm-sel-count');
-  var idsEl   = document.getElementById('pm-hidden-ids');
-  var cbAll   = document.getElementById('pm-cb-all');
-  if (!form) return;
-  form.style.display = checked.length > 0 ? 'flex' : 'none';
-  if (countEl) countEl.textContent = checked.length + ' selected';
-  if (idsEl)   idsEl.innerHTML = checked.map(function(c){ return '<input type="hidden" name="ids[]" value="' + c.dataset.id + '">'; }).join('');
-  if (cbAll) {
-    cbAll.checked       = all.length > 0 && checked.length === all.length;
-    cbAll.indeterminate = checked.length > 0 && checked.length < all.length;
-  }
-}
-function pmSelectAll(el) {
-  var all      = document.querySelectorAll('.pm-cb-row');
-  var nChecked = [].filter.call(all, function(c){ return c.checked; }).length;
-  var should   = nChecked < all.length;
-  [].forEach.call(all, function(c){ c.checked = should; });
-  el.checked       = should;
-  el.indeterminate = false;
-  pmRefresh();
-}
-function pmClear() {
-  document.querySelectorAll('.pm-cb-row').forEach(function(c){ c.checked = false; });
-  pmRefresh();
-}
-function pmConfirmDel() {
-  var n = document.querySelectorAll('.pm-cb-row:checked').length;
-  return confirm('Permanently delete ' + n + ' programme(s) from master list? This cannot be undone.');
-}
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('.pm-cb-row').forEach(function(c){
-    c.addEventListener('change', pmRefresh);
+(function() {
+  var tbl   = document.getElementById('pm-table');
+  var cbAll = document.getElementById('pm-cb-all');
+  var form  = document.getElementById('pm-bulk-form');
+  if (!tbl) return;
+
+  /* Event delegation on the table — same pattern as TNI */
+  tbl.addEventListener('change', function(e) {
+    if (e.target === cbAll) {
+      /* Header checkbox changed → set all rows to match */
+      tbl.querySelectorAll('.pm-cb-row').forEach(function(c) {
+        c.checked = cbAll.checked;
+      });
+    }
+    _pmUpdate();
   });
-});
+
+  function _pmUpdate() {
+    var all     = tbl.querySelectorAll('.pm-cb-row');
+    var checked = [].filter.call(all, function(c) { return c.checked; });
+    if (form) {
+      form.style.display = checked.length > 0 ? 'flex' : 'none';
+      var cntEl = document.getElementById('pm-sel-count');
+      var idsEl = document.getElementById('pm-hidden-ids');
+      if (cntEl) cntEl.textContent = checked.length + ' selected';
+      if (idsEl) idsEl.innerHTML = checked.map(function(c) {
+        return '<input type="hidden" name="ids[]" value="' + c.dataset.id + '">';
+      }).join('');
+    }
+    if (cbAll) {
+      cbAll.checked       = all.length > 0 && checked.length === all.length;
+      cbAll.indeterminate = checked.length > 0 && checked.length < all.length;
+    }
+  }
+
+  /* Expose helpers needed by bulk-form buttons */
+  window.pmClear = function() {
+    tbl.querySelectorAll('.pm-cb-row').forEach(function(c) { c.checked = false; });
+    _pmUpdate();
+  };
+  window.pmConfirmDel = function() {
+    var n = tbl.querySelectorAll('.pm-cb-row:checked').length;
+    return confirm('Permanently delete ' + n + ' programme(s)? This cannot be undone.');
+  };
+})();
 </script>
 
 {# ── Add Single Modal ── #}
