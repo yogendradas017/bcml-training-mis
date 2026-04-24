@@ -46,11 +46,23 @@
   <div class="card-body pb-2 pt-3">
     <input type="text" id="pm-search" class="form-control" placeholder="Search programme..." style="max-width:300px;font-size:13px;">
   </div>
+  <!-- Bulk action bar -->
+  <div id="pm-bulk-bar" style="display:none;background:#fef2f2;border-bottom:1px solid #fecaca;padding:8px 16px;align-items:center;gap:12px;">
+    <span id="pm-sel-count" style="font-size:13px;font-weight:600;color:#dc2626;">0 selected</span>
+    <form method="POST" action="{{ url_for('programme_master_bulk_delete') }}" id="pm-bulk-del-form" onsubmit="return pmConfirmBulkDel();">
+      <div id="pm-hidden-ids"></div>
+      <button type="submit" class="btn btn-danger btn-sm">
+        <i class="bi bi-trash3-fill me-1"></i> Delete Selected
+      </button>
+    </form>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="pmClearAll()">Clear</button>
+  </div>
   <div class="card-body p-0">
     <table class="table table-sm table-hover mb-0" style="font-size:13px;">
-      <thead style="background:#f8fafc;">
+      <thead style="background:#1a1f35;color:#fff;">
         <tr>
-          <th style="width:44px;padding:10px 14px;">#</th>
+          <th style="width:38px;padding:10px 14px;"><input type="checkbox" id="pm-cb-all" style="cursor:pointer;"></th>
+          <th style="padding:10px 14px;width:44px;color:#9ca3af;">#</th>
           <th style="padding:10px 14px;">Programme Name</th>
           <th style="padding:10px 14px;">Type &amp; Mode</th>
           <th style="padding:10px 14px;width:60px;text-align:center;">Del</th>
@@ -59,6 +71,7 @@
       <tbody id="pm-body">
         {% for p in progs %}
         <tr class="pm-row" data-name="{{ p.name|lower }}">
+          <td style="padding:8px 14px;"><input type="checkbox" class="pm-cb-row" data-id="{{ p.id }}" style="cursor:pointer;"></td>
           <td style="padding:8px 14px;color:#9ca3af;font-size:11px;">{{ loop.index }}</td>
           <td style="padding:8px 14px;font-weight:600;color:#111827;"
               class="pm-name-cell" data-id="{{ p.id }}" data-name="{{ p.name }}"
@@ -169,6 +182,50 @@
 {% endblock %}
 {% block scripts %}
 <script>
+// ── Bulk select / delete ──────────────────────────────────────────────────────
+const pmBulkBar  = document.getElementById('pm-bulk-bar');
+const pmSelCount = document.getElementById('pm-sel-count');
+const pmHiddenIds = document.getElementById('pm-hidden-ids');
+
+function pmUpdateBar() {
+  const checked = [...document.querySelectorAll('.pm-cb-row:checked')];
+  const n = checked.length;
+  if (n > 0) {
+    pmBulkBar.style.display = 'flex';
+    pmSelCount.textContent = n + ' selected';
+    pmHiddenIds.innerHTML = checked.map(c => `<input type="hidden" name="ids[]" value="${c.dataset.id}">`).join('');
+  } else {
+    pmBulkBar.style.display = 'none';
+    pmHiddenIds.innerHTML = '';
+  }
+}
+
+function pmClearAll() {
+  document.querySelectorAll('.pm-cb-row').forEach(c => c.checked = false);
+  document.getElementById('pm-cb-all').checked = false;
+  pmUpdateBar();
+}
+
+function pmConfirmBulkDel() {
+  const n = document.querySelectorAll('.pm-cb-row:checked').length;
+  return confirm(`Permanently delete ${n} programme(s) from master list? This cannot be undone.`);
+}
+
+document.getElementById('pm-cb-all')?.addEventListener('change', function() {
+  document.querySelectorAll('.pm-cb-row').forEach(c => c.checked = this.checked);
+  pmUpdateBar();
+});
+
+document.querySelectorAll('.pm-cb-row').forEach(c =>
+  c.addEventListener('change', () => {
+    const all = document.querySelectorAll('.pm-cb-row');
+    const checked = [...all].filter(x => x.checked);
+    document.getElementById('pm-cb-all').indeterminate = checked.length > 0 && checked.length < all.length;
+    document.getElementById('pm-cb-all').checked = checked.length === all.length;
+    pmUpdateBar();
+  })
+);
+
 // ── Table search ──────────────────────────────────────────────────────────────
 const pmSearch = document.getElementById('pm-search');
 if (pmSearch) {

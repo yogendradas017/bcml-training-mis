@@ -782,6 +782,26 @@ def programme_master_delete(prog_id):
     flash('Programme removed from master list.', 'warning')
     return redirect(url_for('programme_master'))
 
+@app.route('/programme-master/bulk-delete', methods=['POST'])
+@spoc_required
+def programme_master_bulk_delete():
+    plant_id = session['plant_id']
+    ids = request.form.getlist('ids[]')
+    if not ids:
+        flash('No programmes selected.', 'warning')
+        return redirect(url_for('programme_master'))
+    try:
+        ids_int = [int(i) for i in ids]
+    except ValueError:
+        flash('Invalid selection.', 'danger')
+        return redirect(url_for('programme_master'))
+    db = get_db()
+    db.executemany('DELETE FROM programme_master WHERE id=? AND plant_id=?',
+                   [(i, plant_id) for i in ids_int])
+    db.commit()
+    flash(f'{len(ids_int)} programme(s) deleted from master list.', 'warning')
+    return redirect(url_for('programme_master'))
+
 @app.route('/programme-master/bulk', methods=['POST'])
 @spoc_required
 def programme_master_bulk():
@@ -2709,101 +2729,121 @@ _ACRONYMS = {
     'PPE','SOP','EHS','OJT','DCS','UPS','VFD','DG','SLD','AC','DC','GST','ISO',
     'HR','IT','MBC','FFT','MIST','DM','ETP','CPU','CGCB','MSDS','OFSAM','ZFD',
     'STD2SD','FCS','RTD','TC','KNO3','MOP','PDM','5S','5-S','JCB','PM','R&M',
+    'AI','ML','KPI','GMP','BOD','COD','TOC','TDS','ROI','MIS','SAP','ERR','ERB',
+    'CCTV','GPS','QR','LED','LCD','CRM','ERP','LMS','HRM','WMS','PLC','SCADA',
 }
 
-# Common domain-specific misspellings — word-level (lowercase key → correct form)
+# Hardcoded domain-specific misspellings (fast path, no fuzzy needed)
 _WORD_FIXES = {
-    # Technique variants
     'techqnique':'Technique','tecnique':'Technique','techique':'Technique',
-    'technqiue':'Technique','teqnique':'Technique','techiquie':'Technique',
-    'technque':'Technique','technnique':'Technique',
-    # Grinding
+    'technqiue':'Technique','teqnique':'Technique','technque':'Technique',
     'grainding':'Grinding','graining':'Grinding','granding':'Grinding',
-    'grindng':'Grinding','grindding':'Grinding','grindig':'Grinding',
-    # Hygiene
-    'hyigene':'Hygiene','hyegiene':'Hygiene','hygeine':'Hygiene',
-    'hygeiene':'Hygiene','higiene':'Hygiene','hygene':'Hygiene',
-    # Maintenance
+    'grindig':'Grinding','grindding':'Grinding',
+    'hyigene':'Hygiene','hyegiene':'Hygiene','hygeine':'Hygiene','higiene':'Hygiene',
     'maitenance':'Maintenance','maintenace':'Maintenance','maintainance':'Maintenance',
-    'mantenance':'Maintenance','mainteance':'Maintenance',
-    # Safety
-    'safty':'Safety','saftey':'Safety','safetey':'Safety',
-    # Operation / Operations
+    'mantenance':'Maintenance',
+    'safty':'Safety','saftey':'Safety',
     'operartion':'Operation','operetion':'Operation','opertion':'Operation',
-    # Management
     'managment':'Management','managament':'Management','mangement':'Management',
-    # Training
-    'trainning':'Training','traning':'Training','traing':'Training',
-    # Awareness
-    'awarness':'Awareness','awreness':'Awareness','awarenes':'Awareness',
-    # Handling
-    'handeling':'Handling','handlng':'Handling','handlig':'Handling',
-    # Electrical
-    'electrcial':'Electrical','eletrical':'Electrical','electical':'Electrical',
-    # Chemical
-    'chemcial':'Chemical','chemicle':'Chemical','chemicla':'Chemical',
-    # Equipment
+    'trainning':'Training','traning':'Training',
+    'awarness':'Awareness','awreness':'Awareness',
+    'handeling':'Handling','handlng':'Handling',
+    'electrcial':'Electrical','eletrical':'Electrical',
+    'chemcial':'Chemical','chemicle':'Chemical',
     'equpiment':'Equipment','equipement':'Equipment','equipmnet':'Equipment',
-    # Procedure
-    'proceudre':'Procedure','proceedure':'Procedure','procedrue':'Procedure',
-    # Compliance
-    'complience':'Compliance','compliace':'Compliance','complaince':'Compliance',
-    # Environment / Environmental
+    'proceudre':'Procedure','proceedure':'Procedure',
+    'complience':'Compliance','compliace':'Compliance',
     'enviroment':'Environment','enviromental':'Environmental',
-    # Knowledge
     'knowlege':'Knowledge','knwoledge':'Knowledge','knoweldge':'Knowledge',
-    # Monitoring
     'monitorng':'Monitoring','monitering':'Monitoring',
-    # Building
     'buidling':'Building','buldling':'Building',
-    # Cutting
-    'cuttiing':'Cutting','cuting':'Cutting',
+    'confind':'Confined','confinde':'Confined','condfined':'Confined',
+    'chocking':'Choking','chocing':'Choking',
+    'equipments':'Equipment',   # Equipment is uncountable
+    'lubricants':'Lubricants',  # already correct, keep
 }
 
-def _apply_word_fixes(s):
-    """Correct known misspelled words in a programme name string."""
-    if not s:
-        return s
-    words = s.split()
-    out = []
-    for w in words:
-        core = w.strip('.,;:()')
-        suffix = w[len(core):]
-        fix = _WORD_FIXES.get(core.lower())
-        out.append((fix + suffix) if fix else w)
-    return ' '.join(out)
+
+_STRIP_CHARS = '.,;:()/'
 
 def _smart_title(s):
-    """Title case preserving acronyms; small connective words stay lowercase (unless first)."""
-    _SMALL = frozenset({
-        'a','an','the','and','or','but','nor','for','yet','so',
-        'at','by','in','of','on','to','as','is','it',
-        'with','from','into','onto','off','per','via',
-    })
-    result = []
-    words = s.split()
-    for i, w in enumerate(words):
-        # Strip BOTH ends to find the core word; capture trailing punct for reconstruction
-        core     = w.strip('.,;:()')
-        # suffix = only the trailing punctuation (w.title() handles leading punct correctly)
+    """Title case: preserve acronyms, handle slashes, keep small words lowercase mid-title."""
+    _SMALL = frozenset({'a','an','the','and','or','but','nor','for','yet','so',
+                        'at','by','in','of','on','to','as','is','it',
+                        'with','from','into','onto','off','per','via'})
+
+    def _tw(w, is_first):
+        if not w:
+            return w
+        # Words like "MBC/Belt" — split on slash, process each part, rejoin
+        if '/' in w:
+            parts = w.split('/')
+            return '/'.join(_tw(p, is_first and j == 0) for j, p in enumerate(parts))
+        lstripped = w.lstrip(_STRIP_CHARS)
+        prefix    = w[:len(w) - len(lstripped)]
+        core      = lstripped.rstrip(_STRIP_CHARS)
+        suffix    = lstripped[len(core):]
+        if not core:
+            return w
         core_up  = core.upper()
         core_low = core.lower()
         if core_up in _ACRONYMS:
-            # Re-insert leading punct if any, then acronym, then trailing punct
-            leading  = len(w) - len(w.lstrip('.,;:(}'))
-            trailing = w[leading + len(core):]
-            result.append(w[:leading] + core_up + trailing)
-        elif core_low == 'ph':
-            leading  = len(w) - len(w.lstrip('.,;:(}'))
-            trailing = w[leading + len(core):]
-            result.append(w[:leading] + 'pH' + trailing)
-        elif i > 0 and core_low in _SMALL and '(' not in w and ')' not in w:
-            # Keep small connective words lowercase mid-title (no punct wrapper)
-            result.append(core_low)
-        else:
-            # Default: use str.title() which correctly handles leading/trailing punctuation
-            result.append(w.title())
-    return ' '.join(result)
+            return prefix + core_up + suffix
+        # Auto-preserve any all-uppercase word (e.g. "AI", "KPI", "GMP") even if not in list
+        if core == core_up and len(core) >= 2 and core.isalpha():
+            return prefix + core_up + suffix
+        if core_low == 'ph':
+            return prefix + 'pH' + suffix
+        if not is_first and core_low in _SMALL and not prefix and not suffix:
+            return core_low
+        return prefix + core.capitalize() + suffix
+
+    return ' '.join(_tw(w, i == 0) for i, w in enumerate(s.split()))
+
+def _apply_word_fixes(s):
+    """
+    Three-layer word-level spell correction:
+    1. Hardcoded _WORD_FIXES for instant known errors
+    2. Master vocab fuzzy correction (≥0.82 similarity) for anything in MASTER_PROGRAMMES words
+    3. Pass-through for everything else
+    Words < 4 chars and acronyms are never changed.
+    """
+    if not s:
+        return s
+    from difflib import get_close_matches as _gcm
+    words = s.split()
+    out   = []
+    for w in words:
+        lstripped = w.lstrip(_STRIP_CHARS)
+        prefix    = w[:len(w) - len(lstripped)]
+        core      = lstripped.rstrip(_STRIP_CHARS)
+        suffix    = lstripped[len(core):]
+        core_low  = core.lower()
+
+        if not core or len(core) < 4 or core.upper() in _ACRONYMS:
+            out.append(w)
+            continue
+
+        # Layer 1: hardcoded fixes
+        fix = _WORD_FIXES.get(core_low)
+        if fix:
+            out.append(prefix + fix + suffix)
+            continue
+
+        # Layer 2: already correct per master vocab
+        if core_low in _MASTER_VOCAB:
+            out.append(w)
+            continue
+
+        # Layer 3: vocabulary fuzzy match (only if master vocab is populated)
+        if _MASTER_VOCAB:
+            m = _gcm(core_low, _MASTER_VOCAB.keys(), n=1, cutoff=0.82)
+            if m:
+                out.append(prefix + _MASTER_VOCAB[m[0]] + suffix)
+                continue
+
+        out.append(w)
+    return ' '.join(out)
 
 MASTER_PROGRAMMES = [
     "5-S Management","5S Commercial","Advance Practice Pathology In Agriculture",
@@ -2910,14 +2950,29 @@ MASTER_PROGRAMMES = [
 ]
 _MASTER_LOWER = [p.lower() for p in MASTER_PROGRAMMES]
 
+def _build_master_vocab():
+    """Build word-level vocabulary from MASTER_PROGRAMMES for fuzzy spell correction."""
+    _skip = frozenset({'a','an','the','and','or','but','of','in','to','at','by','as','is','it',
+                       'for','on','per','via','from','into','onto','off','with','how','its'})
+    vocab = {}
+    for prog in MASTER_PROGRAMMES:
+        for w in re.split(r'[ /,;:()\-]+', prog):
+            core = re.sub(r'[.,;:()/&\-]', '', w).strip()
+            if core and len(core) >= 4 and core.upper() not in _ACRONYMS and core.lower() not in _skip:
+                vocab[core.lower()] = core
+    return vocab
+
+_MASTER_VOCAB = _build_master_vocab()
+
 def _smart_analyze_rows(df, plant_id, db):
     from difflib import get_close_matches as gcm
     _prog_cache = {}  # cache: raw_lower → canonical name
 
-    # Load plant-specific master from DB; fallback to hardcoded list if empty
+    # Union of DB master + hardcoded list so every known programme is matchable
     _db_master = [r[0] for r in db.execute(
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,))]
-    _active_master       = _db_master if _db_master else MASTER_PROGRAMMES
+    _combined_seen = dict.fromkeys(_db_master + MASTER_PROGRAMMES)
+    _active_master       = list(_combined_seen.keys())
     _active_master_lower = [p.lower() for p in _active_master]
 
     def _match_master(raw_lower):
@@ -3091,30 +3146,28 @@ def _error_excel_for_tni(error_rows, dup_rows=None, plant_id=None, db=None):
     last_row = len(error_rows) + 1
 
     # Programme Name dropdown from master list
-    if plant_id and db:
+    if plant_id and db and last_row > 1:
         master_progs = [r[0] for r in db.execute(
             'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
         ).fetchall()] or MASTER_PROGRAMMES
         ws_pl = wb.create_sheet('_ProgList')
         ws_pl.sheet_state = 'hidden'
-        for r, v in enumerate(master_progs, 1):
-            ws_pl.cell(row=r, column=1, value=v)
-        wb.defined_names['ProgList'] = openpyxl.workbook.defined_name.DefinedName(
-            'ProgList', attr_text=f'_ProgList!$A$1:$A${len(master_progs)}')
-        dv_prog = DataValidation(type='list', formula1='ProgList', allow_blank=True,
-                                 showErrorMessage=True, errorTitle='Not in Master List',
-                                 error='Select a programme from the dropdown. If the programme is new, add it to Programme Master first.',
-                                 showDropDown=False)
+        for idx, v in enumerate(master_progs, 1):
+            ws_pl.cell(row=idx, column=1, value=v)
+        dv_prog = DataValidation(type='list',
+                                 formula1=f'_ProgList!$A$1:$A${len(master_progs)}',
+                                 allow_blank=True, showDropDown=False)
         dv_prog.sqref = f'C2:C{last_row}'
         ws.add_data_validation(dv_prog)
 
-    # Dropdowns
-    dv_type = DataValidation(type='list', formula1=f'"{",".join(PROG_TYPES)}"', allow_blank=True)
-    dv_mode = DataValidation(type='list', formula1=f'"{",".join(MODES)}"',      allow_blank=True)
-    dv_type.sqref = f'D2:D{last_row}'
-    dv_mode.sqref = f'E2:E{last_row}'
-    ws.add_data_validation(dv_type)
-    ws.add_data_validation(dv_mode)
+    # Dropdowns (only if there are actual error rows)
+    if last_row > 1:
+        dv_type = DataValidation(type='list', formula1=f'"{",".join(PROG_TYPES)}"', allow_blank=True)
+        dv_mode = DataValidation(type='list', formula1=f'"{",".join(MODES)}"',      allow_blank=True)
+        dv_type.sqref = f'D2:D{last_row}'
+        dv_mode.sqref = f'E2:E{last_row}'
+        ws.add_data_validation(dv_type)
+        ws.add_data_validation(dv_mode)
 
     # Instructions sheet
     ws2 = wb.create_sheet('How To Fix')
