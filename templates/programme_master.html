@@ -55,9 +55,9 @@
   </form>
   <div class="card-body p-0">
     <table class="table table-sm table-hover mb-0" style="font-size:13px;">
-      <thead style="background:#1a1f35;color:#fff;">
+      <thead style="background:#1a1f35;color:#fff;border-bottom:2px solid #6366f1;">
         <tr>
-          <th style="width:38px;padding:10px 14px;"><input type="checkbox" id="pm-cb-all" style="cursor:pointer;"></th>
+          <th style="width:38px;padding:10px 14px;"><input type="checkbox" id="pm-cb-all" style="cursor:pointer;width:16px;height:16px;accent-color:#6366f1;"></th>
           <th style="padding:10px 14px;width:44px;color:#9ca3af;">#</th>
           <th style="padding:10px 14px;">Programme Name</th>
           <th style="padding:10px 14px;">Type &amp; Mode</th>
@@ -67,7 +67,7 @@
       <tbody id="pm-body">
         {% for p in progs %}
         <tr class="pm-row" data-name="{{ p.name|lower }}">
-          <td style="padding:8px 14px;"><input type="checkbox" class="pm-cb-row" data-id="{{ p.id }}" style="cursor:pointer;"></td>
+          <td style="padding:8px 14px;"><input type="checkbox" class="pm-cb-row" data-id="{{ p.id }}" style="cursor:pointer;width:16px;height:16px;accent-color:#6366f1;"></td>
           <td style="padding:8px 14px;color:#9ca3af;font-size:11px;">{{ loop.index }}</td>
           <td style="padding:8px 14px;font-weight:600;color:#111827;"
               class="pm-name-cell" data-id="{{ p.id }}" data-name="{{ p.name }}"
