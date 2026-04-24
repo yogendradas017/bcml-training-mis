@@ -237,7 +237,7 @@
               <i class="bi bi-exclamation-circle me-1"></i>In file: <strong>"{{ r.programme_name }}"</strong>
             </div>
             <select name="fix_prog_{{ r.row_num }}" class="form-select form-select-sm fix-prog-ts"
-                    style="font-size:12px;">
+                    form="tni-confirm-form" style="font-size:12px;">
               <option value="">— fix: pick correct programme —</option>
               {% for p in master_progs %}
               <option value="{{ p }}">{{ p }}</option>
@@ -322,7 +322,7 @@
 </div>
 
 <!-- Action bar -->
-<form method="POST" action="{{ url_for('tni_analyze_confirm') }}">
+<form method="POST" action="{{ url_for('tni_analyze_confirm') }}" id="tni-confirm-form">
   <input type="hidden" name="aid" value="{{ aid }}">
   <div class="d-flex gap-3 align-items-center flex-wrap">
     <button type="submit" class="btn px-5 py-2 fw-semibold" style="background:#10b981;color:#fff;border:none;font-size:14px;">
