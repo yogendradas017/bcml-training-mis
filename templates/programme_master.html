@@ -46,17 +46,13 @@
   <div class="card-body pb-2 pt-3">
     <input type="text" id="pm-search" class="form-control" placeholder="Search programme..." style="max-width:300px;font-size:13px;">
   </div>
-  <!-- Bulk action bar -->
-  <div id="pm-bulk-bar" style="display:none;background:#fef2f2;border-bottom:1px solid #fecaca;padding:8px 16px;align-items:center;gap:12px;">
-    <span id="pm-sel-count" style="font-size:13px;font-weight:600;color:#dc2626;">0 selected</span>
-    <form method="POST" action="{{ url_for('programme_master_bulk_delete') }}" id="pm-bulk-del-form" onsubmit="return pmConfirmBulkDel();">
-      <div id="pm-hidden-ids"></div>
-      <button type="submit" class="btn btn-danger btn-sm">
-        <i class="bi bi-trash3-fill me-1"></i> Delete Selected
-      </button>
-    </form>
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="pmClearAll()">Clear</button>
-  </div>
+  <!-- Bulk delete bar (shown when rows selected) -->
+  <form method="POST" action="{{ url_for('programme_master_bulk_delete') }}" id="pm-bulk-form" onsubmit="return pmConfirmDel();" style="display:none;background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 16px;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div id="pm-hidden-ids"></div>
+    <span id="pm-sel-count" style="font-size:13px;font-weight:700;color:#dc2626;"></span>
+    <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash3-fill me-1"></i> Delete Selected</button>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="pmClear()">Clear</button>
+  </form>
   <div class="card-body p-0">
     <table class="table table-sm table-hover mb-0" style="font-size:13px;">
       <thead style="background:#1a1f35;color:#fff;">
@@ -183,47 +179,41 @@
 {% block scripts %}
 <script>
 // ── Bulk select / delete ──────────────────────────────────────────────────────
-const pmBulkBar  = document.getElementById('pm-bulk-bar');
-const pmSelCount = document.getElementById('pm-sel-count');
-const pmHiddenIds = document.getElementById('pm-hidden-ids');
+function pmRefresh() {
+  const cbs      = [...document.querySelectorAll('.pm-cb-row')];
+  const checked  = cbs.filter(c => c.checked);
+  const form     = document.getElementById('pm-bulk-form');
+  const countEl  = document.getElementById('pm-sel-count');
+  const idsEl    = document.getElementById('pm-hidden-ids');
+  const cbAll    = document.getElementById('pm-cb-all');
 
-function pmUpdateBar() {
-  const checked = [...document.querySelectorAll('.pm-cb-row:checked')];
-  const n = checked.length;
-  if (n > 0) {
-    pmBulkBar.style.display = 'flex';
-    pmSelCount.textContent = n + ' selected';
-    pmHiddenIds.innerHTML = checked.map(c => `<input type="hidden" name="ids[]" value="${c.dataset.id}">`).join('');
-  } else {
-    pmBulkBar.style.display = 'none';
-    pmHiddenIds.innerHTML = '';
+  form.style.display = checked.length > 0 ? 'flex' : 'none';
+  countEl.textContent = checked.length + ' selected';
+  idsEl.innerHTML = checked.map(c => `<input type="hidden" name="ids[]" value="${c.dataset.id}">`).join('');
+
+  if (cbAll) {
+    cbAll.checked       = cbs.length > 0 && checked.length === cbs.length;
+    cbAll.indeterminate = checked.length > 0 && checked.length < cbs.length;
   }
 }
 
-function pmClearAll() {
+function pmClear() {
   document.querySelectorAll('.pm-cb-row').forEach(c => c.checked = false);
-  document.getElementById('pm-cb-all').checked = false;
-  pmUpdateBar();
+  pmRefresh();
 }
 
-function pmConfirmBulkDel() {
+function pmConfirmDel() {
   const n = document.querySelectorAll('.pm-cb-row:checked').length;
-  return confirm(`Permanently delete ${n} programme(s) from master list? This cannot be undone.`);
+  return confirm('Permanently delete ' + n + ' programme(s) from master list? This cannot be undone.');
 }
 
 document.getElementById('pm-cb-all')?.addEventListener('change', function() {
   document.querySelectorAll('.pm-cb-row').forEach(c => c.checked = this.checked);
-  pmUpdateBar();
+  pmRefresh();
 });
 
 document.querySelectorAll('.pm-cb-row').forEach(c =>
-  c.addEventListener('change', () => {
-    const all = document.querySelectorAll('.pm-cb-row');
-    const checked = [...all].filter(x => x.checked);
-    document.getElementById('pm-cb-all').indeterminate = checked.length > 0 && checked.length < all.length;
-    document.getElementById('pm-cb-all').checked = checked.length === all.length;
-    pmUpdateBar();
-  })
+  c.addEventListener('change', pmRefresh)
 );
 
 // ── Table search ──────────────────────────────────────────────────────────────
