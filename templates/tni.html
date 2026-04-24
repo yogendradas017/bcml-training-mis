@@ -2,7 +2,8 @@
 {% block page_title %}TNI Tracking{% endblock %}
 {% block content %}
 
-<!-- Fresh Upload -->
+<!-- Fresh Upload — admin only -->
+{% if session.role == 'admin' %}
 <div class="card mb-3" style="border-left:5px solid #10b981;">
   <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2"
        style="background:linear-gradient(135deg,#065f46,#10b981);color:#fff;">
@@ -20,6 +21,7 @@
     </a>
   </div>
 </div>
+{% endif %}
 
 <!-- TNI Analyzer — row-by-row review path -->
 <div class="card mb-4" style="border-left:5px solid #6366f1;">
