@@ -1108,7 +1108,7 @@ def tni_bulk_upload():
     return redirect(url_for('tni'))
 
 @app.route('/tni/fresh-upload', methods=['GET', 'POST'])
-@spoc_required
+@admin_required
 def tni_fresh_upload():
     plant_id = session['plant_id']
     db = get_db()
