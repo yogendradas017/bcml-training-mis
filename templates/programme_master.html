@@ -106,6 +106,48 @@
 </div>
 {% endif %}
 
+<script>
+/* Bulk-select core — defined inline so it is always available */
+function pmRefresh() {
+  var all     = document.querySelectorAll('.pm-cb-row');
+  var checked = [].filter.call(all, function(c){ return c.checked; });
+  var form    = document.getElementById('pm-bulk-form');
+  var countEl = document.getElementById('pm-sel-count');
+  var idsEl   = document.getElementById('pm-hidden-ids');
+  var cbAll   = document.getElementById('pm-cb-all');
+  if (!form) return;
+  form.style.display = checked.length > 0 ? 'flex' : 'none';
+  if (countEl) countEl.textContent = checked.length + ' selected';
+  if (idsEl)   idsEl.innerHTML = checked.map(function(c){ return '<input type="hidden" name="ids[]" value="' + c.dataset.id + '">'; }).join('');
+  if (cbAll) {
+    cbAll.checked       = all.length > 0 && checked.length === all.length;
+    cbAll.indeterminate = checked.length > 0 && checked.length < all.length;
+  }
+}
+function pmSelectAll(el) {
+  var all      = document.querySelectorAll('.pm-cb-row');
+  var nChecked = [].filter.call(all, function(c){ return c.checked; }).length;
+  var should   = nChecked < all.length;
+  [].forEach.call(all, function(c){ c.checked = should; });
+  el.checked       = should;
+  el.indeterminate = false;
+  pmRefresh();
+}
+function pmClear() {
+  document.querySelectorAll('.pm-cb-row').forEach(function(c){ c.checked = false; });
+  pmRefresh();
+}
+function pmConfirmDel() {
+  var n = document.querySelectorAll('.pm-cb-row:checked').length;
+  return confirm('Permanently delete ' + n + ' programme(s) from master list? This cannot be undone.');
+}
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.pm-cb-row').forEach(function(c){
+    c.addEventListener('change', pmRefresh);
+  });
+});
+</script>
+
 {# ── Add Single Modal ── #}
 <div class="modal fade" id="addModal" tabindex="-1">
   <div class="modal-dialog">
@@ -178,49 +220,6 @@
 {% endblock %}
 {% block scripts %}
 <script>
-// ── Bulk select / delete ──────────────────────────────────────────────────────
-function pmRefresh() {
-  const cbs      = [...document.querySelectorAll('.pm-cb-row')];
-  const checked  = cbs.filter(c => c.checked);
-  const form     = document.getElementById('pm-bulk-form');
-  const countEl  = document.getElementById('pm-sel-count');
-  const idsEl    = document.getElementById('pm-hidden-ids');
-  const cbAll    = document.getElementById('pm-cb-all');
-
-  form.style.display = checked.length > 0 ? 'flex' : 'none';
-  countEl.textContent = checked.length + ' selected';
-  idsEl.innerHTML = checked.map(c => `<input type="hidden" name="ids[]" value="${c.dataset.id}">`).join('');
-
-  if (cbAll) {
-    cbAll.checked       = cbs.length > 0 && checked.length === cbs.length;
-    cbAll.indeterminate = checked.length > 0 && checked.length < cbs.length;
-  }
-}
-
-function pmClear() {
-  document.querySelectorAll('.pm-cb-row').forEach(c => c.checked = false);
-  pmRefresh();
-}
-
-function pmConfirmDel() {
-  const n = document.querySelectorAll('.pm-cb-row:checked').length;
-  return confirm('Permanently delete ' + n + ' programme(s) from master list? This cannot be undone.');
-}
-
-function pmSelectAll(el) {
-  const allCbs = document.querySelectorAll('.pm-cb-row');
-  const total   = allCbs.length;
-  const nChecked = [...allCbs].filter(c => c.checked).length;
-  const shouldCheck = nChecked < total;   // if any unchecked → select all; if all checked → deselect
-  allCbs.forEach(c => c.checked = shouldCheck);
-  el.checked = shouldCheck;
-  el.indeterminate = false;
-  pmRefresh();
-}
-
-document.querySelectorAll('.pm-cb-row').forEach(c =>
-  c.addEventListener('change', pmRefresh)
-);
 
 // ── Table search ──────────────────────────────────────────────────────────────
 const pmSearch = document.getElementById('pm-search');
