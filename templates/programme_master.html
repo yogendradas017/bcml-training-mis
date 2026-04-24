@@ -57,7 +57,7 @@
     <table class="table table-sm table-hover mb-0" style="font-size:13px;">
       <thead style="background:#1a1f35;color:#fff;border-bottom:2px solid #6366f1;">
         <tr>
-          <th style="width:38px;padding:10px 14px;"><input type="checkbox" id="pm-cb-all" style="cursor:pointer;width:16px;height:16px;accent-color:#6366f1;"></th>
+          <th style="width:38px;padding:10px 14px;"><input type="checkbox" id="pm-cb-all" onclick="pmSelectAll(this)" style="cursor:pointer;width:16px;height:16px;accent-color:#6366f1;"></th>
           <th style="padding:10px 14px;width:44px;color:#9ca3af;">#</th>
           <th style="padding:10px 14px;">Programme Name</th>
           <th style="padding:10px 14px;">Type &amp; Mode</th>
@@ -207,13 +207,16 @@ function pmConfirmDel() {
   return confirm('Permanently delete ' + n + ' programme(s) from master list? This cannot be undone.');
 }
 
-document.getElementById('pm-cb-all')?.addEventListener('click', function() {
-  const allCbs = [...document.querySelectorAll('.pm-cb-row')];
-  // If not every row is checked, select all; otherwise deselect all
-  const shouldCheck = !allCbs.every(c => c.checked);
+function pmSelectAll(el) {
+  const allCbs = document.querySelectorAll('.pm-cb-row');
+  const total   = allCbs.length;
+  const nChecked = [...allCbs].filter(c => c.checked).length;
+  const shouldCheck = nChecked < total;   // if any unchecked → select all; if all checked → deselect
   allCbs.forEach(c => c.checked = shouldCheck);
+  el.checked = shouldCheck;
+  el.indeterminate = false;
   pmRefresh();
-});
+}
 
 document.querySelectorAll('.pm-cb-row').forEach(c =>
   c.addEventListener('change', pmRefresh)
