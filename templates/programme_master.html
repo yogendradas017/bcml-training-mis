@@ -207,8 +207,11 @@ function pmConfirmDel() {
   return confirm('Permanently delete ' + n + ' programme(s) from master list? This cannot be undone.');
 }
 
-document.getElementById('pm-cb-all')?.addEventListener('change', function() {
-  document.querySelectorAll('.pm-cb-row').forEach(c => c.checked = this.checked);
+document.getElementById('pm-cb-all')?.addEventListener('click', function() {
+  const allCbs = [...document.querySelectorAll('.pm-cb-row')];
+  // If not every row is checked, select all; otherwise deselect all
+  const shouldCheck = !allCbs.every(c => c.checked);
+  allCbs.forEach(c => c.checked = shouldCheck);
   pmRefresh();
 });
 
