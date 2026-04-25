@@ -51,6 +51,9 @@ STATUSES     = ['To Be Planned', 'Conducted', 'Re-Scheduled', 'Cancelled']
 INT_EXT      = ['Internal', 'External', 'Online']
 MONTHS_FY    = ['April','May','June','July','August','September',
                 'October','November','December','January','February','March']
+MONTH_NUM    = {m: f'{i+1:02d}' for i, m in enumerate(
+                ['January','February','March','April','May','June',
+                 'July','August','September','October','November','December'])}
 CAL_NEW      = ['Calendar Program', 'New Program']
 GENDERS      = ['Male', 'Female', 'Others']
 TYPE_ABBREV  = {
@@ -1485,6 +1488,15 @@ def add_emp_training():
                 start_date = cal['plan_start'] or ''
             if not end_date:
                 end_date = cal['plan_end'] or ''
+        else:
+            flash(f'Session code "{session_code}" not found in calendar — record saved without calendar link.', 'warning')
+
+    # Fallback: get prog_type from Programme Master if still blank
+    if not prog_type and prog_name:
+        mr = db.execute('SELECT prog_type FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
+                        (plant_id, prog_name)).fetchone()
+        if mr and mr['prog_type']:
+            prog_type = mr['prog_type']
 
     month = _date_to_month(start_date)
 
@@ -1612,6 +1624,13 @@ def training_bulk_upload():
         if not prog_name:
             errors.append(f'Row {i+2}: Programme Name required (no session code matched).')
             continue
+
+        # Fallback: get prog_type from Programme Master if still blank
+        if not prog_type and prog_name:
+            mr = db.execute('SELECT prog_type FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
+                            (plant_id, prog_name)).fetchone()
+            if mr and mr['prog_type']:
+                prog_type = mr['prog_type']
 
         if not cal_new:
             prog_name = _canonical_prog(prog_name, plant_id, db)
@@ -2607,26 +2626,35 @@ def _new_session_code(plant_id, prog_code, db):
     return f'{prog_code}/{fy}/B{count+1:02d}'
 
 def _sync_calendar_from_2c(plant_id, db):
+    # Any session with a 2C record is "Conducted" regardless of prior calendar status
     db.execute('''UPDATE calendar SET status='Conducted'
         WHERE plant_id=? AND session_code IN
-        (SELECT session_code FROM programme_details WHERE plant_id=?)
-        AND status='To Be Planned' ''', (plant_id, plant_id))
+        (SELECT session_code FROM programme_details WHERE plant_id=?)''', (plant_id, plant_id))
     db.commit()
 
 def _calc_summary(plant_id, month_filter, db):
     rows = []
+    # 2C month filter: convert month name → zero-padded number for strftime comparison
+    mn = MONTH_NUM.get(month_filter, '') if month_filter else ''
+    month_clause_2c = f"AND strftime('%m', p.start_date) = '{mn}'" if mn else ("AND 1=0" if month_filter else "")
     for pt in PROG_TYPES:
         clause = "AND t.month=?" if month_filter else ""
-        params_bc = [plant_id, pt, 'Blue Collared'] + ([month_filter] if month_filter else [])
-        params_wc = [plant_id, pt, 'White Collared'] + ([month_filter] if month_filter else [])
+        params_bc  = [plant_id, pt, 'Blue Collared'] + ([month_filter] if month_filter else [])
+        params_wc  = [plant_id, pt, 'White Collared'] + ([month_filter] if month_filter else [])
         params_all = [plant_id, pt] + ([month_filter] if month_filter else [])
 
-        bc_progs = db.execute(f'''SELECT COUNT(DISTINCT t.session_code) FROM emp_training t
+        # No. of distinct sessions per collar (use programme_name as fallback when session_code blank)
+        _distinct = "CASE WHEN t.session_code IS NOT NULL AND t.session_code != '' THEN t.session_code ELSE t.programme_name END"
+        bc_progs = db.execute(f'''SELECT COUNT(DISTINCT {_distinct}) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', params_bc).fetchone()[0]
-        wc_progs = db.execute(f'''SELECT COUNT(DISTINCT t.session_code) FROM emp_training t
+        wc_progs = db.execute(f'''SELECT COUNT(DISTINCT {_distinct}) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', params_wc).fetchone()[0]
+        # Total distinct sessions (no collar split — avoids double-counting mixed sessions)
+        all_progs = db.execute(f'''SELECT COUNT(DISTINCT {_distinct}) FROM emp_training t
+            WHERE t.plant_id=? AND t.prog_type=? {clause}''', params_all).fetchone()[0]
+
         bc_seats = db.execute(f'''SELECT COUNT(*) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', params_bc).fetchone()[0]
@@ -2639,19 +2667,19 @@ def _calc_summary(plant_id, month_filter, db):
         wc_hrs = db.execute(f'''SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', params_wc).fetchone()[0]
-        # Internal/External counts from 2C — filter by month derived from start_date
-        month_clause_2c = "AND strftime('%m', p.start_date) = strftime('%m', '2000-' || ? || '-01')" if month_filter else ""
+
+        # Internal/External counts from 2C — month filtered by start_date
         int_prog = db.execute(f'''SELECT COUNT(DISTINCT p.session_code) FROM programme_details p
             WHERE p.plant_id=? AND p.prog_type=? AND p.int_ext='Internal' {month_clause_2c}''',
-            [plant_id, pt] + ([month_filter] if month_filter else [])).fetchone()[0]
+            [plant_id, pt]).fetchone()[0]
         ext_prog = db.execute(f'''SELECT COUNT(DISTINCT p.session_code) FROM programme_details p
             WHERE p.plant_id=? AND p.prog_type=? AND p.int_ext='External' {month_clause_2c}''',
-            [plant_id, pt] + ([month_filter] if month_filter else [])).fetchone()[0]
+            [plant_id, pt]).fetchone()[0]
         rows.append({
             'prog_type': pt,
             'bc_progs': bc_progs, 'wc_progs': wc_progs,
             'int_prog': int_prog, 'ext_prog': ext_prog,
-            'total_prog': bc_progs + wc_progs,
+            'total_prog': all_progs,
             'bc_seats': bc_seats, 'wc_seats': wc_seats,
             'total_seats': bc_seats + wc_seats,
             'bc_hrs': round(bc_hrs, 1), 'wc_hrs': round(wc_hrs, 1),
