@@ -138,12 +138,12 @@
 
 {% if warn_count > 0 %}
 <div class="alert d-flex gap-2 align-items-start py-2 mb-2" style="background:#fff7ed;border:1px solid #fed7aa;font-size:13px;color:#c2410c;">
-  <i class="bi bi-ban mt-1" style="flex-shrink:0;"></i>
+  <i class="bi bi-exclamation-triangle-fill mt-1" style="flex-shrink:0;"></i>
   <div>
-    <strong>{{ warn_count }} row(s) BLOCKED — programme name not found in Programme Master.</strong>
-    These rows will <strong>NOT be imported</strong>. They will be downloaded in the error Excel so you can correct the spelling.
-    Fix the programme names and re-upload — or add the correct names to
-    <a href="{{ url_for('programme_master') }}" target="_blank">Programme Master</a> first.
+    <strong>{{ warn_count }} row(s) have unknown programme names.</strong>
+    For each orange row, either: <strong>(a)</strong> pick the correct existing programme from the dropdown to fix a spelling error,
+    or <strong>(b)</strong> select <em>"✓ Accept as new — add to master"</em> if it is genuinely a new programme.
+    Rows left as "— decide —" will be skipped and downloaded for correction.
   </div>
 </div>
 {% endif %}
@@ -238,12 +238,15 @@
             </div>
             <select name="fix_prog_{{ r.row_num }}" class="form-select form-select-sm fix-prog-ts"
                     form="tni-confirm-form" style="font-size:12px;">
-              <option value="">— fix: pick correct programme —</option>
+              <option value="">— decide —</option>
+              <option value="__new__" style="color:#065f46;font-weight:600;">✓ Accept as new — add to master</option>
+              <optgroup label="Fix spelling — pick existing master programme">
               {% for p in master_progs %}
               <option value="{{ p }}">{{ p }}</option>
               {% endfor %}
+              </optgroup>
             </select>
-            <div style="font-size:10px;color:#9ca3af;margin-top:3px;">Select = row will import with corrected name</div>
+            <div style="font-size:10px;color:#9ca3af;margin-top:3px;">New programme? Pick "Accept as new". Typo? Pick the correct name.</div>
           </td>
           <td>{{ r.prog_type or '—' }}</td>
           <td>{{ r.mode or '—' }}</td>
