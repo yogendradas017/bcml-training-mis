@@ -83,11 +83,7 @@
                    style="cursor:pointer;width:16px;height:16px;accent-color:#6366f1;">
           </td>
           <td style="padding:8px 14px;color:#9ca3af;font-size:11px;">{{ loop.index }}</td>
-          <td style="padding:8px 14px;font-weight:600;color:#111827;"
-              class="pm-name-cell" data-id="{{ p.id }}" data-name="{{ p.name }}"
-              title="Click to edit name">{{ p.name }}
-            <i class="bi bi-pencil" style="font-size:10px;color:#9ca3af;margin-left:6px;opacity:0;"></i>
-          </td>
+          <td style="padding:8px 14px;font-weight:600;color:#111827;">{{ p.name }}</td>
           <td style="padding:8px 14px;">
             <form method="POST" action="{{ url_for('programme_master_add') }}" style="display:flex;gap:6px;align-items:center;">
               <input type="hidden" name="name" value="{{ p.name }}">
@@ -281,58 +277,5 @@ if (nameInput) {
   });
 }
 
-// ── Inline name editing ───────────────────────────────────────────────────────
-document.querySelectorAll('.pm-name-cell').forEach(cell => {
-  cell.style.cursor = 'pointer';
-  const pencil = cell.querySelector('.bi-pencil');
-  cell.addEventListener('mouseenter', () => { if (pencil) pencil.style.opacity = '1'; });
-  cell.addEventListener('mouseleave', () => { if (pencil) pencil.style.opacity = '0'; });
-
-  cell.addEventListener('click', function() {
-    if (cell.querySelector('input')) return;
-    const origName = cell.dataset.name;
-    const progId   = cell.dataset.id;
-
-    cell.innerHTML = '';
-    const inp = document.createElement('input');
-    inp.type = 'text'; inp.value = origName;
-    inp.className = 'form-control form-control-sm';
-    inp.style.cssText = 'font-weight:600;display:inline-block;width:calc(100% - 8px);';
-    cell.appendChild(inp);
-    inp.focus(); inp.select();
-
-    const restore = () => {
-      cell.innerHTML = origName + ' <i class="bi bi-pencil" style="font-size:10px;color:#9ca3af;margin-left:6px;opacity:0;"></i>';
-      cell.dataset.name = origName;
-      cell.closest('tr').dataset.name = origName.toLowerCase();
-    };
-
-    const save = async () => {
-      const newName = inp.value.trim();
-      if (!newName || newName === origName) { restore(); return; }
-      inp.disabled = true;
-      try {
-        const res  = await fetch(`/programme-master/${progId}/rename`, {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({name: newName})
-        });
-        const data = await res.json();
-        if (data.ok) {
-          cell.innerHTML = data.name + ' <i class="bi bi-pencil" style="font-size:10px;color:#9ca3af;margin-left:6px;opacity:0;"></i>';
-          cell.dataset.name = data.name;
-          cell.closest('tr').dataset.name = data.name.toLowerCase();
-          const hidden = cell.closest('tr').querySelector('input[name="name"]');
-          if (hidden) hidden.value = data.name;
-        } else { alert(data.error || 'Could not rename.'); restore(); }
-      } catch(e) { alert('Network error.'); restore(); }
-    };
-
-    inp.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); save(); }
-      if (e.key === 'Escape') restore();
-    });
-    inp.addEventListener('blur', () => setTimeout(save, 120));
-  });
-});
 </script>
 {% endblock %}

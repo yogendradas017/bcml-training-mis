@@ -14,6 +14,7 @@ from openpyxl.utils import get_column_letter
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'bcml-tms-2627-xK9pQ')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB upload limit
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 _default_db = os.path.join(BASE_DIR, 'data', 'training.db')
@@ -181,6 +182,18 @@ def _cleanse_programme_names(db, plant_id=None):
 
     return report
 
+def _cleanup_stale_analyze_files():
+    """Remove tni_analyze_*.json files older than 24 hours from data/ dir."""
+    import glob, time
+    pattern = os.path.join(BASE_DIR, 'data', 'tni_analyze_*.json')
+    cutoff  = time.time() - 86400
+    for path in glob.glob(pattern):
+        try:
+            if os.path.getmtime(path) < cutoff:
+                os.remove(path)
+        except Exception:
+            pass
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     db = sqlite3.connect(DB_PATH)
@@ -207,6 +220,7 @@ def init_db():
     _cleanse_programme_names(db)
     db.commit()
     db.close()
+    _cleanup_stale_analyze_files()
 
 # ─── AUTH ─────────────────────────────────────────────────────────────────────
 
@@ -253,6 +267,11 @@ def admin_required(f):
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated
+
+@app.errorhandler(413)
+def upload_too_large(e):
+    flash('File too large. Maximum upload size is 16 MB.', 'danger')
+    return redirect(request.referrer or url_for('index'))
 
 @app.route('/')
 def index():
@@ -538,15 +557,47 @@ def add_tni():
     plant_id = session['plant_id']
     f = request.form
     db = get_db()
-    source    = f.get('source', 'TNI Driven').strip() or 'TNI Driven'
-    prog_name = _canonical_prog(f['programme_name'].strip(), plant_id, db)
-    db.execute(
+
+    emp_code      = f.get('emp_code', '').strip()
+    prog_name_raw = f.get('programme_name', '').strip()
+    prog_type     = f.get('prog_type', '').strip()
+    mode          = f.get('mode', '').strip()
+    source        = f.get('source', 'TNI Driven').strip() or 'TNI Driven'
+
+    if not emp_code or not prog_name_raw:
+        flash('Employee Code and Programme Name are required.', 'danger')
+        return redirect(url_for('tni'))
+
+    emp = db.execute('SELECT 1 FROM employees WHERE emp_code=? AND plant_id=? AND is_active=1',
+                     (emp_code, plant_id)).fetchone()
+    if not emp:
+        flash(f'Employee code "{emp_code}" not found in active employees for this plant.', 'danger')
+        return redirect(url_for('tni'))
+
+    if prog_type and prog_type not in PROG_TYPES:
+        flash(f'Invalid programme type "{prog_type}". Choose from: {", ".join(PROG_TYPES)}.', 'danger')
+        return redirect(url_for('tni'))
+    if mode and mode not in MODES:
+        flash(f'Invalid mode "{mode}". Choose from: {", ".join(MODES)}.', 'danger')
+        return redirect(url_for('tni'))
+
+    try:
+        planned_hours = float(f.get('planned_hours') or 0)
+        if planned_hours < 0:
+            raise ValueError
+    except ValueError:
+        flash('Planned hours must be a non-negative number (e.g. 4 or 2.5).', 'danger')
+        return redirect(url_for('tni'))
+
+    prog_name = _canonical_prog(prog_name_raw, plant_id, db)
+    cur = db.execute(
         '''INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,source)
            VALUES(?,?,?,?,?,?,?)''',
-        (plant_id, f['emp_code'], prog_name,
-         f.get('prog_type',''), f.get('mode',''),
-         float(f.get('planned_hours') or 0), source)
+        (plant_id, emp_code, prog_name, prog_type, mode, planned_hours, source)
     )
+    if cur.rowcount == 0:
+        flash(f'TNI entry for "{prog_name}" already exists for employee {emp_code}.', 'warning')
+        return redirect(url_for('tni'))
     _sync_master_from_tni(plant_id, db)
     db.commit()
     flash('TNI entry added.', 'success')
@@ -739,7 +790,7 @@ def programme_master():
 @spoc_required
 def programme_master_add():
     plant_id = session['plant_id']
-    name = request.form.get('name', '').strip()
+    name = _smart_title(request.form.get('name', '').strip())
     prog_type = request.form.get('prog_type', '').strip()
     mode = request.form.get('mode', '').strip()
     if not name:
@@ -772,30 +823,30 @@ def programme_master_add():
         flash(f'Error: {e}', 'danger')
     return redirect(url_for('programme_master'))
 
-@app.route('/programme-master/<int:prog_id>/rename', methods=['POST'])
-@spoc_required
-def programme_master_rename(prog_id):
-    plant_id = session['plant_id']
-    new_name = request.json.get('name', '').strip() if request.is_json else request.form.get('name', '').strip()
-    if not new_name:
-        return jsonify(ok=False, error='Name cannot be empty'), 400
-    db = get_db()
-    clash = db.execute('SELECT id FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?) AND id!=?',
-                       (plant_id, new_name, prog_id)).fetchone()
-    if clash:
-        return jsonify(ok=False, error=f'"{new_name}" already exists in master list'), 409
-    db.execute('UPDATE programme_master SET name=? WHERE id=? AND plant_id=?', (new_name, prog_id, plant_id))
-    db.commit()
-    return jsonify(ok=True, name=new_name)
+def _prog_in_use(prog_name, plant_id, db):
+    """Return True if programme name is referenced in TNI, calendar, or training records."""
+    for table in ('tni', 'calendar', 'emp_training'):
+        if db.execute(f'SELECT 1 FROM {table} WHERE plant_id=? AND LOWER(programme_name)=LOWER(?) LIMIT 1',
+                      (plant_id, prog_name)).fetchone():
+            return True
+    return False
 
 @app.route('/programme-master/<int:prog_id>/delete', methods=['POST'])
 @spoc_required
 def programme_master_delete(prog_id):
     plant_id = session['plant_id']
     db = get_db()
+    prog = db.execute('SELECT name FROM programme_master WHERE id=? AND plant_id=?',
+                      (prog_id, plant_id)).fetchone()
+    if not prog:
+        flash('Programme not found.', 'danger')
+        return redirect(url_for('programme_master'))
+    if _prog_in_use(prog['name'], plant_id, db):
+        flash(f'Cannot delete "{prog["name"]}" — it is referenced in TNI, Calendar, or Training Records.', 'danger')
+        return redirect(url_for('programme_master'))
     db.execute('DELETE FROM programme_master WHERE id=? AND plant_id=?', (prog_id, plant_id))
     db.commit()
-    flash('Programme removed from master list.', 'warning')
+    flash(f'"{prog["name"]}" removed from master list.', 'warning')
     return redirect(url_for('programme_master'))
 
 @app.route('/programme-master/bulk-delete', methods=['POST'])
@@ -812,10 +863,23 @@ def programme_master_bulk_delete():
         flash('Invalid selection.', 'danger')
         return redirect(url_for('programme_master'))
     db = get_db()
-    db.executemany('DELETE FROM programme_master WHERE id=? AND plant_id=?',
-                   [(i, plant_id) for i in ids_int])
+    blocked = []
+    deleted = 0
+    for i in ids_int:
+        prog = db.execute('SELECT name FROM programme_master WHERE id=? AND plant_id=?',
+                          (i, plant_id)).fetchone()
+        if not prog:
+            continue
+        if _prog_in_use(prog['name'], plant_id, db):
+            blocked.append(prog['name'])
+        else:
+            db.execute('DELETE FROM programme_master WHERE id=? AND plant_id=?', (i, plant_id))
+            deleted += 1
     db.commit()
-    flash(f'{len(ids_int)} programme(s) deleted from master list.', 'warning')
+    if deleted:
+        flash(f'{deleted} programme(s) deleted.', 'warning')
+    if blocked:
+        flash(f'{len(blocked)} programme(s) could not be deleted (in use in TNI/Calendar/Training): {", ".join(blocked[:5])}', 'danger')
     return redirect(url_for('programme_master'))
 
 @app.route('/programme-master/sync-from-tni', methods=['POST'])
@@ -831,7 +895,7 @@ def programme_master_sync_from_tni():
         flash('No TNI data found — master list unchanged.', 'warning')
         return redirect(url_for('programme_master'))
     # Replace master with TNI-derived names (preserve type/mode for existing entries)
-    existing = {r['name']: r for r in db.execute(
+    existing = {r['name']: dict(r) for r in db.execute(
         'SELECT name, prog_type, mode FROM programme_master WHERE plant_id=?', (plant_id,)).fetchall()}
     db.execute('DELETE FROM programme_master WHERE plant_id=?', (plant_id,))
     for name in tni_progs:
@@ -1017,30 +1081,28 @@ def tni_template():
     for r, v in enumerate(master_progs, 1):
         ws_prog.cell(row=r, column=1, value=v)
 
-    # named ranges for validation
-    wb.defined_names['EmpCodes']   = openpyxl.workbook.defined_name.DefinedName(
-        'EmpCodes',   attr_text=f'_EmpList!$A$1:$A${emp_count}')
-    wb.defined_names['ProgTypes']  = openpyxl.workbook.defined_name.DefinedName(
-        'ProgTypes',  attr_text=f'_ValidValues!$A$1:$A${len(prog_types)}')
-    wb.defined_names['ModeList']   = openpyxl.workbook.defined_name.DefinedName(
-        'ModeList',   attr_text=f'_ValidValues!$B$1:$B${len(modes)}')
-    wb.defined_names['MonthList']  = openpyxl.workbook.defined_name.DefinedName(
-        'MonthList',  attr_text=f'_ValidValues!$C$1:$C${len(months)}')
-    wb.defined_names['ProgList']   = openpyxl.workbook.defined_name.DefinedName(
-        'ProgList',   attr_text=f'_ProgList!$A$1:$A${len(master_progs)}')
+    # ── Named ranges (required for cross-sheet DataValidation in Excel) ──────────
+    from openpyxl.workbook.defined_name import DefinedName
+    if emp_count:
+        wb.defined_names['EmpCodes'] = DefinedName(
+            'EmpCodes', attr_text=f'_EmpList!$A$1:$A${emp_count}')
+    if master_progs:
+        wb.defined_names['ProgList'] = DefinedName(
+            'ProgList', attr_text=f'_ProgList!$A$1:$A${len(master_progs)}')
 
-    # ── Data Validations ─────────────────────────────────────────
+    # ── Data Validations ─────────────────────────────────────────────────────────
     max_rows = 2000
 
-    # Col A — Employee Code dropdown
-    dv_emp = DataValidation(type='list', formula1='EmpCodes', allow_blank=False,
-                            showErrorMessage=True, errorTitle='Invalid Employee',
-                            error='Select a valid Employee Code from the dropdown.',
-                            showDropDown=False)
-    dv_emp.sqref = f'A2:A{max_rows}'
-    ws.add_data_validation(dv_emp)
+    # Col A — Employee Code (named range, large list)
+    if emp_count:
+        dv_emp = DataValidation(type='list', formula1='EmpCodes', allow_blank=False,
+                                showErrorMessage=True, errorTitle='Invalid Employee',
+                                error='Select a valid Employee Code from the dropdown.',
+                                showDropDown=False)
+        dv_emp.sqref = f'A2:A{max_rows}'
+        ws.add_data_validation(dv_emp)
 
-    # Col C — Programme Name dropdown (from master list)
+    # Col C — Programme Name (named range, dynamic list)
     if master_progs:
         dv_prog = DataValidation(type='list', formula1='ProgList', allow_blank=False,
                                  showErrorMessage=True, errorTitle='Programme Not in Master',
@@ -1049,24 +1111,30 @@ def tni_template():
         dv_prog.sqref = f'C2:C{max_rows}'
         ws.add_data_validation(dv_prog)
 
-    # Col D — Type of Programme
-    dv_type = DataValidation(type='list', formula1='ProgTypes', allow_blank=False,
+    # Col D — Type of Programme (inline string — small fixed list, most reliable)
+    dv_type = DataValidation(type='list',
+                             formula1=f'"{",".join(prog_types)}"',
+                             allow_blank=False,
                              showErrorMessage=True, errorTitle='Invalid Type',
                              error='Select from: ' + ', '.join(prog_types),
                              showDropDown=False)
     dv_type.sqref = f'D2:D{max_rows}'
     ws.add_data_validation(dv_type)
 
-    # Col E — Mode
-    dv_mode = DataValidation(type='list', formula1='ModeList', allow_blank=True,
+    # Col E — Mode (inline string)
+    dv_mode = DataValidation(type='list',
+                             formula1=f'"{",".join(modes)}"',
+                             allow_blank=True,
                              showErrorMessage=True, errorTitle='Invalid Mode',
                              error='Select from: ' + ', '.join(modes),
                              showDropDown=False)
     dv_mode.sqref = f'E2:E{max_rows}'
     ws.add_data_validation(dv_mode)
 
-    # Col F — Month
-    dv_month = DataValidation(type='list', formula1='MonthList', allow_blank=True,
+    # Col F — Month (inline string)
+    dv_month = DataValidation(type='list',
+                              formula1=f'"{",".join(months)}"',
+                              allow_blank=True,
                               showErrorMessage=True, errorTitle='Invalid Month',
                               error='Select a valid month from the dropdown.',
                               showDropDown=False)
@@ -1149,7 +1217,7 @@ def tni_bulk_upload():
     return redirect(url_for('tni'))
 
 @app.route('/tni/fresh-upload', methods=['GET', 'POST'])
-@admin_required
+@spoc_required
 def tni_fresh_upload():
     plant_id = session['plant_id']
     db = get_db()
@@ -2736,7 +2804,7 @@ def _canonical_prog(raw_name, plant_id, db):
     raw_lower  = corrected.lower()
     if raw_lower in master_lower:
         return master[master_lower.index(raw_lower)]
-    m = gcm(raw_lower, master_lower, n=1, cutoff=0.65)
+    m = gcm(raw_lower, master_lower, n=1, cutoff=0.82)
     if m:
         return master[master_lower.index(m[0])]
     return _smart_title(corrected)
@@ -2838,7 +2906,8 @@ def _smart_title(s):
             return core_low
         return prefix + core.capitalize() + suffix
 
-    return ' '.join(_tw(w, i == 0) for i, w in enumerate(s.split()))
+    result = ' '.join(_tw(w, i == 0) for i, w in enumerate(s.split()))
+    return result.strip('.,;: ')
 
 def _apply_word_fixes(s):
     """
