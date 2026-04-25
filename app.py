@@ -77,14 +77,20 @@ def close_db(e=None):
         db.close()
 
 def _migrate_tni_unique(db):
-    """Add UNIQUE(plant_id, emp_code, programme_name) to tni if not present."""
-    has_unique = db.execute(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='tni' "
-        "AND sql LIKE '%emp_code%' AND sql LIKE '%programme_name%'"
-    ).fetchone()[0]
+    """Ensure tni has a UNIQUE(plant_id, emp_code, programme_name) constraint.
+    The old check used to match any index (including plain idx_tni_dedup) and exit early,
+    so this uses PRAGMA index_list to find an actual UNIQUE index on those columns.
+    """
+    has_unique = False
+    for row in db.execute("PRAGMA index_list(tni)").fetchall():
+        if row[2] == 1:  # unique flag
+            cols = [r[2] for r in db.execute(f"PRAGMA index_info('{row[1]}')").fetchall()]
+            if 'emp_code' in cols and 'programme_name' in cols:
+                has_unique = True
+                break
     if has_unique:
         return
-    # Recreate tni with unique constraint, keeping one row per unique key (latest id)
+    # Recreate tni with UNIQUE constraint; preserve source column if it already exists
     db.executescript('''
         CREATE TABLE tni_new (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,16 +100,19 @@ def _migrate_tni_unique(db):
             prog_type TEXT, mode TEXT, target_month TEXT,
             planned_hours REAL DEFAULT 0,
             created_at TEXT DEFAULT (date('now')),
+            source TEXT DEFAULT 'TNI Driven',
             UNIQUE(plant_id, emp_code, programme_name)
         );
         INSERT OR IGNORE INTO tni_new
-            (plant_id, emp_code, programme_name, prog_type, mode, target_month, planned_hours, created_at)
-        SELECT plant_id, emp_code, programme_name, prog_type, mode, target_month, planned_hours, created_at
+            (plant_id, emp_code, programme_name, prog_type, mode, target_month,
+             planned_hours, created_at, source)
+        SELECT plant_id, emp_code, programme_name, prog_type, mode, target_month,
+               planned_hours, created_at, COALESCE(source, 'TNI Driven')
         FROM tni ORDER BY id;
         DROP TABLE tni;
         ALTER TABLE tni_new RENAME TO tni;
         CREATE INDEX IF NOT EXISTS idx_tni_plant ON tni(plant_id);
-        CREATE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name);
     ''')
 
 def _cleanse_master_spelling(db):
@@ -3419,13 +3428,28 @@ def tni_analyze():
     upload_progs_lower = set(
         r['programme_name'].lower() for r in rows if r['status'] in ('ok', 'fixed')
     )
+    # How many of the importable rows already exist in TNI (updates vs new inserts)
+    import_count = ok_count + fixed_count
+    existing_keys = set(
+        (r['emp_code'].strip().upper(), r['programme_name'].strip().lower())
+        for r in db_r.execute('SELECT emp_code, programme_name FROM tni WHERE plant_id=?', (plant_id_r,))
+    )
+    new_count = sum(
+        1 for r in rows if r['status'] in ('ok', 'fixed')
+        and (r['emp_code'].strip().upper(), r['programme_name'].strip().lower()) not in existing_keys
+    )
+    update_count = import_count - new_count
+    current_tni  = db_r.execute('SELECT COUNT(DISTINCT emp_code || "|" || programme_name) FROM tni WHERE plant_id=?',
+                                (plant_id_r,)).fetchone()[0]
     return render_template('tni_analyze.html', step='review',
                            rows=rows, aid=aid,
                            ok_count=ok_count, fixed_count=fixed_count,
                            warn_count=warn_count, err_count=err_count,
                            master_progs=master_progs,
                            upload_progs_lower=upload_progs_lower,
-                           prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY)
+                           prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY,
+                           new_count=new_count, update_count=update_count,
+                           current_tni=current_tni)
 
 
 @app.route('/tni/analyze/confirm', methods=['POST'])

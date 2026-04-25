@@ -127,6 +127,11 @@
         </div>
         <div style="font-size:12px;margin-top:4px;opacity:.8;">{{ pct }}% importable</div>
       </div>
+      <div style="text-align:center;min-width:110px;">
+        <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:1px;">New Records</div>
+        <div style="font-size:26px;font-weight:800;color:#a78bfa;">{{ new_count or 0 }}</div>
+        <div style="font-size:10px;opacity:.6;">{{ update_count or 0 }} updates</div>
+      </div>
       <div class="d-flex gap-2 align-items-center flex-wrap">
         <a href="{{ url_for('tni_analyze') }}" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:none;">
           <i class="bi bi-arrow-repeat"></i> Re-upload
