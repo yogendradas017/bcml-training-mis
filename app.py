@@ -433,10 +433,18 @@ def tni():
             'SELECT DISTINCT programme_name FROM tni WHERE plant_id=?', (plant_id,)).fetchall()]
         dirty_names = [n for n in tni_names if n.lower() not in master_lower]
 
+    # Count duplicate TNI rows (same emp_code + programme_name)
+    dup_count = db.execute('''
+        SELECT COALESCE(SUM(cnt - 1), 0)
+        FROM (SELECT COUNT(*) as cnt FROM tni WHERE plant_id=?
+              GROUP BY emp_code, programme_name HAVING cnt > 1)
+    ''', (plant_id,)).fetchone()[0]
+
     return render_template('tni.html', total=total,
                            employees=emps, programmes=programmes,
                            prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY,
-                           departments=depts, dirty_names=dirty_names)
+                           departments=depts, dirty_names=dirty_names,
+                           dup_count=dup_count)
 
 def _tni_filters(plant_id):
     """Build WHERE clause + params from current request args for TNI queries."""
