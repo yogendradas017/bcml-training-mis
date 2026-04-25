@@ -77,20 +77,14 @@ def close_db(e=None):
         db.close()
 
 def _migrate_tni_unique(db):
-    """Ensure tni has a UNIQUE(plant_id, emp_code, programme_name) constraint.
-    The old check used to match any index (including plain idx_tni_dedup) and exit early,
-    so this uses PRAGMA index_list to find an actual UNIQUE index on those columns.
-    """
-    has_unique = False
-    for row in db.execute("PRAGMA index_list(tni)").fetchall():
-        if row[2] == 1:  # unique flag
-            cols = [r[2] for r in db.execute(f"PRAGMA index_info('{row[1]}')").fetchall()]
-            if 'emp_code' in cols and 'programme_name' in cols:
-                has_unique = True
-                break
+    """Add UNIQUE(plant_id, emp_code, programme_name) to tni if not present."""
+    has_unique = db.execute(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='tni' "
+        "AND sql LIKE '%emp_code%' AND sql LIKE '%programme_name%'"
+    ).fetchone()[0]
     if has_unique:
         return
-    # Recreate tni with UNIQUE constraint; preserve source column if it already exists
+    # Recreate tni with unique constraint, keeping one row per unique key (latest id)
     db.executescript('''
         CREATE TABLE tni_new (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,19 +94,16 @@ def _migrate_tni_unique(db):
             prog_type TEXT, mode TEXT, target_month TEXT,
             planned_hours REAL DEFAULT 0,
             created_at TEXT DEFAULT (date('now')),
-            source TEXT DEFAULT 'TNI Driven',
             UNIQUE(plant_id, emp_code, programme_name)
         );
         INSERT OR IGNORE INTO tni_new
-            (plant_id, emp_code, programme_name, prog_type, mode, target_month,
-             planned_hours, created_at, source)
-        SELECT plant_id, emp_code, programme_name, prog_type, mode, target_month,
-               planned_hours, created_at, COALESCE(source, 'TNI Driven')
+            (plant_id, emp_code, programme_name, prog_type, mode, target_month, planned_hours, created_at)
+        SELECT plant_id, emp_code, programme_name, prog_type, mode, target_month, planned_hours, created_at
         FROM tni ORDER BY id;
         DROP TABLE tni;
         ALTER TABLE tni_new RENAME TO tni;
         CREATE INDEX IF NOT EXISTS idx_tni_plant ON tni(plant_id);
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name);
+        CREATE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name);
     ''')
 
 def _cleanse_master_spelling(db):
@@ -558,13 +549,24 @@ def tni_data():
     return jsonify({'total': total, 'page': page, 'per_page': per_page, 'rows': rows})
 
 def _sync_master_from_tni(plant_id, db):
-    """Add every unique programme name from TNI into programme_master (additive, preserves type/mode)."""
-    rows = db.execute(
-        'SELECT DISTINCT programme_name FROM tni WHERE plant_id=? AND programme_name IS NOT NULL AND programme_name != ""',
-        (plant_id,)).fetchall()
+    """Sync programme names + types from TNI into programme_master. Additive; sets prog_type from most-common TNI value."""
+    rows = db.execute('''
+        SELECT programme_name,
+               (SELECT prog_type FROM tni t2
+                WHERE t2.plant_id=t.plant_id AND t2.programme_name=t.programme_name
+                  AND t2.prog_type IS NOT NULL AND t2.prog_type != ""
+                GROUP BY prog_type ORDER BY COUNT(*) DESC LIMIT 1) AS top_type
+        FROM tni t
+        WHERE plant_id=? AND programme_name IS NOT NULL AND programme_name != ""
+        GROUP BY programme_name
+    ''', (plant_id,)).fetchall()
     for r in rows:
-        db.execute('INSERT OR IGNORE INTO programme_master(plant_id, name) VALUES(?,?)',
-                   (plant_id, r[0]))
+        db.execute('INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type) VALUES(?,?,?)',
+                   (plant_id, r['programme_name'], r['top_type']))
+        if r['top_type']:
+            db.execute('''UPDATE programme_master SET prog_type=?
+                          WHERE plant_id=? AND LOWER(name)=LOWER(?) AND (prog_type IS NULL OR prog_type="")''',
+                       (r['top_type'], plant_id, r['programme_name']))
 
 @app.route('/tni/add', methods=['POST'])
 @spoc_required
@@ -797,18 +799,10 @@ def programme_master():
         prog_type TEXT, mode TEXT,
         created_at TEXT DEFAULT (date('now')),
         UNIQUE(plant_id, name))''')
-    # Auto-sync from TNI if master is empty but TNI has data
-    tni_count = db.execute('SELECT COUNT(DISTINCT programme_name) FROM tni WHERE plant_id=?',
-                           (plant_id,)).fetchone()[0]
-    master_count = db.execute('SELECT COUNT(*) FROM programme_master WHERE plant_id=?',
-                              (plant_id,)).fetchone()[0]
-    if master_count == 0 and tni_count > 0:
-        _sync_master_from_tni(plant_id, db)
-        flash(f'Programme Master built automatically from TNI — {tni_count} programmes added.', 'success')
     progs = db.execute(
         'SELECT * FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
     return render_template('programme_master.html', progs=progs,
-                           prog_types=PROG_TYPES, modes=MODES, tni_count=tni_count)
+                           prog_types=PROG_TYPES, modes=MODES)
 
 @app.route('/programme-master/add', methods=['POST'])
 @spoc_required
@@ -816,7 +810,6 @@ def programme_master_add():
     plant_id = session['plant_id']
     name = _smart_title(request.form.get('name', '').strip())
     prog_type = request.form.get('prog_type', '').strip()
-    mode = request.form.get('mode', '').strip()
     if not name:
         flash('Programme name is required.', 'danger')
         return redirect(url_for('programme_master'))
@@ -833,13 +826,13 @@ def programme_master_add():
         existing = db.execute('SELECT id FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
                               (plant_id, name)).fetchone()
         if existing:
-            db.execute('UPDATE programme_master SET prog_type=?, mode=? WHERE id=?',
-                       (prog_type or None, mode or None, existing['id']))
+            db.execute('UPDATE programme_master SET prog_type=? WHERE id=?',
+                       (prog_type or None, existing['id']))
             db.commit()
             flash(f'"{name}" updated.', 'success')
         else:
-            db.execute('INSERT INTO programme_master(plant_id,name,prog_type,mode) VALUES(?,?,?,?)',
-                       (plant_id, name, prog_type or None, mode or None))
+            db.execute('INSERT INTO programme_master(plant_id,name,prog_type) VALUES(?,?,?)',
+                       (plant_id, name, prog_type or None))
             db.commit()
             flash(f'"{name}" added to master list.', 'success')
     except Exception as e:
@@ -918,14 +911,23 @@ def programme_master_sync_from_tni():
     if not tni_progs:
         flash('No TNI data found — master list unchanged.', 'warning')
         return redirect(url_for('programme_master'))
-    # Replace master with TNI-derived names (preserve type/mode for existing entries)
-    existing = {r['name']: dict(r) for r in db.execute(
-        'SELECT name, prog_type, mode FROM programme_master WHERE plant_id=?', (plant_id,)).fetchall()}
+    # Replace master with TNI-derived names; prog_type from TNI (most common), fallback to existing
+    existing = {r['name']: r['prog_type'] for r in db.execute(
+        'SELECT name, prog_type FROM programme_master WHERE plant_id=?', (plant_id,)).fetchall()}
+    tni_types = {r['programme_name']: r['top_type'] for r in db.execute('''
+        SELECT programme_name,
+               (SELECT prog_type FROM tni t2
+                WHERE t2.plant_id=t.plant_id AND t2.programme_name=t.programme_name
+                  AND t2.prog_type IS NOT NULL AND t2.prog_type != ""
+                GROUP BY prog_type ORDER BY COUNT(*) DESC LIMIT 1) AS top_type
+        FROM tni t WHERE plant_id=? AND programme_name IS NOT NULL AND programme_name != ""
+        GROUP BY programme_name
+    ''', (plant_id,)).fetchall()}
     db.execute('DELETE FROM programme_master WHERE plant_id=?', (plant_id,))
     for name in tni_progs:
-        prev = existing.get(name, {})
-        db.execute('INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, mode) VALUES(?,?,?,?)',
-                   (plant_id, name, prev.get('prog_type'), prev.get('mode')))
+        prog_type = tni_types.get(name) or existing.get(name)
+        db.execute('INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type) VALUES(?,?,?)',
+                   (plant_id, name, prog_type))
     db.commit()
     flash(f'Programme Master rebuilt from TNI data — {len(tni_progs)} unique programme(s).', 'success')
     return redirect(url_for('programme_master'))
@@ -966,10 +968,9 @@ def programme_master_bulk():
         if not name or name.lower() in ('nan', 'none', ''):
             continue
         prog_type = str(row.get(type_col, '')).strip() if type_col else ''
-        mode      = str(row.get(mode_col, '')).strip() if mode_col else ''
         try:
-            db.execute('INSERT INTO programme_master(plant_id,name,prog_type,mode) VALUES(?,?,?,?)',
-                       (plant_id, name, prog_type or None, mode or None))
+            db.execute('INSERT INTO programme_master(plant_id,name,prog_type) VALUES(?,?,?)',
+                       (plant_id, name, prog_type or None))
             inserted += 1
         except Exception:
             skipped += 1
@@ -984,8 +985,8 @@ def programme_master_template():
     ws = wb.active
     ws.title = 'Programme Master'
     hdr_fill = PatternFill('solid', fgColor='1A1F35')
-    headers = ['Programme Name', 'Type of Programme', 'Mode']
-    widths  = [45, 25, 15]
+    headers = ['Programme Name', 'Type of Programme']
+    widths  = [45, 30]
     for ci, (h, w) in enumerate(zip(headers, widths), 1):
         c = ws.cell(row=1, column=ci, value=h)
         c.fill = hdr_fill
@@ -994,16 +995,15 @@ def programme_master_template():
         ws.column_dimensions[get_column_letter(ci)].width = w
     ws.row_dimensions[1].height = 22
     # Sample rows
-    samples = [('Fire Safety', 'EHS/HR', 'Classroom'),
-               ('5-S Management', 'EHS/HR', 'OJT'),
-               ('Advanced Excel', 'IT', 'Classroom')]
+    samples = [('Fire Safety', 'EHS/HR'),
+               ('5-S Management', 'EHS/HR'),
+               ('Advanced Excel', 'IT')]
     for row in samples:
         ws.append(row)
     from openpyxl.worksheet.datavalidation import DataValidation
     dv_type = DataValidation(type='list', formula1=f'"{",".join(PROG_TYPES)}"', allow_blank=True)
-    dv_mode = DataValidation(type='list', formula1=f'"{",".join(MODES)}"', allow_blank=True)
-    dv_type.sqref = 'B2:B500'; dv_mode.sqref = 'C2:C500'
-    ws.add_data_validation(dv_type); ws.add_data_validation(dv_mode)
+    dv_type.sqref = 'B2:B500'
+    ws.add_data_validation(dv_type)
     ws.freeze_panes = 'A2'
     buf = _io.BytesIO(); wb.save(buf); buf.seek(0)
     return send_file(buf, as_attachment=True, download_name='Programme_Master_Template.xlsx',
@@ -1015,13 +1015,13 @@ def programme_master_export():
     plant_id = session['plant_id']
     plant_name = session.get('plant_name', 'Plant')
     db = get_db()
-    progs = db.execute('SELECT name, prog_type, mode, created_at FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
+    progs = db.execute('SELECT name, prog_type, created_at FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'Programme Master'
     hdr_fill = PatternFill('solid', fgColor='1A1F35')
-    headers = ['#', 'Programme Name', 'Type of Programme', 'Mode', 'Added On']
-    widths  = [5, 45, 25, 15, 14]
+    headers = ['#', 'Programme Name', 'Type of Programme', 'Added On']
+    widths  = [5, 45, 30, 14]
     for ci, (h, w) in enumerate(zip(headers, widths), 1):
         c = ws.cell(row=1, column=ci, value=h)
         c.fill = hdr_fill
@@ -1031,7 +1031,7 @@ def programme_master_export():
     ws.row_dimensions[1].height = 22
     ws.freeze_panes = 'A2'
     for i, r in enumerate(progs, 1):
-        ws.append([i, r['name'], r['prog_type'] or '', r['mode'] or '', r['created_at'] or ''])
+        ws.append([i, r['name'], r['prog_type'] or '', r['created_at'] or ''])
     buf = _io.BytesIO(); wb.save(buf); buf.seek(0)
     return send_file(buf, as_attachment=True,
                      download_name=f'Programme_Master_{plant_name}.xlsx',
@@ -3428,28 +3428,13 @@ def tni_analyze():
     upload_progs_lower = set(
         r['programme_name'].lower() for r in rows if r['status'] in ('ok', 'fixed')
     )
-    # How many of the importable rows already exist in TNI (updates vs new inserts)
-    import_count = ok_count + fixed_count
-    existing_keys = set(
-        (r['emp_code'].strip().upper(), r['programme_name'].strip().lower())
-        for r in db_r.execute('SELECT emp_code, programme_name FROM tni WHERE plant_id=?', (plant_id_r,))
-    )
-    new_count = sum(
-        1 for r in rows if r['status'] in ('ok', 'fixed')
-        and (r['emp_code'].strip().upper(), r['programme_name'].strip().lower()) not in existing_keys
-    )
-    update_count = import_count - new_count
-    current_tni  = db_r.execute('SELECT COUNT(DISTINCT emp_code || "|" || programme_name) FROM tni WHERE plant_id=?',
-                                (plant_id_r,)).fetchone()[0]
     return render_template('tni_analyze.html', step='review',
                            rows=rows, aid=aid,
                            ok_count=ok_count, fixed_count=fixed_count,
                            warn_count=warn_count, err_count=err_count,
                            master_progs=master_progs,
                            upload_progs_lower=upload_progs_lower,
-                           prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY,
-                           new_count=new_count, update_count=update_count,
-                           current_tni=current_tni)
+                           prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY)
 
 
 @app.route('/tni/analyze/confirm', methods=['POST'])
