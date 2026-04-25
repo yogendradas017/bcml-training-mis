@@ -728,11 +728,6 @@ def programme_master():
         prog_type TEXT, mode TEXT,
         created_at TEXT DEFAULT (date('now')),
         UNIQUE(plant_id, name))''')
-    # Seed Balrampur if empty
-    if plant_id == 1 and db.execute('SELECT COUNT(*) FROM programme_master WHERE plant_id=1').fetchone()[0] == 0:
-        for pname in MASTER_PROGRAMMES:
-            db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(1,?)', (pname,))
-        db.commit()
     progs = db.execute(
         'SELECT * FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
     return render_template('programme_master.html', progs=progs,
