@@ -527,6 +527,15 @@ def tni_data():
 
     return jsonify({'total': total, 'page': page, 'per_page': per_page, 'rows': rows})
 
+def _sync_master_from_tni(plant_id, db):
+    """Add every unique programme name from TNI into programme_master (additive, preserves type/mode)."""
+    rows = db.execute(
+        'SELECT DISTINCT programme_name FROM tni WHERE plant_id=? AND programme_name IS NOT NULL AND programme_name != ""',
+        (plant_id,)).fetchall()
+    for r in rows:
+        db.execute('INSERT OR IGNORE INTO programme_master(plant_id, name) VALUES(?,?)',
+                   (plant_id, r[0]))
+
 @app.route('/tni/add', methods=['POST'])
 @spoc_required
 def add_tni():
@@ -542,10 +551,7 @@ def add_tni():
          f.get('prog_type',''), f.get('mode',''),
          float(f.get('planned_hours') or 0), source)
     )
-    # Non-TNI sources: ensure programme exists in master list
-    if source != 'TNI Driven':
-        db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(?,?)',
-                   (plant_id, prog_name))
+    _sync_master_from_tni(plant_id, db)
     db.commit()
     flash('TNI entry added.', 'success')
     return redirect(url_for('tni'))
@@ -1137,6 +1143,7 @@ def tni_bulk_upload():
         db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
                    (plant_id, emp_code, prog_name, prog_type, mode, hours))
         inserted += 1
+    _sync_master_from_tni(plant_id, db)
     db.commit()
     if errors:
         if inserted:
@@ -1179,8 +1186,7 @@ def tni_fresh_upload():
                 'INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
                 (plant_id, r['emp_code'], r['programme_name'], r['prog_type'], r['mode'], r['hours'])
             )
-        for prog in result['unique_progs']:
-            db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(?,?)', (plant_id, prog))
+        _sync_master_from_tni(plant_id, db)
         db.commit()
 
         try:
@@ -3395,6 +3401,7 @@ def tni_analyze_confirm():
                         row['prog_type'], row['mode'], row['planned_hours']))
             inserted += 1
 
+    _sync_master_from_tni(plant_id, db)
     db.commit()
     try: os.remove(path)
     except: pass
