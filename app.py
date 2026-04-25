@@ -201,10 +201,6 @@ def init_db():
     for u in users:
         db.execute('INSERT OR IGNORE INTO users(username,password,role,plant_id) VALUES(?,?,?,?)',
                    (u[0], generate_password_hash(u[1]), u[2], u[3]))
-    # Seed Balrampur master programmes (plant_id=1) from hardcoded list if empty
-    if db.execute('SELECT COUNT(*) FROM programme_master WHERE plant_id=1').fetchone()[0] == 0:
-        for name in MASTER_PROGRAMMES:
-            db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(1,?)', (name,))
     db.commit()
     # Fix spelling in master list first, then cleanse TNI/calendar against it
     _cleanse_master_spelling(db)
@@ -3379,7 +3375,7 @@ def tni_analyze_confirm():
             fix = corrections.get(row['row_num'])
             if not fix:
                 continue   # still blocked
-            prog_name = fix
+            prog_name = row['programme_name'] if fix == '__new__' else fix
         else:
             prog_name = row['programme_name']
 
