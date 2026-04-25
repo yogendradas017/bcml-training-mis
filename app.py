@@ -122,11 +122,14 @@ def _cleanse_master_spelling(db):
     db.commit()
 
 def _migrate_tni_source(db):
-    """Add source column to tni table if not present (migration for existing DBs)."""
+    """Add source column to tni if missing; collapse legacy source values to 2 options."""
     cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
     if 'source' not in cols:
         db.execute("ALTER TABLE tni ADD COLUMN source TEXT DEFAULT 'TNI Driven'")
-        db.commit()
+    # Collapse Corp Driven / Unit Driven / Compliance Driven → New Requirement
+    db.execute("""UPDATE tni SET source='New Requirement'
+        WHERE source IN ('Corp Driven','Unit Driven','Compliance Driven')""")
+    db.commit()
 
 def _cleanse_programme_names(db, plant_id=None):
     """Fix programme name casing/typos in tni, emp_training, calendar against master lists.
@@ -565,7 +568,8 @@ def add_tni():
     prog_name_raw = f.get('programme_name', '').strip()
     prog_type     = f.get('prog_type', '').strip()
     mode          = f.get('mode', '').strip()
-    source        = f.get('source', 'TNI Driven').strip() or 'TNI Driven'
+    raw_source = f.get('source', 'TNI Driven').strip()
+    source     = raw_source if raw_source in ('TNI Driven', 'New Requirement') else 'TNI Driven'
 
     if not emp_code or not prog_name_raw:
         flash('Employee Code and Programme Name are required.', 'danger')
@@ -606,7 +610,7 @@ def add_tni():
     flash('TNI entry added.', 'success')
     return redirect(url_for('tni'))
 
-_NON_TNI_SOURCES = ('Corp Driven', 'Unit Driven', 'Compliance Driven')
+_NON_TNI_SOURCES = ('New Requirement',)
 
 @app.route('/tni/<int:tni_id>/set-source', methods=['POST'])
 @spoc_required
@@ -2311,14 +2315,8 @@ def api_tni_coverage():
     collar_map = {'Blue Collared': 'Blue Collared', 'White Collared': 'White Collared'}
     audience  = collar_map.get((meta['collar'] or '') if meta else '', 'Common') if meta else ''
 
-    # Derive source from prog_type
-    pt_lower = prog_type.lower() if prog_type else ''
-    if 'statutory' in pt_lower or 'compliance' in pt_lower or 'legal' in pt_lower:
-        source = 'Compliance Driven'
-    elif demand > 0:
-        source = 'TNI Driven'
-    else:
-        source = ''
+    # All analyzer-derived rows come from TNI data
+    source = 'TNI Driven' if demand > 0 else ''
 
     avg_hrs = round(hrs_row['avg_hrs'], 1) if hrs_row and hrs_row['avg_hrs'] else 0
 
