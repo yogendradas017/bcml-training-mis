@@ -42,9 +42,22 @@
   <div class="card-body text-center py-5">
     <i class="bi bi-database-add" style="font-size:42px;display:block;margin-bottom:12px;color:#6366f1;"></i>
     <div style="font-size:16px;font-weight:700;color:#1e1b4b;margin-bottom:6px;">Master list is empty</div>
+    {% if tni_count and tni_count > 0 %}
     <div style="font-size:13px;color:#6b7280;max-width:480px;margin:0 auto 20px;">
-      Your Programme Master list will be built automatically when you upload TNI data for
-      <strong>{{ session.plant_name }}</strong>. Every unique, clean programme name in your TNI becomes your master.
+      TNI data has <strong>{{ tni_count }}</strong> programme{{ 's' if tni_count != 1 }} for
+      <strong>{{ session.plant_name }}</strong>. Click below to build the master list from it.
+    </div>
+    <div class="d-flex gap-2 justify-content-center flex-wrap">
+      <form method="POST" action="{{ url_for('programme_master_sync_from_tni') }}">
+        <button type="submit" class="btn btn-primary btn-sm fw-semibold">
+          <i class="bi bi-arrow-repeat me-1"></i> Build Master from TNI ({{ tni_count }} programmes)
+        </button>
+      </form>
+    </div>
+    {% else %}
+    <div style="font-size:13px;color:#6b7280;max-width:480px;margin:0 auto 20px;">
+      Upload your TNI data for <strong>{{ session.plant_name }}</strong> first.
+      Every unique, clean programme name in your TNI becomes your master.
     </div>
     <div class="d-flex gap-2 justify-content-center flex-wrap">
       <a href="{{ url_for('tni_analyze') }}" class="btn btn-primary btn-sm fw-semibold">
@@ -54,6 +67,7 @@
         <i class="bi bi-upload me-1"></i> Fresh TNI Upload
       </a>
     </div>
+    {% endif %}
   </div>
 </div>
 {% else %}

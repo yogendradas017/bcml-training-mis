@@ -788,10 +788,18 @@ def programme_master():
         prog_type TEXT, mode TEXT,
         created_at TEXT DEFAULT (date('now')),
         UNIQUE(plant_id, name))''')
+    # Auto-sync from TNI if master is empty but TNI has data
+    tni_count = db.execute('SELECT COUNT(DISTINCT programme_name) FROM tni WHERE plant_id=?',
+                           (plant_id,)).fetchone()[0]
+    master_count = db.execute('SELECT COUNT(*) FROM programme_master WHERE plant_id=?',
+                              (plant_id,)).fetchone()[0]
+    if master_count == 0 and tni_count > 0:
+        _sync_master_from_tni(plant_id, db)
+        flash(f'Programme Master built automatically from TNI — {tni_count} programmes added.', 'success')
     progs = db.execute(
         'SELECT * FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
     return render_template('programme_master.html', progs=progs,
-                           prog_types=PROG_TYPES, modes=MODES)
+                           prog_types=PROG_TYPES, modes=MODES, tni_count=tni_count)
 
 @app.route('/programme-master/add', methods=['POST'])
 @spoc_required

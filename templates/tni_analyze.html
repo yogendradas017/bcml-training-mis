@@ -136,6 +136,15 @@
   </div>
 </div>
 
+{% if not master_progs %}
+<div class="alert d-flex gap-2 align-items-center py-2 mb-2" style="background:#eff6ff;border:1px solid #bfdbfe;font-size:13px;color:#1d4ed8;">
+  <i class="bi bi-info-circle-fill" style="flex-shrink:0;"></i>
+  <div>
+    <strong>Programme Master is empty</strong> — programme names in this upload will not be validated against a master list.
+    After confirming, all unique programme names will be added to your master automatically.
+  </div>
+</div>
+{% endif %}
 {% if warn_count > 0 %}
 <div class="alert d-flex gap-2 align-items-start py-2 mb-2" style="background:#fff7ed;border:1px solid #fed7aa;font-size:13px;color:#c2410c;">
   <i class="bi bi-exclamation-triangle-fill mt-1" style="flex-shrink:0;"></i>
