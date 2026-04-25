@@ -666,22 +666,33 @@
     .pager-btn[disabled] { opacity: .35; cursor: default; pointer-events: none; }
 
     /* ══════════════════════════════════════════════════════════════
-       RESPONSIVE — Mobile
+       RESPONSIVE — Tablet + Mobile (sidebar collapses ≤ 992px)
     ══════════════════════════════════════════════════════════════ */
-    @media (max-width: 768px) {
+    @media (max-width: 992px) {
       :root { --sb-w: 260px; }
       .sidebar { transform: translateX(-100%); }
       .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
       .main-wrap { margin-left: 0; width: 100vw; }
       .topbar { padding: 0 16px; }
-      .page-body { padding: 16px; }
+      .page-body { padding: 20px 16px; }
       #menu-btn { display: flex; }
-      .t-plant .plant-text,
-      .t-user .user-text { display: none; }
+      .t-plant .plant-text { display: none; }
       .topbar-title { font-size: 14px; }
       .sc-val { font-size: 26px; }
       .table-responsive { font-size: 12px; }
       .table td, .table thead th { padding: 9px 12px; }
+    }
+    /* ══════════════════════════════════════════════════════════════
+       RESPONSIVE — Mobile only
+    ══════════════════════════════════════════════════════════════ */
+    @media (max-width: 576px) {
+      .page-body { padding: 12px; }
+      .sc { padding: 18px 16px; }
+      .sc-val { font-size: 22px; }
+      .card-body { padding: 14px; }
+      .btn { padding: 8px 14px; font-size: 12.5px; }
+      .topbar-title { font-size: 13px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .user-btn .uname { display: none; }
     }
     /* ══════════════════════════════════════════════════════════════
        BULK ACTION BAR
@@ -689,7 +700,7 @@
     #bulk-bar {
       position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
       z-index: 2000; transition: bottom .28s cubic-bezier(.4,0,.2,1);
-      min-width: 360px;
+      width: min(420px, 92vw);
     }
     #bulk-bar.show { bottom: 24px; }
     .bulk-bar-inner {
@@ -697,6 +708,7 @@
       padding: 13px 20px; display: flex; align-items: center; gap: 12px;
       box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.2);
       border: 1px solid rgba(255,255,255,.08);
+      flex-wrap: wrap;
     }
     .bulk-count {
       color: #e5e7eb; font-size: 13px; font-weight: 600;
@@ -708,14 +720,6 @@
       accent-color: var(--c-primary);
     }
     th:has(.cb-all), td:has(.cb-row) { width: 36px; text-align: center; }
-
-    @media (max-width: 480px) {
-      .page-body { padding: 12px; }
-      .sc { padding: 18px 16px; }
-      .sc-val { font-size: 24px; }
-      .card-body { padding: 16px; }
-      .btn { padding: 8px 14px; font-size: 12.5px; }
-    }
   </style>
 </head>
 <body>
