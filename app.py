@@ -122,13 +122,18 @@ def _cleanse_master_spelling(db):
     db.commit()
 
 def _migrate_tni_source(db):
-    """Add source column to tni if missing; collapse legacy source values to 2 options."""
+    """Add source column to tni if missing; collapse legacy source values to 2 options across tni + calendar."""
     cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
     if 'source' not in cols:
         db.execute("ALTER TABLE tni ADD COLUMN source TEXT DEFAULT 'TNI Driven'")
-    # Collapse Corp Driven / Unit Driven / Compliance Driven → New Requirement
     db.execute("""UPDATE tni SET source='New Requirement'
-        WHERE source IN ('Corp Driven','Unit Driven','Compliance Driven')""")
+        WHERE source IN ('Corp Driven','Unit Driven','Compliance Driven',
+                         'New- Unit Driven','New- Corporate Driven')""")
+    db.execute("""UPDATE calendar SET source='New Requirement'
+        WHERE source IN ('Corp Driven','Unit Driven','Compliance Driven',
+                         'New- Unit Driven','New- Corporate Driven')""")
+    db.execute("UPDATE tni SET source='TNI Driven' WHERE source IS NULL OR source=''")
+    db.execute("UPDATE calendar SET source='TNI Driven' WHERE source IS NULL OR source='' OR source='TNI'")
     db.commit()
 
 def _cleanse_programme_names(db, plant_id=None):
@@ -1397,7 +1402,7 @@ def add_calendar():
          level,mode,target_audience,planned_pax,trainer_vendor,status)
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
         (plant_id, prog_code, session_code,
-         f.get('source','TNI'), prog_name, prog_type,
+         f.get('source','TNI Driven') if f.get('source','') in ('TNI Driven','New Requirement') else 'TNI Driven', prog_name, prog_type,
          f.get('planned_month',''), f.get('plan_start',''), f.get('plan_end',''),
          f.get('time_from',''), f.get('time_to',''),
          float(f.get('duration_hrs') or 0),
@@ -1432,7 +1437,7 @@ def edit_calendar(cal_id):
         planned_pax=?, trainer_vendor=?, status=?
         WHERE id=? AND plant_id=?''',
         (_canonical_prog(f.get('programme_name','').strip(), plant_id, db), f.get('prog_type',''),
-         f.get('source','TNI'), f.get('planned_month',''),
+         f.get('source','TNI Driven') if f.get('source','') in ('TNI Driven','New Requirement') else 'TNI Driven', f.get('planned_month',''),
          f.get('plan_start',''), f.get('plan_end',''),
          f.get('time_from',''), f.get('time_to',''),
          float(f.get('duration_hrs') or 0), f.get('level',''),
@@ -2073,7 +2078,8 @@ def calendar_bulk_upload():
     for i, row in df.iterrows():
         prog_name = _clean(row, ['programme name', 'programme_name', 'program name'])
         prog_type = _clean(row, ['type of programme', 'type', 'prog type'])
-        source    = _clean(row, ['source']) or 'TNI'
+        raw_src   = _clean(row, ['source']) or ''
+        source    = raw_src if raw_src in ('TNI Driven', 'New Requirement') else 'TNI Driven'
         month     = _clean(row, ['planned month', 'month'])
         plan_start= _clean(row, ['plan start (yyyy-mm-dd)', 'plan start', 'start date'])
         plan_end  = _clean(row, ['plan end (yyyy-mm-dd)', 'plan end', 'end date'])
