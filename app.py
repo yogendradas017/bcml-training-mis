@@ -1009,7 +1009,7 @@ def tni_template():
     # ── Sheet 4: Programme Master (hidden) ───────────────────────
     master_progs = [r[0] for r in db.execute(
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
-    ).fetchall()] or MASTER_PROGRAMMES
+    ).fetchall()] or []
     ws_prog = wb.create_sheet('_ProgList')
     ws_prog.sheet_state = 'hidden'
     for r, v in enumerate(master_progs, 1):
@@ -1249,7 +1249,7 @@ def training_calendar():
 
     # Dropdown uses master list only (canonical names); TNI demand shown via badge
     master_programmes = [r[0] for r in db.execute(
-        'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()] or MASTER_PROGRAMMES
+        'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()] or []
     all_cal_programmes = master_programmes
     # TNI programmes still needed for demand_map and coverage panel
     tni_programmes = [r[0] for r in db.execute(
@@ -2152,7 +2152,7 @@ def api_programme_list():
     db = get_db()
     master = [r[0] for r in db.execute(
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
-    ).fetchall()] or MASTER_PROGRAMMES
+    ).fetchall()] or []
     return jsonify(master)
 
 @app.route('/api/tni-coverage')
@@ -2727,7 +2727,7 @@ def _canonical_prog(raw_name, plant_id, db):
     from difflib import get_close_matches as gcm
     master = [r[0] for r in db.execute(
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
-    ).fetchall()] or MASTER_PROGRAMMES
+    ).fetchall()] or []
     master_lower = [m.lower() for m in master]
     # Word-correct the raw name before matching so misspellings find their master entry
     corrected = _apply_word_fixes(raw_name.strip())
@@ -3006,12 +3006,11 @@ def _smart_analyze_rows(df, plant_id, db):
     from difflib import get_close_matches as gcm
     _prog_cache = {}  # cache: raw_lower → canonical name
 
-    # Union of DB master + hardcoded list so every known programme is matchable
-    _db_master = [r[0] for r in db.execute(
+    # Use only this plant's own master — never cross-contaminate with another plant's list
+    _active_master       = [r[0] for r in db.execute(
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,))]
-    _combined_seen = dict.fromkeys(_db_master + MASTER_PROGRAMMES)
-    _active_master       = list(_combined_seen.keys())
     _active_master_lower = [p.lower() for p in _active_master]
+    _has_master          = len(_active_master) > 0
 
     def _match_master(raw_lower):
         if raw_lower in _prog_cache:
@@ -3109,8 +3108,8 @@ def _smart_analyze_rows(df, plant_id, db):
                     if status == 'ok': status = 'fixed'
                 else:
                     clean_prog = titled
-                # Flag: not found in master list at all
-                if status not in ('error',):
+                # Flag: not found in master list — only warn if this plant HAS a master list
+                if _has_master and status not in ('error',):
                     issues.append(f'"{clean_prog}" not found in Programme Master — verify spelling or add it to master list')
                     if status == 'ok': status = 'warning'
 
@@ -3187,7 +3186,7 @@ def _error_excel_for_tni(error_rows, dup_rows=None, plant_id=None, db=None):
     if plant_id and db and last_row > 1:
         master_progs = [r[0] for r in db.execute(
             'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
-        ).fetchall()] or MASTER_PROGRAMMES
+        ).fetchall()] or []
         ws_pl = wb.create_sheet('_ProgList')
         ws_pl.sheet_state = 'hidden'
         for idx, v in enumerate(master_progs, 1):
@@ -3310,7 +3309,7 @@ def tni_analyze():
     db_r        = get_db()
     master_progs = [r[0] for r in db_r.execute(
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id_r,)
-    ).fetchall()] or MASTER_PROGRAMMES
+    ).fetchall()] or []
     # Programmes confirmed clean in this upload (ok + fixed rows)
     upload_progs_lower = set(
         r['programme_name'].lower() for r in rows if r['status'] in ('ok', 'fixed')
