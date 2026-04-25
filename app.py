@@ -816,6 +816,30 @@ def programme_master_bulk_delete():
     flash(f'{len(ids_int)} programme(s) deleted from master list.', 'warning')
     return redirect(url_for('programme_master'))
 
+@app.route('/programme-master/sync-from-tni', methods=['POST'])
+@spoc_required
+def programme_master_sync_from_tni():
+    """Rebuild master list from distinct programme names currently in TNI for this plant."""
+    plant_id = session['plant_id']
+    db = get_db()
+    tni_progs = [r[0] for r in db.execute(
+        'SELECT DISTINCT programme_name FROM tni WHERE plant_id=? AND programme_name IS NOT NULL AND programme_name != "" ORDER BY programme_name',
+        (plant_id,)).fetchall()]
+    if not tni_progs:
+        flash('No TNI data found — master list unchanged.', 'warning')
+        return redirect(url_for('programme_master'))
+    # Replace master with TNI-derived names (preserve type/mode for existing entries)
+    existing = {r['name']: r for r in db.execute(
+        'SELECT name, prog_type, mode FROM programme_master WHERE plant_id=?', (plant_id,)).fetchall()}
+    db.execute('DELETE FROM programme_master WHERE plant_id=?', (plant_id,))
+    for name in tni_progs:
+        prev = existing.get(name, {})
+        db.execute('INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, mode) VALUES(?,?,?,?)',
+                   (plant_id, name, prev.get('prog_type'), prev.get('mode')))
+    db.commit()
+    flash(f'Programme Master rebuilt from TNI data — {len(tni_progs)} unique programme(s).', 'success')
+    return redirect(url_for('programme_master'))
+
 @app.route('/programme-master/bulk', methods=['POST'])
 @spoc_required
 def programme_master_bulk():
