@@ -3542,4 +3542,6 @@ except Exception as _e:
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.jinja_env.auto_reload = True
     app.run(host='0.0.0.0', port=port, debug=False)
