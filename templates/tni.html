@@ -131,9 +131,7 @@
           <label class="form-label">Source <span class="required-star">*</span></label>
           <select name="source" id="tni_source_sel" class="form-select" required onchange="toggleTniProgField(this.value)">
             <option value="TNI Driven" selected>TNI Driven</option>
-            <option value="Corp Driven">Corp Driven</option>
-            <option value="Unit Driven">Unit Driven</option>
-            <option value="Compliance Driven">Compliance Driven</option>
+            <option value="New Requirement">New Requirement</option>
           </select>
           <div id="tni-new-prog-hint" style="display:none;font-size:11px;color:#10b981;margin-top:3px;">
             <i class="bi bi-info-circle me-1"></i>New programme will be added to Master List automatically.
@@ -297,12 +295,10 @@ const TNI = {
       this._updateBulkBar(); return;
     }
 
-    const NON_TNI_SRCS = ['Corp Driven', 'Unit Driven', 'Compliance Driven'];
+    const NON_TNI_SRCS = ['New Requirement'];
     const SRC_COLORS = {
-      'TNI Driven':        ['#d1fae5','#065f46'],
-      'Corp Driven':       ['#dbeafe','#1d4ed8'],
-      'Unit Driven':       ['#fef3c7','#92400e'],
-      'Compliance Driven': ['#fce7f3','#9d174d'],
+      'TNI Driven':      ['#d1fae5','#065f46'],
+      'New Requirement': ['#dbeafe','#1d4ed8'],
     };
 
     const offset = (page - 1) * perPage;
@@ -366,11 +362,7 @@ const TNI = {
           body: JSON.stringify({source: src})
         }).then(r => r.json()).then(d => {
           if (d.ok) {
-            const [bg, fg] = ({
-              'Corp Driven':       ['#dbeafe','#1d4ed8'],
-              'Unit Driven':       ['#fef3c7','#92400e'],
-              'Compliance Driven': ['#fce7f3','#9d174d'],
-            })[src] || ['#e5e7eb','#374151'];
+            const [bg, fg] = ({'New Requirement': ['#dbeafe','#1d4ed8']})[src] || ['#e5e7eb','#374151'];
             sel.style.background = bg;
             sel.style.color = fg;
             sel.style.borderColor = fg + '40';
