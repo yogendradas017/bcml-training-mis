@@ -42,22 +42,9 @@
   <div class="card-body text-center py-5">
     <i class="bi bi-database-add" style="font-size:42px;display:block;margin-bottom:12px;color:#6366f1;"></i>
     <div style="font-size:16px;font-weight:700;color:#1e1b4b;margin-bottom:6px;">Master list is empty</div>
-    {% if tni_count and tni_count > 0 %}
     <div style="font-size:13px;color:#6b7280;max-width:480px;margin:0 auto 20px;">
-      TNI data has <strong>{{ tni_count }}</strong> programme{{ 's' if tni_count != 1 }} for
-      <strong>{{ session.plant_name }}</strong>. Click below to build the master list from it.
-    </div>
-    <div class="d-flex gap-2 justify-content-center flex-wrap">
-      <form method="POST" action="{{ url_for('programme_master_sync_from_tni') }}">
-        <button type="submit" class="btn btn-primary btn-sm fw-semibold">
-          <i class="bi bi-arrow-repeat me-1"></i> Build Master from TNI ({{ tni_count }} programmes)
-        </button>
-      </form>
-    </div>
-    {% else %}
-    <div style="font-size:13px;color:#6b7280;max-width:480px;margin:0 auto 20px;">
-      Upload your TNI data for <strong>{{ session.plant_name }}</strong> first.
-      Every unique, clean programme name in your TNI becomes your master.
+      Your Programme Master list will be built automatically when you upload TNI data for
+      <strong>{{ session.plant_name }}</strong>. Every unique, clean programme name in your TNI becomes your master.
     </div>
     <div class="d-flex gap-2 justify-content-center flex-wrap">
       <a href="{{ url_for('tni_analyze') }}" class="btn btn-primary btn-sm fw-semibold">
@@ -67,7 +54,6 @@
         <i class="bi bi-upload me-1"></i> Fresh TNI Upload
       </a>
     </div>
-    {% endif %}
   </div>
 </div>
 {% else %}
@@ -85,7 +71,7 @@
           </th>
           <th style="padding:10px 14px;width:44px;color:#9ca3af;">#</th>
           <th style="padding:10px 14px;">Programme Name</th>
-          <th style="padding:10px 14px;">Type &amp; Mode</th>
+          <th style="padding:10px 14px;">Type of Programme</th>
           <th style="padding:10px 14px;width:60px;text-align:center;">Del</th>
         </tr>
       </thead>
@@ -101,13 +87,9 @@
           <td style="padding:8px 14px;">
             <form method="POST" action="{{ url_for('programme_master_add') }}" style="display:flex;gap:6px;align-items:center;">
               <input type="hidden" name="name" value="{{ p.name }}">
-              <select name="prog_type" class="form-select form-select-sm" style="width:150px;font-size:12px;">
-                <option value="">— Type —</option>
+              <select name="prog_type" class="form-select form-select-sm" style="width:180px;font-size:12px;">
+                <option value="">— Type of Programme —</option>
                 {% for pt in prog_types %}<option {% if p.prog_type==pt %}selected{% endif %}>{{ pt }}</option>{% endfor %}
-              </select>
-              <select name="mode" class="form-select form-select-sm" style="width:110px;font-size:12px;">
-                <option value="">— Mode —</option>
-                {% for m in modes %}<option {% if p.mode==m %}selected{% endif %}>{{ m }}</option>{% endfor %}
               </select>
               <button class="btn btn-sm" style="background:#6366f1;color:#fff;padding:3px 10px;font-size:11px;" title="Save">
                 <i class="bi bi-check2"></i>
@@ -151,13 +133,6 @@
             <select name="prog_type" class="form-select form-select-sm">
               <option value="">— Select —</option>
               {% for pt in prog_types %}<option>{{ pt }}</option>{% endfor %}
-            </select>
-          </div>
-          <div class="mb-2">
-            <label class="form-label fw-semibold" style="font-size:13px;">Default Mode</label>
-            <select name="mode" class="form-select form-select-sm">
-              <option value="">— Select —</option>
-              {% for m in modes %}<option>{{ m }}</option>{% endfor %}
             </select>
           </div>
         </div>
