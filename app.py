@@ -2665,26 +2665,25 @@ def _calc_summary(plant_id, month_filter, db):
         p_bc     = [plant_id, pt, 'Blue Collared']  + ([month_filter] if month_filter else [])
         p_wc     = [plant_id, pt, 'White Collared'] + ([month_filter] if month_filter else [])
 
-        # Session collar breakdown in one query: BC-only / WC-only / Common / Total
-        cq = db.execute(f'''
-            SELECT SUM(CASE WHEN has_bc=1 AND has_wc=0 THEN 1 ELSE 0 END),
-                   SUM(CASE WHEN has_wc=1 AND has_bc=0 THEN 1 ELSE 0 END),
-                   SUM(CASE WHEN has_bc=1 AND has_wc=1 THEN 1 ELSE 0 END),
-                   COUNT(*)
-            FROM (
-              SELECT {_distinct} AS sk,
-                     MAX(CASE WHEN e.collar='Blue Collared'  THEN 1 ELSE 0 END) AS has_bc,
-                     MAX(CASE WHEN e.collar='White Collared' THEN 1 ELSE 0 END) AS has_wc
-              FROM emp_training t
-              JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-              WHERE t.plant_id=? AND t.prog_type=? {clause}
-              GROUP BY sk
-            )''', p_pt).fetchone()
-        bc_progs     = cq[0] or 0
-        wc_progs     = cq[1] or 0
-        common_progs = cq[2] or 0
-        total_progs  = cq[3] or 0
+        # No. of Programmes: from 2C audience field (authoritative per-session record)
+        pq = db.execute(f'''SELECT
+            SUM(CASE WHEN audience='Blue Collared'  THEN 1 ELSE 0 END),
+            SUM(CASE WHEN audience='White Collared' THEN 1 ELSE 0 END),
+            SUM(CASE WHEN audience='Common'         THEN 1 ELSE 0 END),
+            COUNT(DISTINCT session_code),
+            SUM(CASE WHEN int_ext='Internal' THEN 1 ELSE 0 END),
+            SUM(CASE WHEN int_ext='External' THEN 1 ELSE 0 END)
+            FROM programme_details p
+            WHERE p.plant_id=? AND p.prog_type=? {month_clause_2c}''',
+            [plant_id, pt]).fetchone()
+        bc_progs     = pq[0] or 0
+        wc_progs     = pq[1] or 0
+        common_progs = pq[2] or 0
+        total_progs  = pq[3] or 0
+        int_prog     = pq[4] or 0
+        ext_prog     = pq[5] or 0
 
+        # Seats and hours: from 2A individual attendance records
         bc_seats = db.execute(f'''SELECT COUNT(*) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', p_bc).fetchone()[0]
@@ -2697,13 +2696,6 @@ def _calc_summary(plant_id, month_filter, db):
         wc_hrs = db.execute(f'''SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', p_wc).fetchone()[0]
-
-        int_prog = db.execute(f'''SELECT COUNT(DISTINCT p.session_code) FROM programme_details p
-            WHERE p.plant_id=? AND p.prog_type=? AND p.int_ext='Internal' {month_clause_2c}''',
-            [plant_id, pt]).fetchone()[0]
-        ext_prog = db.execute(f'''SELECT COUNT(DISTINCT p.session_code) FROM programme_details p
-            WHERE p.plant_id=? AND p.prog_type=? AND p.int_ext='External' {month_clause_2c}''',
-            [plant_id, pt]).fetchone()[0]
 
         # Fixed = unique TNI emp per prog_type+collar (always FY, no month filter)
         bc_fixed = db.execute('''SELECT COUNT(DISTINCT t.emp_code) FROM tni t
