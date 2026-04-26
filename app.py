@@ -2655,66 +2655,114 @@ def _sync_calendar_from_2c(plant_id, db):
 
 def _calc_summary(plant_id, month_filter, db):
     rows = []
-    # 2C month filter: convert month name → zero-padded number for strftime comparison
     mn = MONTH_NUM.get(month_filter, '') if month_filter else ''
     month_clause_2c = f"AND strftime('%m', p.start_date) = '{mn}'" if mn else ("AND 1=0" if month_filter else "")
-    for pt in PROG_TYPES:
-        clause = "AND t.month=?" if month_filter else ""
-        params_bc  = [plant_id, pt, 'Blue Collared'] + ([month_filter] if month_filter else [])
-        params_wc  = [plant_id, pt, 'White Collared'] + ([month_filter] if month_filter else [])
-        params_all = [plant_id, pt] + ([month_filter] if month_filter else [])
+    _distinct = "CASE WHEN t.session_code IS NOT NULL AND t.session_code != '' THEN t.session_code ELSE t.programme_name END"
 
-        # No. of distinct sessions per collar (use programme_name as fallback when session_code blank)
-        _distinct = "CASE WHEN t.session_code IS NOT NULL AND t.session_code != '' THEN t.session_code ELSE t.programme_name END"
-        bc_progs = db.execute(f'''SELECT COUNT(DISTINCT {_distinct}) FROM emp_training t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', params_bc).fetchone()[0]
-        wc_progs = db.execute(f'''SELECT COUNT(DISTINCT {_distinct}) FROM emp_training t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', params_wc).fetchone()[0]
-        # Total distinct sessions (no collar split — avoids double-counting mixed sessions)
-        all_progs = db.execute(f'''SELECT COUNT(DISTINCT {_distinct}) FROM emp_training t
-            WHERE t.plant_id=? AND t.prog_type=? {clause}''', params_all).fetchone()[0]
+    for pt in PROG_TYPES:
+        clause   = "AND t.month=?" if month_filter else ""
+        p_pt     = [plant_id, pt] + ([month_filter] if month_filter else [])
+        p_bc     = [plant_id, pt, 'Blue Collared']  + ([month_filter] if month_filter else [])
+        p_wc     = [plant_id, pt, 'White Collared'] + ([month_filter] if month_filter else [])
+
+        # Session collar breakdown in one query: BC-only / WC-only / Common / Total
+        cq = db.execute(f'''
+            SELECT SUM(CASE WHEN has_bc=1 AND has_wc=0 THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN has_wc=1 AND has_bc=0 THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN has_bc=1 AND has_wc=1 THEN 1 ELSE 0 END),
+                   COUNT(*)
+            FROM (
+              SELECT {_distinct} AS sk,
+                     MAX(CASE WHEN e.collar='Blue Collared'  THEN 1 ELSE 0 END) AS has_bc,
+                     MAX(CASE WHEN e.collar='White Collared' THEN 1 ELSE 0 END) AS has_wc
+              FROM emp_training t
+              JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+              WHERE t.plant_id=? AND t.prog_type=? {clause}
+              GROUP BY sk
+            )''', p_pt).fetchone()
+        bc_progs     = cq[0] or 0
+        wc_progs     = cq[1] or 0
+        common_progs = cq[2] or 0
+        total_progs  = cq[3] or 0
 
         bc_seats = db.execute(f'''SELECT COUNT(*) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', params_bc).fetchone()[0]
+            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', p_bc).fetchone()[0]
         wc_seats = db.execute(f'''SELECT COUNT(*) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', params_wc).fetchone()[0]
+            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', p_wc).fetchone()[0]
         bc_hrs = db.execute(f'''SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', params_bc).fetchone()[0]
+            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', p_bc).fetchone()[0]
         wc_hrs = db.execute(f'''SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', params_wc).fetchone()[0]
+            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', p_wc).fetchone()[0]
 
-        # Internal/External counts from 2C — month filtered by start_date
         int_prog = db.execute(f'''SELECT COUNT(DISTINCT p.session_code) FROM programme_details p
             WHERE p.plant_id=? AND p.prog_type=? AND p.int_ext='Internal' {month_clause_2c}''',
             [plant_id, pt]).fetchone()[0]
         ext_prog = db.execute(f'''SELECT COUNT(DISTINCT p.session_code) FROM programme_details p
             WHERE p.plant_id=? AND p.prog_type=? AND p.int_ext='External' {month_clause_2c}''',
             [plant_id, pt]).fetchone()[0]
+
+        # Fixed = unique TNI emp per prog_type+collar (always FY, no month filter)
+        bc_fixed = db.execute('''SELECT COUNT(DISTINCT t.emp_code) FROM tni t
+            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+            WHERE t.plant_id=? AND t.prog_type=? AND e.collar='Blue Collared' ''',
+            [plant_id, pt]).fetchone()[0]
+        wc_fixed = db.execute('''SELECT COUNT(DISTINCT t.emp_code) FROM tni t
+            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+            WHERE t.plant_id=? AND t.prog_type=? AND e.collar='White Collared' ''',
+            [plant_id, pt]).fetchone()[0]
+
+        # Cumulative = TNI employees actually trained (always FY cumulative)
+        bc_cum = db.execute('''SELECT COUNT(DISTINCT et.emp_code) FROM emp_training et
+            JOIN employees e ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
+            JOIN tni t ON t.emp_code=et.emp_code AND t.plant_id=et.plant_id
+              AND LOWER(t.prog_type)=LOWER(et.prog_type)
+            WHERE et.plant_id=? AND et.prog_type=? AND e.collar='Blue Collared' ''',
+            [plant_id, pt]).fetchone()[0]
+        wc_cum = db.execute('''SELECT COUNT(DISTINCT et.emp_code) FROM emp_training et
+            JOIN employees e ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
+            JOIN tni t ON t.emp_code=et.emp_code AND t.plant_id=et.plant_id
+              AND LOWER(t.prog_type)=LOWER(et.prog_type)
+            WHERE et.plant_id=? AND et.prog_type=? AND e.collar='White Collared' ''',
+            [plant_id, pt]).fetchone()[0]
+
+        bc_cov  = round(bc_cum  / bc_fixed  * 100, 1) if bc_fixed  else 0
+        wc_cov  = round(wc_cum  / wc_fixed  * 100, 1) if wc_fixed  else 0
+        tot_cov = round((bc_cum + wc_cum) / (bc_fixed + wc_fixed) * 100, 1) if (bc_fixed + wc_fixed) else 0
+
         rows.append({
-            'prog_type': pt,
-            'bc_progs': bc_progs, 'wc_progs': wc_progs,
-            'int_prog': int_prog, 'ext_prog': ext_prog,
-            'total_prog': all_progs,
-            'bc_seats': bc_seats, 'wc_seats': wc_seats,
-            'total_seats': bc_seats + wc_seats,
-            'bc_hrs': round(bc_hrs, 1), 'wc_hrs': round(wc_hrs, 1),
-            'total_hrs': round(bc_hrs + wc_hrs, 1)
+            'prog_type':    pt,
+            'bc_progs':     bc_progs,    'wc_progs':  wc_progs,
+            'common_progs': common_progs,'total_progs': total_progs,
+            'int_prog':     int_prog,    'ext_prog':  ext_prog,
+            'bc_seats':     bc_seats,    'wc_seats':  wc_seats,
+            'total_seats':  bc_seats + wc_seats,
+            'bc_hrs':       round(bc_hrs, 1), 'wc_hrs': round(wc_hrs, 1),
+            'total_hrs':    round(bc_hrs + wc_hrs, 1),
+            'bc_fixed':     bc_fixed,    'wc_fixed':  wc_fixed,
+            'bc_cum':       bc_cum,      'wc_cum':    wc_cum,
+            'bc_cov':       bc_cov,      'wc_cov':    wc_cov,
+            'tot_cov':      tot_cov,
         })
     return rows
 
 def _calc_totals(rows):
-    t = {k: 0 for k in rows[0]} if rows else {}
+    if not rows:
+        return {}
+    t = {k: 0 for k in rows[0]}
     t['prog_type'] = 'TOTAL'
+    skip = {'prog_type', 'bc_cov', 'wc_cov', 'tot_cov'}
     for r in rows:
         for k, v in r.items():
-            if k != 'prog_type':
+            if k not in skip:
                 t[k] = round(t.get(k, 0) + (v or 0), 1)
+    t['bc_cov']  = round(t['bc_cum']  / t['bc_fixed']  * 100, 1) if t.get('bc_fixed')  else 0
+    t['wc_cov']  = round(t['wc_cum']  / t['wc_fixed']  * 100, 1) if t.get('wc_fixed')  else 0
+    t['tot_cov'] = round((t['bc_cum'] + t['wc_cum']) / (t['bc_fixed'] + t['wc_fixed']) * 100, 1) \
+                   if (t.get('bc_fixed', 0) + t.get('wc_fixed', 0)) else 0
     return t
 
 def _calc_compliance(plant_id, db):

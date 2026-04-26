@@ -70,29 +70,44 @@
   </div>
   {% else %}
   <div class="table-responsive">
-    <table class="table table-bordered mb-0" style="font-size:12.5px;">
+    <table class="table table-bordered mb-0" style="font-size:12px;">
       <thead>
         <tr style="background:#1e3a5f;color:#fff;text-align:center;">
-          <th rowspan="2" class="align-middle text-start" style="min-width:170px;padding:10px 14px;">Programme Type</th>
-          <th colspan="4" style="border-bottom:1px solid rgba(255,255,255,.2);">No. of Programmes</th>
+          <th rowspan="2" class="align-middle text-start" style="min-width:160px;padding:10px 14px;">Programme Type</th>
+          <th colspan="6" style="border-bottom:1px solid rgba(255,255,255,.2);">No. of Programmes</th>
           <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);">Person Seats Trained</th>
           <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);">Man-Hours</th>
+          <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);background:#7c3aed;">
+            Avg % Employees Covered (TNI)
+          </th>
         </tr>
         <tr style="background:#2e5585;color:#fff;text-align:center;font-size:11px;">
-          <th>Blue Collar</th><th>White Collar</th><th>Internal</th><th>External</th>
+          <th>Blue Collar</th><th>White Collar</th><th>Common</th><th>Total</th><th>Internal</th><th>External</th>
           <th>Blue Collar</th><th>White Collar</th><th>Total</th>
           <th>Blue Collar</th><th>White Collar</th><th>Total</th>
+          <th style="background:#6d28d9;">Blue Collar</th>
+          <th style="background:#6d28d9;">White Collar</th>
+          <th style="background:#6d28d9;">Total</th>
         </tr>
       </thead>
       <tbody>
         {% for row in summary_rows %}
-        <tr style="{% if loop.last %}font-weight:700;background:#f0f4ff;{% endif %}">
+        <tr>
           <td style="padding:9px 14px;font-weight:600;color:#1e3a5f;">{{ row.prog_type }}</td>
-          {% for val in [row.bc_progs, row.wc_progs, row.int_prog, row.ext_prog,
+          {% for val in [row.bc_progs, row.wc_progs, row.common_progs, row.total_progs,
+                         row.int_prog, row.ext_prog,
                          row.bc_seats, row.wc_seats, row.total_seats,
                          row.bc_hrs, row.wc_hrs, row.total_hrs] %}
-          <td style="text-align:center;padding:9px 10px;color:{% if val %}#111827{% else %}#d1d5db{% endif %};">
-            {% if val %}{{ val }}{% else %}—{% endif %}
+          <td style="text-align:center;padding:8px 8px;color:{% if val %}#111827{% else %}#d1d5db{% endif %};">
+            {{ val if val else '—' }}
+          </td>
+          {% endfor %}
+          {# Coverage % cells — highlighted #}
+          {% for pct in [row.bc_cov, row.wc_cov, row.tot_cov] %}
+          <td style="text-align:center;padding:8px 8px;font-weight:700;
+            background:{% if pct >= 100 %}#d1fae5{% elif pct >= 75 %}#fef3c7{% elif pct > 0 %}#fee2e2{% else %}#f9fafb{% endif %};
+            color:{% if pct >= 100 %}#065f46{% elif pct >= 75 %}#92400e{% elif pct > 0 %}#991b1b{% else %}#d1d5db{% endif %};">
+            {% if pct %}{{ pct }}%{% else %}—{% endif %}
           </td>
           {% endfor %}
         </tr>
@@ -103,14 +118,19 @@
           <td style="padding:10px 14px;text-align:left;">TOTAL</td>
           <td>{{ totals.bc_progs or 0 }}</td>
           <td>{{ totals.wc_progs or 0 }}</td>
+          <td>{{ totals.common_progs or 0 }}</td>
+          <td>{{ totals.total_progs or 0 }}</td>
           <td>{{ totals.int_prog or 0 }}</td>
           <td>{{ totals.ext_prog or 0 }}</td>
           <td>{{ totals.bc_seats or 0 }}</td>
           <td>{{ totals.wc_seats or 0 }}</td>
-          <td style="font-size:14px;">{{ totals.total_seats or 0 }}</td>
+          <td style="font-size:13px;">{{ totals.total_seats or 0 }}</td>
           <td>{{ totals.bc_hrs or 0 }}</td>
           <td>{{ totals.wc_hrs or 0 }}</td>
-          <td style="font-size:14px;">{{ totals.total_hrs or 0 }}</td>
+          <td style="font-size:13px;">{{ totals.total_hrs or 0 }}</td>
+          <td style="background:#4c1d95;">{{ totals.bc_cov or 0 }}%</td>
+          <td style="background:#4c1d95;">{{ totals.wc_cov or 0 }}%</td>
+          <td style="background:#4c1d95;font-size:13px;">{{ totals.tot_cov or 0 }}%</td>
         </tr>
       </tfoot>
     </table>
