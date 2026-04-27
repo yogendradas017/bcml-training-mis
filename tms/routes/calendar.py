@@ -9,6 +9,7 @@ from tms.helpers import (
     _is_ajax, _canonical_prog, _get_or_create_prog_code, _new_session_code,
     _derive_audience, _sync_calendar_from_2c,
     _read_upload_file, _clean, _safe_float, _error_excel_response,
+    _current_fy, _in_current_fy,
 )
 
 import openpyxl
@@ -80,6 +81,17 @@ def _register(app):
         form_audience = f.get('target_audience', '')
         audience      = tni_audience if tni_audience else form_audience
 
+        dur = float(f.get('duration_hrs') or 0)
+        if dur <= 0:
+            flash('Duration must be greater than 0 hours.', 'danger')
+            return redirect(url_for('training_calendar'))
+        fy_start, fy_end = _current_fy()
+        for fld, lbl in [('plan_start', 'Plan Start'), ('plan_end', 'Plan End')]:
+            val = f.get(fld, '')
+            if val and not _in_current_fy(val):
+                flash(f'{lbl} date must be within the current financial year ({fy_start} to {fy_end}).', 'danger')
+                return redirect(url_for('training_calendar'))
+
         db.execute('''INSERT INTO calendar
             (plant_id,prog_code,session_code,source,programme_name,prog_type,
              planned_month,plan_start,plan_end,time_from,time_to,duration_hrs,
@@ -122,6 +134,17 @@ def _register(app):
         tni_audience_edit = _derive_audience(plant_id, edit_prog, db)
         form_audience_edit = f.get('target_audience', '')
         edit_audience     = tni_audience_edit if tni_audience_edit else form_audience_edit
+
+        dur = float(f.get('duration_hrs') or 0)
+        if dur <= 0:
+            flash('Duration must be greater than 0 hours.', 'danger')
+            return redirect(url_for('training_calendar'))
+        fy_start, fy_end = _current_fy()
+        for fld, lbl in [('plan_start', 'Plan Start'), ('plan_end', 'Plan End')]:
+            val = f.get(fld, '')
+            if val and not _in_current_fy(val):
+                flash(f'{lbl} date must be within the current financial year ({fy_start} to {fy_end}).', 'danger')
+                return redirect(url_for('training_calendar'))
 
         db.execute('''UPDATE calendar SET
             programme_name=?, prog_type=?, source=?, planned_month=?,

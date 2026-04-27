@@ -8,6 +8,7 @@ from tms.decorators import spoc_required
 from tms.helpers import (
     _is_ajax, _canonical_prog, _date_to_month, _safe_float,
     _read_upload_file, _clean, _error_excel_response,
+    _current_fy, _in_current_fy,
 )
 
 import openpyxl
@@ -72,13 +73,22 @@ def _register(app):
             if mr and mr['prog_type']:
                 prog_type = mr['prog_type']
 
+        hrs = float(f.get('hrs') or 0)
+        if hrs <= 0:
+            flash('Training hours must be greater than 0.', 'danger')
+            return redirect(url_for('emp_training'))
+        fy_start, fy_end = _current_fy()
+        if start_date and not _in_current_fy(start_date):
+            flash(f'Training date must be within the current financial year ({fy_start} to {fy_end}).', 'danger')
+            return redirect(url_for('emp_training'))
+
         month = _date_to_month(start_date)
         db.execute('''INSERT INTO emp_training
             (plant_id,emp_code,session_code,programme_name,start_date,end_date,
              hrs,prog_type,level,mode,cal_new,pre_rating,post_rating,venue,month)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
             (plant_id, emp_code, session_code, prog_name,
-             start_date, end_date, float(f.get('hrs') or 0),
+             start_date, end_date, hrs,
              prog_type, level, mode, cal_new,
              _safe_float(f.get('pre_rating')), _safe_float(f.get('post_rating')),
              f.get('venue',''), month))

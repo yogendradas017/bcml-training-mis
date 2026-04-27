@@ -64,6 +64,25 @@ def _safe_float(val):
         return None
 
 
+def _current_fy():
+    """Returns (fy_start, fy_end) as 'YYYY-MM-DD' strings for the current financial year (Apr–Mar)."""
+    today = date.today()
+    yr = today.year if today.month >= 4 else today.year - 1
+    return f'{yr}-04-01', f'{yr+1}-03-31'
+
+
+def _in_current_fy(date_str):
+    """True if date_str falls within the current FY, or is empty/None."""
+    if not date_str:
+        return True
+    try:
+        d = date.fromisoformat(str(date_str)[:10])
+        s, e = _current_fy()
+        return date.fromisoformat(s) <= d <= date.fromisoformat(e)
+    except (ValueError, TypeError):
+        return False
+
+
 def _date_to_month(date_str):
     if not date_str:
         return ''

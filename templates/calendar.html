@@ -553,5 +553,16 @@ function openEdit(id, prog, type, source, month, start, end, tfrom, tto, hrs, le
 }
 
 PROG_AC.setup(document.getElementById('e_prog'));
+
+// FY date bounds + enforce min hours > 0
+(function(){
+  const today = new Date();
+  const yr = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+  const fyStart = `${yr}-04-01`, fyEnd = `${yr+1}-03-31`;
+  document.querySelectorAll('input[type=date][name=plan_start], input[type=date][name=plan_end]').forEach(el => {
+    el.min = fyStart; el.max = fyEnd;
+  });
+  document.querySelectorAll('input[name=duration_hrs]').forEach(el => { el.min = '0.5'; });
+})();
 </script>
 {% endblock %}
