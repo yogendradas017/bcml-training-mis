@@ -212,5 +212,13 @@ new TomSelect('#pc_session_code', {
   placeholder: 'Type session code or programme name...',
   onChange: function(val) { fillSessionDetails2c(val); }
 });
+
+(function(){
+  const today = new Date();
+  const yr = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+  const fyStart = `${yr}-04-01`, fyEnd = `${yr+1}-03-31`;
+  document.querySelectorAll('input[type=date]').forEach(el => { el.min = fyStart; el.max = fyEnd; });
+  document.querySelectorAll('input[name=hours_actual]').forEach(el => { el.min = '0.5'; });
+})();
 </script>
 {% endblock %}

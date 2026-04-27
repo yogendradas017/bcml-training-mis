@@ -9,7 +9,7 @@ from tms.decorators import spoc_required
 from tms.helpers import (
     _is_ajax, _smart_title, _prog_in_use, _canonical_prog,
     _read_upload_file, _clean, _safe_float, _error_excel_response,
-    _sync_master_from_tni,
+    _sync_master_from_tni, _current_fy, _in_current_fy,
 )
 
 import openpyxl
@@ -334,6 +334,16 @@ def _register(app):
         cal_new   = 'Calendar Program'    if cal else 'New Program'
         mode      = cal['mode']           if cal else ''
         audience  = cal['target_audience'] if cal else ''
+
+        hours = float(f.get('hours_actual') or 0)
+        if hours <= 0:
+            flash('Actual hours must be greater than 0.', 'danger')
+            return redirect(url_for('programme_details'))
+        fy_start, fy_end = _current_fy()
+        start_date = f.get('start_date', '')
+        if start_date and not _in_current_fy(start_date):
+            flash(f'Start date must be within the current financial year ({fy_start} to {fy_end}).', 'danger')
+            return redirect(url_for('programme_details'))
 
         db.execute('''INSERT INTO programme_details
             (plant_id,session_code,programme_name,prog_type,level,cal_new,mode,
