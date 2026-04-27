@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block page_title %}Export Data — {{ plant.name }}{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div>
+    <h5 class="mb-0">Export to Excel — {{ plant.name }}</h5>
+    <small class="text-muted">Select sheets and filters before downloading.</small>
+  </div>
+</div>
+
+<form method="POST" action="{{ url_for('export_excel', plant_id=plant.id) }}">
+<div class="row g-3">
+
+  {# ── Sheet Selection ── #}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header fw-semibold" style="background:#1a1f35;color:#fff;font-size:13px;">
+        <i class="bi bi-table me-2"></i>Select Sheets to Export
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% set sheets = [
+            ('emp_master',  'bi-people',       '#6366f1', 'Employee Master',        'All active and exited employees'),
+            ('tni',         'bi-clipboard2-check', '#0891b2', 'TNI Tracking',       'Training need identification records'),
+            ('calendar',    'bi-calendar3',    '#7c3aed', 'Training Calendar',      'Planned sessions vs actual'),
+            ('training_2a', 'bi-person-badge', '#065f46', '2A — Emp. Training',     'Individual attendance records'),
+            ('prog_2c',     'bi-journal-text', '#9a3412', '2C — Programme Details', 'Conducted session details & feedback'),
+          ] %}
+          {% for val, icon, color, label, desc in sheets %}
+          <div class="col-md-4 col-lg-3">
+            <label class="d-flex align-items-start gap-3 p-3 rounded-3 border sheet-card"
+                   style="cursor:pointer;transition:all .15s;" data-val="{{ val }}">
+              <input type="checkbox" name="sheets" value="{{ val }}" class="sheet-cb"
+                     style="width:17px;height:17px;margin-top:2px;accent-color:{{ color }};" checked>
+              <div>
+                <div style="font-weight:700;font-size:13px;color:#111827;">
+                  <i class="bi {{ icon }} me-1" style="color:{{ color }};"></i>{{ label }}
+                </div>
+                <div style="font-size:11px;color:#6b7280;margin-top:2px;">{{ desc }}</div>
+              </div>
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Filters ── #}
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold" style="background:#1a1f35;color:#fff;font-size:13px;">
+        <i class="bi bi-funnel me-2"></i>Filters <span style="font-weight:400;opacity:.7;">(optional)</span>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-6">
+            <label class="form-label fw-semibold" style="font-size:12px;">Month</label>
+            <select name="month" class="form-select form-select-sm">
+              <option value="">All Months</option>
+              {% for m in months %}<option>{{ m }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-semibold" style="font-size:12px;">Collar</label>
+            <select name="collar" class="form-select form-select-sm">
+              <option value="">All Collars</option>
+              <option>Blue Collared</option>
+              <option>White Collared</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-semibold" style="font-size:12px;">Department</label>
+            <select name="dept" class="form-select form-select-sm">
+              <option value="">All Departments</option>
+              {% for d in departments %}<option>{{ d }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-semibold" style="font-size:12px;">Source</label>
+            <select name="source" class="form-select form-select-sm">
+              <option value="">All Sources</option>
+              <option value="TNI Driven">TNI Driven</option>
+              <option value="New Requirement">New Requirement</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-3 p-2 rounded" style="background:#f8fafc;font-size:11px;color:#6b7280;">
+          <i class="bi bi-info-circle me-1"></i>
+          Month filter applies to Calendar & 2A. Collar/Dept filters apply to Employee Master, TNI & 2A. Source filter applies to TNI & Calendar.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Summary ── #}
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold" style="background:#1a1f35;color:#fff;font-size:13px;">
+        <i class="bi bi-info-circle me-2"></i>What You'll Download
+      </div>
+      <div class="card-body" id="preview-box" style="font-size:13px;color:#374151;">
+        <div id="preview-list"></div>
+        <div id="no-sheets-msg" style="display:none;color:#ef4444;font-size:13px;">
+          <i class="bi bi-exclamation-triangle me-1"></i>Select at least one sheet.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Action ── #}
+  <div class="col-12 d-flex gap-3 align-items-center">
+    <button type="submit" id="dl-btn" class="btn btn-success px-4 fw-semibold">
+      <i class="bi bi-file-earmark-excel me-2"></i>Download Excel
+    </button>
+    <a href="{{ url_for('spoc_dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+
+</div>
+</form>
+
+<style>
+.sheet-card { background:#fff; }
+.sheet-card:hover { background:#f8fafc; border-color:#6366f1 !important; }
+.sheet-card.selected { background:#f5f3ff; border-color:#6366f1 !important; }
+</style>
+
+<script>
+const SHEET_LABELS = {
+  emp_master:  'Employee Master',
+  tni:         'TNI Tracking',
+  calendar:    'Training Calendar',
+  training_2a: '2A — Emp. Training',
+  prog_2c:     '2C — Programme Details',
+};
+
+function updatePreview() {
+  const checked = [...document.querySelectorAll('.sheet-cb:checked')].map(c => c.value);
+  const list    = document.getElementById('preview-list');
+  const noMsg   = document.getElementById('no-sheets-msg');
+  const dlBtn   = document.getElementById('dl-btn');
+  if (!checked.length) {
+    list.innerHTML = ''; noMsg.style.display = 'block'; dlBtn.disabled = true; return;
+  }
+  noMsg.style.display = 'none'; dlBtn.disabled = false;
+  list.innerHTML = checked.map(v =>
+    `<div class="mb-1"><i class="bi bi-check2-circle text-success me-2"></i>${SHEET_LABELS[v] || v}</div>`
+  ).join('');
+}
+
+document.querySelectorAll('.sheet-cb').forEach(cb => {
+  cb.addEventListener('change', function() {
+    const card = this.closest('.sheet-card');
+    card.classList.toggle('selected', this.checked);
+    updatePreview();
+  });
+  cb.closest('.sheet-card').classList.add('selected');
+});
+
+updatePreview();
+</script>
+{% endblock %}

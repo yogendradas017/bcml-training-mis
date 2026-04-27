@@ -110,8 +110,10 @@
           </select>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Target Audience</label>
-          <select name="target_audience" class="form-select">
+          <label class="form-label d-flex align-items-center gap-1">Target Audience
+            <span id="audience-lock-badge" style="display:none;font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:10px;font-weight:600;"><i class="bi bi-lock-fill"></i> TNI</span>
+          </label>
+          <select name="target_audience" id="add_audience" class="form-select">
             <option value="">-- Select --</option>
             {% for a in audiences %}<option>{{ a }}</option>{% endfor %}
           </select>
@@ -312,7 +314,10 @@
     </div>
   </div>
 </div>
-{# ── Edit Modal ── #}
+{% endblock %}
+
+{% block modals %}
+{# ── Edit Modal — at body level to avoid .page-body stacking context ── #}
 <div class="modal fade" id="editModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <form method="POST" id="editForm">
@@ -383,7 +388,9 @@
               </select>
             </div>
             <div class="col-md-3">
-              <label class="form-label fw-semibold" style="font-size:13px;">Audience</label>
+              <label class="form-label fw-semibold d-flex align-items-center gap-1" style="font-size:13px;">Audience
+                <span id="e-audience-lock-badge" style="display:none;font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:10px;font-weight:600;"><i class="bi bi-lock-fill"></i> TNI</span>
+              </label>
               <select name="target_audience" id="e_audience" class="form-select form-select-sm">
                 <option value="">— Select —</option>
                 {% for a in audiences %}<option>{{ a }}</option>{% endfor %}
@@ -416,7 +423,6 @@
     </form>
   </div>
 </div>
-
 {% endblock %}
 {% block scripts %}
 <script>
@@ -435,6 +441,7 @@ const _calProgTs = new TomSelect('#cal_prog_name', {
     }
   },
   onChange: function(val) {
+    if (!val) _unlockAddAudience();
     _fetchCoverage(val);
   }
 });
@@ -479,8 +486,29 @@ function _fetchCoverage(val) {
         _setSelect('source',          d.source);
         _setSelect('planned_month',   d.target_month);
         if (d.avg_hrs > 0) _setInput('duration_hrs', d.avg_hrs);
-        if (d.uncovered > 0) _setInput('planned_pax', d.uncovered);
+        const paxEl = document.querySelector('input[name="planned_pax"]');
+        if (paxEl) paxEl.value = d.uncovered > 0 ? d.uncovered : 0;
+
+        // Lock audience if TNI has collar data
+        const addAud = document.getElementById('add_audience');
+        const addBadge = document.getElementById('audience-lock-badge');
+        if (d.tni_locked && addAud) {
+          addAud.disabled = true;
+          if (addBadge) addBadge.style.display = '';
+        } else if (addAud) {
+          addAud.disabled = false;
+          if (addBadge) addBadge.style.display = 'none';
+        }
       });
+}
+
+function _unlockAddAudience() {
+  const addAud = document.getElementById('add_audience');
+  const addBadge = document.getElementById('audience-lock-badge');
+  if (addAud) addAud.disabled = false;
+  if (addBadge) addBadge.style.display = 'none';
+  const paxEl = document.querySelector('input[name="planned_pax"]');
+  if (paxEl) paxEl.value = 0;
 }
 BulkSelect.init('calTable', '{{ url_for("calendar_bulk_delete") }}');
 
@@ -495,12 +523,32 @@ function openEdit(id, prog, type, source, month, start, end, tfrom, tto, hrs, le
   document.getElementById('e_hrs').value      = hrs;
   document.getElementById('e_pax').value      = pax;
   document.getElementById('e_trainer').value  = trainer;
-  ['e_type','e_source','e_month','e_mode','e_level','e_audience','e_status'].forEach((id,i) => {
+  ['e_type','e_source','e_month','e_mode','e_level','e_audience','e_status'].forEach((eid,i) => {
     const val = [type, source, month, mode, level, audience, status][i];
-    const el  = document.getElementById(id);
+    const el  = document.getElementById(eid);
     el.value  = val;
     if (!el.value) el.selectedIndex = 0;
   });
+  // Lock audience from TNI in edit modal
+  const eAud = document.getElementById('e_audience');
+  const eBadge = document.getElementById('e-audience-lock-badge');
+  if (prog) {
+    fetch('/api/tni-coverage?q=' + encodeURIComponent(prog))
+      .then(r => r.json())
+      .then(d => {
+        if (d.tni_locked && d.audience) {
+          eAud.value    = d.audience;
+          eAud.disabled = true;
+          if (eBadge) eBadge.style.display = '';
+        } else {
+          eAud.disabled = false;
+          if (eBadge) eBadge.style.display = 'none';
+        }
+      });
+  } else {
+    eAud.disabled = false;
+    if (eBadge) eBadge.style.display = 'none';
+  }
   new bootstrap.Modal(document.getElementById('editModal')).show();
 }
 
