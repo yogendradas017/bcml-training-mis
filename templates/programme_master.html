@@ -378,17 +378,21 @@ function pmApplyFilters() {
   const q   = (document.getElementById('pm-search').value || '').toLowerCase().trim();
   const typ = (document.getElementById('pm-filter-type').value || '').toLowerCase();
   const src = (document.getElementById('pm-filter-src').value || '').toLowerCase();
-  let visible = 0;
+  let sl = 0;
   document.querySelectorAll('.pm-row').forEach(r => {
     const nameOk = !q   || r.dataset.name.includes(q) || (r.dataset.progType||'').toLowerCase().includes(q) || (r.dataset.source||'').toLowerCase().includes(q);
     const typOk  = !typ || (r.dataset.progType||'').toLowerCase() === typ;
     const srcOk  = !src || (r.dataset.source||'').toLowerCase() === src;
     const show   = nameOk && typOk && srcOk;
     r.style.display = show ? '' : 'none';
-    if (show) visible++;
+    if (show) {
+      sl++;
+      const slCell = r.querySelectorAll('td')[1];
+      if (slCell) slCell.textContent = sl;
+    }
   });
   const cnt = document.getElementById('pm-count');
-  if (cnt) cnt.textContent = visible + ' shown';
+  if (cnt) cnt.textContent = sl + ' shown';
 }
 ['pm-search','pm-filter-type','pm-filter-src'].forEach(id => {
   const el = document.getElementById(id);
