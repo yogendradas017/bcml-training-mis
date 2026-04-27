@@ -308,7 +308,7 @@ const TBL = {
 
   search(id, q) {
     if (!this._st[id]) return;
-    this._st[id].search = q.toLowerCase(); this._st[id].page = 1; this._render(id);
+    this._st[id].search = q.trim().toLowerCase(); this._st[id].page = 1; this._render(id);
   },
 
   filter(id, key, val) {

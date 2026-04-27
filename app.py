@@ -1,4 +1,5 @@
 import os
+import subprocess
 from flask import Flask, g, flash, redirect, request, url_for
 
 from tms.constants import BASE_DIR
@@ -7,6 +8,13 @@ from tms.db import get_db, init_db
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'bcml-tms-2627-xK9pQ')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+try:
+    _sv = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'],
+                                   stderr=subprocess.DEVNULL).decode().strip()
+except Exception:
+    _sv = '1'
+app.config['STATIC_VER'] = _sv
 
 
 @app.teardown_appcontext
