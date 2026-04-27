@@ -265,7 +265,7 @@
 TBL.init('empTable', 30);
 TBL.buildDynamic('empTable', 'dept', document.getElementById('empDeptFilter'), 'All Departments');
 
-// Modal init deferred — sharedExitModal is in {% block modals %} which renders after this block
+// Modal init deferred — sharedExitModal renders after this scripts block (base.html render order)
 document.addEventListener('DOMContentLoaded', function() {
   const today = new Date().toISOString().split('T')[0];
   const _exitModalEl = document.getElementById('sharedExitModal');
