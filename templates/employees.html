@@ -262,27 +262,25 @@
 {% endblock %}
 {% block scripts %}
 <script>
-const today = new Date().toISOString().split('T')[0];
-const exitDateEl = document.getElementById('exitDateInput');
-exitDateEl.value = today;
-exitDateEl.max = today;  // no future dates allowed
-
-// Move modal to <body> so .main-wrap overflow:hidden doesn't clip it
-const _exitModalEl = document.getElementById('sharedExitModal');
-document.body.appendChild(_exitModalEl);
-
-const _exitModal = new bootstrap.Modal(_exitModalEl, {backdrop: true, keyboard: true});
-
-document.querySelectorAll('.exit-btn').forEach(btn => {
-  btn.addEventListener('click', function() {
-    document.getElementById('exitModalLabel').textContent = 'Mark Exit — ' + this.dataset.empName;
-    document.getElementById('exitModalForm').action = this.dataset.exitUrl;
-    document.getElementById('exitDateInput').value = today;
-    _exitModal.show();
-  });
-});
-
 TBL.init('empTable', 30);
 TBL.buildDynamic('empTable', 'dept', document.getElementById('empDeptFilter'), 'All Departments');
+
+// Modal init deferred — sharedExitModal is in {% block modals %} which renders after this block
+document.addEventListener('DOMContentLoaded', function() {
+  const today = new Date().toISOString().split('T')[0];
+  const _exitModalEl = document.getElementById('sharedExitModal');
+  if (!_exitModalEl) return;
+  const exitDateEl = document.getElementById('exitDateInput');
+  if (exitDateEl) { exitDateEl.value = today; exitDateEl.max = today; }
+  const _exitModal = new bootstrap.Modal(_exitModalEl, {backdrop: true, keyboard: true});
+  document.querySelectorAll('.exit-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.getElementById('exitModalLabel').textContent = 'Mark Exit — ' + this.dataset.empName;
+      document.getElementById('exitModalForm').action = this.dataset.exitUrl;
+      document.getElementById('exitDateInput').value = today;
+      _exitModal.show();
+    });
+  });
+});
 </script>
 {% endblock %}
