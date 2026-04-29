@@ -626,68 +626,80 @@ def _register(app):
         if request.method == 'GET':
             return render_template('tni_analyze.html', step='upload')
 
-        f = request.files.get('file')
-        if not f or f.filename == '':
-            flash('No file selected.', 'danger')
-            return render_template('tni_analyze.html', step='upload')
-        skip = int(request.form.get('skip_rows', 0))
+        import traceback as _tb, logging as _log
         try:
-            import pandas as _pd
-            raw   = f.read()
-            fname = f.filename.lower()
-            if fname.endswith('.csv'):
-                df = _pd.read_csv(io.BytesIO(raw), dtype=str, skiprows=skip).fillna('')
-            else:
-                df = _pd.read_excel(io.BytesIO(raw), dtype=str, skiprows=skip).fillna('')
+            f = request.files.get('file')
+            if not f or f.filename == '':
+                flash('No file selected.', 'danger')
+                return render_template('tni_analyze.html', step='upload')
+            try:
+                skip = int(request.form.get('skip_rows') or 0)
+            except (ValueError, TypeError):
+                skip = 0
+            try:
+                import pandas as _pd
+                raw   = f.read()
+                fname = f.filename.lower()
+                if fname.endswith('.csv'):
+                    df = _pd.read_csv(io.BytesIO(raw), dtype=str, skiprows=skip).fillna('')
+                else:
+                    df = _pd.read_excel(io.BytesIO(raw), dtype=str, skiprows=skip).fillna('')
+            except Exception as e:
+                flash(f'Could not read file: {e}', 'danger')
+                return render_template('tni_analyze.html', step='upload')
+
+            plant_id = session['plant_id']
+            db       = get_db()
+            try:
+                rows = _smart_analyze_rows(df, plant_id, db)
+            except Exception as e:
+                _log.error('_smart_analyze_rows error:\n' + _tb.format_exc())
+                flash(f'Analysis error: {e}', 'danger')
+                return render_template('tni_analyze.html', step='upload')
+
+            if not rows:
+                col_list = ', '.join(f'"{c}"' for c in df.columns.tolist()[:15])
+                flash(f'No data rows found. Columns detected: {col_list}. '
+                      f'Try increasing "Skip top rows" if headers are not on row 1.', 'warning')
+                return render_template('tni_analyze.html', step='upload')
+
+            master_progs = [r[0] for r in db.execute(
+                'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
+            ).fetchall()] or []
+
+            for r in rows:
+                r['ai_issues'] = []
+                r['row_num']   = int(r['row_num']) if r.get('row_num') is not None else 0
+                if r.get('planned_hours') is None:
+                    r['planned_hours'] = 0.0
+
+            aid = str(_uuid.uuid4())
+            os.makedirs(os.path.join(BASE_DIR, 'data'), exist_ok=True)
+            with open(os.path.join(BASE_DIR, 'data', f'tni_analyze_{aid}.json'), 'w') as fp:
+                _json.dump(rows, fp, default=str)
+
+            ok_count    = sum(1 for r in rows if r['status'] == 'ok')
+            fixed_count = sum(1 for r in rows if r['status'] == 'fixed')
+            ai_count    = 0
+            warn_count  = sum(1 for r in rows if r['status'] == 'warning')
+            err_count   = sum(1 for r in rows if r['status'] == 'error')
+
+            upload_progs_lower = set(
+                str(r['programme_name']).lower() for r in rows
+                if r['status'] in ('ok', 'fixed') and r.get('programme_name'))
+            return render_template('tni_analyze.html', step='review',
+                                   rows=rows, aid=aid,
+                                   ok_count=ok_count, fixed_count=fixed_count,
+                                   ai_count=ai_count,
+                                   warn_count=warn_count, err_count=err_count,
+                                   master_progs=master_progs,
+                                   upload_progs_lower=upload_progs_lower,
+                                   prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY)
+
         except Exception as e:
-            flash(f'Could not read file: {e}', 'danger')
+            _log.error('tni_analyze POST unhandled:\n' + _tb.format_exc())
+            flash(f'Unexpected error: {e}', 'danger')
             return render_template('tni_analyze.html', step='upload')
-
-        plant_id = session['plant_id']
-        db       = get_db()
-        try:
-            rows = _smart_analyze_rows(df, plant_id, db)
-        except Exception as e:
-            import traceback, logging
-            logging.error(traceback.format_exc())
-            flash(f'Analysis error: {e}', 'danger')
-            return render_template('tni_analyze.html', step='upload')
-
-        if not rows:
-            col_list = ', '.join(f'"{c}"' for c in df.columns.tolist()[:15])
-            flash(f'No data rows found. Columns detected: {col_list}. '
-                  f'Try increasing "Skip top rows" if headers are not on row 1.', 'warning')
-            return render_template('tni_analyze.html', step='upload')
-
-        master_progs = [r[0] for r in db.execute(
-            'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
-        ).fetchall()] or []
-
-        for r in rows:
-            r['ai_issues'] = []
-
-        aid = str(_uuid.uuid4())
-        os.makedirs(os.path.join(BASE_DIR, 'data'), exist_ok=True)
-        with open(os.path.join(BASE_DIR, 'data', f'tni_analyze_{aid}.json'), 'w') as fp:
-            _json.dump(rows, fp, default=str)
-
-        ok_count    = sum(1 for r in rows if r['status'] == 'ok')
-        fixed_count = sum(1 for r in rows if r['status'] == 'fixed')
-        ai_count    = 0
-        warn_count  = sum(1 for r in rows if r['status'] == 'warning')
-        err_count   = sum(1 for r in rows if r['status'] == 'error')
-
-        upload_progs_lower = set(
-            r['programme_name'].lower() for r in rows
-            if r['status'] in ('ok', 'fixed'))
-        return render_template('tni_analyze.html', step='review',
-                               rows=rows, aid=aid,
-                               ok_count=ok_count, fixed_count=fixed_count,
-                               ai_count=ai_count,
-                               warn_count=warn_count, err_count=err_count,
-                               master_progs=master_progs,
-                               upload_progs_lower=upload_progs_lower,
-                               prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY)
 
     @app.route('/tni/analyze/confirm', methods=['POST'])
     @spoc_required
