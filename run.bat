@@ -21,6 +21,9 @@ if not exist ".deps_installed" (
     echo. > .deps_installed
 )
 
+REM Gemini API key for AI validation
+set GEMINI_API_KEY=AIzaSyAnQtp7Cs3bpkfsAN7TNR39iR-xbl3Gk9I
+
 REM Initialise DB and seed employees on first run
 if not exist "data\training.db" (
     echo Setting up database for first time...

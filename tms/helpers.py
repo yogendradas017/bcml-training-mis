@@ -1002,6 +1002,73 @@ def _smart_analyze_rows(df, plant_id, db):
     return results
 
 
+def _ai_validate_programme_names(uploaded_names, master_progs):
+    """
+    Second-pass AI check on programme names using Google Gemini (free tier).
+    Catches non-canonical suffixes (year, FY, batch, unit codes) and
+    semantic duplicates that fuzzy matching misses.
+
+    Returns {name_lower: [{'type': str, 'msg': str, 'fix': str|None}]}.
+    Returns {} silently if GEMINI_API_KEY not set or call fails.
+    """
+    import os
+    if not os.environ.get('GEMINI_API_KEY') or not uploaded_names:
+        return {}
+    try:
+        import google.generativeai as genai, json as _j
+        genai.configure(api_key=os.environ['GEMINI_API_KEY'])
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        master_text = '\n'.join(f'- {p}' for p in master_progs[:100]) or '(none yet)'
+        names_text  = '\n'.join(f'{i+1}. "{n}"' for i, n in enumerate(uploaded_names))
+
+        prompt = f"""You validate TNI (Training Needs Identification) data for BCML (Balrampur Chini Mills), an Indian sugar manufacturer. SPOCs upload Excel files with employee training plans.
+
+Master list of canonical programme names:
+{master_text}
+
+Programme names from this upload:
+{names_text}
+
+Check ONLY these two issues:
+
+1. SUFFIX — Name contains a non-canonical suffix that should be stripped: year numbers (2025, 2026), FY codes (FY25-26, 25-26), batch numbers (Batch 1, B2), plant unit codes (BCM, GCM, RCM, TCM, MZP, ACM, KCM, BBN, HCM, MCM), quarters (Q1, Q2, Q3, Q4), or date ranges (Jan-Mar). Suggest the clean canonical name.
+   Examples:
+   - "Fire Safety Training FY25-26" → fix: "Fire Safety Training"
+   - "5S Housekeeping BCM Batch 2" → fix: "5S Housekeeping"
+   - "Leadership Dev Workshop Q3 2025" → fix: "Leadership Development Workshop"
+
+2. SEMANTIC_DUP — Two names in THIS list clearly refer to the same programme (>90% confident). Add dup_with as a list of the other 1-based index numbers.
+   Examples:
+   - "Fire Safety" and "Fire Safety Training" — probable dup
+   - "5S Housekeeping" and "5-S House Keeping" — clear dup
+
+Rules:
+- Be conservative — only flag if clearly wrong
+- Short clean names like "First Aid", "Fire Safety", "POSH Awareness" are fine
+- Do NOT flag names just because they are not in master — that is handled elsewhere
+- Indian industrial terms are valid: Boiler, Turbine, ETP, Cane, SOP, OJT
+
+Respond with ONLY a compact JSON array, no markdown fences, no explanation:
+[{{"idx":1,"issues":[]}},{{"idx":2,"issues":[{{"type":"suffix","msg":"Contains FY code 25-26","fix":"Fire Safety Training"}}]}}]"""
+
+        resp = model.generate_content(prompt)
+        raw  = resp.text.strip()
+        if raw.startswith('```'):
+            raw = raw.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+
+        data = _j.loads(raw)
+        findings = {}
+        for item in data:
+            idx    = item.get('idx', 0) - 1
+            issues = item.get('issues') or []
+            if issues and 0 <= idx < len(uploaded_names):
+                findings[uploaded_names[idx].lower()] = issues
+        return findings
+    except Exception:
+        return {}
+
+
 def _error_excel_for_tni(error_rows, dup_rows=None, plant_id=None, db=None):
     from openpyxl.worksheet.datavalidation import DataValidation
     wb = openpyxl.Workbook()

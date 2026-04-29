@@ -15,7 +15,8 @@ from tms.helpers import (
     _is_ajax, _get_programme_names, _canonical_prog, _sync_master_from_tni,
     _read_upload_file, _read_upload_file_path, _clean, _safe_float,
     _error_excel_response, _process_fresh_tni, _parse_msforms_excel,
-    _smart_analyze_rows, _error_excel_for_tni, _cleanse_programme_names,
+    _smart_analyze_rows, _ai_validate_programme_names,
+    _error_excel_for_tni, _cleanse_programme_names,
 )
 
 import openpyxl
@@ -658,23 +659,39 @@ def _register(app):
                   f'Try increasing "Skip top rows" if headers are not on row 1.', 'warning')
             return render_template('tni_analyze.html', step='upload')
 
+        master_progs = [r[0] for r in db.execute(
+            'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
+        ).fetchall()] or []
+
+        # AI second-pass: check unique programme names for quality issues
+        uploaded_names = list(dict.fromkeys(
+            r['programme_name'] for r in rows
+            if r.get('programme_name') and r['status'] != 'error'
+        ))
+        ai_findings = _ai_validate_programme_names(uploaded_names, master_progs)
+        for r in rows:
+            prog_key = (r.get('programme_name') or '').lower()
+            r['ai_issues'] = ai_findings.get(prog_key, [])
+            if r['ai_issues'] and r['status'] == 'ok':
+                r['status'] = 'ai_flag'
+
         aid = str(_uuid.uuid4())
         with open(os.path.join(BASE_DIR, 'data', f'tni_analyze_{aid}.json'), 'w') as fp:
             _json.dump(rows, fp)
 
         ok_count    = sum(1 for r in rows if r['status'] == 'ok')
         fixed_count = sum(1 for r in rows if r['status'] == 'fixed')
+        ai_count    = sum(1 for r in rows if r['status'] == 'ai_flag')
         warn_count  = sum(1 for r in rows if r['status'] == 'warning')
         err_count   = sum(1 for r in rows if r['status'] == 'error')
 
-        master_progs = [r[0] for r in db.execute(
-            'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
-        ).fetchall()] or []
         upload_progs_lower = set(
-            r['programme_name'].lower() for r in rows if r['status'] in ('ok', 'fixed'))
+            r['programme_name'].lower() for r in rows
+            if r['status'] in ('ok', 'fixed', 'ai_flag'))
         return render_template('tni_analyze.html', step='review',
                                rows=rows, aid=aid,
                                ok_count=ok_count, fixed_count=fixed_count,
+                               ai_count=ai_count,
                                warn_count=warn_count, err_count=err_count,
                                master_progs=master_progs,
                                upload_progs_lower=upload_progs_lower,
