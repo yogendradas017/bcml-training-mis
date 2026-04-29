@@ -216,20 +216,27 @@ def _register(app):
         inserted = 0
         errors = []
 
+        # Pre-load existing emp codes for this plant to detect DB duplicates upfront
+        existing_codes = {
+            r[0] for r in db.execute(
+                'SELECT emp_code FROM employees WHERE plant_id=?', (plant_id,)).fetchall()
+        }
+        seen_in_file = {}  # emp_code -> first row number (detect within-file duplicates)
+
         for i, row in enumerate(rows, start=2):
             if not any(row):
                 continue
-            emp_code = str(row[0]).strip() if row[0] else ''
-            name     = str(row[1]).strip() if row[1] else ''
-            desig    = str(row[2]).strip() if row[2] else ''
-            grade_raw = str(row[3]).strip() if row[3] else ''
+            emp_code   = str(row[0]).strip() if row[0] else ''
+            name       = str(row[1]).strip() if row[1] else ''
+            desig      = str(row[2]).strip() if row[2] else ''
+            grade_raw  = str(row[3]).strip() if row[3] else ''
             collar_raw = str(row[4]).strip() if row[4] else ''
-            dept_raw  = str(row[5]).strip() if row[5] else ''
-            sect_raw  = str(row[6]).strip() if row[6] else ''
-            cat_raw   = str(row[7]).strip() if row[7] else ''
+            dept_raw   = str(row[5]).strip() if row[5] else ''
+            sect_raw   = str(row[6]).strip() if row[6] else ''
+            cat_raw    = str(row[7]).strip() if row[7] else ''
             gender_raw = str(row[8]).strip() if row[8] else ''
-            ph_raw    = str(row[9]).strip() if row[9] else 'No'
-            remarks   = str(row[10]).strip() if row[10] else ''
+            ph_raw     = str(row[9]).strip() if row[9] else 'No'
+            remarks    = str(row[10]).strip() if row[10] else ''
 
             row_errors = []
 
@@ -260,22 +267,27 @@ def _register(app):
             if ph_raw and ph_raw not in PH_OPTIONS:
                 row_errors.append(f"Invalid PH value '{ph_raw}' (must be Yes / No)")
 
-            # Dept/section: accepted as-is (new values allowed)
+            # Duplicate checks — report before attempting insert
+            if emp_code:
+                if emp_code in existing_codes:
+                    row_errors.append(f"Emp code {emp_code} already exists in the system — skipped")
+                elif emp_code in seen_in_file:
+                    row_errors.append(f"Emp code {emp_code} appears again (first at row {seen_in_file[emp_code]}) — skipped")
+                else:
+                    seen_in_file[emp_code] = i
 
             if row_errors:
                 errors.append(f"Row {i} ({emp_code or '?'}): {'; '.join(row_errors)}")
                 continue
 
-            try:
-                db.execute('''INSERT INTO employees
-                    (plant_id,emp_code,name,designation,grade,collar,department,section,
-                     category,gender,physically_handicapped,remarks)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?)''',
-                    (plant_id, emp_code, name, desig, grade, collar,
-                     dept, sect, cat, gender, ph or 'No', remarks))
-                inserted += 1
-            except sqlite3.IntegrityError:
-                errors.append(f"Row {i} ({emp_code}): Emp code already exists — skipped")
+            db.execute('''INSERT INTO employees
+                (plant_id,emp_code,name,designation,grade,collar,department,section,
+                 category,gender,physically_handicapped,remarks)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?)''',
+                (plant_id, emp_code, name, desig, grade, collar,
+                 dept, sect, cat, gender, ph or 'No', remarks))
+            existing_codes.add(emp_code)
+            inserted += 1
 
         db.commit()
 
