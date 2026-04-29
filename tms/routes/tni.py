@@ -663,12 +663,23 @@ def _register(app):
             'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
         ).fetchall()] or []
 
-        # AI second-pass: check unique programme names for quality issues
-        uploaded_names = list(dict.fromkeys(
-            r['programme_name'] for r in rows
-            if r.get('programme_name') and r['status'] != 'error'
-        ))
-        ai_findings = _ai_validate_programme_names(uploaded_names, master_progs)
+        # AI second-pass: comprehensive check — name quality, type, mode, hours
+        seen_progs = {}
+        for r in rows:
+            if not r.get('programme_name') or r['status'] == 'error':
+                continue
+            name = r['programme_name']
+            if name not in seen_progs:
+                seen_progs[name] = {'name': name, 'prog_type': r.get('prog_type', ''),
+                                    'mode': r.get('mode', ''), 'hours': []}
+            if r.get('planned_hours'):
+                seen_progs[name]['hours'].append(r['planned_hours'])
+        prog_summaries = []
+        for data in seen_progs.values():
+            hrs = data['hours']
+            data['avg_hours'] = round(sum(hrs) / len(hrs), 1) if hrs else 0
+            prog_summaries.append(data)
+        ai_findings = _ai_validate_programme_names(prog_summaries, master_progs)
         for r in rows:
             prog_key = (r.get('programme_name') or '').lower()
             r['ai_issues'] = ai_findings.get(prog_key, [])

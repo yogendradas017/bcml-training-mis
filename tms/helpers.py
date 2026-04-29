@@ -1002,55 +1002,76 @@ def _smart_analyze_rows(df, plant_id, db):
     return results
 
 
-def _ai_validate_programme_names(uploaded_names, master_progs):
+def _ai_validate_programme_names(prog_summaries, master_progs):
     """
-    Second-pass AI check on programme names using Google Gemini (free tier).
-    Catches non-canonical suffixes (year, FY, batch, unit codes) and
-    semantic duplicates that fuzzy matching misses.
+    Comprehensive AI check on TNI data using Google Gemini (free tier).
+    Checks: name suffixes, semantic duplicates, type mismatch, mode mismatch,
+    unrealistic hours — all human errors that rule-based checks miss.
 
+    prog_summaries: list of {name, prog_type, mode, avg_hours}
     Returns {name_lower: [{'type': str, 'msg': str, 'fix': str|None}]}.
     Returns {} silently if GEMINI_API_KEY not set or call fails.
     """
     import os
-    if not os.environ.get('GEMINI_API_KEY') or not uploaded_names:
+    if not os.environ.get('GEMINI_API_KEY') or not prog_summaries:
         return {}
     try:
         import google.generativeai as genai, json as _j
         genai.configure(api_key=os.environ['GEMINI_API_KEY'])
         model = genai.GenerativeModel('gemini-1.5-flash')
 
-        master_text = '\n'.join(f'- {p}' for p in master_progs[:100]) or '(none yet)'
-        names_text  = '\n'.join(f'{i+1}. "{n}"' for i, n in enumerate(uploaded_names))
+        master_text  = '\n'.join(f'- {p}' for p in master_progs[:100]) or '(none yet)'
+        summary_text = '\n'.join(
+            f'{i+1}. Name: "{s["name"]}" | Type: {s["prog_type"] or "?"} | Mode: {s["mode"] or "?"} | Avg Hours: {s["avg_hours"]}'
+            for i, s in enumerate(prog_summaries)
+        )
 
-        prompt = f"""You validate TNI (Training Needs Identification) data for BCML (Balrampur Chini Mills), an Indian sugar manufacturer. SPOCs upload Excel files with employee training plans.
+        prompt = f"""You validate TNI (Training Needs Identification) data for BCML (Balrampur Chini Mills), an Indian sugar manufacturer (sugar mills, boilers, cane farming, EHS). SPOCs upload Excel files with employee training nominations.
 
 Master list of canonical programme names:
 {master_text}
 
-Programme names from this upload:
-{names_text}
+Programmes in this upload (with their Type, Mode, Hours as entered by the SPOC):
+{summary_text}
 
-Check ONLY these two issues:
+Check each entry for ALL of the following human errors:
 
-1. SUFFIX — Name contains a non-canonical suffix that should be stripped: year numbers (2025, 2026), FY codes (FY25-26, 25-26), batch numbers (Batch 1, B2), plant unit codes (BCM, GCM, RCM, TCM, MZP, ACM, KCM, BBN, HCM, MCM), quarters (Q1, Q2, Q3, Q4), or date ranges (Jan-Mar). Suggest the clean canonical name.
-   Examples:
-   - "Fire Safety Training FY25-26" → fix: "Fire Safety Training"
-   - "5S Housekeeping BCM Batch 2" → fix: "5S Housekeeping"
-   - "Leadership Dev Workshop Q3 2025" → fix: "Leadership Development Workshop"
+1. SUFFIX — Programme name contains non-canonical suffix: FY codes (FY25-26, 25-26), year (2025), batch (Batch 1, B2), plant unit codes (BCM, GCM, RCM, TCM, MZP, ACM, KCM, BBN, HCM, MCM), quarters (Q1, Q2), months (Jan-Mar). Suggest clean name.
 
-2. SEMANTIC_DUP — Two names in THIS list clearly refer to the same programme (>90% confident). Add dup_with as a list of the other 1-based index numbers.
-   Examples:
-   - "Fire Safety" and "Fire Safety Training" — probable dup
-   - "5S Housekeeping" and "5-S House Keeping" — clear dup
+2. SEMANTIC_DUP — Two entries in this list clearly mean the same programme (>90% confident). Add dup_with: [other 1-based indices].
+   Examples: "Fire Safety" vs "Fire Safety Training", "5S" vs "5S Housekeeping", "POSH" vs "POSH Awareness"
 
-Rules:
-- Be conservative — only flag if clearly wrong
-- Short clean names like "First Aid", "Fire Safety", "POSH Awareness" are fine
-- Do NOT flag names just because they are not in master — that is handled elsewhere
-- Indian industrial terms are valid: Boiler, Turbine, ETP, Cane, SOP, OJT
+3. TYPE_MISMATCH — The Type of Programme entered is clearly wrong for this programme name.
+   Rules:
+   - Fire/Safety/EHS/Environment/POSH/First Aid → EHS/HR
+   - Boiler/Turbine/Electrical/Mechanical/SOP/OJT/Technical operations → Technical
+   - Excel/Computer/SAP/IT/Software → IT
+   - Leadership/Communication/Behavioural/Soft Skills/Motivation → Behavioural/Leadership
+   - Cane/Farming/Harvesting/Soil/Seed/Crop → Cane
+   - Finance/Accounts/Commercial/Taxation → Commercial
+   Only flag if you are very confident the entered type is wrong.
 
-Respond with ONLY a compact JSON array, no markdown fences, no explanation:
-[{{"idx":1,"issues":[]}},{{"idx":2,"issues":[{{"type":"suffix","msg":"Contains FY code 25-26","fix":"Fire Safety Training"}}]}}]"""
+4. MODE_MISMATCH — The Mode is clearly wrong for this programme.
+   Rules:
+   - Field operations, equipment handling, practical skills → OJT (not Classroom)
+   - Standard Operating Procedures → SOP (not Classroom)
+   - E-learning, quiz, video-based → Online (not Classroom)
+   Only flag if obviously wrong.
+
+5. HOURS_FLAG — Planned hours are unrealistic for this type of training.
+   Rules:
+   - Any programme > 40 hours → flag as suspicious
+   - SOP or OJT programme > 16 hours → flag
+   - Online programme > 8 hours → flag
+   - 0 hours → flag as missing
+
+Be conservative — only flag when clearly wrong. Short clean names are fine.
+Do NOT flag names just because they are not in master.
+
+Respond with ONLY a compact JSON array, no markdown, no explanation:
+[{{"idx":1,"issues":[]}},{{"idx":2,"issues":[{{"type":"type_mismatch","msg":"Fire Safety should be EHS/HR not Technical","fix":"EHS/HR"}},{{"type":"suffix","msg":"Name contains FY code","fix":"Fire Safety Training"}}]}}]
+
+Issue types: suffix, semantic_dup, type_mismatch, mode_mismatch, hours_flag"""
 
         resp = model.generate_content(prompt)
         raw  = resp.text.strip()
@@ -1062,8 +1083,8 @@ Respond with ONLY a compact JSON array, no markdown fences, no explanation:
         for item in data:
             idx    = item.get('idx', 0) - 1
             issues = item.get('issues') or []
-            if issues and 0 <= idx < len(uploaded_names):
-                findings[uploaded_names[idx].lower()] = issues
+            if issues and 0 <= idx < len(prog_summaries):
+                findings[prog_summaries[idx]['name'].lower()] = issues
         return findings
     except Exception:
         return {}

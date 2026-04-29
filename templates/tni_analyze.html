@@ -251,7 +251,7 @@
             {% endfor %}
             {% for ai in r.ai_issues %}
             <div style="font-size:11px;color:#7c3aed;margin-top:3px;">
-              <i class="bi bi-robot me-1"></i>AI: {{ ai.msg }}{% if ai.fix %} — suggest: <strong>{{ ai.fix }}</strong>{% endif %}
+              <i class="bi bi-robot me-1"></i>AI: {{ ai.msg }}{% if ai.fix %} → <strong>{{ ai.fix }}</strong>{% endif %}
             </div>
             {% endfor %}
           </td>
@@ -269,13 +269,33 @@
           <td>{{ r.planned_hours }}</td>
           <td style="min-width:220px;">
             {% for ai in r.ai_issues %}
+            {% if ai.type == 'suffix' %}
             <div style="font-size:11px;color:#7c3aed;margin-bottom:3px;">
-              <i class="bi bi-robot me-1"></i>{{ ai.msg }}
-              {% if ai.fix %}<br><span style="color:#065f46;">→ Suggested clean name: <strong>{{ ai.fix }}</strong></span>{% endif %}
-              {% if ai.dup_with %}<br><span style="color:#b45309;">→ Possible duplicate of row(s): {{ ai.dup_with | join(', ') }}</span>{% endif %}
+              <i class="bi bi-scissors me-1"></i>{{ ai.msg }}{% if ai.fix %} → <strong>{{ ai.fix }}</strong>{% endif %}
             </div>
+            {% elif ai.type == 'semantic_dup' %}
+            <div style="font-size:11px;color:#b45309;margin-bottom:3px;">
+              <i class="bi bi-copy me-1"></i>{{ ai.msg }}{% if ai.dup_with %} (row {{ ai.dup_with | join(', ') }}){% endif %}
+            </div>
+            {% elif ai.type == 'type_mismatch' %}
+            <div style="font-size:11px;color:#dc2626;margin-bottom:3px;">
+              <i class="bi bi-tag me-1"></i>{{ ai.msg }}{% if ai.fix %} → suggest Type: <strong>{{ ai.fix }}</strong>{% endif %}
+            </div>
+            {% elif ai.type == 'mode_mismatch' %}
+            <div style="font-size:11px;color:#0369a1;margin-bottom:3px;">
+              <i class="bi bi-display me-1"></i>{{ ai.msg }}{% if ai.fix %} → suggest Mode: <strong>{{ ai.fix }}</strong>{% endif %}
+            </div>
+            {% elif ai.type == 'hours_flag' %}
+            <div style="font-size:11px;color:#92400e;margin-bottom:3px;">
+              <i class="bi bi-clock me-1"></i>{{ ai.msg }}
+            </div>
+            {% else %}
+            <div style="font-size:11px;color:#7c3aed;margin-bottom:3px;">
+              <i class="bi bi-robot me-1"></i>{{ ai.msg }}{% if ai.fix %} → <strong>{{ ai.fix }}</strong>{% endif %}
+            </div>
+            {% endif %}
             {% endfor %}
-            <div style="font-size:10px;color:#9ca3af;margin-top:2px;">Will import. Fix the name if the suggestion is correct.</div>
+            <div style="font-size:10px;color:#9ca3af;margin-top:2px;">Will import. Review AI suggestion and correct if needed.</div>
           </td>
         </tr>
 
@@ -312,7 +332,7 @@
             {% endfor %}
             {% for ai in r.ai_issues %}
             <div style="font-size:11px;color:#7c3aed;margin-top:3px;">
-              <i class="bi bi-robot me-1"></i>AI: {{ ai.msg }}{% if ai.fix %} — suggest: <strong>{{ ai.fix }}</strong>{% endif %}
+              <i class="bi bi-robot me-1"></i>AI: {{ ai.msg }}{% if ai.fix %} → <strong>{{ ai.fix }}</strong>{% endif %}
             </div>
             {% endfor %}
           </td>
@@ -336,7 +356,7 @@
             {% endfor %}
             {% for ai in r.ai_issues %}
             <div style="font-size:11px;color:#7c3aed;margin-top:3px;">
-              <i class="bi bi-robot me-1"></i>AI: {{ ai.msg }}{% if ai.fix %} — suggest: <strong>{{ ai.fix }}</strong>{% endif %}
+              <i class="bi bi-robot me-1"></i>AI: {{ ai.msg }}{% if ai.fix %} → <strong>{{ ai.fix }}</strong>{% endif %}
             </div>
             {% endfor %}
           </td>
