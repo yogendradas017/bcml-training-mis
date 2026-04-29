@@ -45,9 +45,42 @@
 
 <!-- Add Employee Form -->
 <div class="card mb-4">
-  <div class="card-header bg-primary text-white">
-    <i class="bi bi-person-plus"></i> Add New Employee
+  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-person-plus"></i> Add New Employee</span>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('emp_bulk_template') }}" class="btn btn-sm btn-light">
+        <i class="bi bi-file-earmark-arrow-down"></i> Download Template
+      </a>
+      <button class="btn btn-sm btn-success" type="button" data-bs-toggle="collapse" data-bs-target="#bulkUploadSection">
+        <i class="bi bi-upload"></i> Bulk Upload
+      </button>
+    </div>
   </div>
+
+  <!-- Bulk Upload Panel -->
+  <div class="collapse" id="bulkUploadSection">
+    <div class="card-body border-bottom" style="background:#f0fdf4;">
+      <form method="POST" action="{{ url_for('emp_bulk_upload') }}" enctype="multipart/form-data">
+        <div class="d-flex align-items-end gap-3 flex-wrap">
+          <div>
+            <label class="form-label fw-semibold mb-1" style="font-size:13px;">
+              <i class="bi bi-file-earmark-excel text-success"></i> Upload Excel (.xlsx)
+            </label>
+            <input type="file" name="bulk_file" class="form-control form-control-sm" accept=".xlsx" required style="width:280px;">
+          </div>
+          <button type="submit" class="btn btn-success btn-sm px-4">
+            <i class="bi bi-cloud-upload"></i> Upload &amp; Validate
+          </button>
+          <div style="font-size:12px;color:#6b7280;">
+            <i class="bi bi-info-circle"></i>
+            Use the template above. Grade, Collar, Gender and PH must match the Reference sheet values.
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Single Add Form -->
   <div class="card-body">
     <form method="POST" action="{{ url_for('add_employee') }}">
       <div class="row g-3">
@@ -65,27 +98,38 @@
         </div>
         <div class="col-md-3">
           <label class="form-label">Grade</label>
-          <input type="text" name="grade" class="form-control" placeholder="e.g. MANAGERIAL 3B">
+          <select name="grade" class="form-select">
+            <option value="">-- Select --</option>
+            {% for g in grades %}<option>{{ g }}</option>{% endfor %}
+          </select>
         </div>
         <div class="col-md-3">
           <label class="form-label">Collar Type <span class="required-star">*</span></label>
           <select name="collar" class="form-select" required>
             <option value="">-- Select --</option>
-            <option value="Blue Collared">Blue Collared</option>
-            <option value="White Collared">White Collared</option>
+            {% for c in collars %}<option>{{ c }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-3">
           <label class="form-label">Department</label>
-          <input type="text" name="department" class="form-control" placeholder="e.g. ENGINEERING">
+          <select name="department" class="form-select">
+            <option value="">-- Select --</option>
+            {% for d in departments %}<option>{{ d }}</option>{% endfor %}
+          </select>
         </div>
         <div class="col-md-3">
           <label class="form-label">Section</label>
-          <input type="text" name="section" class="form-control" placeholder="e.g. BOILING HOUSE">
+          <select name="section" class="form-select" id="sectionSelect">
+            <option value="">-- Select --</option>
+            {% for s in sections %}<option>{{ s }}</option>{% endfor %}
+          </select>
         </div>
         <div class="col-md-3">
           <label class="form-label">Category</label>
-          <input type="text" name="category" class="form-control" placeholder="Permanent / Seasonal">
+          <select name="category" class="form-select">
+            <option value="">-- Select --</option>
+            {% for cat in categories %}<option>{{ cat }}</option>{% endfor %}
+          </select>
         </div>
         <div class="col-md-3">
           <label class="form-label">Gender</label>
@@ -97,8 +141,7 @@
         <div class="col-md-3">
           <label class="form-label">Physically Handicapped</label>
           <select name="physically_handicapped" class="form-select">
-            <option value="No">No</option>
-            <option value="Yes">Yes</option>
+            {% for p in ph_options %}<option>{{ p }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-3">
