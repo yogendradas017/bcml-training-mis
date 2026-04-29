@@ -158,7 +158,7 @@ def _register(app):
     def programme_intelligence():
         plant_id = session['plant_id']
         db       = get_db()
-        fy       = _current_fy()
+        fy       = _fy_label()
 
         unique_progs = db.execute(
             'SELECT COUNT(DISTINCT programme_name) FROM tni WHERE plant_id=?',
