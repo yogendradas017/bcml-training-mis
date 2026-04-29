@@ -120,7 +120,8 @@ def _derive_audience(plant_id, prog_name, db):
 
 # ── Session code helpers ──────────────────────────────────────────────────────
 
-def _current_fy():
+def _fy_label():
+    """Returns short FY label like '26-27' for use in session codes."""
     today = date.today()
     y = today.year
     return f'{str(y-1)[2:]}-{str(y)[2:]}' if today.month < 4 else f'{str(y)[2:]}-{str(y+1)[2:]}'
@@ -141,7 +142,7 @@ def _get_or_create_prog_code(plant_id, prog_name, prog_type, db):
 
 
 def _new_session_code(plant_id, prog_code, db):
-    fy    = _current_fy()
+    fy    = _fy_label()
     count = db.execute(
         'SELECT COUNT(*) FROM calendar WHERE plant_id=? AND prog_code=? AND session_code LIKE ?',
         (plant_id, prog_code, f'{prog_code}/{fy}/%')).fetchone()[0]

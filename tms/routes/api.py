@@ -3,7 +3,7 @@ from flask import request, session, jsonify, render_template
 from tms.constants import PROG_TYPES
 from tms.db import get_db
 from tms.decorators import login_required, spoc_required
-from tms.helpers import _current_fy, _derive_audience
+from tms.helpers import _fy_label, _derive_audience
 
 
 def _register(app):
@@ -86,7 +86,7 @@ def _register(app):
         if not prog_name:
             return jsonify({})
         db  = get_db()
-        fy  = _current_fy()
+        fy  = _fy_label()
 
         canonical = prog_name
         exact = db.execute('SELECT 1 FROM tni WHERE plant_id=? AND programme_name=? LIMIT 1',
