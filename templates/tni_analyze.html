@@ -275,7 +275,7 @@
             </div>
             {% elif ai.type == 'semantic_dup' %}
             <div style="font-size:11px;color:#b45309;margin-bottom:3px;">
-              <i class="bi bi-copy me-1"></i>{{ ai.msg }}{% if ai.dup_with %} (row {{ ai.dup_with | join(', ') }}){% endif %}
+              <i class="bi bi-copy me-1"></i>{{ ai.msg }}{% if ai.dup_with is iterable and ai.dup_with is not string %} (row {{ ai.dup_with | join(', ') }}){% endif %}
             </div>
             {% elif ai.type == 'type_mismatch' %}
             <div style="font-size:11px;color:#dc2626;margin-bottom:3px;">
