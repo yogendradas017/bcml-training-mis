@@ -47,10 +47,7 @@ def _validate_emp_fields(f, departments, sections):
         errs.append(f"Invalid grade '{f.get('grade')}'. Must be one of the predefined grades.")
     if collar and collar not in COLLARS:
         errs.append(f"Invalid collar '{f.get('collar')}'. Must be Blue Collared or White Collared.")
-    if dept and departments and dept not in departments:
-        errs.append(f"Department '{f.get('department')}' not in predefined list for this plant.")
-    if sect and sections and sect not in sections:
-        errs.append(f"Section '{f.get('section')}' not in predefined list for this plant.")
+    # Dept/section: not strictly enforced — new values are allowed (e.g. new wings added)
     if gender and gender not in GENDERS:
         errs.append(f"Invalid gender '{gender}'. Must be Male, Female, or Others.")
     if ph and ph not in PH_OPTIONS:
@@ -263,11 +260,7 @@ def _register(app):
             if ph_raw and ph_raw not in PH_OPTIONS:
                 row_errors.append(f"Invalid PH value '{ph_raw}' (must be Yes / No)")
 
-            # Dept/section: validate only if the plant already has a list
-            if dept and departments and dept not in departments:
-                row_errors.append(f"Department '{dept_raw}' not in predefined list")
-            if sect and sections and sect not in sections:
-                row_errors.append(f"Section '{sect_raw}' not in predefined list")
+            # Dept/section: accepted as-is (new values allowed)
 
             if row_errors:
                 errors.append(f"Row {i} ({emp_code or '?'}): {'; '.join(row_errors)}")

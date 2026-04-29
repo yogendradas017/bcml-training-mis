@@ -112,15 +112,15 @@
         </div>
         <div class="col-md-3">
           <label class="form-label">Department</label>
-          <select name="department" class="form-select">
-            <option value="">-- Select --</option>
+          <select name="department" id="deptTomSelect">
+            <option value=""></option>
             {% for d in departments %}<option>{{ d }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-3">
           <label class="form-label">Section</label>
-          <select name="section" class="form-select" id="sectionSelect">
-            <option value="">-- Select --</option>
+          <select name="section" id="sectTomSelect">
+            <option value=""></option>
             {% for s in sections %}<option>{{ s }}</option>{% endfor %}
           </select>
         </div>
@@ -307,6 +307,18 @@
 <script>
 TBL.init('empTable', 30);
 TBL.buildDynamic('empTable', 'dept', document.getElementById('empDeptFilter'), 'All Departments');
+
+// Tom Select for Department & Section — allows picking from list OR typing a new value
+new TomSelect('#deptTomSelect', {
+  create: true, maxItems: 1, placeholder: 'Select or type new…',
+  createFilter: v => v.trim().length > 0,
+  onItemAdd(v, item) { this.setTextboxValue(''); this.refreshOptions(); }
+});
+new TomSelect('#sectTomSelect', {
+  create: true, maxItems: 1, placeholder: 'Select or type new…',
+  createFilter: v => v.trim().length > 0,
+  onItemAdd(v, item) { this.setTextboxValue(''); this.refreshOptions(); }
+});
 
 // Modal init deferred — sharedExitModal renders after this scripts block (base.html render order)
 document.addEventListener('DOMContentLoaded', function() {
