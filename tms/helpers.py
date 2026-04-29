@@ -1083,6 +1083,10 @@ Issue types: suffix, semantic_dup, type_mismatch, mode_mismatch, hours_flag"""
         for item in data:
             idx    = item.get('idx', 0) - 1
             issues = item.get('issues') or []
+            for issue in issues:
+                dw = issue.get('dup_with')
+                if dw is not None and not isinstance(dw, list):
+                    issue['dup_with'] = [dw]
             if issues and 0 <= idx < len(prog_summaries):
                 findings[prog_summaries[idx]['name'].lower()] = issues
         return findings
