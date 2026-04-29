@@ -15,7 +15,7 @@ from tms.helpers import (
     _is_ajax, _get_programme_names, _canonical_prog, _sync_master_from_tni,
     _read_upload_file, _read_upload_file_path, _clean, _safe_float,
     _error_excel_response, _process_fresh_tni, _parse_msforms_excel,
-    _smart_analyze_rows, _ai_validate_programme_names,
+    _smart_analyze_rows,
     _error_excel_for_tni, _cleanse_programme_names,
 )
 
@@ -659,61 +659,35 @@ def _register(app):
                   f'Try increasing "Skip top rows" if headers are not on row 1.', 'warning')
             return render_template('tni_analyze.html', step='upload')
 
-        try:
-            import traceback as _tb, logging as _log
-            master_progs = [r[0] for r in db.execute(
-                'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
-            ).fetchall()] or []
+        master_progs = [r[0] for r in db.execute(
+            'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
+        ).fetchall()] or []
 
-            # AI second-pass: comprehensive check — name quality, type, mode, hours
-            seen_progs = {}
-            for r in rows:
-                if not r.get('programme_name') or r['status'] == 'error':
-                    continue
-                name = r['programme_name']
-                if name not in seen_progs:
-                    seen_progs[name] = {'name': name, 'prog_type': r.get('prog_type', ''),
-                                        'mode': r.get('mode', ''), 'hours': []}
-                if r.get('planned_hours'):
-                    seen_progs[name]['hours'].append(float(r['planned_hours']))
-            prog_summaries = []
-            for data in seen_progs.values():
-                hrs = data['hours']
-                data['avg_hours'] = round(sum(hrs) / len(hrs), 1) if hrs else 0
-                prog_summaries.append(data)
-            ai_findings = _ai_validate_programme_names(prog_summaries, master_progs)
-            for r in rows:
-                prog_key = (r.get('programme_name') or '').lower()
-                r['ai_issues'] = ai_findings.get(prog_key, [])
-                if r['ai_issues'] and r['status'] == 'ok':
-                    r['status'] = 'ai_flag'
+        for r in rows:
+            r['ai_issues'] = []
 
-            aid = str(_uuid.uuid4())
-            os.makedirs(os.path.join(BASE_DIR, 'data'), exist_ok=True)
-            with open(os.path.join(BASE_DIR, 'data', f'tni_analyze_{aid}.json'), 'w') as fp:
-                _json.dump(rows, fp, default=str)
+        aid = str(_uuid.uuid4())
+        os.makedirs(os.path.join(BASE_DIR, 'data'), exist_ok=True)
+        with open(os.path.join(BASE_DIR, 'data', f'tni_analyze_{aid}.json'), 'w') as fp:
+            _json.dump(rows, fp, default=str)
 
-            ok_count    = sum(1 for r in rows if r['status'] == 'ok')
-            fixed_count = sum(1 for r in rows if r['status'] == 'fixed')
-            ai_count    = sum(1 for r in rows if r['status'] == 'ai_flag')
-            warn_count  = sum(1 for r in rows if r['status'] == 'warning')
-            err_count   = sum(1 for r in rows if r['status'] == 'error')
+        ok_count    = sum(1 for r in rows if r['status'] == 'ok')
+        fixed_count = sum(1 for r in rows if r['status'] == 'fixed')
+        ai_count    = 0
+        warn_count  = sum(1 for r in rows if r['status'] == 'warning')
+        err_count   = sum(1 for r in rows if r['status'] == 'error')
 
-            upload_progs_lower = set(
-                r['programme_name'].lower() for r in rows
-                if r['status'] in ('ok', 'fixed', 'ai_flag'))
-            return render_template('tni_analyze.html', step='review',
-                                   rows=rows, aid=aid,
-                                   ok_count=ok_count, fixed_count=fixed_count,
-                                   ai_count=ai_count,
-                                   warn_count=warn_count, err_count=err_count,
-                                   master_progs=master_progs,
-                                   upload_progs_lower=upload_progs_lower,
-                                   prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY)
-        except Exception as _e:
-            _log.error(f'tni_analyze POST error: {_tb.format_exc()}')
-            flash(f'Analysis failed: {_e}. Please try again or contact support.', 'danger')
-            return render_template('tni_analyze.html', step='upload')
+        upload_progs_lower = set(
+            r['programme_name'].lower() for r in rows
+            if r['status'] in ('ok', 'fixed'))
+        return render_template('tni_analyze.html', step='review',
+                               rows=rows, aid=aid,
+                               ok_count=ok_count, fixed_count=fixed_count,
+                               ai_count=ai_count,
+                               warn_count=warn_count, err_count=err_count,
+                               master_progs=master_progs,
+                               upload_progs_lower=upload_progs_lower,
+                               prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY)
 
     @app.route('/tni/analyze/confirm', methods=['POST'])
     @spoc_required
