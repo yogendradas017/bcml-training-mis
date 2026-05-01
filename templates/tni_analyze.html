@@ -26,13 +26,6 @@
             </div>
           </div>
           <div class="col">
-            <div style="background:#faf5ff;border:1px solid #ddd6fe;border-radius:10px;padding:10px;">
-              <i class="bi bi-robot" style="font-size:18px;color:#7c3aed;"></i>
-              <div style="font-weight:700;color:#5b21b6;margin-top:4px;">Purple</div>
-              <div style="color:#6b7280;">AI flagged</div>
-            </div>
-          </div>
-          <div class="col">
             <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px;">
               <i class="bi bi-x-circle-fill text-danger" style="font-size:18px;"></i>
               <div style="font-weight:700;color:#dc2626;margin-top:4px;">Red</div>
@@ -84,8 +77,8 @@
 
 {% elif step == 'review' %}
 
-{% set total = ok_count + fixed_count + ai_count + err_count %}
-{% set import_count = ok_count + fixed_count + ai_count %}
+{% set total = ok_count + fixed_count + err_count %}
+{% set import_count = ok_count + fixed_count %}
 {% set blocked_count = err_count %}
 {% set pct = ((import_count / total) * 100)|round|int if total > 0 else 0 %}
 
@@ -112,14 +105,6 @@
         <div style="font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:1px;">Errors</div>
         <div style="font-size:30px;font-weight:800;color:#f87171;">{{ err_count }}</div>
       </div>
-      {% if ai_count > 0 %}
-      <div style="width:1px;height:44px;background:rgba(255,255,255,.2);"></div>
-      <div style="text-align:center;">
-        <div style="font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:1px;">AI Flags</div>
-        <div style="font-size:30px;font-weight:800;color:#c4b5fd;">{{ ai_count }}</div>
-        <div style="font-size:10px;opacity:.7;">review needed</div>
-      </div>
-      {% endif %}
       <div style="flex:1;min-width:160px;">
         <div style="font-size:11px;opacity:.65;margin-bottom:5px;">Import Quality</div>
         <div style="background:rgba(255,255,255,.15);border-radius:99px;height:12px;overflow:hidden;">
@@ -144,17 +129,6 @@
   <div>
     <strong>{{ err_count }} rows could not be auto-fixed</strong> — skipped from import, downloaded in correction Excel.
     Fix and re-upload. <strong>{{ import_count }} rows (green + amber only) will import.</strong>
-  </div>
-</div>
-{% endif %}
-
-{% if ai_count > 0 %}
-<div class="alert d-flex gap-2 align-items-start py-2 mb-2" style="background:#faf5ff;border:1px solid #ddd6fe;font-size:13px;color:#5b21b6;">
-  <i class="bi bi-robot mt-1" style="flex-shrink:0;"></i>
-  <div>
-    <strong>{{ ai_count }} row(s) flagged by AI.</strong>
-    Programme names may contain year codes, FY suffixes, batch numbers, or unit codes that should be stripped.
-    These rows <strong>will import</strong> — review the AI suggestion and correct the programme name before confirming if needed.
   </div>
 </div>
 {% endif %}
@@ -225,53 +199,6 @@
               <span style="color:#9ca3af;font-size:10px;"> ({{ fix.how }})</span>
             </div>
             {% endfor %}
-            {% for ai in r.ai_issues %}
-            <div style="font-size:11px;color:#7c3aed;margin-top:3px;">
-              <i class="bi bi-robot me-1"></i>AI: {{ ai.msg }}{% if ai.fix %} → <strong>{{ ai.fix }}</strong>{% endif %}
-            </div>
-            {% endfor %}
-          </td>
-        </tr>
-
-        {% elif r.status == 'ai_flag' %}
-        <tr class="an-row an-ai" style="background:#faf5ff;">
-          <td style="color:#9ca3af;font-size:11px;">{{ r.row_num }}</td>
-          <td><span style="background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;"><i class="bi bi-robot"></i> AI Flag</span></td>
-          <td style="font-weight:600;">{{ r.emp_code }}</td>
-          <td style="color:#6b7280;">{{ r.emp_name }}</td>
-          <td>{{ r.programme_name }}</td>
-          <td>{{ r.prog_type or '—' }}</td>
-          <td>{{ r.mode or '—' }}</td>
-          <td>{{ r.planned_hours }}</td>
-          <td style="min-width:220px;">
-            {% for ai in r.ai_issues %}
-            {% if ai.type == 'suffix' %}
-            <div style="font-size:11px;color:#7c3aed;margin-bottom:3px;">
-              <i class="bi bi-scissors me-1"></i>{{ ai.msg }}{% if ai.fix %} → <strong>{{ ai.fix }}</strong>{% endif %}
-            </div>
-            {% elif ai.type == 'semantic_dup' %}
-            <div style="font-size:11px;color:#b45309;margin-bottom:3px;">
-              <i class="bi bi-copy me-1"></i>{{ ai.msg }}{% if ai.dup_with %} (row {{ ai.dup_with | join(', ') }}){% endif %}
-            </div>
-            {% elif ai.type == 'type_mismatch' %}
-            <div style="font-size:11px;color:#dc2626;margin-bottom:3px;">
-              <i class="bi bi-tag me-1"></i>{{ ai.msg }}{% if ai.fix %} → suggest Type: <strong>{{ ai.fix }}</strong>{% endif %}
-            </div>
-            {% elif ai.type == 'mode_mismatch' %}
-            <div style="font-size:11px;color:#0369a1;margin-bottom:3px;">
-              <i class="bi bi-display me-1"></i>{{ ai.msg }}{% if ai.fix %} → suggest Mode: <strong>{{ ai.fix }}</strong>{% endif %}
-            </div>
-            {% elif ai.type == 'hours_flag' %}
-            <div style="font-size:11px;color:#92400e;margin-bottom:3px;">
-              <i class="bi bi-clock me-1"></i>{{ ai.msg }}
-            </div>
-            {% else %}
-            <div style="font-size:11px;color:#7c3aed;margin-bottom:3px;">
-              <i class="bi bi-robot me-1"></i>{{ ai.msg }}{% if ai.fix %} → <strong>{{ ai.fix }}</strong>{% endif %}
-            </div>
-            {% endif %}
-            {% endfor %}
-            <div style="font-size:10px;color:#9ca3af;margin-top:2px;">Will import. Review AI suggestion and correct if needed.</div>
           </td>
         </tr>
 
@@ -289,11 +216,6 @@
             {% for issue in r.issues %}
             <div style="font-size:11px;color:#dc2626;margin-bottom:2px;">
               <i class="bi bi-exclamation-circle me-1"></i>{{ issue }}
-            </div>
-            {% endfor %}
-            {% for ai in r.ai_issues %}
-            <div style="font-size:11px;color:#7c3aed;margin-top:3px;">
-              <i class="bi bi-robot me-1"></i>AI: {{ ai.msg }}{% if ai.fix %} → <strong>{{ ai.fix }}</strong>{% endif %}
             </div>
             {% endfor %}
           </td>

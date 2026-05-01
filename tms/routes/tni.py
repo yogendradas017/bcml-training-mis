@@ -671,7 +671,6 @@ def _register(app):
             ).fetchall()] or []
 
             for r in rows:
-                r['ai_issues'] = []
                 r['row_num']   = int(r['row_num']) if r.get('row_num') is not None else 0
                 if r.get('planned_hours') is None:
                     r['planned_hours'] = 0.0
@@ -683,8 +682,6 @@ def _register(app):
 
             ok_count    = sum(1 for r in rows if r['status'] == 'ok')
             fixed_count = sum(1 for r in rows if r['status'] == 'fixed')
-            ai_count    = 0
-            warn_count  = 0  # Smart Analyzer no longer blocks on unknown programmes — they auto-import and sync to master.
             err_count   = sum(1 for r in rows if r['status'] == 'error')
 
             upload_progs_lower = set(
@@ -693,8 +690,7 @@ def _register(app):
             return render_template('tni_analyze.html', step='review',
                                    rows=rows, aid=aid,
                                    ok_count=ok_count, fixed_count=fixed_count,
-                                   ai_count=ai_count,
-                                   warn_count=warn_count, err_count=err_count,
+                                   err_count=err_count,
                                    master_progs=master_progs,
                                    upload_progs_lower=upload_progs_lower,
                                    prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY)
