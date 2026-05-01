@@ -923,6 +923,8 @@ def _smart_analyze_rows(df, plant_id, db):
 
         if not any([raw_emp, raw_prog, raw_type, raw_mode]):
             continue
+        if raw_emp and raw_emp.startswith('⚠'):
+            continue
 
         fixes  = []
         issues = []

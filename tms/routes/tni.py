@@ -467,10 +467,13 @@ def _register(app):
             ws.cell(row=r, column=2).fill  = PatternFill('solid', fgColor='EFF6FF')
             ws.cell(row=r, column=7).value = 0
 
-        note_cell = ws.cell(row=max_rows + 2, column=1,
-                            value='⚠ Do not add columns. Do not delete hidden sheets. Column B auto-fills from Employee Code.')
-        note_cell.font = Font(italic=True, color='FF0000', size=9)
-        ws.merge_cells(f'A{max_rows+2}:G{max_rows+2}')
+        ws_info = wb.create_sheet('Instructions')
+        ws_info.cell(row=1, column=1, value='Instructions').font = Font(bold=True, size=12)
+        ws_info.cell(row=2, column=1, value='• Fill data in the "TNI Data" sheet only — rows 2 onwards.')
+        ws_info.cell(row=3, column=1, value='• Do NOT add or delete columns.')
+        ws_info.cell(row=4, column=1, value='• Column B (Employee Name) auto-fills from the Employee Code you enter in Column A.')
+        ws_info.cell(row=5, column=1, value='• Do NOT delete the hidden sheets (_EmpList, _ValidValues, _ProgList).')
+        ws_info.column_dimensions['A'].width = 80
 
         out = io.BytesIO()
         wb.save(out); out.seek(0)
