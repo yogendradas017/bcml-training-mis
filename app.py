@@ -24,6 +24,19 @@ def close_db(e=None):
         db.close()
 
 
+@app.template_filter('fmt_date')
+def fmt_date(value):
+    """Display any stored date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS) as DD-MM-YYYY."""
+    if not value:
+        return '—'
+    from datetime import datetime as _dt
+    s = str(value).strip()[:10]
+    try:
+        return _dt.strptime(s, '%Y-%m-%d').strftime('%d-%m-%Y')
+    except ValueError:
+        return s
+
+
 @app.errorhandler(413)
 def upload_too_large(e):
     flash('File too large. Maximum upload size is 16 MB.', 'danger')

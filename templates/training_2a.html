@@ -180,7 +180,7 @@
             <td><code style="font-size:11px;">{{ rec.session_code or '—' }}</code></td>
             <td><strong>{{ rec.programme_name }}</strong></td>
             <td><span class="badge bg-secondary" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
-            <td>{{ rec.start_date or '—' }}</td>
+            <td>{{ rec.start_date | fmt_date }}</td>
             <td><strong>{{ rec.hrs }}</strong></td>
             <td>{{ rec.pre_rating or '—' }}</td>
             <td>{{ rec.post_rating or '—' }}</td>
