@@ -732,6 +732,11 @@ def _fuzzy_fix(val, valid_list):
     vl = val.strip().lower()
     for v in valid_list:
         if v.lower() == vl: return v, False
+    # Handle swapped slash-parts: "HR/EHS" → matches "EHS/HR"
+    vl_sorted = '/'.join(sorted(vl.split('/')))
+    for v in valid_list:
+        if '/'.join(sorted(v.lower().split('/'))) == vl_sorted:
+            return v, True
     for v in valid_list:
         if vl in v.lower() or v.lower() in vl: return v, True
     m = get_close_matches(vl, [v.lower() for v in valid_list], n=1, cutoff=0.55)
