@@ -958,16 +958,20 @@ def _smart_analyze_rows(df, plant_id, db):
                     if status == 'ok': status = 'fixed'
                 clean_prog = best
             else:
+                # No fuzzy match against master (similarity < 0.65) → treat as a
+                # genuinely new programme. _sync_master_from_tni() at the end of
+                # tni_analyze_confirm will INSERT OR IGNORE it into programme_master,
+                # so no manual "Accept as new" click is needed. Typos with ≥ 0.65
+                # similarity are still caught and auto-corrected by the branch above.
                 titled = _smart_title(word_fixed)
                 if titled != raw_prog:
-                    fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'Spelling/case corrected (not in master list)'})
-                    clean_prog = titled
+                    fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'Spelling/case normalised — added as new programme'})
                     if status == 'ok': status = 'fixed'
                 else:
-                    clean_prog = titled
-                if _has_master and status not in ('error',):
-                    issues.append(f'"{clean_prog}" not found in Programme Master — verify spelling or add it to master list')
-                    if status == 'ok': status = 'warning'
+                    if _has_master:
+                        fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'New programme — will be added to Programme Master on import'})
+                        if status == 'ok': status = 'fixed'
+                clean_prog = titled
 
         clean_type, type_changed = _fuzzy_fix(raw_type, PROG_TYPES) if raw_type else ('', False)
         if raw_type and clean_type not in PROG_TYPES:
