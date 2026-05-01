@@ -681,7 +681,7 @@ def _register(app):
             ok_count    = sum(1 for r in rows if r['status'] == 'ok')
             fixed_count = sum(1 for r in rows if r['status'] == 'fixed')
             ai_count    = 0
-            warn_count  = sum(1 for r in rows if r['status'] == 'warning')
+            warn_count  = 0  # Smart Analyzer no longer blocks on unknown programmes — they auto-import and sync to master.
             err_count   = sum(1 for r in rows if r['status'] == 'error')
 
             upload_progs_lower = set(
@@ -717,6 +717,9 @@ def _register(app):
         db       = get_db()
         inserted = 0
 
+        # Legacy support: tolerate fix_prog_* fields if they ever arrive (e.g. an
+        # old browser tab with cached HTML), but the analyzer no longer emits
+        # 'warning' rows so corrections is normally empty.
         corrections = {}
         for k, v in request.form.items():
             if k.startswith('fix_prog_') and v.strip():
@@ -725,12 +728,7 @@ def _register(app):
                 except ValueError:
                     pass
 
-        err_rows = []
-        for r in rows:
-            if r['status'] == 'error':
-                err_rows.append(r)
-            elif r['status'] == 'warning' and r['row_num'] not in corrections:
-                err_rows.append(r)
+        err_rows = [r for r in rows if r['status'] == 'error']
 
         existing = set()
         for er in db.execute('SELECT emp_code, programme_name FROM tni WHERE plant_id=?', (plant_id,)):
@@ -741,11 +739,11 @@ def _register(app):
         for row in rows:
             if row['status'] == 'error':
                 continue
-            if row['status'] == 'warning':
-                fix = corrections.get(row['row_num'])
-                if not fix:
-                    continue
-                prog_name = row['programme_name'] if fix == '__new__' else fix
+            # Honour any manual override that arrived from an older review page,
+            # otherwise just use the analyzer's cleaned name.
+            fix = corrections.get(row['row_num'])
+            if fix and fix != '__new__':
+                prog_name = fix
             else:
                 prog_name = row['programme_name']
 

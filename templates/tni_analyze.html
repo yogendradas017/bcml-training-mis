@@ -33,13 +33,6 @@
             </div>
           </div>
           <div class="col">
-            <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;">
-              <i class="bi bi-ban" style="font-size:18px;color:#c2410c;"></i>
-              <div style="font-weight:700;color:#c2410c;margin-top:4px;">Orange</div>
-              <div style="color:#6b7280;">Blocked</div>
-            </div>
-          </div>
-          <div class="col">
             <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px;">
               <i class="bi bi-x-circle-fill text-danger" style="font-size:18px;"></i>
               <div style="font-weight:700;color:#dc2626;margin-top:4px;">Red</div>
@@ -91,9 +84,9 @@
 
 {% elif step == 'review' %}
 
-{% set total = ok_count + fixed_count + ai_count + warn_count + err_count %}
+{% set total = ok_count + fixed_count + ai_count + err_count %}
 {% set import_count = ok_count + fixed_count + ai_count %}
-{% set blocked_count = warn_count + err_count %}
+{% set blocked_count = err_count %}
 {% set pct = ((import_count / total) * 100)|round|int if total > 0 else 0 %}
 
 <!-- Score card -->
@@ -113,12 +106,6 @@
       <div style="text-align:center;">
         <div style="font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:1px;">Auto-fixed</div>
         <div style="font-size:30px;font-weight:800;color:#fbbf24;">{{ fixed_count }}</div>
-      </div>
-      <div style="width:1px;height:44px;background:rgba(255,255,255,.2);"></div>
-      <div style="text-align:center;">
-        <div style="font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:1px;">Blocked</div>
-        <div style="font-size:30px;font-weight:800;color:#fb923c;">{{ warn_count }}</div>
-        <div style="font-size:10px;opacity:.7;">unknown prog</div>
       </div>
       <div style="width:1px;height:44px;background:rgba(255,255,255,.2);"></div>
       <div style="text-align:center;">
@@ -151,17 +138,6 @@
   </div>
 </div>
 
-{% if warn_count > 0 %}
-<div class="alert d-flex gap-2 align-items-start py-2 mb-2" style="background:#fff7ed;border:1px solid #fed7aa;font-size:13px;color:#c2410c;">
-  <i class="bi bi-exclamation-triangle-fill mt-1" style="flex-shrink:0;"></i>
-  <div>
-    <strong>{{ warn_count }} row(s) have unknown programme names.</strong>
-    For each orange row, either: <strong>(a)</strong> pick the correct existing programme from the dropdown to fix a spelling error,
-    or <strong>(b)</strong> select <em>"✓ Accept as new — add to master"</em> if it is genuinely a new programme.
-    Rows left as "— decide —" will be skipped and downloaded for correction.
-  </div>
-</div>
-{% endif %}
 {% if err_count > 0 %}
 <div class="alert d-flex gap-2 align-items-start py-2 mb-3" style="background:#fef2f2;border:1px solid #fecaca;font-size:13px;color:#dc2626;">
   <i class="bi bi-exclamation-triangle-fill mt-1" style="flex-shrink:0;"></i>
@@ -299,45 +275,6 @@
           </td>
         </tr>
 
-        {% elif r.status == 'warning' %}
-        <tr class="an-row an-warning" style="background:#fff7ed;">
-          <td style="color:#9ca3af;font-size:11px;">{{ r.row_num }}</td>
-          <td><span style="background:#fed7aa;color:#c2410c;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;"><i class="bi bi-ban"></i> Blocked</span></td>
-          <td style="font-weight:600;">{{ r.emp_code }}</td>
-          <td style="color:#6b7280;">{{ r.emp_name }}</td>
-          <td style="min-width:260px;">
-            <div style="font-size:11px;color:#c2410c;margin-bottom:4px;">
-              <i class="bi bi-exclamation-circle me-1"></i>In file: <strong>"{{ r.programme_name }}"</strong>
-            </div>
-            <select name="fix_prog_{{ r.row_num }}" class="form-select form-select-sm fix-prog-ts"
-                    form="tni-confirm-form" style="font-size:12px;">
-              <option value="">— decide —</option>
-              <option value="__new__" style="color:#065f46;font-weight:600;">✓ Accept as new — add to master</option>
-              <optgroup label="Fix spelling — pick existing master programme">
-              {% for p in master_progs %}
-              <option value="{{ p }}">{{ p }}</option>
-              {% endfor %}
-              </optgroup>
-            </select>
-            <div style="font-size:10px;color:#9ca3af;margin-top:3px;">New programme? Pick "Accept as new". Typo? Pick the correct name.</div>
-          </td>
-          <td>{{ r.prog_type or '—' }}</td>
-          <td>{{ r.mode or '—' }}</td>
-          <td>{{ r.planned_hours }}</td>
-          <td style="min-width:200px;">
-            {% for issue in r.issues %}
-            <div style="font-size:11px;color:#c2410c;margin-bottom:2px;">
-              <i class="bi bi-x-circle me-1"></i>{{ issue }}
-            </div>
-            {% endfor %}
-            {% for ai in r.ai_issues %}
-            <div style="font-size:11px;color:#7c3aed;margin-top:3px;">
-              <i class="bi bi-robot me-1"></i>AI: {{ ai.msg }}{% if ai.fix %} → <strong>{{ ai.fix }}</strong>{% endif %}
-            </div>
-            {% endfor %}
-          </td>
-        </tr>
-
         {% else %}
         <tr class="an-row an-error" style="background:#fff1f2;">
           <td style="color:#9ca3af;font-size:11px;">{{ r.row_num }}</td>
@@ -415,7 +352,7 @@
       <i class="bi bi-check2-all me-1"></i>
       Confirm &amp; Import
       {% if blocked_count > 0 %}
-      <span style="font-size:12px;opacity:.8;margin-left:4px;">+ Download {{ blocked_count }} still-blocked rows</span>
+      <span style="font-size:12px;opacity:.8;margin-left:4px;">+ Download {{ blocked_count }} error rows</span>
       {% endif %}
     </button>
     <a href="{{ url_for('tni_analyze') }}" class="btn btn-outline-secondary">
@@ -424,37 +361,11 @@
   </div>
   <div style="font-size:12px;color:#6b7280;margin-top:8px;">
     <i class="bi bi-info-circle me-1"></i>
-    Orange rows where you selected a correction above will be imported. Uncorrected orange + red rows download as Excel for re-upload.
+    Green and amber rows import directly. New programme names are added to Programme Master automatically. Red rows (bad employee code / type / mode) download as Excel for re-upload.
   </div>
 </form>
 
 {% endif %}
 {% endblock %}
 
-{% block scripts %}
-{% if step == 'review' %}
-<script>
-// Initialise TomSelect on all programme-fix dropdowns in orange rows
-document.querySelectorAll('.fix-prog-ts').forEach(function(el) {
-  new TomSelect(el, {
-    create: false,
-    maxOptions: 300,
-    placeholder: '— fix: pick correct programme —',
-    onItemAdd: function() {
-      // Visually mark the row as "fixed" when user selects
-      var row = el.closest('tr');
-      if (row) {
-        row.style.background = '#f0fdf4';
-        var badge = row.querySelector('td:nth-child(2) span');
-        if (badge) {
-          badge.style.background = '#d1fae5';
-          badge.style.color = '#065f46';
-          badge.innerHTML = '<i class="bi bi-check2"></i> Fixed';
-        }
-      }
-    }
-  });
-});
-</script>
-{% endif %}
-{% endblock %}
+{% block scripts %}{% endblock %}
