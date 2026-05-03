@@ -15,7 +15,7 @@ from tms.helpers import (
     _is_ajax, _get_programme_names, _canonical_prog, _sync_master_from_tni,
     _read_upload_file, _read_upload_file_path, _clean, _safe_float,
     _error_excel_response, _process_fresh_tni, _parse_msforms_excel,
-    _smart_analyze_rows,
+    _smart_analyze_rows, _fy_label,
     _error_excel_for_tni, _cleanse_programme_names,
 )
 
@@ -31,9 +31,10 @@ def _register(app):
     def tni():
         plant_id = session['plant_id']
         db = get_db()
+        fy    = _fy_label()
         total = db.execute(
-            'SELECT COUNT(DISTINCT emp_code || "|" || programme_name) FROM tni WHERE plant_id=?',
-            (plant_id,)).fetchone()[0]
+            'SELECT COUNT(DISTINCT emp_code || "|" || programme_name) FROM tni WHERE plant_id=? AND fy_year=?',
+            (plant_id, fy)).fetchone()[0]
         emps = db.execute('SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name', (plant_id,)).fetchall()
         programmes = _get_programme_names(plant_id, db)
         depts = [r[0] for r in db.execute(
@@ -45,14 +46,14 @@ def _register(app):
         dirty_names = []
         if master_lower:
             tni_names = [r[0] for r in db.execute(
-                'SELECT DISTINCT programme_name FROM tni WHERE plant_id=?', (plant_id,)).fetchall()]
+                'SELECT DISTINCT programme_name FROM tni WHERE plant_id=? AND fy_year=?', (plant_id, fy)).fetchall()]
             dirty_names = [n for n in tni_names if n.lower() not in master_lower]
 
         dup_count = db.execute('''
             SELECT COALESCE(SUM(cnt - 1), 0)
-            FROM (SELECT COUNT(*) as cnt FROM tni WHERE plant_id=?
+            FROM (SELECT COUNT(*) as cnt FROM tni WHERE plant_id=? AND fy_year=?
                   GROUP BY emp_code, programme_name HAVING cnt > 1)
-        ''', (plant_id,)).fetchone()[0]
+        ''', (plant_id, fy)).fetchone()[0]
 
         return render_template('tni.html', total=total,
                                employees=emps, programmes=programmes,
@@ -75,8 +76,8 @@ def _register(app):
         mode      = request.args.get('mode', '')
         completed = request.args.get('completed', '')
 
-        where  = ['t.plant_id=?']
-        params = [plant_id]
+        where  = ['t.plant_id=?', 't.fy_year=?']
+        params = [plant_id, _fy_label()]
         if collar: where.append('e.collar=?');       params.append(collar)
         if dept:   where.append('e.department=?');   params.append(dept)
         if ptype:  where.append('t.prog_type=?');    params.append(ptype)
@@ -179,9 +180,9 @@ def _register(app):
             db.commit()
 
         cur = db.execute(
-            '''INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,source)
-               VALUES(?,?,?,?,?,?,?)''',
-            (plant_id, emp_code, prog_name, prog_type, mode, planned_hours, source)
+            '''INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,source,fy_year)
+               VALUES(?,?,?,?,?,?,?,?)''',
+            (plant_id, emp_code, prog_name, prog_type, mode, planned_hours, source, _fy_label())
         )
         if cur.rowcount == 0:
             flash(f'TNI entry for "{prog_name}" already exists for employee {emp_code}.', 'warning')
@@ -294,7 +295,7 @@ def _register(app):
             master_lower = list(master_lower_map.keys())
             seen = set()
             rows = db.execute(
-                'SELECT DISTINCT programme_name FROM tni WHERE plant_id=?', (plant_id,)).fetchall()
+                'SELECT DISTINCT programme_name FROM tni WHERE plant_id=? AND fy_year=?', (plant_id, _fy_label())).fetchall()
             for row in rows:
                 raw = row['programme_name'] or ''
                 if not raw or raw in seen:
@@ -317,6 +318,7 @@ def _register(app):
     def tni_duplicates():
         plant_id = session['plant_id']
         db = get_db()
+        fy   = _fy_label()
         rows = db.execute('''
             SELECT t.emp_code,
                    MAX(e.name) as emp_name,
@@ -326,11 +328,11 @@ def _register(app):
                    GROUP_CONCAT(t.id) as ids
             FROM tni t
             LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=?
+            WHERE t.plant_id=? AND t.fy_year=?
             GROUP BY t.emp_code, t.programme_name
             HAVING cnt > 1
             ORDER BY cnt DESC, emp_name
-        ''', (plant_id,)).fetchall()
+        ''', (plant_id, fy)).fetchall()
         total_extra = sum(r['cnt'] - 1 for r in rows)
         return render_template('tni_duplicates.html', rows=rows, total_extra=total_extra)
 
@@ -340,13 +342,14 @@ def _register(app):
         plant_id = session['plant_id']
         db = get_db()
         deleted = 0
+        fy   = _fy_label()
         rows = db.execute('''
             SELECT GROUP_CONCAT(id ORDER BY id) as ids
             FROM tni
-            WHERE plant_id=?
+            WHERE plant_id=? AND fy_year=?
             GROUP BY emp_code, programme_name
             HAVING COUNT(*) > 1
-        ''', (plant_id,)).fetchall()
+        ''', (plant_id, fy)).fetchall()
         for r in rows:
             id_list = [int(x) for x in r['ids'].split(',')]
             keep = id_list[0]
@@ -511,8 +514,8 @@ def _register(app):
                 errors.append(f'Row {i+2}: Employee {emp_code} not found in your plant.')
                 continue
             prog_name = _canonical_prog(prog_name, plant_id, db)
-            db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
-                       (plant_id, emp_code, prog_name, prog_type, mode, hours))
+            db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,fy_year) VALUES(?,?,?,?,?,?,?)',
+                       (plant_id, emp_code, prog_name, prog_type, mode, hours, _fy_label()))
             inserted += 1
         _sync_master_from_tni(plant_id, db)
         db.commit()
@@ -548,12 +551,13 @@ def _register(app):
             result = _process_fresh_tni(df, plant_id, db)
             rows   = result['valid_rows']
 
-            db.execute('DELETE FROM tni WHERE plant_id=?', (plant_id,))
+            fy = _fy_label()
+            db.execute('DELETE FROM tni WHERE plant_id=? AND fy_year=?', (plant_id, fy))
             db.execute('DELETE FROM programme_master WHERE plant_id=?', (plant_id,))
             for r in rows:
                 db.execute(
-                    'INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
-                    (plant_id, r['emp_code'], r['programme_name'], r['prog_type'], r['mode'], r['hours']))
+                    'INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,fy_year) VALUES(?,?,?,?,?,?,?)',
+                    (plant_id, r['emp_code'], r['programme_name'], r['prog_type'], r['mode'], r['hours'], fy))
             _sync_master_from_tni(plant_id, db)
             db.commit()
             try: os.remove(tmp_path)
@@ -729,8 +733,9 @@ def _register(app):
 
         err_rows = [r for r in rows if r['status'] == 'error']
 
+        fy = _fy_label()
         existing = set()
-        for er in db.execute('SELECT emp_code, programme_name FROM tni WHERE plant_id=?', (plant_id,)):
+        for er in db.execute('SELECT emp_code, programme_name FROM tni WHERE plant_id=? AND fy_year=?', (plant_id, fy)):
             existing.add((er['emp_code'].strip().upper(), er['programme_name'].strip().lower()))
 
         dup_rows = []; updated = 0; seen_batch = {}
@@ -754,14 +759,14 @@ def _register(app):
             seen_batch[key] = row['row_num']
             if key in existing:
                 db.execute('''UPDATE tni SET prog_type=?, mode=?, planned_hours=?
-                              WHERE plant_id=? AND UPPER(emp_code)=? AND LOWER(programme_name)=?''',
+                              WHERE plant_id=? AND fy_year=? AND UPPER(emp_code)=? AND LOWER(programme_name)=?''',
                            (row['prog_type'], row['mode'], row['planned_hours'],
-                            plant_id, row['emp_code'].upper(), prog_name.lower()))
+                            plant_id, fy, row['emp_code'].upper(), prog_name.lower()))
                 updated += 1
             else:
-                db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
+                db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,fy_year) VALUES(?,?,?,?,?,?,?)',
                            (plant_id, row['emp_code'], prog_name,
-                            row['prog_type'], row['mode'], row['planned_hours']))
+                            row['prog_type'], row['mode'], row['planned_hours'], fy))
                 inserted += 1
 
         _sync_master_from_tni(plant_id, db)

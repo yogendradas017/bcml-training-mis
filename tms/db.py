@@ -53,6 +53,44 @@ def _migrate_tni_unique(db):
     ''')
 
 
+def _migrate_tni_fy_year(db):
+    """Add fy_year to tni and rebuild UNIQUE to include it — prevents re-nominations being silently dropped on FY rollover."""
+    from tms.helpers import _fy_label
+    cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
+    if 'fy_year' in cols:
+        return
+    fy = _fy_label()
+    db.execute("ALTER TABLE tni ADD COLUMN fy_year TEXT NOT NULL DEFAULT ''")
+    db.execute("UPDATE tni SET fy_year=? WHERE fy_year=''", (fy,))
+    db.commit()
+    db.executescript('''
+        CREATE TABLE tni_fy (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plant_id INTEGER NOT NULL,
+            emp_code TEXT NOT NULL,
+            programme_name TEXT NOT NULL,
+            prog_type TEXT, mode TEXT, target_month TEXT,
+            planned_hours REAL DEFAULT 0,
+            source TEXT DEFAULT 'TNI Driven',
+            fy_year TEXT NOT NULL DEFAULT '',
+            created_at TEXT DEFAULT (date('now')),
+            UNIQUE(plant_id, emp_code, programme_name, fy_year)
+        );
+        INSERT OR IGNORE INTO tni_fy
+            (id, plant_id, emp_code, programme_name, prog_type, mode, target_month,
+             planned_hours, source, fy_year, created_at)
+        SELECT id, plant_id, emp_code, programme_name, prog_type, mode, target_month,
+               planned_hours, source, fy_year, created_at
+        FROM tni ORDER BY id;
+        DROP TABLE tni;
+        ALTER TABLE tni_fy RENAME TO tni;
+        CREATE INDEX IF NOT EXISTS idx_tni_plant  ON tni(plant_id);
+        CREATE INDEX IF NOT EXISTS idx_tni_dedup  ON tni(plant_id, emp_code, programme_name, fy_year);
+        CREATE INDEX IF NOT EXISTS idx_tni_prog   ON tni(plant_id, programme_name);
+        CREATE INDEX IF NOT EXISTS idx_tni_fy     ON tni(plant_id, fy_year);
+    ''')
+
+
 def _migrate_tni_source(db):
     cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
     if 'source' not in cols:
@@ -101,6 +139,7 @@ def init_db():
         db.executescript(f.read())
     _ensure_indexes(db)
     _migrate_tni_unique(db)
+    _migrate_tni_fy_year(db)
     _migrate_tni_source(db)
     _migrate_programme_master_source(db)
     for p in PLANTS:
