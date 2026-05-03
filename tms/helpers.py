@@ -106,8 +106,9 @@ def _derive_audience(plant_id, prog_name, db):
     collars = db.execute('''
         SELECT DISTINCT e.collar FROM tni t
         JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-        WHERE t.plant_id=? AND LOWER(t.programme_name)=LOWER(?) AND e.collar IS NOT NULL AND e.collar != ''
-    ''', (plant_id, prog_name)).fetchall()
+        WHERE t.plant_id=? AND LOWER(t.programme_name)=LOWER(?) AND t.fy_year=?
+          AND e.collar IS NOT NULL AND e.collar != ''
+    ''', (plant_id, prog_name, _fy_label())).fetchall()
     collar_set = {r['collar'] for r in collars}
     if not collar_set:
         return None
@@ -169,20 +170,22 @@ def _sync_calendar_from_2c(plant_id, db):
 # ── Programme master helpers ──────────────────────────────────────────────────
 
 def _sync_master_from_tni(plant_id, db):
+    fy = _fy_label()
     rows = db.execute('''
         SELECT programme_name,
                (SELECT prog_type FROM tni t2
                 WHERE t2.plant_id=t.plant_id AND t2.programme_name=t.programme_name
-                  AND t2.prog_type IS NOT NULL AND t2.prog_type != ""
+                  AND t2.fy_year=? AND t2.prog_type IS NOT NULL AND t2.prog_type != ""
                 GROUP BY prog_type ORDER BY COUNT(*) DESC LIMIT 1) AS top_type,
                CASE WHEN EXISTS(
                    SELECT 1 FROM tni t3 WHERE t3.plant_id=t.plant_id
-                   AND t3.programme_name=t.programme_name AND t3.source='TNI Driven'
+                   AND t3.programme_name=t.programme_name AND t3.fy_year=?
+                   AND t3.source='TNI Driven'
                ) THEN 'TNI Requirement' ELSE 'New Requirement' END AS derived_source
         FROM tni t
-        WHERE plant_id=? AND programme_name IS NOT NULL AND programme_name != ""
+        WHERE plant_id=? AND fy_year=? AND programme_name IS NOT NULL AND programme_name != ""
         GROUP BY programme_name
-    ''', (plant_id,)).fetchall()
+    ''', (fy, fy, plant_id, fy)).fetchall()
     for r in rows:
         db.execute('''INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, source)
                       VALUES(?,?,?,?)''',
@@ -209,6 +212,7 @@ def _prog_in_use(prog_name, plant_id, db):
 
 def _calc_summary(plant_id, month_filter, db):
     rows = []
+    fy   = _fy_label()
     mn = MONTH_NUM.get(month_filter, '') if month_filter else ''
     month_clause_2c = f"AND strftime('%m', p.start_date) = '{mn}'" if mn else ("AND 1=0" if month_filter else "")
 
@@ -250,25 +254,25 @@ def _calc_summary(plant_id, month_filter, db):
 
         bc_fixed = db.execute('''SELECT COUNT(DISTINCT t.emp_code) FROM tni t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar='Blue Collared' ''',
-            [plant_id, pt]).fetchone()[0]
+            WHERE t.plant_id=? AND t.prog_type=? AND t.fy_year=? AND e.collar='Blue Collared' ''',
+            [plant_id, pt, fy]).fetchone()[0]
         wc_fixed = db.execute('''SELECT COUNT(DISTINCT t.emp_code) FROM tni t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar='White Collared' ''',
-            [plant_id, pt]).fetchone()[0]
+            WHERE t.plant_id=? AND t.prog_type=? AND t.fy_year=? AND e.collar='White Collared' ''',
+            [plant_id, pt, fy]).fetchone()[0]
 
         bc_cum = db.execute('''SELECT COUNT(DISTINCT et.emp_code) FROM emp_training et
             JOIN employees e ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
             JOIN tni t ON t.emp_code=et.emp_code AND t.plant_id=et.plant_id
-              AND LOWER(t.prog_type)=LOWER(et.prog_type)
+              AND LOWER(t.prog_type)=LOWER(et.prog_type) AND t.fy_year=?
             WHERE et.plant_id=? AND et.prog_type=? AND e.collar='Blue Collared' ''',
-            [plant_id, pt]).fetchone()[0]
+            [fy, plant_id, pt]).fetchone()[0]
         wc_cum = db.execute('''SELECT COUNT(DISTINCT et.emp_code) FROM emp_training et
             JOIN employees e ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
             JOIN tni t ON t.emp_code=et.emp_code AND t.plant_id=et.plant_id
-              AND LOWER(t.prog_type)=LOWER(et.prog_type)
+              AND LOWER(t.prog_type)=LOWER(et.prog_type) AND t.fy_year=?
             WHERE et.plant_id=? AND et.prog_type=? AND e.collar='White Collared' ''',
-            [plant_id, pt]).fetchone()[0]
+            [fy, plant_id, pt]).fetchone()[0]
 
         bc_cov  = round(bc_cum  / bc_fixed  * 100, 1) if bc_fixed  else 0
         wc_cov  = round(wc_cum  / wc_fixed  * 100, 1) if wc_fixed  else 0
@@ -428,13 +432,13 @@ def _cleanse_programme_names(db, plant_id=None):
                         db.execute(f'UPDATE {table} SET programme_name=? WHERE id=?', (canonical, row['id']))
                         fixed += 1
         dupes = db.execute('''
-            SELECT emp_code, programme_name, MIN(id) as keep_id, COUNT(*) as cnt
+            SELECT emp_code, programme_name, fy_year, MIN(id) as keep_id, COUNT(*) as cnt
             FROM tni WHERE plant_id=?
-            GROUP BY emp_code, programme_name HAVING cnt > 1
+            GROUP BY emp_code, programme_name, fy_year HAVING cnt > 1
         ''', (pid,)).fetchall()
         for d in dupes:
-            db.execute('DELETE FROM tni WHERE plant_id=? AND emp_code=? AND programme_name=? AND id != ?',
-                       (pid, d['emp_code'], d['programme_name'], d['keep_id']))
+            db.execute('DELETE FROM tni WHERE plant_id=? AND emp_code=? AND programme_name=? AND fy_year=? AND id != ?',
+                       (pid, d['emp_code'], d['programme_name'], d['fy_year'], d['keep_id']))
             merged += 1
         db.commit()
         report[pid] = {'fixed': fixed, 'merged': merged}
@@ -590,8 +594,8 @@ def _parse_msforms_excel(file_storage, plant_id, db):
             errors.append(f'Row {i+2}: Employee code "{emp_code}" not found in your plant.')
             continue
         db.execute(
-            'INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours) VALUES(?,?,?,?,?,?)',
-            (plant_id, emp_code, prog_name, prog_type, mode, hours))
+            'INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,fy_year) VALUES(?,?,?,?,?,?,?)',
+            (plant_id, emp_code, prog_name, prog_type, mode, hours, _fy_label()))
         inserted += 1
 
     db.commit()

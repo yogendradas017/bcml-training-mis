@@ -45,8 +45,9 @@ CREATE TABLE IF NOT EXISTS tni (
     target_month TEXT,
     planned_hours REAL DEFAULT 0,
     source TEXT DEFAULT 'TNI Driven',
+    fy_year TEXT NOT NULL DEFAULT '',
     created_at TEXT DEFAULT (date('now')),
-    UNIQUE(plant_id, emp_code, programme_name)
+    UNIQUE(plant_id, emp_code, programme_name, fy_year)
 );
 
 CREATE TABLE IF NOT EXISTS calendar (
@@ -131,8 +132,9 @@ CREATE INDEX IF NOT EXISTS idx_emp_plant ON employees(plant_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_emp_code ON employees(emp_code);
 CREATE INDEX IF NOT EXISTS idx_emp_plant_code ON employees(plant_id, emp_code);
 CREATE INDEX IF NOT EXISTS idx_tni_plant ON tni(plant_id);
-CREATE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name);
+CREATE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name, fy_year);
 CREATE INDEX IF NOT EXISTS idx_tni_prog ON tni(plant_id, programme_name);
+CREATE INDEX IF NOT EXISTS idx_tni_fy ON tni(plant_id, fy_year);
 CREATE INDEX IF NOT EXISTS idx_cal_plant ON calendar(plant_id);
 CREATE INDEX IF NOT EXISTS idx_training_plant ON emp_training(plant_id);
 CREATE INDEX IF NOT EXISTS idx_et_lookup ON emp_training(plant_id, emp_code, programme_name);
