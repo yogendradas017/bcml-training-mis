@@ -117,6 +117,21 @@ CREATE TABLE IF NOT EXISTS programme_details (
     created_at TEXT DEFAULT (date('now'))
 );
 
+CREATE TABLE IF NOT EXISTS tni_archive (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    archive_token TEXT NOT NULL,
+    archived_at TEXT NOT NULL,
+    plant_id INTEGER NOT NULL,
+    emp_code TEXT NOT NULL,
+    programme_name TEXT NOT NULL,
+    prog_type TEXT,
+    mode TEXT,
+    target_month TEXT,
+    planned_hours REAL DEFAULT 0,
+    source TEXT DEFAULT 'TNI Driven',
+    fy_year TEXT NOT NULL DEFAULT ''
+);
+
 CREATE TABLE IF NOT EXISTS programme_master (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plant_id INTEGER NOT NULL REFERENCES plants(id),
@@ -127,6 +142,8 @@ CREATE TABLE IF NOT EXISTS programme_master (
     UNIQUE(plant_id, name)
 );
 
+CREATE INDEX IF NOT EXISTS idx_tni_archive_token ON tni_archive(archive_token);
+CREATE INDEX IF NOT EXISTS idx_tni_archive_plant ON tni_archive(plant_id, fy_year);
 CREATE INDEX IF NOT EXISTS idx_prog_master_plant ON programme_master(plant_id);
 CREATE INDEX IF NOT EXISTS idx_emp_plant ON employees(plant_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_emp_code ON employees(emp_code);
