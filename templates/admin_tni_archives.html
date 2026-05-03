@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block page_title %}TNI Archives{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0">TNI Archives</h5>
+    <small class="text-muted">Snapshots taken automatically before each Fresh Upload. Click Restore to undo a wipe.</small>
+  </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="alert alert-{{ cat }} alert-dismissible fade show py-2">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endwith %}
+
+{% if not archives %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-archive" style="font-size:40px;color:#9ca3af;display:block;margin-bottom:10px;"></i>
+    <div style="font-weight:600;color:#374151;">No archives yet</div>
+    <div style="font-size:13px;color:#6b7280;margin-top:6px;">Archives are created automatically when a SPOC runs Fresh Upload.</div>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-header d-flex align-items-center gap-2"
+       style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;font-size:14px;">
+    <i class="bi bi-archive-fill"></i>
+    <span>{{ archives|length }} Snapshot(s) — most recent first</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered table-hover mb-0" style="font-size:13px;">
+      <thead style="background:#f3f4f6;">
+        <tr>
+          <th style="padding:10px 14px;">Plant</th>
+          <th style="padding:10px 14px;">FY</th>
+          <th style="padding:10px 14px;">Archived At</th>
+          <th style="padding:10px 14px;">Rows</th>
+          <th style="padding:10px 14px;">Ref</th>
+          <th style="padding:10px 14px;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in archives %}
+        <tr>
+          <td style="padding:8px 14px;font-weight:500;">{{ a.plant_name }}</td>
+          <td style="padding:8px 14px;">{{ a.fy_year }}</td>
+          <td style="padding:8px 14px;color:#6b7280;">{{ a.archived_at[:16].replace('T',' ') }}</td>
+          <td style="padding:8px 14px;">
+            <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-weight:600;">{{ a.row_count }}</span>
+          </td>
+          <td style="padding:8px 14px;font-family:monospace;color:#6b7280;font-size:11px;">{{ a.archive_token[:8] }}…</td>
+          <td style="padding:8px 14px;">
+            <form method="POST" action="{{ url_for('admin_tni_restore') }}"
+                  onsubmit="return confirm('Restore {{ a.row_count }} rows for {{ a.plant_name }} ({{ a.fy_year }})?\n\nThis will REPLACE current TNI data for that plant+FY.')">
+              <input type="hidden" name="token" value="{{ a.archive_token }}">
+              <button type="submit" class="btn btn-warning btn-sm px-3 fw-semibold">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="mt-3" style="font-size:12px;color:#9ca3af;">
+  Archives are never auto-deleted. Restoring replaces current TNI data (same plant + FY) and rebuilds the programme master list.
+</div>
+{% endif %}
+
+{% endblock %}

@@ -67,6 +67,57 @@ def _register(app):
         session.pop('unit_code',  None)
         return redirect(url_for('central_dashboard'))
 
+    @app.route('/admin/tni-archives')
+    def admin_tni_archives():
+        if session.get('role') != 'admin':
+            return redirect(url_for('index'))
+        db = get_db()
+        archives = db.execute('''
+            SELECT a.archive_token, a.archived_at, a.plant_id,
+                   p.name AS plant_name, a.fy_year, COUNT(*) AS row_count
+            FROM tni_archive a
+            JOIN plants p ON p.id = a.plant_id
+            GROUP BY a.archive_token
+            ORDER BY a.archived_at DESC
+        ''').fetchall()
+        return render_template('admin_tni_archives.html', archives=archives)
+
+    @app.route('/admin/tni-archives/restore', methods=['POST'])
+    def admin_tni_restore():
+        if session.get('role') != 'admin':
+            return redirect(url_for('index'))
+        token = request.form.get('token', '').strip()
+        if not token:
+            flash('No archive token provided.', 'danger')
+            return redirect(url_for('admin_tni_archives'))
+        db = get_db()
+        meta = db.execute(
+            'SELECT plant_id, fy_year FROM tni_archive WHERE archive_token=? LIMIT 1', (token,)
+        ).fetchone()
+        if not meta:
+            flash('Archive not found.', 'danger')
+            return redirect(url_for('admin_tni_archives'))
+        plant_id = meta['plant_id']
+        fy_year  = meta['fy_year']
+        db.execute('DELETE FROM tni WHERE plant_id=? AND fy_year=?', (plant_id, fy_year))
+        db.execute('''
+            INSERT OR IGNORE INTO tni
+                (plant_id, emp_code, programme_name, prog_type, mode,
+                 target_month, planned_hours, source, fy_year)
+            SELECT plant_id, emp_code, programme_name, prog_type, mode,
+                   target_month, planned_hours, source, fy_year
+            FROM tni_archive WHERE archive_token=?
+        ''', (token,))
+        restored = db.execute(
+            'SELECT COUNT(*) FROM tni WHERE plant_id=? AND fy_year=?', (plant_id, fy_year)
+        ).fetchone()[0]
+        from tms.helpers import _sync_master_from_tni
+        _sync_master_from_tni(plant_id, db)
+        db.commit()
+        plant_name = db.execute('SELECT name FROM plants WHERE id=?', (plant_id,)).fetchone()['name']
+        flash(f'Restored {restored} TNI rows for {plant_name} ({fy_year}). Programme master rebuilt.', 'success')
+        return redirect(url_for('admin_tni_archives'))
+
     @app.route('/dashboard')
     @spoc_required
     def spoc_dashboard():
