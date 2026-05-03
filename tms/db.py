@@ -54,61 +54,67 @@ def _migrate_tni_unique(db):
 
 
 def _migrate_tni_fy_year(db):
-    """Add fy_year to tni and rebuild UNIQUE to include it — prevents re-nominations being silently dropped on FY rollover."""
+    """Add fy_year to tni and rebuild UNIQUE to include it."""
+    import logging
     from tms.helpers import _fy_label
 
     cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
     if not cols:
-        return  # tni table doesn't exist yet; schema.sql will create it
+        return
 
-    fy_exists = 'fy_year' in cols
+    # Phase 1 (critical): add column so all fy_year queries work
+    if 'fy_year' not in cols:
+        fy = _fy_label()
+        try:
+            db.execute("ALTER TABLE tni ADD COLUMN fy_year TEXT NOT NULL DEFAULT ''")
+            db.execute("UPDATE tni SET fy_year=? WHERE fy_year=''", (fy,))
+            db.commit()
+        except Exception as e:
+            logging.error(f'tni_fy_year phase1 failed: {e}')
+            try: db.rollback()
+            except Exception: pass
+            return
+
+    # Phase 2 (nice-to-have): rebuild UNIQUE to include fy_year
     unique_updated = bool(db.execute(
         "SELECT 1 FROM sqlite_master WHERE type='index' AND tbl_name='tni' AND sql LIKE '%fy_year%'"
     ).fetchone())
+    if unique_updated:
+        return
 
-    if fy_exists and unique_updated:
-        return  # fully migrated
-
-    if not fy_exists:
-        fy = _fy_label()
-        db.execute("ALTER TABLE tni ADD COLUMN fy_year TEXT NOT NULL DEFAULT ''")
-        db.execute("UPDATE tni SET fy_year=? WHERE fy_year=''", (fy,))
+    try:
+        existing_cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
+        select_cols = [c for c in
+                       ['id', 'plant_id', 'emp_code', 'programme_name', 'prog_type',
+                        'mode', 'target_month', 'planned_hours', 'source', 'fy_year', 'created_at']
+                       if c in existing_cols]
+        cols_sql = ', '.join(select_cols)
+        db.execute("DROP TABLE IF EXISTS tni_fy")
         db.commit()
-
-    # Determine columns to copy — source may not exist on very old DBs
-    existing_cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
-    select_cols = ['id', 'plant_id', 'emp_code', 'programme_name', 'prog_type',
-                   'mode', 'target_month', 'planned_hours', 'fy_year', 'created_at']
-    if 'source' in existing_cols:
-        select_cols.insert(8, 'source')
-    cols_sql = ', '.join(select_cols)
-
-    # Drop any leftover tni_fy from a previous partial run
-    db.execute("DROP TABLE IF EXISTS tni_fy")
-    db.commit()
-
-    db.executescript(f'''
-        CREATE TABLE tni_fy (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            plant_id INTEGER NOT NULL,
-            emp_code TEXT NOT NULL,
-            programme_name TEXT NOT NULL,
-            prog_type TEXT, mode TEXT, target_month TEXT,
-            planned_hours REAL DEFAULT 0,
-            source TEXT DEFAULT 'TNI Driven',
-            fy_year TEXT NOT NULL DEFAULT '',
-            created_at TEXT DEFAULT (date('now')),
-            UNIQUE(plant_id, emp_code, programme_name, fy_year)
-        );
-        INSERT OR IGNORE INTO tni_fy ({cols_sql})
-        SELECT {cols_sql} FROM tni ORDER BY id;
-        DROP TABLE tni;
-        ALTER TABLE tni_fy RENAME TO tni;
-        CREATE INDEX IF NOT EXISTS idx_tni_plant  ON tni(plant_id);
-        CREATE INDEX IF NOT EXISTS idx_tni_dedup  ON tni(plant_id, emp_code, programme_name, fy_year);
-        CREATE INDEX IF NOT EXISTS idx_tni_prog   ON tni(plant_id, programme_name);
-        CREATE INDEX IF NOT EXISTS idx_tni_fy     ON tni(plant_id, fy_year);
-    ''')
+        db.executescript(f'''
+            CREATE TABLE tni_fy (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_id INTEGER NOT NULL,
+                emp_code TEXT NOT NULL,
+                programme_name TEXT NOT NULL,
+                prog_type TEXT, mode TEXT, target_month TEXT,
+                planned_hours REAL DEFAULT 0,
+                source TEXT DEFAULT 'TNI Driven',
+                fy_year TEXT NOT NULL DEFAULT '',
+                created_at TEXT DEFAULT (date('now')),
+                UNIQUE(plant_id, emp_code, programme_name, fy_year)
+            );
+            INSERT OR IGNORE INTO tni_fy ({cols_sql})
+            SELECT {cols_sql} FROM tni ORDER BY id;
+            DROP TABLE tni;
+            ALTER TABLE tni_fy RENAME TO tni;
+            CREATE INDEX IF NOT EXISTS idx_tni_plant ON tni(plant_id);
+            CREATE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name, fy_year);
+            CREATE INDEX IF NOT EXISTS idx_tni_prog  ON tni(plant_id, programme_name);
+            CREATE INDEX IF NOT EXISTS idx_tni_fy    ON tni(plant_id, fy_year);
+        ''')
+    except Exception as e:
+        logging.warning(f'tni_fy_year phase2 (UNIQUE rebuild) failed — column exists, app ok: {e}')
 
 
 def _migrate_tni_source(db):
