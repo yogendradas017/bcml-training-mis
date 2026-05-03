@@ -56,14 +56,38 @@ def _migrate_tni_unique(db):
 def _migrate_tni_fy_year(db):
     """Add fy_year to tni and rebuild UNIQUE to include it — prevents re-nominations being silently dropped on FY rollover."""
     from tms.helpers import _fy_label
+
     cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
-    if 'fy_year' in cols:
-        return
-    fy = _fy_label()
-    db.execute("ALTER TABLE tni ADD COLUMN fy_year TEXT NOT NULL DEFAULT ''")
-    db.execute("UPDATE tni SET fy_year=? WHERE fy_year=''", (fy,))
+    if not cols:
+        return  # tni table doesn't exist yet; schema.sql will create it
+
+    fy_exists = 'fy_year' in cols
+    unique_updated = bool(db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='index' AND tbl_name='tni' AND sql LIKE '%fy_year%'"
+    ).fetchone())
+
+    if fy_exists and unique_updated:
+        return  # fully migrated
+
+    if not fy_exists:
+        fy = _fy_label()
+        db.execute("ALTER TABLE tni ADD COLUMN fy_year TEXT NOT NULL DEFAULT ''")
+        db.execute("UPDATE tni SET fy_year=? WHERE fy_year=''", (fy,))
+        db.commit()
+
+    # Determine columns to copy — source may not exist on very old DBs
+    existing_cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
+    select_cols = ['id', 'plant_id', 'emp_code', 'programme_name', 'prog_type',
+                   'mode', 'target_month', 'planned_hours', 'fy_year', 'created_at']
+    if 'source' in existing_cols:
+        select_cols.insert(8, 'source')
+    cols_sql = ', '.join(select_cols)
+
+    # Drop any leftover tni_fy from a previous partial run
+    db.execute("DROP TABLE IF EXISTS tni_fy")
     db.commit()
-    db.executescript('''
+
+    db.executescript(f'''
         CREATE TABLE tni_fy (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             plant_id INTEGER NOT NULL,
@@ -76,12 +100,8 @@ def _migrate_tni_fy_year(db):
             created_at TEXT DEFAULT (date('now')),
             UNIQUE(plant_id, emp_code, programme_name, fy_year)
         );
-        INSERT OR IGNORE INTO tni_fy
-            (id, plant_id, emp_code, programme_name, prog_type, mode, target_month,
-             planned_hours, source, fy_year, created_at)
-        SELECT id, plant_id, emp_code, programme_name, prog_type, mode, target_month,
-               planned_hours, source, fy_year, created_at
-        FROM tni ORDER BY id;
+        INSERT OR IGNORE INTO tni_fy ({cols_sql})
+        SELECT {cols_sql} FROM tni ORDER BY id;
         DROP TABLE tni;
         ALTER TABLE tni_fy RENAME TO tni;
         CREATE INDEX IF NOT EXISTS idx_tni_plant  ON tni(plant_id);
