@@ -154,6 +154,59 @@ def _migrate_programme_master_source(db):
     db.commit()
 
 
+def _migrate_emp_training_dedup(db):
+    """Add UNIQUE(plant_id, emp_code, programme_name, start_date) to emp_training."""
+    import logging
+    has_unique = db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='index' AND tbl_name='emp_training' "
+        "AND sql LIKE '%emp_code%' AND sql LIKE '%programme_name%' AND sql LIKE '%start_date%'"
+    ).fetchone()
+    if has_unique:
+        return
+    try:
+        cols = [row[1] for row in db.execute("PRAGMA table_info(emp_training)").fetchall()]
+        if not cols:
+            return
+        col_list = ', '.join(c for c in
+            ['id','plant_id','emp_code','session_code','programme_name',
+             'start_date','end_date','hrs','prog_type','level','mode',
+             'cal_new','pre_rating','post_rating','venue','month','created_at']
+            if c in cols)
+        db.execute("DROP TABLE IF EXISTS emp_training_dedup")
+        db.commit()
+        db.executescript(f'''
+            CREATE TABLE emp_training_dedup (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_id INTEGER NOT NULL,
+                emp_code TEXT NOT NULL,
+                session_code TEXT,
+                programme_name TEXT NOT NULL,
+                start_date TEXT,
+                end_date TEXT,
+                hrs REAL DEFAULT 0,
+                prog_type TEXT,
+                level TEXT,
+                mode TEXT,
+                cal_new TEXT,
+                pre_rating REAL,
+                post_rating REAL,
+                venue TEXT,
+                month TEXT,
+                created_at TEXT DEFAULT (date('now')),
+                UNIQUE(plant_id, emp_code, programme_name, start_date)
+            );
+            INSERT OR IGNORE INTO emp_training_dedup ({col_list})
+            SELECT {col_list} FROM emp_training ORDER BY id;
+            DROP TABLE emp_training;
+            ALTER TABLE emp_training_dedup RENAME TO emp_training;
+            CREATE INDEX IF NOT EXISTS idx_training_plant ON emp_training(plant_id);
+            CREATE INDEX IF NOT EXISTS idx_et_lookup ON emp_training(plant_id, emp_code, programme_name);
+            CREATE INDEX IF NOT EXISTS idx_et_dedup ON emp_training(plant_id, emp_code, programme_name, start_date);
+        ''')
+    except Exception as e:
+        logging.warning(f'emp_training dedup migration failed: {e}')
+
+
 def init_db():
     from tms.helpers import (
         _cleanse_master_spelling, _cleanse_programme_names, _cleanup_stale_analyze_files
@@ -168,6 +221,7 @@ def init_db():
     _migrate_tni_fy_year(db)
     _migrate_tni_source(db)
     _migrate_programme_master_source(db)
+    _migrate_emp_training_dedup(db)
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
                    (p['id'], p['name'], p['unit_code']))
