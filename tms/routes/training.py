@@ -84,7 +84,7 @@ def _register(app):
             return redirect(url_for('emp_training'))
 
         month = _date_to_month(start_date)
-        db.execute('''INSERT INTO emp_training
+        db.execute('''INSERT OR IGNORE INTO emp_training
             (plant_id,emp_code,session_code,programme_name,start_date,end_date,
              hrs,prog_type,level,mode,cal_new,pre_rating,post_rating,venue,month)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
@@ -93,6 +93,9 @@ def _register(app):
              prog_type, level, mode, cal_new,
              _safe_float(f.get('pre_rating')), _safe_float(f.get('post_rating')),
              f.get('venue',''), month))
+        if db.execute('SELECT changes()').fetchone()[0] == 0:
+            flash('Duplicate record — this employee already has a training entry for this programme on this date.', 'warning')
+            return redirect(url_for('emp_training'))
         db.commit()
         flash('Training record added.', 'success')
         return redirect(url_for('emp_training'))
@@ -174,7 +177,7 @@ def _register(app):
                     continue
             return s
 
-        db = get_db(); inserted = 0; errors = []
+        db = get_db(); inserted = 0; errors = []; total_rows = len(df)
         for i, row in df.iterrows():
             emp_code     = _clean(row, ['employee code', 'emp code', 'empcode'])
             session_code = _clean(row, ['session code', 'session code (optional)', 'sessioncode'])
@@ -227,18 +230,21 @@ def _register(app):
             if not cal_new:
                 prog_name = _canonical_prog(prog_name, plant_id, db)
             month = _date_to_month(start_date)
-            db.execute('''INSERT INTO emp_training
+            db.execute('''INSERT OR IGNORE INTO emp_training
                 (plant_id,emp_code,session_code,programme_name,start_date,end_date,
                  hrs,prog_type,level,mode,cal_new,pre_rating,post_rating,venue,month)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (plant_id, emp_code, session_code, prog_name,
                  start_date, end_date, hrs, prog_type, level, mode, cal_new,
                  pre_r, post_r, venue, month))
-            inserted += 1
+            if db.execute('SELECT changes()').fetchone()[0]:
+                inserted += 1
         db.commit()
+        skipped = total_rows - inserted - len(errors)
+        skip_msg = f' {skipped} duplicate(s) skipped.' if skipped > 0 else ''
         if errors:
             if inserted:
-                flash(f'Bulk upload complete: {inserted} records added. {len(errors)} rows had errors — downloading error report.', 'warning')
+                flash(f'Bulk upload complete: {inserted} records added.{skip_msg} {len(errors)} rows had errors — downloading error report.', 'warning')
             return _error_excel_response(errors, inserted, 'Training2A_Upload_Errors.xlsx')
-        flash(f'Bulk upload complete: {inserted} training records added successfully.', 'success')
+        flash(f'Bulk upload complete: {inserted} training records added successfully.{skip_msg}', 'success')
         return redirect(url_for('emp_training'))
