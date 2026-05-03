@@ -552,6 +552,19 @@ def _register(app):
             rows   = result['valid_rows']
 
             fy = _fy_label()
+            import datetime as _dt
+            archived_at = _dt.datetime.now().isoformat(timespec='seconds')
+            db.execute('''
+                INSERT INTO tni_archive
+                    (archive_token, archived_at, plant_id, emp_code, programme_name,
+                     prog_type, mode, target_month, planned_hours, source, fy_year)
+                SELECT ?, ?, plant_id, emp_code, programme_name,
+                       prog_type, mode, target_month, planned_hours, source, fy_year
+                FROM tni WHERE plant_id=? AND fy_year=?
+            ''', (confirm_token, archived_at, plant_id, fy))
+            archived_count = db.execute(
+                'SELECT COUNT(*) FROM tni_archive WHERE archive_token=?', (confirm_token,)
+            ).fetchone()[0]
             db.execute('DELETE FROM tni WHERE plant_id=? AND fy_year=?', (plant_id, fy))
             db.execute('DELETE FROM programme_master WHERE plant_id=?', (plant_id,))
             for r in rows:
@@ -564,7 +577,8 @@ def _register(app):
             except Exception: pass
 
             flash(f'Fresh upload complete: {len(rows)} TNI entries saved. '
-                  f'{len(result["unique_progs"])} unique programmes are now your master list.', 'success')
+                  f'{len(result["unique_progs"])} unique programmes are now your master list. '
+                  f'Previous {archived_count} rows archived (ref: {confirm_token[:8]})', 'success')
             return redirect(url_for('tni'))
 
         f = request.files.get('file')
