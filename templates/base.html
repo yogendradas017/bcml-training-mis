@@ -75,9 +75,6 @@
     <li><a href="{{ url_for('admin_clear_plant') }}" style="color:#fbbf24;">
       <i class="bi bi-arrow-left-right"></i> Switch Plant
     </a></li>
-    <li><a href="{{ url_for('admin_tni_archives') }}" class="{% if request.endpoint=='admin_tni_archives' %}active{% endif %}" style="color:#fbbf24;">
-      <i class="bi bi-archive-fill"></i> TNI Archives
-    </a></li>
     {% endif %}
   </ul>
   {% endif %}
@@ -88,6 +85,11 @@
     <li><a href="{{ url_for('central_dashboard') }}" class="{% if request.endpoint=='central_dashboard' %}active{% endif %}">
       <i class="bi bi-grid-3x3-gap-fill"></i> All Plants Overview
     </a></li>
+    {% if session.role == 'admin' %}
+    <li><a href="{{ url_for('admin_tni_archives') }}" class="{% if request.endpoint=='admin_tni_archives' %}active{% endif %}" style="color:#fbbf24;">
+      <i class="bi bi-archive-fill"></i> TNI Archives
+    </a></li>
+    {% endif %}
   </ul>
   {% endif %}
 
