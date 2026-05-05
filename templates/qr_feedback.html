@@ -53,7 +53,7 @@
     <div class="alert alert-danger py-2" style="font-size:13px;">{{ error }}</div>
     {% endif %}
 
-    <form method="POST" id="fbForm">
+    <form method="POST" action="{{ url_for('qr_feedback', token=token) }}" id="fbForm">
       <input type="hidden" name="lang" value="{{ lang }}">
 
       {# Employee code (optional) #}
