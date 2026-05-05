@@ -25,7 +25,7 @@ def _avg(vals):
 def _validate_token(token, db, check_expiry=True):
     row = db.execute('''
         SELECT q.*, c.programme_name, c.prog_type, c.level, c.mode,
-               c.plan_start, c.plan_end, c.duration_hrs, c.venue,
+               c.plan_start, c.plan_end, c.duration_hrs,
                c.time_from, c.time_to, c.target_audience,
                p.name AS plant_name
         FROM session_qr q
@@ -322,7 +322,7 @@ def _register(app):
              qr['plan_start'] or '', qr['plan_end'] or '',
              qr['duration_hrs'] or 0, qr['prog_type'] or '',
              qr['level'] or '', qr['mode'] or '', 'Calendar Program',
-             qr['venue'] or '', month))
+             '', month))
         changed = db.execute('SELECT changes()').fetchone()[0]
         db.commit()
 
