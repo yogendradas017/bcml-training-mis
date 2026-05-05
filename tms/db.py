@@ -154,6 +154,41 @@ def _migrate_programme_master_source(db):
     db.commit()
 
 
+def _ensure_qr_tables(db):
+    """Create session_qr and feedback_response if not present (schema.sql handles new DBs)."""
+    db.executescript('''
+        CREATE TABLE IF NOT EXISTS session_qr (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plant_id INTEGER NOT NULL,
+            session_code TEXT NOT NULL,
+            token TEXT NOT NULL UNIQUE,
+            stage TEXT NOT NULL DEFAULT 'attendance',
+            created_at TEXT DEFAULT (datetime('now','localtime')),
+            expires_at TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_by INTEGER
+        );
+        CREATE TABLE IF NOT EXISTS feedback_response (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plant_id INTEGER NOT NULL,
+            session_code TEXT NOT NULL,
+            emp_code TEXT,
+            submitted_at TEXT DEFAULT (datetime('now','localtime')),
+            q_obj_explained INTEGER, q_well_structured INTEGER,
+            q_content_appropriate INTEGER, q_presentation_quality INTEGER,
+            q_time_reasonable INTEGER,
+            q_inputs_appropriate INTEGER, q_communication_clear INTEGER,
+            q_queries_responded INTEGER, q_well_involved INTEGER,
+            key_learnings TEXT, suggestions TEXT,
+            ip_address TEXT, lang TEXT DEFAULT 'en',
+            UNIQUE(plant_id, session_code, emp_code)
+        );
+        CREATE INDEX IF NOT EXISTS idx_qr_token   ON session_qr(token);
+        CREATE INDEX IF NOT EXISTS idx_qr_session ON session_qr(plant_id, session_code);
+        CREATE INDEX IF NOT EXISTS idx_fr_session ON feedback_response(plant_id, session_code);
+    ''')
+
+
 def _migrate_emp_training_dedup(db):
     """Add UNIQUE(plant_id, emp_code, programme_name, start_date) to emp_training."""
     import logging
@@ -222,6 +257,7 @@ def init_db():
     _migrate_tni_source(db)
     _migrate_programme_master_source(db)
     _migrate_emp_training_dedup(db)
+    _ensure_qr_tables(db)
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
                    (p['id'], p['name'], p['unit_code']))

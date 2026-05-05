@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Feedback — {{ qr.programme_name }}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<style>
+  body { background:#f0f4ff; font-family:'Segoe UI',sans-serif; }
+  .card { border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,.10); }
+  .prog-badge { background:#065f46; color:#fff; border-radius:10px; padding:10px 16px; font-size:13px; }
+  .section-hdr { background:#f3f4f6; border-radius:8px; padding:8px 14px;
+                 font-weight:600; font-size:13px; color:#374151; margin-bottom:12px; }
+  .q-row { margin-bottom:16px; }
+  .q-text { font-size:13px; color:#111827; margin-bottom:6px; }
+  .likert { display:flex; gap:6px; flex-wrap:wrap; }
+  .likert label { flex:1; min-width:50px; }
+  .likert input[type=radio] { display:none; }
+  .likert input[type=radio] + span {
+    display:block; text-align:center; padding:8px 4px; border:2px solid #d1d5db;
+    border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; color:#374151;
+    transition:all .15s;
+  }
+  .likert input[type=radio]:checked + span {
+    border-color:#6366f1; background:#6366f1; color:#fff;
+  }
+  .lang-toggle { font-size:12px; }
+</style>
+</head>
+<body class="py-4 px-3">
+
+<div style="max-width:480px;margin:0 auto;">
+  <div class="text-center mb-3">
+    <img src="{{ url_for('static', filename='bcml_logo.png') }}" height="48" onerror="this.style.display='none'">
+    <div class="fw-bold mt-1" style="color:#1a1f35;font-size:15px;">Training Feedback</div>
+  </div>
+
+  <div class="card p-4">
+    <div class="prog-badge mb-3">
+      <div style="font-size:11px;opacity:.7;margin-bottom:2px;">Programme</div>
+      <div class="fw-bold">{{ qr.programme_name }}</div>
+      <div style="font-size:11px;margin-top:4px;opacity:.8;">
+        {{ qr.plan_start or '' }}{% if qr.venue %} &nbsp;·&nbsp; {{ qr.venue }}{% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end mb-3 lang-toggle">
+      <a href="?lang=en" class="{% if lang=='en' %}fw-bold text-primary{% else %}text-muted{% endif %} me-2">English</a>
+      <a href="?lang=hi" class="{% if lang=='hi' %}fw-bold text-primary{% else %}text-muted{% endif %}">हिंदी</a>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger py-2" style="font-size:13px;">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" id="fbForm">
+      <input type="hidden" name="lang" value="{{ lang }}">
+
+      {# Employee code (optional) #}
+      <div class="mb-4">
+        <label class="form-label fw-semibold" style="font-size:13px;">
+          {% if lang=='hi' %}कर्मचारी कोड (वैकल्पिक){% else %}Employee Code (optional){% endif %}
+        </label>
+        <input type="text" name="emp_code" class="form-control" style="font-size:13px;"
+               placeholder="{% if lang=='hi' %}खाली छोड़ें यदि अनाम{% else %}Leave blank for anonymous{% endif %}">
+      </div>
+
+      {# Section 1: Programme Feedback #}
+      <div class="section-hdr">
+        {% if lang=='hi' %}कार्यक्रम प्रतिक्रिया{% else %}Programme Feedback{% endif %}
+      </div>
+
+      {% set prog_qs_en = [
+        (1,'q1','The objectives of the programme were clearly explained'),
+        (2,'q2','The programme was well structured'),
+        (3,'q3','The content was appropriate for this group'),
+        (4,'q4','The quality of presentation was high'),
+        (5,'q5','The time allocation was reasonable'),
+      ] %}
+      {% set prog_qs_hi = [
+        (1,'q1','कार्यक्रम के उद्देश्यों को स्पष्ट रूप से समझाया गया'),
+        (2,'q2','कार्यक्रम अच्छी तरह से संरचित था'),
+        (3,'q3','सामग्री इस समूह के लिए उचित थी'),
+        (4,'q4','प्रस्तुति की गुणवत्ता उच्च थी'),
+        (5,'q5','समय का आवंटन उचित था'),
+      ] %}
+      {% set prog_qs = prog_qs_hi if lang=='hi' else prog_qs_en %}
+
+      {% for num, name, text in prog_qs %}
+      <div class="q-row">
+        <div class="q-text">{{ num }}. {{ text }}</div>
+        <div class="likert">
+          {% for v, lbl in [(1,'1\nSD'),(2,'2\nD'),(3,'3\nA'),(4,'4\nSA')] %}
+          <label>
+            <input type="radio" name="{{ name }}" value="{{ v }}" required>
+            <span style="white-space:pre-line">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      {# Section 2: Trainer Feedback #}
+      <div class="section-hdr mt-3">
+        {% if lang=='hi' %}प्रशिक्षक प्रतिक्रिया{% else %}Trainer Feedback{% endif %}
+      </div>
+
+      {% set train_qs_en = [
+        (6,'q6','Quality of inputs by the faculty was appropriate'),
+        (7,'q7','Communication by the faculty was clear'),
+        (8,'q8','Questions/queries were responded by the faculty'),
+        (9,'q9','Participants were well involved by the faculty'),
+      ] %}
+      {% set train_qs_hi = [
+        (6,'q6','फैकल्टी द्वारा इनपुट की गुणवत्ता उचित थी'),
+        (7,'q7','फैकल्टी का संचार स्पष्ट था'),
+        (8,'q8','प्रश्नों/प्रश्नों का उत्तर फैकल्टी द्वारा दिया गया'),
+        (9,'q9','प्रतिभागियों को फैकल्टी द्वारा अच्छी तरह से शामिल किया गया'),
+      ] %}
+      {% set train_qs = train_qs_hi if lang=='hi' else train_qs_en %}
+
+      {% for num, name, text in train_qs %}
+      <div class="q-row">
+        <div class="q-text">{{ num }}. {{ text }}</div>
+        <div class="likert">
+          {% for v, lbl in [(1,'1\nSD'),(2,'2\nD'),(3,'3\nA'),(4,'4\nSA')] %}
+          <label>
+            <input type="radio" name="{{ name }}" value="{{ v }}" required>
+            <span style="white-space:pre-line">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="mt-3" style="font-size:11px;color:#9ca3af;margin-bottom:12px;">
+        SD = Strongly Disagree &nbsp;·&nbsp; D = Disagree &nbsp;·&nbsp; A = Agree &nbsp;·&nbsp; SA = Strongly Agree
+      </div>
+
+      {# Free text #}
+      <div class="mb-3">
+        <label class="form-label fw-semibold" style="font-size:13px;">
+          {% if lang=='hi' %}मुख्य सीख{% else %}Key Learnings{% endif %}
+        </label>
+        <textarea name="key_learnings" class="form-control" rows="2" style="font-size:13px;"></textarea>
+      </div>
+      <div class="mb-4">
+        <label class="form-label fw-semibold" style="font-size:13px;">
+          {% if lang=='hi' %}सुझाव{% else %}Suggestions for Improvement{% endif %}
+        </label>
+        <textarea name="suggestions" class="form-control" rows="2" style="font-size:13px;"></textarea>
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn btn-success w-100 py-3 fw-bold" style="font-size:16px;">
+        {% if lang=='hi' %}प्रतिक्रिया जमा करें{% else %}Submit Feedback{% endif %}
+      </button>
+    </form>
+  </div>
+
+  <div class="text-center mt-3" style="font-size:11px;color:#9ca3af;">
+    {{ qr.plant_name }} &nbsp;·&nbsp; {{ qr.session_code }}
+  </div>
+</div>
+
+<script>
+document.getElementById('fbForm').addEventListener('submit', () => {
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '{% if lang=="hi" %}जमा हो रहा है…{% else %}Submitting…{% endif %}';
+});
+</script>
+</body>
+</html>

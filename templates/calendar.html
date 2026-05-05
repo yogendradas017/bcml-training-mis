@@ -298,6 +298,49 @@
                 onclick="openEdit({{ s.id }},'{{ s.programme_name|replace("'","\\'") }}','{{ s.prog_type or '' }}','{{ s.source or 'TNI' }}','{{ s.planned_month or '' }}','{{ s.plan_start or '' }}','{{ s.plan_end or '' }}','{{ s.time_from or '' }}','{{ s.time_to or '' }}','{{ s.duration_hrs }}','{{ s.level or '' }}','{{ s.mode or '' }}','{{ s.target_audience or '' }}','{{ s.planned_pax }}','{{ s.trainer_vendor or '' }}','{{ s.status }}')">
                 <i class="bi bi-pencil"></i>
               </button>
+              {# QR dropdown #}
+              <div class="dropdown d-inline-block me-1">
+                <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" title="QR Codes">
+                  <i class="bi bi-qr-code"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" style="font-size:13px;min-width:200px;">
+                  {% set sq = qr_map.get(s.session_code, {}) %}
+                  {# Attendance QR #}
+                  {% if sq.get('attendance') and sq['attendance']['is_active'] %}
+                  <li><a class="dropdown-item" href="{{ url_for('qr_poster', token=sq['attendance']['token']) }}" target="_blank">
+                    <i class="bi bi-printer me-1"></i> Print Attendance QR
+                  </a></li>
+                  {% else %}
+                  <li>
+                    <form method="POST" action="{{ url_for('qr_generate', cal_id=s.id) }}">
+                      <input type="hidden" name="stage" value="attendance">
+                      <button type="submit" class="dropdown-item">
+                        <i class="bi bi-qr-code me-1"></i> Generate Attendance QR
+                      </button>
+                    </form>
+                  </li>
+                  {% endif %}
+                  {# Feedback QR #}
+                  {% if sq.get('feedback') and sq['feedback']['is_active'] %}
+                  <li><a class="dropdown-item" href="{{ url_for('qr_poster', token=sq['feedback']['token']) }}" target="_blank">
+                    <i class="bi bi-printer me-1"></i> Print Feedback QR
+                  </a></li>
+                  {% else %}
+                  <li>
+                    <form method="POST" action="{{ url_for('qr_generate', cal_id=s.id) }}">
+                      <input type="hidden" name="stage" value="feedback">
+                      <button type="submit" class="dropdown-item">
+                        <i class="bi bi-qr-code me-1"></i> Generate Feedback QR
+                      </button>
+                    </form>
+                  </li>
+                  {% endif %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="{{ url_for('qr_live', cal_id=s.id) }}">
+                    <i class="bi bi-broadcast me-1 text-danger"></i> Live Attendance
+                  </a></li>
+                </ul>
+              </div>
               <form method="POST" action="{{ url_for('delete_calendar', cal_id=s.id) }}" style="display:inline;">
                 <button type="button" class="btn btn-sm btn-outline-danger"
                         onclick="ajaxDelete(this,'Delete session {{ s.session_code }}?')">

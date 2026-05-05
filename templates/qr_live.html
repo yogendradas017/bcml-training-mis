@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block page_title %}Live Attendance — {{ cal.programme_name }}{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0">Live Attendance Monitor</h5>
+    <small class="text-muted">{{ cal.programme_name }} &nbsp;·&nbsp; {{ cal.session_code }}</small>
+  </div>
+  <a href="{{ url_for('training_calendar') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Calendar
+  </a>
+</div>
+
+{# Scorecards #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid #6366f1;">
+      <div class="card-body py-3">
+        <div id="countDisplay" style="font-size:36px;font-weight:700;color:#6366f1;">{{ attendees|length }}</div>
+        <div style="font-size:12px;color:#6b7280;">Scanned</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid #d1d5db;">
+      <div class="card-body py-3">
+        <div style="font-size:36px;font-weight:700;color:#9ca3af;">{{ cal.planned_pax or 0 }}</div>
+        <div style="font-size:12px;color:#6b7280;">Planned</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid #10b981;">
+      <div class="card-body py-3">
+        <div id="fbDisplay" style="font-size:36px;font-weight:700;color:#10b981;">{{ fb_count }}</div>
+        <div style="font-size:12px;color:#6b7280;">Feedback</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid #f59e0b;">
+      <div class="card-body py-3">
+        <div style="font-size:14px;font-weight:600;color:#d97706;padding-top:6px;" id="lastScan">
+          {% if attendees %}{{ attendees[0].created_at[:16] if attendees[0].created_at else '—' }}{% else %}—{% endif %}
+        </div>
+        <div style="font-size:12px;color:#6b7280;">Last Scan</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# QR codes #}
+{% if qr_rows %}
+<div class="card mb-4">
+  <div class="card-header" style="background:#1a1f35;color:#fff;font-size:13px;">
+    <i class="bi bi-qr-code me-1"></i> QR Codes for this Session
+  </div>
+  <div class="card-body d-flex flex-wrap gap-3 py-3">
+    {% for q in qr_rows %}
+    <div class="text-center">
+      {% if q.is_active %}
+      <img src="{{ url_for('qr_image', token=q.token) }}" style="width:120px;height:120px;">
+      <div style="font-size:11px;font-weight:600;margin-top:4px;">
+        {{ q.stage|title }}
+      </div>
+      <div class="d-flex gap-1 mt-1 justify-content-center">
+        <a href="{{ url_for('qr_poster', token=q.token) }}" target="_blank"
+           class="btn btn-outline-secondary btn-sm" style="font-size:10px;">
+          <i class="bi bi-printer"></i> Print
+        </a>
+        <form method="POST" action="{{ url_for('qr_revoke', qr_id=q.id) }}" style="display:inline;">
+          <button type="button" class="btn btn-outline-danger btn-sm" style="font-size:10px;"
+                  onclick="if(confirm('Revoke this QR?'))this.closest('form').submit()">
+            <i class="bi bi-x-circle"></i>
+          </button>
+        </form>
+      </div>
+      {% else %}
+      <div style="width:120px;height:120px;background:#f3f4f6;border-radius:8px;
+                  display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:11px;">
+        Revoked
+      </div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:4px;">{{ q.stage|title }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    {# Generate new QR buttons #}
+    <div class="d-flex flex-column gap-2 justify-content-center ms-2">
+      {% set existing_stages = qr_rows|map(attribute='stage')|list %}
+      {% if 'attendance' not in existing_stages %}
+      <form method="POST" action="{{ url_for('qr_generate', cal_id=cal.id) }}">
+        <input type="hidden" name="stage" value="attendance">
+        <button class="btn btn-primary btn-sm"><i class="bi bi-qr-code me-1"></i> Gen Attendance QR</button>
+      </form>
+      {% endif %}
+      {% if 'feedback' not in existing_stages %}
+      <form method="POST" action="{{ url_for('qr_generate', cal_id=cal.id) }}">
+        <input type="hidden" name="stage" value="feedback">
+        <button class="btn btn-success btn-sm"><i class="bi bi-qr-code me-1"></i> Gen Feedback QR</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# Attendee list #}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center"
+       style="background:#f3f4f6;font-size:13px;">
+    <span><i class="bi bi-people-fill me-1"></i> Attendees <span id="countBadge" class="badge bg-primary ms-1">{{ attendees|length }}</span></span>
+    <span style="font-size:11px;color:#9ca3af;" id="refreshStatus">Live · refreshes every 5s</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:13px;" id="attendeeTable">
+      <thead style="background:#f9fafb;">
+        <tr>
+          <th style="padding:8px 14px;">#</th>
+          <th style="padding:8px 14px;">Emp Code</th>
+          <th style="padding:8px 14px;">Name</th>
+          <th style="padding:8px 14px;">Designation</th>
+          <th style="padding:8px 14px;">Dept</th>
+          <th style="padding:8px 14px;">Scanned At</th>
+        </tr>
+      </thead>
+      <tbody id="attendeeBody">
+        {% for a in attendees %}
+        <tr>
+          <td style="padding:6px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:6px 14px;font-family:monospace;">{{ a.emp_code }}</td>
+          <td style="padding:6px 14px;font-weight:500;">{{ a.name or '—' }}</td>
+          <td style="padding:6px 14px;">{{ a.designation or '—' }}</td>
+          <td style="padding:6px 14px;">{{ a.department or '—' }}</td>
+          <td style="padding:6px 14px;color:#6b7280;">{{ a.created_at[:16] if a.created_at else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr id="emptyRow"><td colspan="6" class="text-center text-muted py-4">No scans yet. Waiting…</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const CAL_ID = {{ cal.id }};
+const PLANNED = {{ cal.planned_pax or 0 }};
+
+function refresh() {
+  fetch(`/api/qr/${CAL_ID}/live.json`)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('countDisplay').textContent = data.count;
+      document.getElementById('countBadge').textContent = data.count;
+      document.getElementById('fbDisplay').textContent = data.fb_count;
+
+      const tbody = document.getElementById('attendeeBody');
+      if (data.rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No scans yet. Waiting…</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.rows.map((r, i) => `
+        <tr>
+          <td style="padding:6px 14px;color:#9ca3af;">${i+1}</td>
+          <td style="padding:6px 14px;font-family:monospace;">${r.emp_code}</td>
+          <td style="padding:6px 14px;font-weight:500;">${r.name||'—'}</td>
+          <td style="padding:6px 14px;">${r.designation||'—'}</td>
+          <td style="padding:6px 14px;">${r.department||'—'}</td>
+          <td style="padding:6px 14px;color:#6b7280;">${(r.scanned_at||'').slice(0,16)||'—'}</td>
+        </tr>`).join('');
+
+      if (data.rows.length > 0)
+        document.getElementById('lastScan').textContent = (data.rows[0].scanned_at||'').slice(0,16)||'—';
+
+      document.getElementById('refreshStatus').textContent = 'Live · updated ' + new Date().toLocaleTimeString();
+    })
+    .catch(() => {});
+}
+
+setInterval(refresh, 5000);
+</script>
+{% endblock %}

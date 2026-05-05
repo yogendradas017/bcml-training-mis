@@ -117,6 +117,40 @@ CREATE TABLE IF NOT EXISTS programme_details (
     created_at TEXT DEFAULT (date('now'))
 );
 
+CREATE TABLE IF NOT EXISTS session_qr (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plant_id INTEGER NOT NULL REFERENCES plants(id),
+    session_code TEXT NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    stage TEXT NOT NULL DEFAULT 'attendance' CHECK(stage IN ('attendance','feedback')),
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    expires_at TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_by INTEGER REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS feedback_response (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plant_id INTEGER NOT NULL REFERENCES plants(id),
+    session_code TEXT NOT NULL,
+    emp_code TEXT,
+    submitted_at TEXT DEFAULT (datetime('now','localtime')),
+    q_obj_explained INTEGER,
+    q_well_structured INTEGER,
+    q_content_appropriate INTEGER,
+    q_presentation_quality INTEGER,
+    q_time_reasonable INTEGER,
+    q_inputs_appropriate INTEGER,
+    q_communication_clear INTEGER,
+    q_queries_responded INTEGER,
+    q_well_involved INTEGER,
+    key_learnings TEXT,
+    suggestions TEXT,
+    ip_address TEXT,
+    lang TEXT DEFAULT 'en',
+    UNIQUE(plant_id, session_code, emp_code)
+);
+
 CREATE TABLE IF NOT EXISTS tni_archive (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     archive_token TEXT NOT NULL,
@@ -142,6 +176,9 @@ CREATE TABLE IF NOT EXISTS programme_master (
     UNIQUE(plant_id, name)
 );
 
+CREATE INDEX IF NOT EXISTS idx_qr_token    ON session_qr(token);
+CREATE INDEX IF NOT EXISTS idx_qr_session  ON session_qr(plant_id, session_code);
+CREATE INDEX IF NOT EXISTS idx_fr_session  ON feedback_response(plant_id, session_code);
 CREATE INDEX IF NOT EXISTS idx_tni_archive_token ON tni_archive(archive_token);
 CREATE INDEX IF NOT EXISTS idx_tni_archive_plant ON tni_archive(plant_id, fy_year);
 CREATE INDEX IF NOT EXISTS idx_prog_master_plant ON programme_master(plant_id);

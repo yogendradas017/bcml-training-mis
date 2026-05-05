@@ -59,11 +59,20 @@ def _register(app):
                              'over': max(0, planned_pax - d)})
         cov_rows.sort(key=lambda x: x['gap'], reverse=True)
 
+        qr_rows = db.execute(
+            'SELECT session_code, stage, token, is_active FROM session_qr WHERE plant_id=?',
+            (plant_id,)
+        ).fetchall()
+        qr_map = {}
+        for q in qr_rows:
+            qr_map.setdefault(q['session_code'], {})[q['stage']] = dict(q)
+
         return render_template('calendar.html', sessions=sessions, demand_map=demand_map,
                                tni_programmes=tni_programmes,
                                all_cal_programmes=all_cal_programmes, cov_rows=cov_rows,
                                prog_types=PROG_TYPES, modes=MODES, levels=LEVELS,
-                               audiences=AUDIENCES, months=MONTHS_FY, statuses=STATUSES)
+                               audiences=AUDIENCES, months=MONTHS_FY, statuses=STATUSES,
+                               qr_map=qr_map)
 
     @app.route('/calendar/add', methods=['POST'])
     @spoc_required
@@ -117,6 +126,11 @@ def _register(app):
     @spoc_required
     def delete_calendar(cal_id):
         db = get_db()
+        cal = db.execute('SELECT session_code FROM calendar WHERE id=? AND plant_id=?',
+                         (cal_id, session['plant_id'])).fetchone()
+        if cal:
+            db.execute('DELETE FROM session_qr WHERE plant_id=? AND session_code=?',
+                       (session['plant_id'], cal['session_code']))
         db.execute('DELETE FROM calendar WHERE id=? AND plant_id=?', (cal_id, session['plant_id']))
         db.commit()
         if _is_ajax():
@@ -180,6 +194,13 @@ def _register(app):
             for i in range(0, len(ids), 900):
                 chunk = ids[i:i+900]
                 ph = ','.join('?' * len(chunk))
+                codes = db.execute(
+                    f'SELECT session_code FROM calendar WHERE id IN ({ph}) AND plant_id=?',
+                    chunk + [plant_id]
+                ).fetchall()
+                for c in codes:
+                    db.execute('DELETE FROM session_qr WHERE plant_id=? AND session_code=?',
+                               (plant_id, c['session_code']))
                 db.execute(f'DELETE FROM calendar WHERE id IN ({ph}) AND plant_id=?', chunk + [plant_id])
                 deleted += len(chunk)
             db.commit()
