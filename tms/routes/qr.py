@@ -199,6 +199,77 @@ def _register(app):
         return render_template('qr_live.html', cal=cal, qr_rows=qr_rows,
                                attendees=attendees, fb_count=fb_count)
 
+    # ── SPOC: feedback analysis report ───────────────────────────────────────
+
+    @app.route('/calendar/<int:cal_id>/feedback-report')
+    @spoc_required
+    def qr_feedback_report(cal_id):
+        plant_id = session['plant_id']
+        db = get_db()
+        cal = db.execute('SELECT * FROM calendar WHERE id=? AND plant_id=?',
+                         (cal_id, plant_id)).fetchone()
+        if not cal:
+            flash('Session not found.', 'danger')
+            return redirect(url_for('training_calendar'))
+
+        rows = db.execute('''
+            SELECT r.*, e.name, e.designation, e.department
+            FROM feedback_response r
+            LEFT JOIN employees e ON e.emp_code=r.emp_code AND e.plant_id=r.plant_id
+            WHERE r.plant_id=? AND r.session_code=?
+            ORDER BY r.submitted_at
+        ''', (plant_id, cal['session_code'])).fetchall()
+
+        q_fields = [
+            ('q_obj_explained',       'Objectives clearly explained'),
+            ('q_well_structured',     'Programme well structured'),
+            ('q_content_appropriate', 'Content appropriate for group'),
+            ('q_presentation_quality','Quality of presentation was high'),
+            ('q_time_reasonable',     'Time allocation was reasonable'),
+            ('q_inputs_appropriate',  'Faculty inputs were appropriate'),
+            ('q_communication_clear', 'Faculty communication was clear'),
+            ('q_queries_responded',   'Queries responded by faculty'),
+            ('q_well_involved',       'Participants well involved by faculty'),
+        ]
+
+        def _analyse(field, rows):
+            vals = [r[field] for r in rows if r[field] and 1 <= r[field] <= 4]
+            if not vals:
+                return {'sd':0,'d':0,'a':0,'sa':0,'avg':None,'pct':None,'n':0}
+            return {
+                'sd':  vals.count(1),
+                'd':   vals.count(2),
+                'a':   vals.count(3),
+                'sa':  vals.count(4),
+                'avg': round(sum(vals)/len(vals), 2),
+                'pct': round(sum(vals)/len(vals)/4*100, 1),
+                'n':   len(vals),
+            }
+
+        q_stats = [(label, _analyse(field, rows)) for field, label in q_fields]
+
+        def _subtotal(stats_slice):
+            avgs = [s['avg'] for _, s in stats_slice if s['avg'] is not None]
+            if not avgs:
+                return None, None
+            avg = round(sum(avgs)/len(avgs), 2)
+            return avg, round(avg/4*100, 1)
+
+        prog_avg,    prog_pct    = _subtotal(q_stats[:5])
+        trainer_avg, trainer_pct = _subtotal(q_stats[5:])
+        overall_avg, overall_pct = _subtotal(q_stats)
+
+        learnings   = [r['key_learnings']  for r in rows if r['key_learnings']  and r['key_learnings'].strip()]
+        suggestions = [r['suggestions']     for r in rows if r['suggestions']    and r['suggestions'].strip()]
+
+        return render_template('feedback_report.html',
+                               cal=cal, rows=rows,
+                               q_stats=q_stats, q_fields=q_fields,
+                               prog_avg=prog_avg, prog_pct=prog_pct,
+                               trainer_avg=trainer_avg, trainer_pct=trainer_pct,
+                               overall_avg=overall_avg, overall_pct=overall_pct,
+                               learnings=learnings, suggestions=suggestions)
+
     # ── SPOC: live JSON poll ──────────────────────────────────────────────────
 
     @app.route('/api/qr/<int:cal_id>/live.json')

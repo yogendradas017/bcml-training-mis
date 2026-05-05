@@ -7,9 +7,14 @@
     <h5 class="mb-0">Live Attendance Monitor</h5>
     <small class="text-muted">{{ cal.programme_name }} &nbsp;·&nbsp; {{ cal.session_code }}</small>
   </div>
-  <a href="{{ url_for('training_calendar') }}" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-arrow-left"></i> Calendar
-  </a>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('qr_feedback_report', cal_id=cal.id) }}" class="btn btn-outline-success btn-sm">
+      <i class="bi bi-bar-chart-fill"></i> Feedback Report
+    </a>
+    <a href="{{ url_for('training_calendar') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Calendar
+    </a>
+  </div>
 </div>
 
 {# Scorecards #}
