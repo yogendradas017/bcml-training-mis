@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block page_title %}Feedback Report — {{ cal.programme_name }}{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0">Feedback Analysis Report</h5>
+    <small class="text-muted">{{ cal.programme_name }} &nbsp;·&nbsp; {{ cal.session_code }}</small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('qr_live', cal_id=cal.id) }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Live Monitor
+    </a>
+    <button onclick="window.print()" class="btn btn-outline-primary btn-sm no-print">
+      <i class="bi bi-printer"></i> Print
+    </button>
+  </div>
+</div>
+
+{% if not rows %}
+<div class="alert alert-info">No feedback responses yet for this session.</div>
+{% else %}
+
+{# ── Overall scorecards ──────────────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid #6366f1;">
+      <div class="card-body py-3">
+        <div style="font-size:32px;font-weight:700;color:#6366f1;">{{ rows|length }}</div>
+        <div style="font-size:12px;color:#6b7280;">Responses</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid #3b82f6;">
+      <div class="card-body py-3">
+        <div style="font-size:32px;font-weight:700;color:#3b82f6;">
+          {{ prog_pct|round(1) if prog_pct else '—' }}{% if prog_pct %}<span style="font-size:16px;">%</span>{% endif %}
+        </div>
+        <div style="font-size:12px;color:#6b7280;">Programme Score</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid #10b981;">
+      <div class="card-body py-3">
+        <div style="font-size:32px;font-weight:700;color:#10b981;">
+          {{ trainer_pct|round(1) if trainer_pct else '—' }}{% if trainer_pct %}<span style="font-size:16px;">%</span>{% endif %}
+        </div>
+        <div style="font-size:12px;color:#6b7280;">Trainer Score</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center h-100" style="border-top:4px solid #f59e0b;">
+      <div class="card-body py-3">
+        <div style="font-size:32px;font-weight:700;color:#d97706;">
+          {{ overall_pct|round(1) if overall_pct else '—' }}{% if overall_pct %}<span style="font-size:16px;">%</span>{% endif %}
+        </div>
+        <div style="font-size:12px;color:#6b7280;">Overall Satisfaction</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Question-wise analysis ──────────────────────────────────────────────── #}
+<div class="card mb-4">
+  <div class="card-header" style="background:#1a1f35;color:#fff;font-size:13px;">
+    <i class="bi bi-bar-chart-fill me-1"></i> Question-wise Analysis
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:12px;">
+      <thead style="background:#f9fafb;">
+        <tr>
+          <th style="padding:8px 12px;width:30px;">#</th>
+          <th style="padding:8px 12px;">Question</th>
+          <th class="text-center" style="padding:8px 8px;width:45px;" title="Strongly Disagree">SD</th>
+          <th class="text-center" style="padding:8px 8px;width:45px;" title="Disagree">D</th>
+          <th class="text-center" style="padding:8px 8px;width:45px;" title="Agree">A</th>
+          <th class="text-center" style="padding:8px 8px;width:45px;" title="Strongly Agree">SA</th>
+          <th class="text-center" style="padding:8px 8px;width:60px;">Avg</th>
+          <th class="text-center" style="padding:8px 8px;width:70px;">Score %</th>
+          <th style="padding:8px 12px;min-width:120px;">Bar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {# Programme section header #}
+        <tr style="background:#eff6ff;">
+          <td colspan="9" style="padding:6px 12px;font-weight:600;font-size:12px;color:#1d4ed8;">
+            Programme Feedback (Q1–Q5)
+          </td>
+        </tr>
+        {% for label, s in q_stats[:5] %}
+        <tr>
+          <td style="padding:5px 12px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:5px 12px;">{{ label }}</td>
+          <td class="text-center" style="padding:5px 8px;color:#ef4444;">{{ s.sd }}</td>
+          <td class="text-center" style="padding:5px 8px;color:#f97316;">{{ s.d }}</td>
+          <td class="text-center" style="padding:5px 8px;color:#6366f1;">{{ s.a }}</td>
+          <td class="text-center" style="padding:5px 8px;color:#10b981;">{{ s.sa }}</td>
+          <td class="text-center" style="padding:5px 8px;font-weight:600;">{{ s.avg or '—' }}</td>
+          <td class="text-center" style="padding:5px 8px;">
+            {% if s.pct %}
+            <span style="font-weight:600;color:{% if s.pct >= 75 %}#059669{% elif s.pct >= 50 %}#d97706{% else %}#dc2626{% endif %};">
+              {{ s.pct }}%
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="padding:5px 12px;">
+            {% if s.pct %}
+            <div style="background:#e5e7eb;border-radius:4px;height:10px;overflow:hidden;">
+              <div style="background:{% if s.pct >= 75 %}#10b981{% elif s.pct >= 50 %}#f59e0b{% else %}#ef4444{% endif %};
+                          width:{{ s.pct }}%;height:100%;border-radius:4px;"></div>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        {# Programme subtotal #}
+        <tr style="background:#f0fdf4;font-weight:600;">
+          <td colspan="6" style="padding:6px 12px;font-size:12px;color:#065f46;">Programme Sub-total</td>
+          <td class="text-center" style="padding:6px 8px;color:#065f46;">{{ prog_avg or '—' }}</td>
+          <td class="text-center" style="padding:6px 8px;color:#065f46;">{{ prog_pct|round(1) if prog_pct else '—' }}{% if prog_pct %}%{% endif %}</td>
+          <td style="padding:6px 12px;">
+            {% if prog_pct %}
+            <div style="background:#e5e7eb;border-radius:4px;height:10px;overflow:hidden;">
+              <div style="background:#10b981;width:{{ prog_pct }}%;height:100%;border-radius:4px;"></div>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+
+        {# Trainer section header #}
+        <tr style="background:#f0fdf4;">
+          <td colspan="9" style="padding:6px 12px;font-weight:600;font-size:12px;color:#065f46;">
+            Trainer Feedback (Q6–Q9)
+          </td>
+        </tr>
+        {% for label, s in q_stats[5:] %}
+        <tr>
+          <td style="padding:5px 12px;color:#9ca3af;">{{ loop.index + 5 }}</td>
+          <td style="padding:5px 12px;">{{ label }}</td>
+          <td class="text-center" style="padding:5px 8px;color:#ef4444;">{{ s.sd }}</td>
+          <td class="text-center" style="padding:5px 8px;color:#f97316;">{{ s.d }}</td>
+          <td class="text-center" style="padding:5px 8px;color:#6366f1;">{{ s.a }}</td>
+          <td class="text-center" style="padding:5px 8px;color:#10b981;">{{ s.sa }}</td>
+          <td class="text-center" style="padding:5px 8px;font-weight:600;">{{ s.avg or '—' }}</td>
+          <td class="text-center" style="padding:5px 8px;">
+            {% if s.pct %}
+            <span style="font-weight:600;color:{% if s.pct >= 75 %}#059669{% elif s.pct >= 50 %}#d97706{% else %}#dc2626{% endif %};">
+              {{ s.pct }}%
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="padding:5px 12px;">
+            {% if s.pct %}
+            <div style="background:#e5e7eb;border-radius:4px;height:10px;overflow:hidden;">
+              <div style="background:{% if s.pct >= 75 %}#10b981{% elif s.pct >= 50 %}#f59e0b{% else %}#ef4444{% endif %};
+                          width:{{ s.pct }}%;height:100%;border-radius:4px;"></div>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        {# Trainer subtotal #}
+        <tr style="background:#ecfdf5;font-weight:600;">
+          <td colspan="6" style="padding:6px 12px;font-size:12px;color:#065f46;">Trainer Sub-total</td>
+          <td class="text-center" style="padding:6px 8px;color:#065f46;">{{ trainer_avg or '—' }}</td>
+          <td class="text-center" style="padding:6px 8px;color:#065f46;">{{ trainer_pct|round(1) if trainer_pct else '—' }}{% if trainer_pct %}%{% endif %}</td>
+          <td style="padding:6px 12px;">
+            {% if trainer_pct %}
+            <div style="background:#e5e7eb;border-radius:4px;height:10px;overflow:hidden;">
+              <div style="background:#10b981;width:{{ trainer_pct }}%;height:100%;border-radius:4px;"></div>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+
+        {# Overall #}
+        <tr style="background:#1a1f35;color:#fff;font-weight:700;">
+          <td colspan="6" style="padding:8px 12px;font-size:13px;">Overall Satisfaction</td>
+          <td class="text-center" style="padding:8px 8px;">{{ overall_avg or '—' }}</td>
+          <td class="text-center" style="padding:8px 8px;">{{ overall_pct|round(1) if overall_pct else '—' }}{% if overall_pct %}%{% endif %}</td>
+          <td style="padding:8px 12px;">
+            {% if overall_pct %}
+            <div style="background:#374151;border-radius:4px;height:10px;overflow:hidden;">
+              <div style="background:#fbbf24;width:{{ overall_pct }}%;height:100%;border-radius:4px;"></div>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ── Individual responses ────────────────────────────────────────────────── #}
+<div class="card mb-4">
+  <div class="card-header" style="background:#f3f4f6;font-size:13px;font-weight:600;">
+    <i class="bi bi-table me-1"></i> Individual Responses
+    <span class="badge bg-secondary ms-1">{{ rows|length }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:11px;">
+      <thead style="background:#f9fafb;">
+        <tr>
+          <th style="padding:7px 10px;">#</th>
+          <th style="padding:7px 10px;">Emp Code</th>
+          <th style="padding:7px 10px;">Name</th>
+          <th class="text-center" style="padding:7px 6px;" title="Objectives explained">Q1</th>
+          <th class="text-center" style="padding:7px 6px;" title="Well structured">Q2</th>
+          <th class="text-center" style="padding:7px 6px;" title="Content appropriate">Q3</th>
+          <th class="text-center" style="padding:7px 6px;" title="Presentation quality">Q4</th>
+          <th class="text-center" style="padding:7px 6px;" title="Time reasonable">Q5</th>
+          <th class="text-center" style="padding:7px 6px;" title="Faculty inputs">Q6</th>
+          <th class="text-center" style="padding:7px 6px;" title="Faculty communication">Q7</th>
+          <th class="text-center" style="padding:7px 6px;" title="Queries responded">Q8</th>
+          <th class="text-center" style="padding:7px 6px;" title="Participants involved">Q9</th>
+          <th style="padding:7px 10px;">Submitted</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td style="padding:5px 10px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:5px 10px;font-family:monospace;">{{ r.emp_code or '—' }}</td>
+          <td style="padding:5px 10px;">{{ r.name or 'Anonymous' }}</td>
+          {% for q in ['q_obj_explained','q_well_structured','q_content_appropriate',
+                       'q_presentation_quality','q_time_reasonable',
+                       'q_inputs_appropriate','q_communication_clear',
+                       'q_queries_responded','q_well_involved'] %}
+          <td class="text-center" style="padding:5px 6px;font-weight:600;
+              color:{% if r[q]==4 %}#059669{% elif r[q]==3 %}#6366f1{% elif r[q]==2 %}#d97706{% elif r[q]==1 %}#dc2626{% else %}#9ca3af{% endif %};">
+            {{ r[q] or '—' }}
+          </td>
+          {% endfor %}
+          <td style="padding:5px 10px;color:#6b7280;">{{ r.submitted_at[:16] if r.submitted_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer" style="font-size:10px;color:#9ca3af;">
+    1=Strongly Disagree &nbsp;·&nbsp; 2=Disagree &nbsp;·&nbsp; 3=Agree &nbsp;·&nbsp; 4=Strongly Agree
+  </div>
+</div>
+
+{# ── Key Learnings ───────────────────────────────────────────────────────── #}
+{% if learnings %}
+<div class="card mb-4">
+  <div class="card-header" style="background:#f3f4f6;font-size:13px;font-weight:600;">
+    <i class="bi bi-lightbulb me-1"></i> Key Learnings <span class="badge bg-secondary ms-1">{{ learnings|length }}</span>
+  </div>
+  <ul class="list-group list-group-flush">
+    {% for l in learnings %}
+    <li class="list-group-item" style="font-size:13px;">{{ loop.index }}. {{ l }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{# ── Suggestions ─────────────────────────────────────────────────────────── #}
+{% if suggestions %}
+<div class="card mb-4">
+  <div class="card-header" style="background:#f3f4f6;font-size:13px;font-weight:600;">
+    <i class="bi bi-chat-left-text me-1"></i> Suggestions for Improvement <span class="badge bg-secondary ms-1">{{ suggestions|length }}</span>
+  </div>
+  <ul class="list-group list-group-flush">
+    {% for s in suggestions %}
+    <li class="list-group-item" style="font-size:13px;">{{ loop.index }}. {{ s }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% endif %}
+
+<style>
+@media print {
+  .no-print { display:none !important; }
+  .card { break-inside:avoid; }
+}
+</style>
+
+{% endblock %}
