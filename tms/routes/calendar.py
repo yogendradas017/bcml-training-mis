@@ -126,8 +126,13 @@ def _register(app):
     @spoc_required
     def delete_calendar(cal_id):
         db = get_db()
-        cal = db.execute('SELECT session_code FROM calendar WHERE id=? AND plant_id=?',
+        cal = db.execute('SELECT session_code, status FROM calendar WHERE id=? AND plant_id=?',
                          (cal_id, session['plant_id'])).fetchone()
+        if cal and cal['status'] == 'Conducted':
+            if _is_ajax():
+                return 'Conducted sessions cannot be deleted.', 403
+            flash('Conducted sessions cannot be deleted.', 'danger')
+            return redirect(url_for('training_calendar'))
         if cal:
             db.execute('DELETE FROM session_qr WHERE plant_id=? AND session_code=?',
                        (session['plant_id'], cal['session_code']))
@@ -144,6 +149,11 @@ def _register(app):
         plant_id = session['plant_id']
         f = request.form
         db = get_db()
+        existing = db.execute('SELECT status FROM calendar WHERE id=? AND plant_id=?',
+                              (cal_id, plant_id)).fetchone()
+        if existing and existing['status'] == 'Conducted':
+            flash('Conducted sessions cannot be edited.', 'danger')
+            return redirect(url_for('training_calendar'))
         edit_prog         = _canonical_prog(f.get('programme_name','').strip(), plant_id, db)
         tni_audience_edit = _derive_audience(plant_id, edit_prog, db)
         form_audience_edit = f.get('target_audience', '')
@@ -195,13 +205,13 @@ def _register(app):
                 chunk = ids[i:i+900]
                 ph = ','.join('?' * len(chunk))
                 codes = db.execute(
-                    f'SELECT session_code FROM calendar WHERE id IN ({ph}) AND plant_id=?',
+                    f'SELECT session_code FROM calendar WHERE id IN ({ph}) AND plant_id=? AND status != "Conducted"',
                     chunk + [plant_id]
                 ).fetchall()
                 for c in codes:
                     db.execute('DELETE FROM session_qr WHERE plant_id=? AND session_code=?',
                                (plant_id, c['session_code']))
-                db.execute(f'DELETE FROM calendar WHERE id IN ({ph}) AND plant_id=?', chunk + [plant_id])
+                db.execute(f'DELETE FROM calendar WHERE id IN ({ph}) AND plant_id=? AND status != "Conducted"', chunk + [plant_id])
                 deleted += len(chunk)
             db.commit()
             flash(f'{deleted} calendar sessions deleted.', 'warning')

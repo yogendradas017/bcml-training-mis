@@ -303,10 +303,16 @@
               {% else %}<span class="badge bg-secondary">{{ s.status }}</span>{% endif %}
             </td>
             <td style="white-space:nowrap;padding:4px 6px;">
+              {% if s.status == 'Conducted' %}
+              <button class="btn btn-sm btn-outline-secondary" title="Conducted — locked" style="padding:2px 6px;" disabled>
+                <i class="bi bi-lock-fill"></i>
+              </button>
+              {% else %}
               <button class="btn btn-sm btn-outline-primary" title="Edit" style="padding:2px 6px;"
                 onclick="openEdit({{ s.id }},'{{ s.programme_name|replace("'","\\'") }}','{{ s.prog_type or '' }}','{{ s.source or 'TNI' }}','{{ s.planned_month or '' }}','{{ s.plan_start or '' }}','{{ s.plan_end or '' }}','{{ s.time_from or '' }}','{{ s.time_to or '' }}','{{ s.duration_hrs }}','{{ s.level or '' }}','{{ s.mode or '' }}','{{ s.target_audience or '' }}','{{ s.planned_pax }}','{{ s.trainer_vendor or '' }}','{{ s.status }}')">
                 <i class="bi bi-pencil"></i>
               </button>
+              {% endif %}
               {# QR dropdown #}
               <div class="dropdown d-inline-block position-static">
                 <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" data-bs-offset="0,2" title="QR Codes" style="padding:2px 6px;">
@@ -350,12 +356,14 @@
                   </a></li>
                 </ul>
               </div>
+              {% if s.status != 'Conducted' %}
               <form method="POST" action="{{ url_for('delete_calendar', cal_id=s.id) }}" style="display:inline;">
                 <button type="button" class="btn btn-sm btn-outline-danger" style="padding:2px 6px;"
                         onclick="ajaxDelete(this,'Delete session {{ s.session_code }}?')">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
+              {% endif %}
             </td>
           </tr>
           {% else %}
