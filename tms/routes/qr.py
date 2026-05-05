@@ -199,6 +199,34 @@ def _register(app):
         return render_template('qr_live.html', cal=cal, qr_rows=qr_rows,
                                attendees=attendees, fb_count=fb_count)
 
+    # ── SPOC: feedback reports index ─────────────────────────────────────────
+
+    @app.route('/feedback-reports')
+    @spoc_required
+    def feedback_reports_index():
+        plant_id = session['plant_id']
+        db = get_db()
+        rows = db.execute('''
+            SELECT c.id AS cal_id, c.session_code, c.programme_name,
+                   c.plan_start, c.plan_end, c.status,
+                   COUNT(f.id) AS fb_count,
+                   AVG(CASE WHEN f.q_obj_explained>0 THEN f.q_obj_explained END +
+                       CASE WHEN f.q_well_structured>0 THEN f.q_well_structured END +
+                       CASE WHEN f.q_content_appropriate>0 THEN f.q_content_appropriate END +
+                       CASE WHEN f.q_presentation_quality>0 THEN f.q_presentation_quality END +
+                       CASE WHEN f.q_time_reasonable>0 THEN f.q_time_reasonable END +
+                       CASE WHEN f.q_inputs_appropriate>0 THEN f.q_inputs_appropriate END +
+                       CASE WHEN f.q_communication_clear>0 THEN f.q_communication_clear END +
+                       CASE WHEN f.q_queries_responded>0 THEN f.q_queries_responded END +
+                       CASE WHEN f.q_well_involved>0 THEN f.q_well_involved END) / 9.0 AS avg_score
+            FROM calendar c
+            JOIN feedback_response f ON f.session_code=c.session_code AND f.plant_id=c.plant_id
+            WHERE c.plant_id=?
+            GROUP BY c.id
+            ORDER BY c.plan_start DESC
+        ''', (plant_id,)).fetchall()
+        return render_template('feedback_reports_index.html', rows=rows)
+
     # ── SPOC: feedback analysis report ───────────────────────────────────────
 
     @app.route('/calendar/<int:cal_id>/feedback-report')

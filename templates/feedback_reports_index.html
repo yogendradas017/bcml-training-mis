@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block page_title %}Feedback Reports{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h5 class="mb-0">Feedback Reports</h5>
+</div>
+
+{% if not rows %}
+<div class="alert alert-info">No feedback collected yet. Generate a Feedback QR from the Training Calendar and ask participants to scan.</div>
+{% else %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+      <thead style="background:#1a1f35;color:#fff;">
+        <tr>
+          <th style="padding:10px 14px;">Programme</th>
+          <th style="padding:10px 14px;">Session Code</th>
+          <th style="padding:10px 14px;">Date</th>
+          <th style="padding:10px 14px;">Status</th>
+          <th class="text-center" style="padding:10px 14px;">Responses</th>
+          <th class="text-center" style="padding:10px 14px;">Overall %</th>
+          <th style="padding:10px 14px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        {% set pct = (r.avg_score / 4 * 100) if r.avg_score else None %}
+        <tr>
+          <td style="padding:8px 14px;font-weight:500;">{{ r.programme_name }}</td>
+          <td style="padding:8px 14px;font-family:monospace;font-size:12px;">{{ r.session_code }}</td>
+          <td style="padding:8px 14px;color:#6b7280;">
+            {{ r.plan_start or '—' }}{% if r.plan_end and r.plan_end != r.plan_start %} – {{ r.plan_end }}{% endif %}
+          </td>
+          <td style="padding:8px 14px;">
+            <span class="badge" style="background:{% if r.status=='Conducted' %}#059669{% elif r.status=='To Be Planned' %}#9ca3af{% else %}#6366f1{% endif %};">
+              {{ r.status }}
+            </span>
+          </td>
+          <td class="text-center" style="padding:8px 14px;">
+            <span class="badge bg-primary">{{ r.fb_count }}</span>
+          </td>
+          <td class="text-center" style="padding:8px 14px;">
+            {% if pct %}
+            <span style="font-weight:700;color:{% if pct >= 75 %}#059669{% elif pct >= 50 %}#d97706{% else %}#dc2626{% endif %};">
+              {{ pct|round(1) }}%
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="padding:8px 14px;">
+            <a href="{{ url_for('qr_feedback_report', cal_id=r.cal_id) }}"
+               class="btn btn-sm btn-outline-success" style="font-size:12px;">
+              <i class="bi bi-bar-chart-fill"></i> View Report
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
