@@ -259,14 +259,23 @@
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0" id="calTable" style="font-size:13px;">
+      <table class="table table-hover table-sm mb-0" id="calTable" style="font-size:12px;">
         <thead>
           <tr>
-            <th><input type="checkbox" class="cb-all"></th>
-            <th>#</th><th>Session Code</th><th>Programme Name</th><th>Type</th>
-            <th>Month</th><th>Plan Start</th><th>Duration</th><th>Mode</th>
-            <th>Audience</th><th>Pax</th><th>TNI Demand</th>
-            <th>Trainer</th><th>Status</th><th>Action</th>
+            <th style="width:30px;"><input type="checkbox" class="cb-all"></th>
+            <th style="width:22px;">#</th>
+            <th>Session Code</th>
+            <th>Programme Name</th>
+            <th>Type</th>
+            <th style="width:70px;">Month</th>
+            <th style="width:90px;">Start</th>
+            <th style="width:60px;">Hrs</th>
+            <th style="width:80px;">Mode</th>
+            <th style="width:80px;">Audience</th>
+            <th style="width:40px;">Pax</th>
+            <th style="width:45px;">Demand</th>
+            <th style="width:90px;">Status</th>
+            <th style="width:100px;">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -274,18 +283,18 @@
           <tr data-status="{{ s.status }}" data-type="{{ s.prog_type or '' }}" data-mode="{{ s.mode or '' }}" data-month="{{ s.planned_month or '' }}" data-audience="{{ s.target_audience or '' }}">
             <td><input type="checkbox" class="cb-row" value="{{ s.id }}"></td>
             <td>{{ loop.index }}</td>
-            <td><code style="font-size:11px;">{{ s.session_code }}</code><br>
-                <small class="text-muted">{{ s.prog_code }}</small></td>
-            <td><strong>{{ s.programme_name }}</strong></td>
-            <td><span class="badge bg-secondary" style="font-size:11px;">{{ s.prog_type or '—' }}</span></td>
+            <td style="white-space:nowrap;"><code style="font-size:10px;">{{ s.session_code }}</code></td>
+            <td style="max-width:160px;">
+              <span title="{{ s.programme_name }}" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;">{{ s.programme_name }}</span>
+            </td>
+            <td><span class="badge bg-secondary" style="font-size:10px;">{{ s.prog_type or '—' }}</span></td>
             <td>{{ s.planned_month or '—' }}</td>
             <td>{{ s.plan_start or '—' }}</td>
-            <td>{{ s.duration_hrs }} hrs</td>
+            <td>{{ s.duration_hrs }}</td>
             <td>{{ s.mode or '—' }}</td>
             <td>{{ s.target_audience or '—' }}</td>
             <td>{{ s.planned_pax }}</td>
             <td>{{ demand_map.get(s.programme_name, '—') }}</td>
-            <td style="font-size:12px;">{{ s.trainer_vendor or '—' }}</td>
             <td>
               {% if s.status == 'Conducted' %}<span class="badge badge-conducted">Conducted</span>
               {% elif s.status == 'To Be Planned' %}<span class="badge badge-planned">To Be Planned</span>
@@ -293,14 +302,14 @@
               {% elif s.status == 'Re-Scheduled' %}<span class="badge badge-rescheduled">Re-Scheduled</span>
               {% else %}<span class="badge bg-secondary">{{ s.status }}</span>{% endif %}
             </td>
-            <td style="white-space:nowrap;">
-              <button class="btn btn-sm btn-outline-primary me-1" title="Edit"
+            <td style="white-space:nowrap;padding:4px 6px;">
+              <button class="btn btn-sm btn-outline-primary" title="Edit" style="padding:2px 6px;"
                 onclick="openEdit({{ s.id }},'{{ s.programme_name|replace("'","\\'") }}','{{ s.prog_type or '' }}','{{ s.source or 'TNI' }}','{{ s.planned_month or '' }}','{{ s.plan_start or '' }}','{{ s.plan_end or '' }}','{{ s.time_from or '' }}','{{ s.time_to or '' }}','{{ s.duration_hrs }}','{{ s.level or '' }}','{{ s.mode or '' }}','{{ s.target_audience or '' }}','{{ s.planned_pax }}','{{ s.trainer_vendor or '' }}','{{ s.status }}')">
                 <i class="bi bi-pencil"></i>
               </button>
               {# QR dropdown #}
-              <div class="dropdown d-inline-block me-1">
-                <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" title="QR Codes">
+              <div class="dropdown d-inline-block">
+                <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" title="QR Codes" style="padding:2px 6px;">
                   <i class="bi bi-qr-code"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" style="font-size:13px;min-width:200px;">
@@ -342,7 +351,7 @@
                 </ul>
               </div>
               <form method="POST" action="{{ url_for('delete_calendar', cal_id=s.id) }}" style="display:inline;">
-                <button type="button" class="btn btn-sm btn-outline-danger"
+                <button type="button" class="btn btn-sm btn-outline-danger" style="padding:2px 6px;"
                         onclick="ajaxDelete(this,'Delete session {{ s.session_code }}?')">
                   <i class="bi bi-trash"></i>
                 </button>
