@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Thank You</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<style>
+  body { background:#f0f4ff; font-family:'Segoe UI',sans-serif; }
+  .card { border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,.10); }
+</style>
+</head>
+<body class="py-5 px-3">
+<div style="max-width:400px;margin:0 auto;">
+  <div class="card p-4 text-center">
+
+    {% if msg == 'attendance_ok' %}
+    <div style="font-size:64px;margin-bottom:12px;">✅</div>
+    <h5 class="fw-bold text-success">Attendance Marked!</h5>
+    {% if emp_name %}
+    <div class="mt-2" style="font-size:15px;">Hello, <strong>{{ emp_name }}</strong></div>
+    {% endif %}
+    <div class="mt-2 text-muted" style="font-size:13px;">
+      Your attendance for <strong>{{ qr.programme_name }}</strong> has been recorded.
+    </div>
+
+    {% elif msg == 'already_marked' %}
+    <div style="font-size:64px;margin-bottom:12px;">👍</div>
+    <h5 class="fw-bold" style="color:#d97706;">Already Marked</h5>
+    {% if emp_name %}
+    <div class="mt-2" style="font-size:15px;"><strong>{{ emp_name }}</strong></div>
+    {% endif %}
+    <div class="mt-2 text-muted" style="font-size:13px;">
+      Your attendance was already recorded for this session.
+    </div>
+
+    {% elif msg == 'feedback_ok' %}
+    <div style="font-size:64px;margin-bottom:12px;">🙏</div>
+    <h5 class="fw-bold text-success">Feedback Submitted!</h5>
+    <div class="mt-2 text-muted" style="font-size:13px;">
+      Thank you for your feedback on <strong>{{ qr.programme_name }}</strong>.
+      Your response helps us improve.
+    </div>
+    {% endif %}
+
+    <div class="mt-4 p-3" style="background:#f3f4f6;border-radius:10px;font-size:12px;color:#6b7280;">
+      {{ qr.plant_name }} &nbsp;·&nbsp; {{ qr.session_code }}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

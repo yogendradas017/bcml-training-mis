@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Mark Attendance — {{ qr.programme_name }}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<style>
+  body { background:#f0f4ff; font-family:'Segoe UI',sans-serif; }
+  .card { border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,.10); }
+  .prog-badge { background:#1a1f35; color:#fff; border-radius:10px; padding:10px 16px; font-size:13px; }
+  .search-item { cursor:pointer; padding:8px 14px; border-bottom:1px solid #f0f0f0; font-size:13px; }
+  .search-item:hover { background:#eff6ff; }
+  #suggestions { border:1px solid #d1d5db; border-top:none; border-radius:0 0 8px 8px;
+                 background:#fff; max-height:220px; overflow-y:auto; display:none; }
+</style>
+</head>
+<body class="py-4 px-3">
+
+<div style="max-width:440px;margin:0 auto;">
+  <div class="text-center mb-3">
+    <img src="{{ url_for('static', filename='bcml_logo.png') }}" height="48" onerror="this.style.display='none'">
+    <div class="fw-bold mt-1" style="color:#1a1f35;font-size:15px;">BCML Training Management</div>
+  </div>
+
+  <div class="card p-4">
+    <div class="prog-badge mb-3">
+      <div style="font-size:11px;opacity:.7;margin-bottom:2px;">Session</div>
+      <div class="fw-bold">{{ qr.programme_name }}</div>
+      <div style="font-size:11px;margin-top:4px;opacity:.8;">
+        {{ qr.plan_start or '' }}{% if qr.plan_end and qr.plan_end != qr.plan_start %} – {{ qr.plan_end }}{% endif %}
+        {% if qr.venue %} &nbsp;·&nbsp; {{ qr.venue }}{% endif %}
+      </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger py-2" style="font-size:13px;">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/q/{{ token }}/attend" id="attendForm">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Search by Name or Employee Code</label>
+        <input type="text" id="searchBox" class="form-control form-control-lg"
+               placeholder="Type your name or code…" autocomplete="off">
+        <div id="suggestions"></div>
+        <input type="hidden" name="emp_code" id="empCode" required>
+      </div>
+
+      <div id="empPreview" class="alert alert-success py-2 mb-3" style="display:none;font-size:13px;">
+        <strong id="empName"></strong><br>
+        <span id="empMeta" style="color:#374151;"></span>
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-3 fw-bold" style="font-size:16px;" disabled>
+        ✅ Mark My Attendance
+      </button>
+    </form>
+  </div>
+
+  <div class="text-center mt-3" style="font-size:11px;color:#9ca3af;">
+    {{ qr.plant_name }} &nbsp;·&nbsp; {{ qr.session_code }}
+  </div>
+</div>
+
+<script>
+const TOKEN = '{{ token }}';
+const searchBox = document.getElementById('searchBox');
+const suggestions = document.getElementById('suggestions');
+const empCode = document.getElementById('empCode');
+const submitBtn = document.getElementById('submitBtn');
+const empPreview = document.getElementById('empPreview');
+const empName = document.getElementById('empName');
+const empMeta = document.getElementById('empMeta');
+
+let debounce;
+searchBox.addEventListener('input', () => {
+  clearTimeout(debounce);
+  const q = searchBox.value.trim();
+  if (q.length < 2) { suggestions.style.display = 'none'; return; }
+  debounce = setTimeout(() => {
+    fetch(`/q/${TOKEN}/emp-search?q=${encodeURIComponent(q)}`)
+      .then(r => r.json()).then(data => {
+        suggestions.innerHTML = '';
+        if (!data.length) {
+          suggestions.innerHTML = '<div class="search-item text-muted">No match found</div>';
+        } else {
+          data.forEach(d => {
+            const el = document.createElement('div');
+            el.className = 'search-item';
+            el.innerHTML = `<strong>${d.name}</strong> <span style="color:#6b7280">${d.emp_code}</span><br>
+                            <small style="color:#9ca3af">${d.designation||''} ${d.department?'· '+d.department:''}</small>`;
+            el.onclick = () => selectEmp(d);
+            suggestions.appendChild(el);
+          });
+        }
+        suggestions.style.display = 'block';
+      });
+  }, 300);
+});
+
+function selectEmp(d) {
+  searchBox.value = d.name + ' (' + d.emp_code + ')';
+  empCode.value = d.emp_code;
+  suggestions.style.display = 'none';
+  empPreview.style.display = 'block';
+  empName.textContent = d.name;
+  empMeta.textContent = [d.emp_code, d.designation, d.department].filter(Boolean).join(' · ');
+  submitBtn.disabled = false;
+}
+
+document.addEventListener('click', e => {
+  if (!suggestions.contains(e.target) && e.target !== searchBox)
+    suggestions.style.display = 'none';
+});
+
+document.getElementById('attendForm').addEventListener('submit', () => {
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting…';
+});
+</script>
+</body>
+</html>

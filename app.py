@@ -44,7 +44,7 @@ def upload_too_large(e):
 
 
 # Register all routes (deferred imports — app is defined above)
-from tms.routes import auth, employees, tni, programme, calendar, training, summary, central, export, api
+from tms.routes import auth, employees, tni, programme, calendar, training, summary, central, export, api, qr
 
 auth.       _register(app)
 employees.  _register(app)
@@ -56,6 +56,7 @@ summary.    _register(app)
 central.    _register(app)
 export.     _register(app)
 api.        _register(app)
+qr.         _register(app)
 
 
 try:
