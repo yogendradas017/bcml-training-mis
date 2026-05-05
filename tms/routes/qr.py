@@ -263,9 +263,26 @@ def _register(app):
         except Exception:
             return render_template('qr_error.html',
                                    msg='This QR code is invalid or has expired.'), 410
+        lang = request.args.get('lang', 'en')
+        if lang not in ('en', 'hi'):
+            lang = 'en'
         if qr['stage'] == 'attendance':
             return render_template('qr_attendance.html', qr=qr, token=token, error=None)
-        return render_template('qr_feedback.html', qr=qr, token=token, error=None, lang='en')
+        return render_template('qr_feedback.html', qr=qr, token=token, error=None, lang=lang)
+
+    # ── PUBLIC: thanks (PRG target — GET only) ────────────────────────────────
+
+    @app.route('/q/<token>/thanks')
+    def qr_thanks(token):
+        db = get_db()
+        try:
+            qr = _validate_token(token, db, check_expiry=False)
+        except Exception:
+            return render_template('qr_error.html',
+                                   msg='This QR code is invalid or has expired.'), 410
+        msg      = request.args.get('msg', 'attendance_ok')
+        emp_name = request.args.get('emp_name') or None
+        return render_template('qr_thanks.html', qr=qr, msg=msg, emp_name=emp_name)
 
     # ── PUBLIC: employee name search (uses token for plant resolution) ─────────
 
@@ -290,8 +307,10 @@ def _register(app):
 
     # ── PUBLIC: submit attendance ─────────────────────────────────────────────
 
-    @app.route('/q/<token>/attend', methods=['POST'])
+    @app.route('/q/<token>/attend', methods=['GET', 'POST'])
     def qr_attend(token):
+        if request.method == 'GET':
+            return redirect(url_for('qr_landing', token=token), 302)
         db = get_db()
         try:
             qr = _validate_token(token, db)
@@ -327,10 +346,10 @@ def _register(app):
         db.commit()
 
         if changed == 0:
-            return render_template('qr_thanks.html', qr=qr,
-                                   msg='already_marked', emp_name=emp['name'])
-        return render_template('qr_thanks.html', qr=qr,
-                               msg='attendance_ok', emp_name=emp['name'])
+            return redirect(url_for('qr_thanks', token=token,
+                                    msg='already_marked', emp_name=emp['name']), 303)
+        return redirect(url_for('qr_thanks', token=token,
+                                msg='attendance_ok', emp_name=emp['name']), 303)
 
     # ── PUBLIC: feedback form ─────────────────────────────────────────────────
 
@@ -386,5 +405,4 @@ def _register(app):
         _recompute_feedback_aggregates(qr['plant_id'], qr['session_code'], db)
         db.commit()
 
-        return render_template('qr_thanks.html', qr=qr,
-                               msg='feedback_ok', emp_name=None)
+        return redirect(url_for('qr_thanks', token=token, msg='feedback_ok'), 303)
