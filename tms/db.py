@@ -118,40 +118,47 @@ def _migrate_tni_fy_year(db):
 
 
 def _migrate_tni_source(db):
-    cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
-    if 'source' not in cols:
-        db.execute("ALTER TABLE tni ADD COLUMN source TEXT DEFAULT 'TNI Driven'")
-    db.execute("""UPDATE tni SET source='New Requirement'
-        WHERE source IN ('Corp Driven','Unit Driven','Compliance Driven',
-                         'New- Unit Driven','New- Corporate Driven')""")
-    db.execute("""UPDATE calendar SET source='New Requirement'
-        WHERE source IN ('Corp Driven','Unit Driven','Compliance Driven',
-                         'New- Unit Driven','New- Corporate Driven')""")
-    db.execute("UPDATE tni SET source='TNI Driven' WHERE source IS NULL OR source=''")
-    db.execute("UPDATE calendar SET source='TNI Driven' WHERE source IS NULL OR source='' OR source='TNI'")
-    db.commit()
+    import logging
+    try:
+        cols = [row[1] for row in db.execute("PRAGMA table_info(tni)").fetchall()]
+        if 'source' not in cols:
+            db.execute("ALTER TABLE tni ADD COLUMN source TEXT DEFAULT 'TNI Driven'")
+        db.execute("""UPDATE tni SET source='New Requirement'
+            WHERE source IN ('Corp Driven','Unit Driven','Compliance Driven',
+                             'New- Unit Driven','New- Corporate Driven')""")
+        db.execute("""UPDATE calendar SET source='New Requirement'
+            WHERE source IN ('Corp Driven','Unit Driven','Compliance Driven',
+                             'New- Unit Driven','New- Corporate Driven')""")
+        db.execute("UPDATE tni SET source='TNI Driven' WHERE source IS NULL OR source=''")
+        db.execute("UPDATE calendar SET source='TNI Driven' WHERE source IS NULL OR source='' OR source='TNI'")
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_tni_source failed: {e}')
 
 
 def _migrate_programme_master_source(db):
-    cols = [row[1] for row in db.execute("PRAGMA table_info(programme_master)").fetchall()]
-    if 'source' not in cols:
-        db.execute("ALTER TABLE programme_master ADD COLUMN source TEXT DEFAULT 'TNI Requirement'")
-    # Always re-derive source from TNI to ensure correctness
-    db.execute('''
-        UPDATE programme_master SET source = CASE
-            WHEN EXISTS(
-                SELECT 1 FROM tni t WHERE t.plant_id=programme_master.plant_id
-                AND LOWER(t.programme_name)=LOWER(programme_master.name)
-                AND t.source='TNI Driven'
-            ) THEN 'TNI Requirement'
-            WHEN EXISTS(
-                SELECT 1 FROM tni t WHERE t.plant_id=programme_master.plant_id
-                AND LOWER(t.programme_name)=LOWER(programme_master.name)
-            ) THEN 'New Requirement'
-            ELSE 'TNI Requirement'
-        END
-    ''')
-    db.commit()
+    import logging
+    try:
+        cols = [row[1] for row in db.execute("PRAGMA table_info(programme_master)").fetchall()]
+        if 'source' not in cols:
+            db.execute("ALTER TABLE programme_master ADD COLUMN source TEXT DEFAULT 'TNI Requirement'")
+        db.execute('''
+            UPDATE programme_master SET source = CASE
+                WHEN EXISTS(
+                    SELECT 1 FROM tni t WHERE t.plant_id=programme_master.plant_id
+                    AND LOWER(t.programme_name)=LOWER(programme_master.name)
+                    AND t.source='TNI Driven'
+                ) THEN 'TNI Requirement'
+                WHEN EXISTS(
+                    SELECT 1 FROM tni t WHERE t.plant_id=programme_master.plant_id
+                    AND LOWER(t.programme_name)=LOWER(programme_master.name)
+                ) THEN 'New Requirement'
+                ELSE 'TNI Requirement'
+            END
+        ''')
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_programme_master_source failed: {e}')
 
 
 def _ensure_qr_tables(db):
@@ -243,23 +250,35 @@ def _migrate_emp_training_dedup(db):
 
 
 def _migrate_session_pin(db):
-    cols = [r[1] for r in db.execute("PRAGMA table_info(calendar)").fetchall()]
-    if 'session_pin' not in cols:
-        db.execute("ALTER TABLE calendar ADD COLUMN session_pin TEXT")
-        db.commit()
+    import logging
+    try:
+        cols = [r[1] for r in db.execute("PRAGMA table_info(calendar)").fetchall()]
+        if 'session_pin' not in cols:
+            db.execute("ALTER TABLE calendar ADD COLUMN session_pin TEXT")
+            db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_session_pin failed: {e}')
 
 
 def _migrate_central_plant(db):
-    db.execute("INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(99,'Central','CEN')")
-    db.commit()
+    import logging
+    try:
+        db.execute("INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(99,'Central','CEN')")
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_central_plant failed: {e}')
 
 
 def _migrate_calendar_is_central(db):
-    cols = [r[1] for r in db.execute("PRAGMA table_info(calendar)").fetchall()]
-    if 'is_central' not in cols:
-        db.execute("ALTER TABLE calendar ADD COLUMN is_central INTEGER NOT NULL DEFAULT 0")
-    db.execute("CREATE INDEX IF NOT EXISTS idx_cal_central ON calendar(is_central, plant_id)")
-    db.commit()
+    import logging
+    try:
+        cols = [r[1] for r in db.execute("PRAGMA table_info(calendar)").fetchall()]
+        if 'is_central' not in cols:
+            db.execute("ALTER TABLE calendar ADD COLUMN is_central INTEGER NOT NULL DEFAULT 0")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_cal_central ON calendar(is_central, plant_id)")
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_calendar_is_central failed: {e}')
 
 
 def _migrate_emp_training_host(db):
@@ -335,8 +354,12 @@ def _migrate_corp_members(db):
 
 
 def _migrate_central_user_plant(db):
-    db.execute("UPDATE users SET plant_id=99 WHERE username='central' AND (plant_id IS NULL OR plant_id=0)")
-    db.commit()
+    import logging
+    try:
+        db.execute("UPDATE users SET plant_id=99 WHERE username='central' AND (plant_id IS NULL OR plant_id=0)")
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_central_user_plant failed: {e}')
 
 
 def init_db():
