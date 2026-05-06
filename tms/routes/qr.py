@@ -291,13 +291,17 @@ def _register(app):
     @app.route('/calendar/<int:cal_id>/feedback-report')
     @spoc_or_central_required
     def qr_feedback_report(cal_id):
-        plant_id = session['plant_id']
+        role = session.get('role')
         db = get_db()
-        cal = db.execute('SELECT * FROM calendar WHERE id=? AND plant_id=?',
-                         (cal_id, plant_id)).fetchone()
+        if role in ('central', 'admin'):
+            cal = db.execute('SELECT * FROM calendar WHERE id=?', (cal_id,)).fetchone()
+        else:
+            cal = db.execute('SELECT * FROM calendar WHERE id=? AND plant_id=?',
+                             (cal_id, session['plant_id'])).fetchone()
         if not cal:
             flash('Session not found.', 'danger')
-            return redirect(url_for('training_calendar'))
+            return _cal_home()
+        plant_id = cal['plant_id']
 
         rows = db.execute('''
             SELECT r.*,
@@ -366,12 +370,17 @@ def _register(app):
     @app.route('/api/qr/<int:cal_id>/live.json')
     @spoc_or_central_required
     def qr_live_json(cal_id):
-        plant_id = session['plant_id']
+        role = session.get('role')
         db = get_db()
-        cal = db.execute('SELECT session_code, planned_pax FROM calendar WHERE id=? AND plant_id=?',
-                         (cal_id, plant_id)).fetchone()
+        if role in ('central', 'admin'):
+            cal = db.execute('SELECT session_code, planned_pax, plant_id FROM calendar WHERE id=?',
+                             (cal_id,)).fetchone()
+        else:
+            cal = db.execute('SELECT session_code, planned_pax, plant_id FROM calendar WHERE id=? AND plant_id=?',
+                             (cal_id, session['plant_id'])).fetchone()
         if not cal:
             return jsonify({'error': 'not found'}), 404
+        plant_id = cal['plant_id']
 
         if plant_id == CENTRAL_PLANT_ID:
             rows = db.execute('''
