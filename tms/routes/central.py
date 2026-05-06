@@ -17,8 +17,16 @@ def _register(app):
             pid = p['id']
             bc  = db.execute("SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='Blue Collared'", (pid,)).fetchone()[0]
             wc  = db.execute("SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='White Collared'", (pid,)).fetchone()[0]
-            sessions_cnt  = db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=?", (pid,)).fetchone()[0]
-            conducted_cnt = db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted'", (pid,)).fetchone()[0]
+            # Plant's own calendar sessions
+            own_sessions  = db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=?", (pid,)).fetchone()[0]
+            own_conducted = db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted'", (pid,)).fetchone()[0]
+            # Distinct central-hosted sessions attended by this plant's employees
+            central_attended = db.execute(
+                "SELECT COUNT(DISTINCT session_code) FROM emp_training "
+                "WHERE plant_id=? AND host_plant_id=99 AND session_code IS NOT NULL AND session_code!=''",
+                (pid,)).fetchone()[0]
+            sessions_cnt  = own_sessions + central_attended
+            conducted_cnt = own_conducted + central_attended
             manhours = db.execute("SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=?", (pid,)).fetchone()[0]
             bc_hrs   = db.execute("SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id WHERE t.plant_id=? AND e.collar='Blue Collared'", (pid,)).fetchone()[0]
             wc_hrs   = db.execute("SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id WHERE t.plant_id=? AND e.collar='White Collared'", (pid,)).fetchone()[0]
@@ -53,7 +61,17 @@ def _register(app):
             plant_q = []
             for p in plant_summaries:
                 pid  = p['id']
-                sc_p = db.execute(f"SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted' AND planned_month IN ({ph})", [pid]+months).fetchone()[0]
+                # Plant's own conducted calendar sessions
+                own_sc_p = db.execute(
+                    f"SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted' AND planned_month IN ({ph})",
+                    [pid]+months).fetchone()[0]
+                # Distinct central sessions attended by this plant's employees in the quarter
+                cen_sc_p = db.execute(
+                    f"SELECT COUNT(DISTINCT session_code) FROM emp_training "
+                    f"WHERE plant_id=? AND host_plant_id=99 AND session_code IS NOT NULL AND session_code!='' "
+                    f"AND month IN ({ph})",
+                    [pid]+months).fetchone()[0]
+                sc_p = own_sc_p + cen_sc_p
                 mh_p = db.execute(f"SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND month IN ({ph})", [pid]+months).fetchone()[0]
                 plant_q.append({'name': p['name'], 'unit_code': p['unit_code'], 'id': p['id'],
                                 'sessions': sc_p, 'manhours': round(mh_p, 1)})

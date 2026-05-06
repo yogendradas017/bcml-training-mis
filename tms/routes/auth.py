@@ -123,13 +123,20 @@ def _register(app):
     def spoc_dashboard():
         plant_id = session['plant_id']
         db = get_db()
+        # Distinct central-hosted sessions attended by this plant's employees
+        # (counted in addition to plant's own calendar sessions, since they're
+        # also real training events that consumed plant manhours).
+        central_attended = db.execute(
+            "SELECT COUNT(DISTINCT session_code) FROM emp_training "
+            "WHERE plant_id=? AND host_plant_id=99 AND session_code IS NOT NULL AND session_code!=''",
+            (plant_id,)).fetchone()[0]
         stats = {
             'total_emp':    db.execute('SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)).fetchone()[0],
             'blue_collar':  db.execute("SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='Blue Collared'", (plant_id,)).fetchone()[0],
             'white_collar': db.execute("SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='White Collared'", (plant_id,)).fetchone()[0],
             'tni_count':    db.execute('SELECT COUNT(DISTINCT emp_code || "|" || programme_name) FROM tni WHERE plant_id=?', (plant_id,)).fetchone()[0],
-            'sessions':     db.execute('SELECT COUNT(*) FROM calendar WHERE plant_id=?', (plant_id,)).fetchone()[0],
-            'conducted':    db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted'", (plant_id,)).fetchone()[0],
+            'sessions':     db.execute('SELECT COUNT(*) FROM calendar WHERE plant_id=?', (plant_id,)).fetchone()[0] + central_attended,
+            'conducted':    db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted'", (plant_id,)).fetchone()[0] + central_attended,
             'trainings':    db.execute('SELECT COUNT(*) FROM emp_training WHERE plant_id=?', (plant_id,)).fetchone()[0],
             'manhours':     db.execute('SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=?', (plant_id,)).fetchone()[0],
         }
