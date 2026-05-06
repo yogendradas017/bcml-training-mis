@@ -25,6 +25,7 @@
           <th style="padding:8px 14px;">Hrs</th>
           <th style="padding:8px 14px;">Pax</th>
           <th style="padding:8px 14px;">Status</th>
+          <th style="padding:8px 14px;">FB</th>
           <th style="padding:8px 14px;">QR</th>
           <th style="padding:8px 14px;"></th>
         </tr>
@@ -47,18 +48,40 @@
             <span class="badge bg-{{ status_colors.get(s.status, 'secondary') }}">{{ s.status }}</span>
           </td>
           <td style="padding:6px 14px;">
-            <div class="d-flex gap-1">
+            {% set fb_cnt = fb_counts.get(s.session_code, 0) %}
+            {% if fb_cnt > 0 %}
+            <span class="badge bg-success" title="{{ fb_cnt }} feedback responses">{{ fb_cnt }}</span>
+            {% else %}
+            <span style="color:#d1d5db;font-size:11px;">—</span>
+            {% endif %}
+          </td>
+          <td style="padding:6px 14px;">
+            <div class="d-flex gap-1 flex-wrap">
               {% if 'attendance' in qr and qr['attendance']['is_active'] %}
               <a href="{{ url_for('qr_poster', token=qr['attendance']['token']) }}" target="_blank"
                  class="btn btn-outline-primary btn-sm" style="font-size:10px;" title="Attendance QR">
                 <i class="bi bi-qr-code"></i> Att
               </a>
+              {% else %}
+              <form method="POST" action="{{ url_for('qr_generate', cal_id=s.id) }}" style="display:inline;">
+                <input type="hidden" name="stage" value="attendance">
+                <button class="btn btn-primary btn-sm" style="font-size:10px;" title="Generate Attendance QR">
+                  <i class="bi bi-qr-code"></i> +Att
+                </button>
+              </form>
               {% endif %}
               {% if 'feedback' in qr and qr['feedback']['is_active'] %}
               <a href="{{ url_for('qr_poster', token=qr['feedback']['token']) }}" target="_blank"
                  class="btn btn-outline-success btn-sm" style="font-size:10px;" title="Feedback QR">
                 <i class="bi bi-qr-code"></i> FB
               </a>
+              {% else %}
+              <form method="POST" action="{{ url_for('qr_generate', cal_id=s.id) }}" style="display:inline;">
+                <input type="hidden" name="stage" value="feedback">
+                <button class="btn btn-success btn-sm" style="font-size:10px;" title="Generate Feedback QR">
+                  <i class="bi bi-qr-code"></i> +FB
+                </button>
+              </form>
               {% endif %}
               <a href="{{ url_for('qr_live', cal_id=s.id) }}"
                  class="btn btn-outline-secondary btn-sm" style="font-size:10px;" title="Live Monitor">
@@ -68,23 +91,23 @@
           </td>
           <td style="padding:6px 14px;">
             {% if s.status == 'Conducted' %}
-            <i class="bi bi-lock-fill text-secondary" title="Conducted — locked"></i>
+            <i class="bi bi-lock-fill text-secondary me-1" title="Conducted — locked"></i>
             {% else %}
             <button class="btn btn-outline-secondary btn-sm" style="font-size:10px;"
                     onclick='openEdit({{ s.id }}, {{ s|tojson }})'>
               <i class="bi bi-pencil"></i>
             </button>
+            {% endif %}
             <form method="POST" action="{{ url_for('central_calendar_delete', cal_id=s.id) }}"
                   style="display:inline;" onsubmit="return confirm('Delete this session?')">
               <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size:10px;">
                 <i class="bi bi-trash"></i>
               </button>
             </form>
-            {% endif %}
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="10" class="text-center text-muted py-4">No central sessions yet.</td></tr>
+        <tr><td colspan="11" class="text-center text-muted py-4">No central sessions yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>
