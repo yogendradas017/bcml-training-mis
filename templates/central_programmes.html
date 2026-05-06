@@ -31,7 +31,7 @@
           <td style="padding:6px 14px;">{{ p.prog_type or '—' }}</td>
           <td style="padding:6px 14px;">
             <form method="POST" action="{{ url_for('central_programme_delete', prog_id=p.id) }}"
-                  style="display:inline;" onsubmit="return confirm('Delete {{ p.name }}?')">
+                  style="display:inline;" onsubmit="return confirm('Delete ' + {{ p.name|tojson }} + '?')">
               <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size:11px;">
                 <i class="bi bi-trash"></i>
               </button>

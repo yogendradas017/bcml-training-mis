@@ -79,6 +79,13 @@ def _make_qr_png(url):
 
 # ── register ─────────────────────────────────────────────────────────────────
 
+def _cal_home():
+    """Redirect back to whichever calendar the user came from."""
+    if session.get('plant_id') == CENTRAL_PLANT_ID:
+        return redirect(url_for('central_calendar'))
+    return redirect(url_for('training_calendar'))
+
+
 def _register(app):
 
     # ── SPOC: generate QR for a calendar session ─────────────────────────────
@@ -92,7 +99,7 @@ def _register(app):
                          (cal_id, plant_id)).fetchone()
         if not cal:
             flash('Session not found.', 'danger')
-            return redirect(url_for('training_calendar'))
+            return _cal_home()
 
         stage = request.form.get('stage', 'attendance')
         if stage not in ('attendance', 'feedback'):
@@ -165,7 +172,7 @@ def _register(app):
                    (qr_id, plant_id))
         db.commit()
         flash('QR revoked — old QR no longer accepts scans.', 'warning')
-        return redirect(url_for('training_calendar'))
+        return _cal_home()
 
     # ── SPOC: set/clear session PIN ──────────────────────────────────────────
 
@@ -198,7 +205,7 @@ def _register(app):
                          (cal_id, plant_id)).fetchone()
         if not cal:
             flash('Session not found.', 'danger')
-            return redirect(url_for('training_calendar'))
+            return _cal_home()
 
         qr_rows = db.execute(
             'SELECT * FROM session_qr WHERE plant_id=? AND session_code=? ORDER BY stage',
@@ -282,9 +289,13 @@ def _register(app):
             return redirect(url_for('training_calendar'))
 
         rows = db.execute('''
-            SELECT r.*, e.name, e.designation, e.department
+            SELECT r.*,
+                   COALESCE(e.name, cm.name) AS name,
+                   COALESCE(e.designation, cm.designation) AS designation,
+                   COALESCE(e.department, cm.department) AS department
             FROM feedback_response r
             LEFT JOIN employees e ON e.emp_code=r.emp_code AND e.plant_id=r.plant_id
+            LEFT JOIN corp_members cm ON cm.emp_code=r.emp_code AND r.plant_id=99
             WHERE r.plant_id=? AND r.session_code=?
             ORDER BY r.submitted_at
         ''', (plant_id, cal['session_code'])).fetchall()
@@ -620,10 +631,18 @@ def _register(app):
 
         emp_code = request.form.get('emp_code', '').strip().upper() or None
         if emp_code:
-            ok = db.execute(
-                'SELECT 1 FROM employees WHERE plant_id=? AND emp_code=? AND is_active=1',
-                (qr['plant_id'], emp_code)
-            ).fetchone()
+            if qr['plant_id'] == CENTRAL_PLANT_ID:
+                ok = (
+                    db.execute('SELECT 1 FROM corp_members WHERE emp_code=? AND is_active=1',
+                               (emp_code,)).fetchone() or
+                    db.execute('SELECT 1 FROM employees WHERE emp_code=? AND is_active=1',
+                               (emp_code,)).fetchone()
+                )
+            else:
+                ok = db.execute(
+                    'SELECT 1 FROM employees WHERE plant_id=? AND emp_code=? AND is_active=1',
+                    (qr['plant_id'], emp_code)
+                ).fetchone()
             if not ok:
                 return render_template('qr_feedback.html', qr=qr, token=token, lang=lang,
                                        error=f'Employee code "{emp_code}" not found.')
