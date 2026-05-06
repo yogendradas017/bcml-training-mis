@@ -159,7 +159,7 @@
           <tr>
             <th><input type="checkbox" class="cb-all"></th>
             <th>#</th><th>Employee</th><th>Collar</th><th>Session</th>
-            <th>Programme</th><th>Type</th><th>Start Date</th>
+            <th>Programme</th><th>Type</th><th>Source</th><th>Start Date</th>
             <th>Hrs</th><th>Pre</th><th>Post</th><th>Venue</th><th>Month</th><th>Action</th>
           </tr>
         </thead>
@@ -180,6 +180,15 @@
             <td><code style="font-size:11px;">{{ rec.session_code or '—' }}</code></td>
             <td><strong>{{ rec.programme_name }}</strong></td>
             <td><span class="badge bg-secondary" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
+            <td>
+              {% if rec.host_plant_id == 99 %}
+              <span class="badge bg-primary" style="font-size:10px;" title="Central Training — New Requirement">Central</span>
+              {% elif rec.cal_new == 'New Requirement' %}
+              <span class="badge bg-warning text-dark" style="font-size:10px;">New Req</span>
+              {% else %}
+              <span style="color:#9ca3af;font-size:11px;">—</span>
+              {% endif %}
+            </td>
             <td>{{ rec.start_date | fmt_date }}</td>
             <td><strong>{{ rec.hrs }}</strong></td>
             <td>{{ rec.pre_rating or '—' }}</td>

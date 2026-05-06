@@ -601,8 +601,13 @@ def _register(app):
                 (emp_plant, emp_code, qr['session_code'], qr['programme_name'],
                  qr['plan_start'] or '', qr['plan_end'] or '',
                  qr['duration_hrs'] or 0, qr['prog_type'] or '',
-                 qr['level'] or '', qr['mode'] or '', 'Calendar Program',
+                 qr['level'] or '', qr['mode'] or '', 'New Requirement',
                  '', month, host_pid))
+            # Auto-update programme_master for attendee's plant + central
+            for pid in ({emp_plant, CENTRAL_PLANT_ID}):
+                db.execute('''INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, source)
+                              VALUES(?,?,?,'New Requirement')''',
+                           (pid, qr['programme_name'], qr['prog_type'] or ''))
         else:
             emp = db.execute(
                 'SELECT name, collar, designation, department FROM employees '
