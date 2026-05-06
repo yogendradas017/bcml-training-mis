@@ -55,6 +55,39 @@
   </div>
 </div>
 
+{# Session PIN control #}
+<div class="card mb-4" style="border-left:4px solid {% if cal.session_pin %}#f59e0b{% else %}#d1d5db{% endif %};">
+  <div class="card-body py-3 d-flex flex-wrap align-items-center gap-3">
+    <div>
+      <div style="font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Session PIN</div>
+      {% if cal.session_pin %}
+      <div style="font-size:36px;font-weight:800;color:#d97706;letter-spacing:8px;">{{ cal.session_pin }}</div>
+      <div style="font-size:11px;color:#6b7280;">Announce this code to participants</div>
+      {% else %}
+      <div style="font-size:14px;color:#9ca3af;margin-top:4px;">No PIN set — anyone can scan</div>
+      {% endif %}
+    </div>
+    <div class="ms-auto d-flex gap-2 align-items-center flex-wrap">
+      <form method="POST" action="{{ url_for('qr_set_pin', cal_id=cal.id) }}" class="d-flex gap-2">
+        <input type="text" name="pin" maxlength="4" inputmode="numeric" pattern="\d{4}"
+               placeholder="4-digit" style="width:90px;font-size:18px;font-weight:700;text-align:center;letter-spacing:4px;"
+               class="form-control" value="{{ cal.session_pin or '' }}">
+        <button type="submit" class="btn btn-warning btn-sm fw-bold">
+          <i class="bi bi-lock-fill"></i> Set PIN
+        </button>
+      </form>
+      {% if cal.session_pin %}
+      <form method="POST" action="{{ url_for('qr_set_pin', cal_id=cal.id) }}">
+        <input type="hidden" name="pin" value="">
+        <button type="submit" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-unlock"></i> Clear
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
 {# QR codes #}
 {% if qr_rows %}
 <div class="card mb-4">

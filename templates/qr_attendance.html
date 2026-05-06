@@ -38,6 +38,16 @@
     {% endif %}
 
     <form method="POST" action="/q/{{ token }}/attend" id="attendForm">
+      {% if has_pin %}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Session Code <span class="text-danger">*</span></label>
+        <input type="text" name="session_pin" class="form-control form-control-lg text-center fw-bold"
+               maxlength="4" inputmode="numeric" pattern="\d{4}"
+               placeholder="Enter 4-digit code from trainer"
+               style="font-size:24px;letter-spacing:8px;" required autocomplete="off">
+        <div class="form-text">Ask your trainer for today's session code.</div>
+      </div>
+      {% endif %}
       <div class="mb-3">
         <label class="form-label fw-semibold">Search by Name or Employee Code</label>
         <input type="text" id="searchBox" class="form-control form-control-lg"

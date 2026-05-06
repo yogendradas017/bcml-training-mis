@@ -26,7 +26,7 @@ def _validate_token(token, db, check_expiry=True):
     row = db.execute('''
         SELECT q.*, c.programme_name, c.prog_type, c.level, c.mode,
                c.plan_start, c.plan_end, c.duration_hrs,
-               c.time_from, c.time_to, c.target_audience,
+               c.time_from, c.time_to, c.target_audience, c.session_pin,
                p.name AS plant_name
         FROM session_qr q
         JOIN calendar c ON c.session_code=q.session_code AND c.plant_id=q.plant_id
@@ -164,6 +164,26 @@ def _register(app):
         db.commit()
         flash('QR revoked — old QR no longer accepts scans.', 'warning')
         return redirect(url_for('training_calendar'))
+
+    # ── SPOC: set/clear session PIN ──────────────────────────────────────────
+
+    @app.route('/calendar/<int:cal_id>/set-pin', methods=['POST'])
+    @spoc_required
+    def qr_set_pin(cal_id):
+        plant_id = session['plant_id']
+        db = get_db()
+        pin = request.form.get('pin', '').strip()
+        if pin and (len(pin) != 4 or not pin.isdigit()):
+            flash('PIN must be exactly 4 digits.', 'danger')
+            return redirect(url_for('qr_live', cal_id=cal_id))
+        db.execute('UPDATE calendar SET session_pin=? WHERE id=? AND plant_id=?',
+                   (pin or None, cal_id, plant_id))
+        db.commit()
+        if pin:
+            flash(f'Session PIN set to {pin}. Announce it to participants.', 'success')
+        else:
+            flash('Session PIN cleared — attendance open without PIN.', 'warning')
+        return redirect(url_for('qr_live', cal_id=cal_id))
 
     # ── SPOC: live attendance monitor ─────────────────────────────────────────
 
@@ -366,7 +386,8 @@ def _register(app):
         if lang not in ('en', 'hi'):
             lang = 'en'
         if qr['stage'] == 'attendance':
-            return render_template('qr_attendance.html', qr=qr, token=token, error=None)
+            return render_template('qr_attendance.html', qr=qr, token=token,
+                                   has_pin=bool(qr['session_pin']), error=None)
         return render_template('qr_feedback.html', qr=qr, token=token, error=None, lang=lang)
 
     # ── PUBLIC: thanks (PRG target — GET only) ────────────────────────────────
@@ -417,9 +438,17 @@ def _register(app):
             return render_template('qr_error.html',
                                    msg='This QR code is invalid or has expired.'), 410
 
+        if qr['session_pin']:
+            entered_pin = request.form.get('session_pin', '').strip()
+            if entered_pin != qr['session_pin']:
+                return render_template('qr_attendance.html', qr=qr, token=token,
+                                       has_pin=True,
+                                       error='Incorrect session code. Ask your trainer for the 4-digit code.')
+
         emp_code = request.form.get('emp_code', '').strip().upper()
         if not emp_code:
             return render_template('qr_attendance.html', qr=qr, token=token,
+                                   has_pin=bool(qr['session_pin']),
                                    error='Please enter or select your Employee Code.')
 
         emp = db.execute(
