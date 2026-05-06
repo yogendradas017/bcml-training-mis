@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block page_title %}Central Attendance Records{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0">Central Attendance Records</h5>
+    <small class="text-muted">Employees from all plants who attended Central sessions</small>
+  </div>
+</div>
+
+{% if not session_groups %}
+<div class="card p-4 text-center text-muted">
+  No attendance records yet. Generate a QR code from the Central Calendar and have participants scan it.
+</div>
+{% else %}
+
+{% for session_code, rows in session_groups.items() %}
+{% set s = session_map.get(session_code, {}) %}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center"
+       style="background:#1a1f35;color:#fff;font-size:13px;">
+    <span>
+      <i class="bi bi-calendar3 me-1"></i>
+      <strong>{{ s.get('programme_name', session_code) }}</strong>
+      <span class="badge bg-secondary ms-2" style="font-size:10px;">{{ session_code }}</span>
+    </span>
+    <span>
+      {{ s.get('plan_start','') }}{% if s.get('plan_end') and s.get('plan_end') != s.get('plan_start') %} – {{ s.get('plan_end') }}{% endif %}
+      &nbsp;·&nbsp; <strong>{{ rows|length }}</strong> attended
+    </span>
+  </div>
+
+  {# Unit-wise summary #}
+  {% set unit_counts = {} %}
+  {% for r in rows %}
+    {% if r.unit_code %}
+      {% set _ = unit_counts.update({r.unit_code: (unit_counts.get(r.unit_code, 0) + 1)}) %}
+    {% endif %}
+  {% endfor %}
+  {% if unit_counts %}
+  <div class="card-body py-2 border-bottom" style="background:#f9fafb;">
+    <div class="d-flex flex-wrap gap-2">
+      {% for uc, cnt in unit_counts.items() %}
+      <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:12px;padding:4px 10px;">
+        {{ uc }} &nbsp; {{ cnt }}
+      </span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="table-responsive">
+    <table class="table table-sm mb-0" style="font-size:12px;">
+      <thead style="background:#f3f4f6;">
+        <tr>
+          <th style="padding:6px 14px;">#</th>
+          <th style="padding:6px 14px;">Emp Code</th>
+          <th style="padding:6px 14px;">Name</th>
+          <th style="padding:6px 14px;">Unit</th>
+          <th style="padding:6px 14px;">Designation</th>
+          <th style="padding:6px 14px;">Department</th>
+          <th style="padding:6px 14px;">Hrs</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td style="padding:5px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:5px 14px;font-family:monospace;">{{ r.emp_code }}</td>
+          <td style="padding:5px 14px;font-weight:500;">{{ r.emp_name or '—' }}</td>
+          <td style="padding:5px 14px;"><span class="badge bg-secondary">{{ r.unit_code or '—' }}</span></td>
+          <td style="padding:5px 14px;">{{ r.designation or '—' }}</td>
+          <td style="padding:5px 14px;">{{ r.department or '—' }}</td>
+          <td style="padding:5px 14px;">{{ r.hrs or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% endblock %}

@@ -27,6 +27,7 @@ PLANTS = [
     {'id': 10, 'name': 'Akbarpur',   'unit_code': 'ACM'},
 ]
 PLANT_MAP = {p['id']: p for p in PLANTS}
+PLANT_MAP[99] = {'id': 99, 'name': 'Central', 'unit_code': 'CEN'}
 
 PROG_TYPES  = ['Behavioural/Leadership', 'Cane', 'Commercial', 'EHS/HR', 'IT', 'Technical']
 MODES       = ['Classroom', 'OJT', 'SOP', 'Online']
@@ -76,3 +77,5 @@ TYPE_ABBREV = {
     'EHS/HR': 'EHS', 'IT': 'ITC', 'Technical': 'TEC'
 }
 NON_TNI_SOURCES = ('New Requirement',)
+
+CENTRAL_PLANT_ID = 99

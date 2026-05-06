@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block page_title %}Central Programme Master{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0">Central Programme Master</h5>
+    <small class="text-muted">Programmes conducted centrally (New Requirement only)</small>
+  </div>
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+    <i class="bi bi-plus-lg"></i> Add Programme
+  </button>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+      <thead style="background:#f9fafb;">
+        <tr>
+          <th style="padding:8px 14px;">#</th>
+          <th style="padding:8px 14px;">Programme Name</th>
+          <th style="padding:8px 14px;">Type</th>
+          <th style="padding:8px 14px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in programmes %}
+        <tr>
+          <td style="padding:6px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:6px 14px;font-weight:500;">{{ p.name }}</td>
+          <td style="padding:6px 14px;">{{ p.prog_type or '—' }}</td>
+          <td style="padding:6px 14px;">
+            <form method="POST" action="{{ url_for('central_programme_delete', prog_id=p.id) }}"
+                  style="display:inline;" onsubmit="return confirm('Delete {{ p.name }}?')">
+              <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size:11px;">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-muted py-4">No programmes yet. Add one to get started.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# Add Modal #}
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('central_programme_add') }}">
+        <div class="modal-header"><h5 class="modal-title">Add Central Programme</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Programme Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Programme Type</label>
+            <select name="prog_type" class="form-select">
+              <option value="">— Select —</option>
+              {% for pt in prog_types %}<option>{{ pt }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Add Programme</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

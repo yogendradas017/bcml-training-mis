@@ -54,6 +54,7 @@
                placeholder="Type your name or code…" autocomplete="off">
         <div id="suggestions"></div>
         <input type="hidden" name="emp_code" id="empCode" required>
+        <input type="hidden" name="attendee_plant_id" id="attendeePlantId" value="">
       </div>
 
       <div id="empPreview" class="alert alert-success py-2 mb-3" style="display:none;font-size:13px;">
@@ -97,7 +98,8 @@ searchBox.addEventListener('input', () => {
           data.forEach(d => {
             const el = document.createElement('div');
             el.className = 'search-item';
-            el.innerHTML = `<strong>${d.name}</strong> <span style="color:#6b7280">${d.emp_code}</span><br>
+            el.innerHTML = `<strong>${d.name}</strong> <span style="color:#6b7280">${d.emp_code}</span>
+                            ${d.unit_code ? `<span class="badge bg-secondary ms-1" style="font-size:10px;">${d.unit_code}</span>` : ''}<br>
                             <small style="color:#9ca3af">${d.designation||''} ${d.department?'· '+d.department:''}</small>`;
             el.onclick = () => selectEmp(d);
             suggestions.appendChild(el);
@@ -111,10 +113,12 @@ searchBox.addEventListener('input', () => {
 function selectEmp(d) {
   searchBox.value = d.name + ' (' + d.emp_code + ')';
   empCode.value = d.emp_code;
+  document.getElementById('attendeePlantId').value = d.plant_id || '';
   suggestions.style.display = 'none';
   empPreview.style.display = 'block';
   empName.textContent = d.name;
-  empMeta.textContent = [d.emp_code, d.designation, d.department].filter(Boolean).join(' · ');
+  const unitTag = d.unit_code ? ` [${d.unit_code}]` : '';
+  empMeta.textContent = [d.emp_code + unitTag, d.designation, d.department].filter(Boolean).join(' · ');
   submitBtn.disabled = false;
 }
 
