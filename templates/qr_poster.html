@@ -42,7 +42,7 @@
 
 <div class="text-center no-print" style="margin-bottom:16px;">
   <button class="btn-print" onclick="window.print()">🖨 Print Poster</button>
-  <a href="{{ url_for('training_calendar') }}" style="margin-left:16px;font-size:13px;color:#6b7280;">← Back to Calendar</a>
+  <a href="{{ url_for('central_calendar') if qr.plant_id == 99 else url_for('training_calendar') }}" style="margin-left:16px;font-size:13px;color:#6b7280;">← Back to Calendar</a>
 </div>
 
 <div class="poster">

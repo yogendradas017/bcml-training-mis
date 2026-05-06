@@ -145,13 +145,19 @@ def _register(app):
         for q in qr_rows:
             qr_map.setdefault(q['session_code'], {})[q['stage']] = dict(q)
 
+        fb_counts = {r['session_code']: r['cnt'] for r in db.execute(
+            'SELECT session_code, COUNT(*) as cnt FROM feedback_response WHERE plant_id=? GROUP BY session_code',
+            (CENTRAL_PLANT_ID,)
+        ).fetchall()}
+
         return render_template('central_calendar.html',
                                sessions=sessions,
                                master_programmes=master_programmes,
                                prog_types=PROG_TYPES, modes=MODES,
                                levels=LEVELS, audiences=AUDIENCES,
                                months=MONTHS_FY, statuses=STATUSES,
-                               qr_map=qr_map)
+                               qr_map=qr_map,
+                               fb_counts=fb_counts)
 
     @app.route('/central/calendar/add', methods=['POST'])
     @central_required
@@ -233,9 +239,6 @@ def _register(app):
                          (cal_id, CENTRAL_PLANT_ID)).fetchone()
         if not cal:
             flash('Session not found.', 'danger')
-            return redirect(url_for('central_calendar'))
-        if cal['status'] == 'Conducted':
-            flash('Conducted sessions cannot be deleted.', 'danger')
             return redirect(url_for('central_calendar'))
         db.execute('DELETE FROM session_qr WHERE plant_id=? AND session_code=?',
                    (CENTRAL_PLANT_ID, cal['session_code']))
