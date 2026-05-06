@@ -70,6 +70,8 @@ CREATE TABLE IF NOT EXISTS calendar (
     planned_pax INTEGER DEFAULT 0,
     trainer_vendor TEXT,
     status TEXT DEFAULT 'To Be Planned',
+    session_pin TEXT,
+    is_central INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT (date('now'))
 );
 
@@ -90,6 +92,7 @@ CREATE TABLE IF NOT EXISTS emp_training (
     post_rating REAL,
     venue TEXT,
     month TEXT,
+    host_plant_id INTEGER,
     created_at TEXT DEFAULT (date('now'))
 );
 
@@ -172,8 +175,20 @@ CREATE TABLE IF NOT EXISTS programme_master (
     name TEXT NOT NULL,
     prog_type TEXT,
     mode TEXT,
+    source TEXT DEFAULT 'TNI Requirement',
     created_at TEXT DEFAULT (date('now')),
     UNIQUE(plant_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS corp_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    emp_code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    designation TEXT DEFAULT '',
+    department TEXT DEFAULT '',
+    email TEXT DEFAULT '',
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT DEFAULT (date('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_qr_token    ON session_qr(token);
@@ -189,6 +204,9 @@ CREATE INDEX IF NOT EXISTS idx_tni_plant ON tni(plant_id);
 CREATE INDEX IF NOT EXISTS idx_tni_dedup ON tni(plant_id, emp_code, programme_name);
 CREATE INDEX IF NOT EXISTS idx_tni_prog ON tni(plant_id, programme_name);
 CREATE INDEX IF NOT EXISTS idx_cal_plant ON calendar(plant_id);
+CREATE INDEX IF NOT EXISTS idx_cal_central ON calendar(is_central, plant_id);
 CREATE INDEX IF NOT EXISTS idx_training_plant ON emp_training(plant_id);
 CREATE INDEX IF NOT EXISTS idx_et_lookup ON emp_training(plant_id, emp_code, programme_name);
+CREATE INDEX IF NOT EXISTS idx_et_host ON emp_training(host_plant_id);
+CREATE INDEX IF NOT EXISTS idx_corp_active ON corp_members(is_active, name);
 CREATE INDEX IF NOT EXISTS idx_prog_plant ON programme_details(plant_id);
