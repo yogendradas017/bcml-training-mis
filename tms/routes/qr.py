@@ -109,12 +109,15 @@ def _register(app):
         if stage not in ('attendance', 'feedback'):
             stage = 'attendance'
 
-        # Calculate expiry: plan_end + 1 day (or today + 7 days if no plan_end)
+        # Calculate expiry: plan_end + 1 day; if already past, use today + 30 days
         try:
-            plan_end = datetime.date.fromisoformat(cal['plan_end'])
-            expires  = (plan_end + datetime.timedelta(days=1)).isoformat() + 'T23:59:59'
+            plan_end    = datetime.date.fromisoformat(cal['plan_end'])
+            expiry_date = plan_end + datetime.timedelta(days=1)
+            if expiry_date < datetime.date.today():
+                expiry_date = datetime.date.today() + datetime.timedelta(days=30)
+            expires = expiry_date.isoformat() + 'T23:59:59'
         except Exception:
-            expires = (datetime.date.today() + datetime.timedelta(days=7)).isoformat() + 'T23:59:59'
+            expires = (datetime.date.today() + datetime.timedelta(days=30)).isoformat() + 'T23:59:59'
 
         existing = db.execute(
             'SELECT id FROM session_qr WHERE plant_id=? AND session_code=? AND stage=?',
