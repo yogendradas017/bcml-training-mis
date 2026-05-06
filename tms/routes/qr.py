@@ -81,7 +81,7 @@ def _make_qr_png(url):
 
 def _cal_home():
     """Redirect back to whichever calendar the user came from."""
-    if session.get('plant_id') == CENTRAL_PLANT_ID:
+    if session.get('role') in ('central', 'admin'):
         return redirect(url_for('central_calendar'))
     return redirect(url_for('training_calendar'))
 
@@ -172,10 +172,13 @@ def _register(app):
     @app.route('/qr/<int:qr_id>/revoke', methods=['POST'])
     @spoc_or_central_required
     def qr_revoke(qr_id):
-        plant_id = session['plant_id']
+        role = session.get('role')
         db = get_db()
-        db.execute('UPDATE session_qr SET is_active=0 WHERE id=? AND plant_id=?',
-                   (qr_id, plant_id))
+        if role in ('central', 'admin'):
+            db.execute('UPDATE session_qr SET is_active=0 WHERE id=?', (qr_id,))
+        else:
+            db.execute('UPDATE session_qr SET is_active=0 WHERE id=? AND plant_id=?',
+                       (qr_id, session['plant_id']))
         db.commit()
         flash('QR revoked — old QR no longer accepts scans.', 'warning')
         return _cal_home()
@@ -267,7 +270,13 @@ def _register(app):
     @spoc_or_central_required
     def feedback_reports_index():
         role = session.get('role')
-        plant_id = CENTRAL_PLANT_ID if role in ('central', 'admin') else session['plant_id']
+        if role == 'central':
+            plant_id = CENTRAL_PLANT_ID
+        elif role == 'admin':
+            # If admin has switched to a specific plant, show that plant's feedback
+            plant_id = session.get('plant_id') or CENTRAL_PLANT_ID
+        else:
+            plant_id = session['plant_id']
         db = get_db()
         rows = db.execute('''
             SELECT c.id AS cal_id, c.session_code, c.programme_name,
