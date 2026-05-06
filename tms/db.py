@@ -242,6 +242,13 @@ def _migrate_emp_training_dedup(db):
         logging.warning(f'emp_training dedup migration failed: {e}')
 
 
+def _migrate_session_pin(db):
+    cols = [r[1] for r in db.execute("PRAGMA table_info(calendar)").fetchall()]
+    if 'session_pin' not in cols:
+        db.execute("ALTER TABLE calendar ADD COLUMN session_pin TEXT")
+        db.commit()
+
+
 def init_db():
     from tms.helpers import (
         _cleanse_master_spelling, _cleanse_programme_names, _cleanup_stale_analyze_files
@@ -258,6 +265,7 @@ def init_db():
     _migrate_programme_master_source(db)
     _migrate_emp_training_dedup(db)
     _ensure_qr_tables(db)
+    _migrate_session_pin(db)
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
                    (p['id'], p['name'], p['unit_code']))
