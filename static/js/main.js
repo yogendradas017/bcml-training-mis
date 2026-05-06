@@ -6,6 +6,15 @@ window.addEventListener('load', () => {
   if (l) { l.classList.add('done'); setTimeout(() => l.remove(), 400); }
 });
 
+/* Move Bootstrap modals to <body> on open so they escape any CSS
+   stacking contexts (e.g. transform on .page-body.fade-up) that
+   would otherwise trap them behind the backdrop. */
+document.addEventListener('show.bs.modal', e => {
+  if (e.target.parentElement !== document.body) {
+    document.body.appendChild(e.target);
+  }
+});
+
 /* ═══════════════════════════════════════════════════
    MOBILE SIDEBAR TOGGLE
 ═══════════════════════════════════════════════════ */
