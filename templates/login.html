@@ -4,446 +4,70 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BCML Training MIS — Login</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-
     body {
-      font-family: 'Inter', system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      display: flex;
-      min-height: 100vh;
-      background: #0b1120;
-      overflow: hidden;
+      background: linear-gradient(135deg, #1a3a5c 0%, #2e6da4 60%, #1a7a3c 100%);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
     }
-
-    /* ── Animated canvas background ── */
-    #bg-canvas {
-      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    .login-card {
+      background: #fff; border-radius: 16px; padding: 40px 36px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.25); width: 100%; max-width: 420px;
     }
-
-    /* ── LEFT BRAND PANEL ── */
-    .brand-panel {
-      position: relative; z-index: 1;
-      flex: 1; display: flex; flex-direction: column;
-      justify-content: center; align-items: flex-start;
-      padding: 60px 64px;
-      min-width: 0;
-    }
-
-    .brand-eyebrow {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 99px;
-      padding: 5px 14px 5px 8px;
-      margin-bottom: 32px;
-    }
-    .brand-eyebrow-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #22c55e;
-      box-shadow: 0 0 8px #22c55e;
-      animation: pulse-dot 2s ease-in-out infinite;
-    }
-    @keyframes pulse-dot {
-      0%,100% { box-shadow: 0 0 4px #22c55e; }
-      50%      { box-shadow: 0 0 14px #22c55e, 0 0 24px rgba(34,197,94,.3); }
-    }
-    .brand-eyebrow span {
-      font-size: 12px; font-weight: 600; color: rgba(255,255,255,.7);
-      letter-spacing: .5px; text-transform: uppercase;
-    }
-
-    .brand-logo-row {
-      display: flex; align-items: center; gap: 18px; margin-bottom: 24px;
-    }
-    .brand-logo-box {
-      width: 64px; height: 64px; border-radius: 16px;
-      background: linear-gradient(135deg,#1e4d8c,#2e6da4);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 8px 32px rgba(46,109,164,.4);
-      flex-shrink: 0; overflow: hidden;
-    }
-    .brand-logo-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
-    .brand-logo-box .brand-initials {
-      font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -1px;
-    }
-    .brand-company {
-      font-size: 11px; font-weight: 700; letter-spacing: 2px;
-      text-transform: uppercase; color: rgba(255,255,255,.5);
-      margin-bottom: 4px;
-    }
-    .brand-name {
-      font-size: 22px; font-weight: 800; color: #fff; line-height: 1.2;
-    }
-
-    .brand-headline {
-      font-size: clamp(28px, 3vw, 42px);
-      font-weight: 800; color: #fff; line-height: 1.2;
-      letter-spacing: -1.5px; margin-bottom: 16px;
-    }
-    .brand-headline .accent {
-      background: linear-gradient(90deg, #60a5fa, #a78bfa, #34d399);
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .brand-sub {
-      font-size: 16px; color: rgba(255,255,255,.5); line-height: 1.7;
-      max-width: 420px; margin-bottom: 48px; font-weight: 400;
-    }
-
-    /* Stat cards */
-    .stat-row { display: flex; gap: 16px; flex-wrap: wrap; }
-    .stat-card {
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 12px; padding: 16px 20px; min-width: 120px;
-    }
-    .stat-value { font-size: 22px; font-weight: 800; color: #fff; }
-    .stat-label { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 2px; letter-spacing: .5px; text-transform: uppercase; }
-
-    /* Feature pills */
-    .feature-list { display: flex; flex-direction: column; gap: 12px; margin-top: 40px; }
-    .feature-item { display: flex; align-items: center; gap: 12px; }
-    .feature-icon {
-      width: 32px; height: 32px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px; flex-shrink: 0;
-    }
-    .feature-text { font-size: 13px; color: rgba(255,255,255,.55); font-weight: 500; }
-
-    /* ── RIGHT FORM PANEL ── */
-    .form-panel {
-      position: relative; z-index: 1;
-      width: 100%; max-width: 480px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      padding: 40px 32px;
-      background: rgba(255,255,255,.02);
-      border-left: 1px solid rgba(255,255,255,.06);
-      backdrop-filter: blur(20px);
-    }
-
-    .form-card {
-      width: 100%; max-width: 400px;
-    }
-
-    .form-header { margin-bottom: 36px; }
-    .form-greeting {
-      font-size: 26px; font-weight: 800; color: #fff; letter-spacing: -1px; margin-bottom: 6px;
-    }
-    .form-subtext { font-size: 14px; color: rgba(255,255,255,.4); font-weight: 400; }
-
-    /* Form fields */
-    .field-group { margin-bottom: 20px; }
-    .field-label {
-      display: block; font-size: 12px; font-weight: 600;
-      color: rgba(255,255,255,.5); letter-spacing: .5px;
-      text-transform: uppercase; margin-bottom: 8px;
-    }
-    .field-wrap { position: relative; }
-    .field-icon {
-      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-      font-size: 16px; color: rgba(255,255,255,.25); pointer-events: none;
-    }
-    .field-wrap input {
-      width: 100%;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 10px;
-      padding: 13px 14px 13px 42px;
-      font-size: 15px; font-weight: 500; color: #fff;
-      font-family: 'Inter', sans-serif;
-      outline: none;
-      transition: border-color .2s, background .2s, box-shadow .2s;
-    }
-    .field-wrap input::placeholder { color: rgba(255,255,255,.2); font-weight: 400; }
-    .field-wrap input:focus {
-      border-color: rgba(96,165,250,.6);
-      background: rgba(255,255,255,.09);
-      box-shadow: 0 0 0 3px rgba(96,165,250,.15);
-    }
-
-    /* Login button */
+    .login-logo { text-align: center; margin-bottom: 28px; }
+    .login-logo .company { font-size: 13px; font-weight: 700; color: #1a3a5c; letter-spacing: 1px; }
+    .login-logo .system  { font-size: 20px; font-weight: 800; color: #2e6da4; margin-top: 4px; }
+    .login-logo .fy      { font-size: 13px; color: #6c757d; margin-top: 2px; }
+    .form-control { padding: 12px 14px; font-size: 15px; border-radius: 8px; }
+    .form-label { font-weight: 600; color: #374151; }
     .btn-login {
-      width: 100%; padding: 14px;
-      background: linear-gradient(135deg, #2563eb, #7c3aed);
-      border: none; border-radius: 10px; cursor: pointer;
-      font-size: 15px; font-weight: 700; color: #fff;
-      font-family: 'Inter', sans-serif; letter-spacing: .2px;
+      background: #2e6da4; border: none; padding: 13px; font-size: 16px;
+      font-weight: 700; border-radius: 8px; width: 100%; color: #fff;
       margin-top: 8px;
-      transition: transform .15s, box-shadow .15s, filter .15s;
-      box-shadow: 0 4px 20px rgba(37,99,235,.4);
-      display: flex; align-items: center; justify-content: center; gap: 8px;
     }
-    .btn-login:hover {
-      filter: brightness(1.12);
-      transform: translateY(-1px);
-      box-shadow: 0 8px 28px rgba(37,99,235,.5);
-    }
-    .btn-login:active { transform: translateY(0); }
-
-    /* Alert */
-    .alert-danger {
-      background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.25);
-      color: #fca5a5; border-radius: 8px; padding: 10px 14px;
-      font-size: 13px; margin-bottom: 20px;
-    }
-
-    /* Divider */
-    .divider { display: flex; align-items: center; gap: 12px; margin: 28px 0; }
-    .divider-line { flex: 1; height: 1px; background: rgba(255,255,255,.07); }
-    .divider-text { font-size: 11px; color: rgba(255,255,255,.25); text-transform: uppercase; letter-spacing: 1px; }
-
-    /* Hint box */
-    .hint-box {
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.07);
-      border-radius: 10px; padding: 14px 16px;
-    }
-    .hint-row { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; }
-    .hint-row:last-child { margin-bottom: 0; }
-    .hint-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: .5px; flex-shrink: 0; }
-    .hint-val { font-size: 13px; color: rgba(255,255,255,.5); }
-    .hint-code {
-      display: inline-block; background: rgba(96,165,250,.12); border: 1px solid rgba(96,165,250,.2);
-      color: #93c5fd; border-radius: 4px; padding: 0 6px; font-size: 12px;
-      font-family: 'Courier New', monospace; font-weight: 600; margin: 0 2px;
-    }
-
-    /* FY badge */
-    .fy-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.15);
-      border-radius: 6px; padding: 4px 10px; margin-top: 24px;
-      font-size: 12px; font-weight: 600; color: #6ee7b7;
-    }
-
-    /* ── MOBILE: stack vertically ── */
-    @media (max-width: 768px) {
-      body { overflow: auto; flex-direction: column; }
-      .brand-panel { display: none; }
-      .form-panel {
-        min-height: 100vh; max-width: 100%;
-        border-left: none; padding: 48px 24px;
-        background: transparent;
-      }
-    }
+    .btn-login:hover { background: #1a3a5c; }
+    .divider { border-top: 1px solid #e5e7eb; margin: 20px 0; }
+    .hint { background: #f0f4ff; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #374151; }
+    .hint b { color: #2e6da4; }
   </style>
 </head>
 <body>
-
-<!-- Animated mesh background -->
-<canvas id="bg-canvas"></canvas>
-
-<!-- LEFT: Brand Panel -->
-<div class="brand-panel">
-  <div class="brand-eyebrow">
-    <span class="brand-eyebrow-dot"></span>
-    <span>System Online · FY 2026-27</span>
-  </div>
-
-  <div class="brand-logo-row">
-    <div class="brand-logo-box">
-      <img src="{{ url_for('static', filename='bcml_logo.png') }}" alt="BCML"
-           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-      <span class="brand-initials" style="display:none;">BC</span>
-    </div>
-    <div>
-      <div class="brand-company">Balrampur Chini Mills Ltd.</div>
-      <div class="brand-name">Training MIS</div>
-    </div>
-  </div>
-
-  <div class="brand-headline">
-    One platform.<br>
-    Every <span class="accent">training insight.</span>
-  </div>
-  <div class="brand-sub">
-    Manage TNI, attendance, feedback, and compliance across all plants — in real time.
-  </div>
-
-  <div class="stat-row">
-    <div class="stat-card">
-      <div class="stat-value">10+</div>
-      <div class="stat-label">Plants</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">2A</div>
-      <div class="stat-label">Live Records</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">QR</div>
-      <div class="stat-label">Attendance</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">360°</div>
-      <div class="stat-label">Feedback</div>
-    </div>
-  </div>
-
-  <div class="feature-list">
-    <div class="feature-item">
-      <div class="feature-icon" style="background:rgba(96,165,250,.12);">📋</div>
-      <span class="feature-text">TNI tracking with fuzzy-match intelligence</span>
-    </div>
-    <div class="feature-item">
-      <div class="feature-icon" style="background:rgba(167,139,250,.12);">📱</div>
-      <span class="feature-text">QR-based attendance — scan from any device</span>
-    </div>
-    <div class="feature-item">
-      <div class="feature-icon" style="background:rgba(52,211,153,.12);">📊</div>
-      <span class="feature-text">Monthly summary with coverage analytics</span>
-    </div>
-  </div>
-
-  <div class="fy-badge">
-    <span>●</span> Financial Year 2026–27
-  </div>
-</div>
-
-<!-- RIGHT: Form Panel -->
-<div class="form-panel">
-  <div class="form-card">
-    <div class="form-header">
-      <div class="form-greeting">Welcome back</div>
-      <div class="form-subtext">Sign in to access your plant dashboard</div>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="company">BALRAMPUR CHINI MILLS LIMITED</div>
+      <div class="system">Training MIS</div>
+      <div class="fy">FY 2026-27</div>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for cat, msg in messages %}
-      <div class="alert-{{ cat }}" style="{% if cat != 'danger' %}background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);color:#93c5fd;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:20px;{% endif %}">
-        {{ msg }}
-      </div>
+      <div class="alert alert-{{ cat }} py-2 mb-3" style="font-size:14px;">{{ msg }}</div>
       {% endfor %}
     {% endif %}
     {% endwith %}
 
     <form method="POST">
-      <div class="field-group">
-        <label class="field-label">Username</label>
-        <div class="field-wrap">
-          <span class="field-icon">👤</span>
-          <input type="text" name="username" placeholder="e.g. balrampur"
-                 autocomplete="username" required autofocus>
-        </div>
+      <div class="mb-3">
+        <label class="form-label">Username</label>
+        <input type="text" name="username" class="form-control" placeholder="e.g. balrampur"
+               autocomplete="username" required autofocus>
       </div>
-      <div class="field-group">
-        <label class="field-label">Password</label>
-        <div class="field-wrap">
-          <span class="field-icon">🔒</span>
-          <input type="password" name="password" placeholder="Enter your password"
-                 autocomplete="current-password" required>
-        </div>
+      <div class="mb-3">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" class="form-control" placeholder="Enter password"
+               autocomplete="current-password" required>
       </div>
-
-      <button type="submit" class="btn-login">
-        <span>Sign In</span>
-        <span>→</span>
-      </button>
+      <button type="submit" class="btn-login">Login →</button>
     </form>
 
-    <div class="divider">
-      <div class="divider-line"></div>
-      <span class="divider-text">Login Guide</span>
-      <div class="divider-line"></div>
-    </div>
-
-    <div class="hint-box">
-      <div class="hint-row">
-        <span class="hint-label">SPOC</span>
-        <span class="hint-val">
-          Use plant name —
-          <span class="hint-code">balrampur</span>
-          <span class="hint-code">babhnan</span>
-          <span class="hint-code">rauzagaon</span> …
-        </span>
-      </div>
-      <div class="hint-row">
-        <span class="hint-label">Central</span>
-        <span class="hint-val"><span class="hint-code">central</span></span>
-      </div>
-      <div class="hint-row">
-        <span class="hint-label">Admin</span>
-        <span class="hint-val"><span class="hint-code">admin</span></span>
-      </div>
+    <div class="divider"></div>
+    <div class="hint">
+      <b>SPOC Login:</b> Use your plant name as username<br>
+      e.g. <b>balrampur</b>, <b>babhnan</b>, <b>rauzagaon</b> ...<br><br>
+      <b>Central Team:</b> username <b>central</b>
     </div>
   </div>
-</div>
-
-<script>
-// Animated mesh / particle canvas
-(function() {
-  const canvas = document.getElementById('bg-canvas');
-  const ctx    = canvas.getContext('2d');
-  let W, H, nodes, frame;
-
-  function resize() {
-    W = canvas.width  = window.innerWidth;
-    H = canvas.height = window.innerHeight;
-  }
-
-  function mkNode() {
-    return {
-      x: Math.random() * W, y: Math.random() * H,
-      vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35,
-      r: Math.random() * 2 + 1,
-    };
-  }
-
-  function init() {
-    resize();
-    nodes = Array.from({length: 70}, mkNode);
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-
-    // Background gradient
-    const grd = ctx.createLinearGradient(0, 0, W, H);
-    grd.addColorStop(0,   '#0b1120');
-    grd.addColorStop(.45, '#0f1e3a');
-    grd.addColorStop(1,   '#0a1f14');
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, W, H);
-
-    // Draw connections
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const dx = nodes[i].x - nodes[j].x;
-        const dy = nodes[i].y - nodes[j].y;
-        const d  = Math.sqrt(dx*dx + dy*dy);
-        if (d < 140) {
-          ctx.beginPath();
-          ctx.strokeStyle = `rgba(96,165,250,${.12 * (1 - d/140)})`;
-          ctx.lineWidth = .6;
-          ctx.moveTo(nodes[i].x, nodes[i].y);
-          ctx.lineTo(nodes[j].x, nodes[j].y);
-          ctx.stroke();
-        }
-      }
-    }
-
-    // Draw nodes
-    nodes.forEach(n => {
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(96,165,250,.35)';
-      ctx.fill();
-      // Move
-      n.x += n.vx; n.y += n.vy;
-      if (n.x < 0 || n.x > W) n.vx *= -1;
-      if (n.y < 0 || n.y > H) n.vy *= -1;
-    });
-
-    frame = requestAnimationFrame(draw);
-  }
-
-  window.addEventListener('resize', () => { resize(); });
-  init();
-  draw();
-})();
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
