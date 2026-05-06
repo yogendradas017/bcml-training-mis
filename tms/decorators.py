@@ -47,9 +47,6 @@ def spoc_or_central_required(f):
         if role not in ('spoc', 'central', 'admin'):
             flash('Access denied.', 'danger')
             return redirect(url_for('index'))
-        if role == 'admin' and not session.get('plant_id'):
-            flash('Please select a plant first.', 'warning')
-            return redirect(url_for('central_dashboard'))
         return f(*args, **kwargs)
     return decorated
 
