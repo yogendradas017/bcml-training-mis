@@ -88,6 +88,21 @@
     <li><a href="{{ url_for('central_dashboard') }}" class="{% if request.endpoint=='central_dashboard' %}active{% endif %}">
       <i class="bi bi-grid-3x3-gap-fill"></i> All Plants Overview
     </a></li>
+    <li><a href="{{ url_for('central_calendar') }}" class="{% if request.endpoint=='central_calendar' %}active{% endif %}">
+      <i class="bi bi-calendar3"></i> Central Calendar
+    </a></li>
+    <li><a href="{{ url_for('central_attendance') }}" class="{% if request.endpoint=='central_attendance' %}active{% endif %}">
+      <i class="bi bi-person-check-fill"></i> Central Attendance
+    </a></li>
+    <li><a href="{{ url_for('feedback_reports_index') }}" class="{% if request.endpoint=='feedback_reports_index' %}active{% endif %}">
+      <i class="bi bi-chat-square-text-fill"></i> Feedback Reports
+    </a></li>
+    <li><a href="{{ url_for('central_programmes') }}" class="{% if request.endpoint=='central_programmes' %}active{% endif %}">
+      <i class="bi bi-journal-check"></i> Programme Master
+    </a></li>
+    <li><a href="{{ url_for('central_corp_members') }}" class="{% if request.endpoint=='central_corp_members' %}active{% endif %}">
+      <i class="bi bi-person-badge-fill"></i> Corp Members
+    </a></li>
     {% if session.role == 'admin' %}
     <li><a href="{{ url_for('admin_tni_archives') }}" class="{% if request.endpoint=='admin_tni_archives' %}active{% endif %}" style="color:#fbbf24;">
       <i class="bi bi-archive-fill"></i> TNI Archives

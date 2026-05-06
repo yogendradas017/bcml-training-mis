@@ -249,6 +249,96 @@ def _migrate_session_pin(db):
         db.commit()
 
 
+def _migrate_central_plant(db):
+    db.execute("INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(99,'Central','CEN')")
+    db.commit()
+
+
+def _migrate_calendar_is_central(db):
+    cols = [r[1] for r in db.execute("PRAGMA table_info(calendar)").fetchall()]
+    if 'is_central' not in cols:
+        db.execute("ALTER TABLE calendar ADD COLUMN is_central INTEGER NOT NULL DEFAULT 0")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_cal_central ON calendar(is_central, plant_id)")
+    db.commit()
+
+
+def _migrate_emp_training_host(db):
+    import logging
+    cols = [r[1] for r in db.execute("PRAGMA table_info(emp_training)").fetchall()]
+    if not cols:
+        return
+    if 'host_plant_id' not in cols:
+        db.execute("ALTER TABLE emp_training ADD COLUMN host_plant_id INTEGER")
+        db.commit()
+    # Rebuild UNIQUE to include session_code (prevents same emp attending two Central sessions
+    # on same date for same programme from colliding)
+    v2_done = bool(db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_et_v2_marker'"
+    ).fetchone())
+    if v2_done:
+        return
+    try:
+        existing = [r[1] for r in db.execute("PRAGMA table_info(emp_training)").fetchall()]
+        keep = [c for c in ['id','plant_id','emp_code','session_code','programme_name',
+                             'start_date','end_date','hrs','prog_type','level','mode',
+                             'cal_new','pre_rating','post_rating','venue','month',
+                             'host_plant_id','created_at'] if c in existing]
+        cols_sql = ', '.join(keep)
+        db.execute("DROP TABLE IF EXISTS emp_training_v2")
+        db.commit()
+        db.executescript(f'''
+            CREATE TABLE emp_training_v2 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_id INTEGER NOT NULL,
+                emp_code TEXT NOT NULL,
+                session_code TEXT,
+                programme_name TEXT NOT NULL,
+                start_date TEXT, end_date TEXT,
+                hrs REAL DEFAULT 0,
+                prog_type TEXT, level TEXT, mode TEXT,
+                cal_new TEXT, pre_rating REAL, post_rating REAL,
+                venue TEXT, month TEXT,
+                host_plant_id INTEGER,
+                created_at TEXT DEFAULT (date('now'))
+            );
+            INSERT OR IGNORE INTO emp_training_v2 ({cols_sql})
+                SELECT {cols_sql} FROM emp_training ORDER BY id;
+            DROP TABLE emp_training;
+            ALTER TABLE emp_training_v2 RENAME TO emp_training;
+            CREATE INDEX IF NOT EXISTS idx_training_plant ON emp_training(plant_id);
+            CREATE INDEX IF NOT EXISTS idx_et_lookup      ON emp_training(plant_id, emp_code, programme_name);
+            CREATE INDEX IF NOT EXISTS idx_et_host        ON emp_training(host_plant_id);
+            CREATE INDEX IF NOT EXISTS idx_et_session     ON emp_training(session_code);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_et_v2_dedup
+                ON emp_training(plant_id, emp_code, programme_name, start_date, COALESCE(session_code,''));
+            CREATE UNIQUE INDEX idx_et_v2_marker ON emp_training(id) WHERE 1=0;
+        ''')
+    except Exception as e:
+        logging.warning(f'emp_training v2 migration failed: {e}')
+
+
+def _migrate_corp_members(db):
+    db.executescript('''
+        CREATE TABLE IF NOT EXISTS corp_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            emp_code TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            designation TEXT DEFAULT '',
+            department TEXT DEFAULT '',
+            email TEXT DEFAULT '',
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT DEFAULT (date('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_corp_active ON corp_members(is_active, name);
+    ''')
+    db.commit()
+
+
+def _migrate_central_user_plant(db):
+    db.execute("UPDATE users SET plant_id=99 WHERE username='central' AND (plant_id IS NULL OR plant_id=0)")
+    db.commit()
+
+
 def init_db():
     from tms.helpers import (
         _cleanse_master_spelling, _cleanse_programme_names, _cleanup_stale_analyze_files
@@ -266,10 +356,15 @@ def init_db():
     _migrate_emp_training_dedup(db)
     _ensure_qr_tables(db)
     _migrate_session_pin(db)
+    _migrate_central_plant(db)
+    _migrate_calendar_is_central(db)
+    _migrate_emp_training_host(db)
+    _migrate_corp_members(db)
+    _migrate_central_user_plant(db)
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
                    (p['id'], p['name'], p['unit_code']))
-    users = [('central', 'bcml@1234', 'central', None),
+    users = [('central', 'bcml@1234', 'central', 99),
              ('admin',   'admin@bcml', 'admin',   None)]
     for p in PLANTS:
         users.append((p['name'].lower(), 'bcml@1234', 'spoc', p['id']))

@@ -7,8 +7,9 @@ from flask import (abort, flash, jsonify, redirect, render_template,
                    request, send_file, session, url_for)
 
 from tms.db import get_db
-from tms.decorators import spoc_required
+from tms.decorators import spoc_required, central_required, spoc_or_central_required
 from tms.helpers import _date_to_month
+from tms.constants import CENTRAL_PLANT_ID
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -27,6 +28,7 @@ def _validate_token(token, db, check_expiry=True):
         SELECT q.*, c.programme_name, c.prog_type, c.level, c.mode,
                c.plan_start, c.plan_end, c.duration_hrs,
                c.time_from, c.time_to, c.target_audience, c.session_pin,
+               c.is_central,
                p.name AS plant_name
         FROM session_qr q
         JOIN calendar c ON c.session_code=q.session_code AND c.plant_id=q.plant_id
@@ -82,7 +84,7 @@ def _register(app):
     # ── SPOC: generate QR for a calendar session ─────────────────────────────
 
     @app.route('/calendar/<int:cal_id>/qr/generate', methods=['POST'])
-    @spoc_required
+    @spoc_or_central_required
     def qr_generate(cal_id):
         plant_id = session['plant_id']
         db = get_db()
@@ -132,7 +134,7 @@ def _register(app):
     # ── SPOC: QR image (PNG stream) ───────────────────────────────────────────
 
     @app.route('/qr/<token>/image.png')
-    @spoc_required
+    @spoc_or_central_required
     def qr_image(token):
         db = get_db()
         row = db.execute('SELECT 1 FROM session_qr WHERE token=?', (token,)).fetchone()
@@ -145,7 +147,7 @@ def _register(app):
     # ── SPOC: printable poster ────────────────────────────────────────────────
 
     @app.route('/qr/<token>/poster')
-    @spoc_required
+    @spoc_or_central_required
     def qr_poster(token):
         db = get_db()
         qr = _validate_token(token, db, check_expiry=False)
@@ -155,7 +157,7 @@ def _register(app):
     # ── SPOC: revoke QR ───────────────────────────────────────────────────────
 
     @app.route('/qr/<int:qr_id>/revoke', methods=['POST'])
-    @spoc_required
+    @spoc_or_central_required
     def qr_revoke(qr_id):
         plant_id = session['plant_id']
         db = get_db()
@@ -168,7 +170,7 @@ def _register(app):
     # ── SPOC: set/clear session PIN ──────────────────────────────────────────
 
     @app.route('/calendar/<int:cal_id>/set-pin', methods=['POST'])
-    @spoc_required
+    @spoc_or_central_required
     def qr_set_pin(cal_id):
         plant_id = session['plant_id']
         db = get_db()
@@ -188,7 +190,7 @@ def _register(app):
     # ── SPOC: live attendance monitor ─────────────────────────────────────────
 
     @app.route('/calendar/<int:cal_id>/live')
-    @spoc_required
+    @spoc_or_central_required
     def qr_live(cal_id):
         plant_id = session['plant_id']
         db = get_db()
@@ -203,13 +205,31 @@ def _register(app):
             (plant_id, cal['session_code'])
         ).fetchall()
 
-        attendees = db.execute('''
-            SELECT t.emp_code, t.created_at, e.name, e.designation, e.department, e.collar
-            FROM emp_training t
-            LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.session_code=?
-            ORDER BY t.created_at DESC
-        ''', (plant_id, cal['session_code'])).fetchall()
+        is_central = (plant_id == CENTRAL_PLANT_ID)
+        if is_central:
+            attendees = db.execute('''
+                SELECT t.emp_code, t.created_at,
+                       COALESCE(e.name, cm.name) AS name,
+                       COALESCE(e.designation, cm.designation) AS designation,
+                       COALESCE(e.department, cm.department) AS department,
+                       e.collar,
+                       p.unit_code AS unit_code
+                FROM emp_training t
+                LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+                LEFT JOIN corp_members cm ON cm.emp_code=t.emp_code AND t.plant_id=99
+                LEFT JOIN plants p ON p.id=t.plant_id
+                WHERE t.session_code=? AND (t.host_plant_id=99 OR t.plant_id=99)
+                ORDER BY t.created_at DESC
+            ''', (cal['session_code'],)).fetchall()
+        else:
+            attendees = db.execute('''
+                SELECT t.emp_code, t.created_at, e.name, e.designation, e.department,
+                       e.collar, NULL AS unit_code
+                FROM emp_training t
+                LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+                WHERE t.plant_id=? AND t.session_code=?
+                ORDER BY t.created_at DESC
+            ''', (plant_id, cal['session_code'])).fetchall()
 
         fb_count = db.execute(
             'SELECT COUNT(*) FROM feedback_response WHERE plant_id=? AND session_code=?',
@@ -217,12 +237,13 @@ def _register(app):
         ).fetchone()[0]
 
         return render_template('qr_live.html', cal=cal, qr_rows=qr_rows,
-                               attendees=attendees, fb_count=fb_count)
+                               attendees=attendees, fb_count=fb_count,
+                               is_central=is_central)
 
     # ── SPOC: feedback reports index ─────────────────────────────────────────
 
     @app.route('/feedback-reports')
-    @spoc_required
+    @spoc_or_central_required
     def feedback_reports_index():
         plant_id = session['plant_id']
         db = get_db()
@@ -250,7 +271,7 @@ def _register(app):
     # ── SPOC: feedback analysis report ───────────────────────────────────────
 
     @app.route('/calendar/<int:cal_id>/feedback-report')
-    @spoc_required
+    @spoc_or_central_required
     def qr_feedback_report(cal_id):
         plant_id = session['plant_id']
         db = get_db()
@@ -321,7 +342,7 @@ def _register(app):
     # ── SPOC: live JSON poll ──────────────────────────────────────────────────
 
     @app.route('/api/qr/<int:cal_id>/live.json')
-    @spoc_required
+    @spoc_or_central_required
     def qr_live_json(cal_id):
         plant_id = session['plant_id']
         db = get_db()
@@ -330,13 +351,29 @@ def _register(app):
         if not cal:
             return jsonify({'error': 'not found'}), 404
 
-        rows = db.execute('''
-            SELECT t.emp_code, t.created_at, e.name, e.designation, e.department
-            FROM emp_training t
-            LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.session_code=?
-            ORDER BY t.created_at DESC
-        ''', (plant_id, cal['session_code'])).fetchall()
+        if plant_id == CENTRAL_PLANT_ID:
+            rows = db.execute('''
+                SELECT t.emp_code, t.created_at,
+                       COALESCE(e.name, cm.name) AS name,
+                       COALESCE(e.designation, cm.designation) AS designation,
+                       COALESCE(e.department, cm.department) AS department,
+                       p.unit_code AS unit_code
+                FROM emp_training t
+                LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+                LEFT JOIN corp_members cm ON cm.emp_code=t.emp_code AND t.plant_id=99
+                LEFT JOIN plants p ON p.id=t.plant_id
+                WHERE t.session_code=? AND (t.host_plant_id=99 OR t.plant_id=99)
+                ORDER BY t.created_at DESC
+            ''', (cal['session_code'],)).fetchall()
+        else:
+            rows = db.execute('''
+                SELECT t.emp_code, t.created_at, e.name, e.designation, e.department,
+                       NULL AS unit_code
+                FROM emp_training t
+                LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+                WHERE t.plant_id=? AND t.session_code=?
+                ORDER BY t.created_at DESC
+            ''', (plant_id, cal['session_code'])).fetchall()
 
         fb_count = db.execute(
             'SELECT COUNT(*) FROM feedback_response WHERE plant_id=? AND session_code=?',
@@ -350,6 +387,7 @@ def _register(app):
             'rows': [{'emp_code': r['emp_code'], 'name': r['name'] or '',
                       'designation': r['designation'] or '',
                       'department': r['department'] or '',
+                      'unit_code': r['unit_code'] or '',
                       'scanned_at': r['created_at'] or ''} for r in rows]
         })
 
@@ -416,14 +454,38 @@ def _register(app):
         q = request.args.get('q', '').strip()
         if len(q) < 2:
             return jsonify([])
-        rows = db.execute('''
-            SELECT emp_code, name, designation, department
-            FROM employees
-            WHERE plant_id=? AND is_active=1
-              AND (LOWER(name) LIKE LOWER(?) OR emp_code LIKE ?)
-            ORDER BY name LIMIT 15
-        ''', (row['plant_id'], f'%{q}%', f'%{q}%')).fetchall()
-        return jsonify([dict(r) for r in rows])
+
+        if row['plant_id'] == CENTRAL_PLANT_ID:
+            # Cross-plant: search all plants + corp members
+            plant_rows = db.execute('''
+                SELECT e.emp_code, e.name, e.designation, e.department,
+                       e.plant_id, p.name AS plant_name, p.unit_code
+                FROM employees e
+                JOIN plants p ON p.id=e.plant_id
+                WHERE e.is_active=1
+                  AND (LOWER(e.name) LIKE LOWER(?) OR e.emp_code LIKE ?)
+                ORDER BY e.name LIMIT 20
+            ''', (f'%{q}%', f'%{q}%')).fetchall()
+            corp_rows = db.execute('''
+                SELECT emp_code, name, designation, department,
+                       99 AS plant_id, 'Corporate' AS plant_name, 'CEN' AS unit_code
+                FROM corp_members
+                WHERE is_active=1
+                  AND (LOWER(name) LIKE LOWER(?) OR emp_code LIKE ?)
+                ORDER BY name LIMIT 10
+            ''', (f'%{q}%', f'%{q}%')).fetchall()
+            results = [dict(r) for r in plant_rows] + [dict(r) for r in corp_rows]
+            return jsonify(results[:25])
+        else:
+            rows = db.execute('''
+                SELECT emp_code, name, designation, department,
+                       plant_id, '' AS plant_name, '' AS unit_code
+                FROM employees
+                WHERE plant_id=? AND is_active=1
+                  AND (LOWER(name) LIKE LOWER(?) OR emp_code LIKE ?)
+                ORDER BY name LIMIT 15
+            ''', (row['plant_id'], f'%{q}%', f'%{q}%')).fetchall()
+            return jsonify([dict(r) for r in rows])
 
     # ── PUBLIC: submit attendance ─────────────────────────────────────────────
 
@@ -451,33 +513,91 @@ def _register(app):
                                    has_pin=bool(qr['session_pin']),
                                    error='Please enter or select your Employee Code.')
 
-        emp = db.execute(
-            'SELECT name, collar, designation, department FROM employees '
-            'WHERE plant_id=? AND emp_code=? AND is_active=1',
-            (qr['plant_id'], emp_code)
-        ).fetchone()
-        if not emp:
-            return render_template('qr_attendance.html', qr=qr, token=token,
-                                   error=f'Employee code "{emp_code}" not found for {qr["plant_name"]}.')
+        is_central_session = (qr['plant_id'] == CENTRAL_PLANT_ID)
 
-        month = _date_to_month(qr['plan_start'] or '')
-        db.execute('''INSERT OR IGNORE INTO emp_training
-            (plant_id, emp_code, session_code, programme_name, start_date, end_date,
-             hrs, prog_type, level, mode, cal_new, venue, month)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-            (qr['plant_id'], emp_code, qr['session_code'], qr['programme_name'],
-             qr['plan_start'] or '', qr['plan_end'] or '',
-             qr['duration_hrs'] or 0, qr['prog_type'] or '',
-             qr['level'] or '', qr['mode'] or '', 'Calendar Program',
-             '', month))
+        if is_central_session:
+            # Determine attendee's home plant from form (set by JS suggestion picker)
+            try:
+                attendee_plant_id = int(request.form.get('attendee_plant_id', '0') or 0)
+            except (ValueError, TypeError):
+                attendee_plant_id = 0
+
+            emp = None
+            if attendee_plant_id and attendee_plant_id != CENTRAL_PLANT_ID:
+                emp = db.execute(
+                    'SELECT name, collar, designation, department, plant_id FROM employees '
+                    'WHERE plant_id=? AND emp_code=? AND is_active=1',
+                    (attendee_plant_id, emp_code)
+                ).fetchone()
+
+            if not emp:
+                # Try corp members
+                corp = db.execute(
+                    'SELECT name, designation, department FROM corp_members '
+                    'WHERE emp_code=? AND is_active=1', (emp_code,)
+                ).fetchone()
+                if corp:
+                    emp_plant = CENTRAL_PLANT_ID
+                    emp_name  = corp['name']
+                    host_pid  = CENTRAL_PLANT_ID
+                else:
+                    # Fallback: search all plants
+                    found = db.execute(
+                        'SELECT name, collar, designation, department, plant_id FROM employees '
+                        'WHERE emp_code=? AND is_active=1 LIMIT 1', (emp_code,)
+                    ).fetchone()
+                    if not found:
+                        return render_template('qr_attendance.html', qr=qr, token=token,
+                                               has_pin=bool(qr['session_pin']),
+                                               error=f'Employee code "{emp_code}" not found.')
+                    emp_plant = found['plant_id']
+                    emp_name  = found['name']
+                    host_pid  = CENTRAL_PLANT_ID
+            else:
+                emp_plant = emp['plant_id']
+                emp_name  = emp['name']
+                host_pid  = CENTRAL_PLANT_ID
+
+            month = _date_to_month(qr['plan_start'] or '')
+            db.execute('''INSERT OR IGNORE INTO emp_training
+                (plant_id, emp_code, session_code, programme_name, start_date, end_date,
+                 hrs, prog_type, level, mode, cal_new, venue, month, host_plant_id)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                (emp_plant, emp_code, qr['session_code'], qr['programme_name'],
+                 qr['plan_start'] or '', qr['plan_end'] or '',
+                 qr['duration_hrs'] or 0, qr['prog_type'] or '',
+                 qr['level'] or '', qr['mode'] or '', 'Calendar Program',
+                 '', month, host_pid))
+        else:
+            emp = db.execute(
+                'SELECT name, collar, designation, department FROM employees '
+                'WHERE plant_id=? AND emp_code=? AND is_active=1',
+                (qr['plant_id'], emp_code)
+            ).fetchone()
+            if not emp:
+                return render_template('qr_attendance.html', qr=qr, token=token,
+                                       has_pin=bool(qr['session_pin']),
+                                       error=f'Employee code "{emp_code}" not found for {qr["plant_name"]}.')
+            emp_name = emp['name']
+            month = _date_to_month(qr['plan_start'] or '')
+            db.execute('''INSERT OR IGNORE INTO emp_training
+                (plant_id, emp_code, session_code, programme_name, start_date, end_date,
+                 hrs, prog_type, level, mode, cal_new, venue, month)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                (qr['plant_id'], emp_code, qr['session_code'], qr['programme_name'],
+                 qr['plan_start'] or '', qr['plan_end'] or '',
+                 qr['duration_hrs'] or 0, qr['prog_type'] or '',
+                 qr['level'] or '', qr['mode'] or '', 'Calendar Program',
+                 '', month))
+
         changed = db.execute('SELECT changes()').fetchone()[0]
         db.commit()
 
         if changed == 0:
             return redirect(url_for('qr_thanks', token=token,
-                                    msg='already_marked', emp_name=emp['name']), 303)
+                                    msg='already_marked', emp_name=emp_name), 303)
         return redirect(url_for('qr_thanks', token=token,
-                                msg='attendance_ok', emp_name=emp['name']), 303)
+                                msg='attendance_ok', emp_name=emp_name), 303)
 
     # ── PUBLIC: feedback form ─────────────────────────────────────────────────
 

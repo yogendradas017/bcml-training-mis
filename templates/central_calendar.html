@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% block page_title %}Central Training Calendar{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0">Central Training Calendar</h5>
+    <small class="text-muted">Cross-plant sessions conducted by the Central team</small>
+  </div>
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+    <i class="bi bi-plus-lg"></i> Add Session
+  </button>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+      <thead style="background:#1a1f35;color:#fff;">
+        <tr>
+          <th style="padding:8px 14px;">#</th>
+          <th style="padding:8px 14px;">Session Code</th>
+          <th style="padding:8px 14px;">Programme</th>
+          <th style="padding:8px 14px;">Type</th>
+          <th style="padding:8px 14px;">Dates</th>
+          <th style="padding:8px 14px;">Hrs</th>
+          <th style="padding:8px 14px;">Pax</th>
+          <th style="padding:8px 14px;">Status</th>
+          <th style="padding:8px 14px;">QR</th>
+          <th style="padding:8px 14px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sessions %}
+        {% set qr = qr_map.get(s.session_code, {}) %}
+        <tr>
+          <td style="padding:6px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:6px 14px;font-family:monospace;font-size:11px;">{{ s.session_code }}</td>
+          <td style="padding:6px 14px;font-weight:500;max-width:200px;">{{ s.programme_name }}</td>
+          <td style="padding:6px 14px;">{{ s.prog_type or '—' }}</td>
+          <td style="padding:6px 14px;white-space:nowrap;">
+            {{ s.plan_start or '—' }}{% if s.plan_end and s.plan_end != s.plan_start %} – {{ s.plan_end }}{% endif %}
+          </td>
+          <td style="padding:6px 14px;">{{ s.duration_hrs or '—' }}</td>
+          <td style="padding:6px 14px;">{{ s.planned_pax or '—' }}</td>
+          <td style="padding:6px 14px;">
+            {% set status_colors = {'Conducted':'success','To Be Planned':'secondary','Re-Scheduled':'warning','Cancelled':'danger'} %}
+            <span class="badge bg-{{ status_colors.get(s.status, 'secondary') }}">{{ s.status }}</span>
+          </td>
+          <td style="padding:6px 14px;">
+            <div class="d-flex gap-1">
+              {% if 'attendance' in qr and qr['attendance']['is_active'] %}
+              <a href="{{ url_for('qr_poster', token=qr['attendance']['token']) }}" target="_blank"
+                 class="btn btn-outline-primary btn-sm" style="font-size:10px;" title="Attendance QR">
+                <i class="bi bi-qr-code"></i> Att
+              </a>
+              {% endif %}
+              {% if 'feedback' in qr and qr['feedback']['is_active'] %}
+              <a href="{{ url_for('qr_poster', token=qr['feedback']['token']) }}" target="_blank"
+                 class="btn btn-outline-success btn-sm" style="font-size:10px;" title="Feedback QR">
+                <i class="bi bi-qr-code"></i> FB
+              </a>
+              {% endif %}
+              <a href="{{ url_for('qr_live', cal_id=s.id) }}"
+                 class="btn btn-outline-secondary btn-sm" style="font-size:10px;" title="Live Monitor">
+                <i class="bi bi-cast"></i>
+              </a>
+            </div>
+          </td>
+          <td style="padding:6px 14px;">
+            {% if s.status == 'Conducted' %}
+            <i class="bi bi-lock-fill text-secondary" title="Conducted — locked"></i>
+            {% else %}
+            <button class="btn btn-outline-secondary btn-sm" style="font-size:10px;"
+                    onclick="openEdit({{ s.id }}, {{ s|tojson }})">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <form method="POST" action="{{ url_for('central_calendar_delete', cal_id=s.id) }}"
+                  style="display:inline;" onsubmit="return confirm('Delete this session?')">
+              <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size:10px;">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" class="text-center text-muted py-4">No central sessions yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# Add Session Modal #}
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('central_calendar_add') }}">
+        <div class="modal-header" style="background:#1a1f35;color:#fff;">
+          <h5 class="modal-title">Add Central Session</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">Programme Name <span class="text-danger">*</span></label>
+              <input type="text" name="programme_name" id="addProgName" class="form-control" required
+                     placeholder="Type to search or enter new…" autocomplete="off">
+              <div id="addProgSugg" style="border:1px solid #d1d5db;border-top:none;border-radius:0 0 8px 8px;
+                   background:#fff;max-height:180px;overflow-y:auto;display:none;position:relative;z-index:1000;">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Programme Type</label>
+              <select name="prog_type" id="addProgType" class="form-select">
+                <option value="">— Select —</option>
+                {% for pt in prog_types %}<option>{{ pt }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Mode</label>
+              <select name="mode" class="form-select">
+                <option value="">— Select —</option>
+                {% for m in modes %}<option>{{ m }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Level</label>
+              <select name="level" class="form-select">
+                <option value="">— Select —</option>
+                {% for l in levels %}<option>{{ l }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Target Audience</label>
+              <select name="target_audience" class="form-select">
+                <option value="">— Select —</option>
+                {% for a in audiences %}<option>{{ a }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Planned Month</label>
+              <select name="planned_month" class="form-select">
+                <option value="">— Select —</option>
+                {% for m in months %}<option>{{ m }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Duration (hrs) <span class="text-danger">*</span></label>
+              <input type="number" name="duration_hrs" class="form-control" step="0.5" min="0.5" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Plan Start</label>
+              <input type="date" name="plan_start" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Plan End</label>
+              <input type="date" name="plan_end" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Time From</label>
+              <input type="time" name="time_from" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Time To</label>
+              <input type="time" name="time_to" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Planned Pax</label>
+              <input type="number" name="planned_pax" class="form-control" min="0">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Trainer / Vendor</label>
+              <input type="text" name="trainer_vendor" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Add Session</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Edit Session Modal #}
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="POST" id="editForm">
+        <div class="modal-header" style="background:#1a1f35;color:#fff;">
+          <h5 class="modal-title">Edit Session</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">Programme Name</label>
+              <input type="text" name="programme_name" id="editProgName" class="form-control" readonly
+                     style="background:#f9fafb;">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Programme Type</label>
+              <select name="prog_type" id="editProgType" class="form-select">
+                <option value="">— Select —</option>
+                {% for pt in prog_types %}<option>{{ pt }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Mode</label>
+              <select name="mode" id="editMode" class="form-select">
+                <option value="">— Select —</option>
+                {% for m in modes %}<option>{{ m }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Level</label>
+              <select name="level" id="editLevel" class="form-select">
+                <option value="">— Select —</option>
+                {% for l in levels %}<option>{{ l }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Target Audience</label>
+              <select name="target_audience" id="editAudience" class="form-select">
+                <option value="">— Select —</option>
+                {% for a in audiences %}<option>{{ a }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Planned Month</label>
+              <select name="planned_month" id="editMonth" class="form-select">
+                <option value="">— Select —</option>
+                {% for m in months %}<option>{{ m }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Status</label>
+              <select name="status" id="editStatus" class="form-select">
+                {% for st in statuses %}<option>{{ st }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Duration (hrs)</label>
+              <input type="number" name="duration_hrs" id="editDur" class="form-control" step="0.5" min="0.5">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Plan Start</label>
+              <input type="date" name="plan_start" id="editStart" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Plan End</label>
+              <input type="date" name="plan_end" id="editEnd" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Time From</label>
+              <input type="time" name="time_from" id="editTimeFrom" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Time To</label>
+              <input type="time" name="time_to" id="editTimeTo" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Planned Pax</label>
+              <input type="number" name="planned_pax" id="editPax" class="form-control" min="0">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Trainer / Vendor</label>
+              <input type="text" name="trainer_vendor" id="editTrainer" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Programme name autocomplete for add modal
+const addProgName = document.getElementById('addProgName');
+const addProgSugg = document.getElementById('addProgSugg');
+const addProgType = document.getElementById('addProgType');
+let addDebounce;
+addProgName.addEventListener('input', () => {
+  clearTimeout(addDebounce);
+  const q = addProgName.value.trim();
+  if (q.length < 1) { addProgSugg.style.display = 'none'; return; }
+  addDebounce = setTimeout(() => {
+    fetch(`/central/prog-search?q=${encodeURIComponent(q)}`)
+      .then(r => r.json()).then(data => {
+        addProgSugg.innerHTML = '';
+        if (!data.length) { addProgSugg.style.display = 'none'; return; }
+        data.forEach(d => {
+          const el = document.createElement('div');
+          el.style.cssText = 'cursor:pointer;padding:8px 14px;font-size:13px;border-bottom:1px solid #f0f0f0;';
+          el.innerHTML = `<strong>${d.name}</strong> <small style="color:#9ca3af;">${d.prog_type||''}</small>`;
+          el.onmouseenter = () => el.style.background = '#eff6ff';
+          el.onmouseleave = () => el.style.background = '';
+          el.onclick = () => {
+            addProgName.value = d.name;
+            if (d.prog_type) addProgType.value = d.prog_type;
+            addProgSugg.style.display = 'none';
+          };
+          addProgSugg.appendChild(el);
+        });
+        addProgSugg.style.display = 'block';
+      });
+  }, 250);
+});
+document.addEventListener('click', e => {
+  if (!addProgSugg.contains(e.target) && e.target !== addProgName)
+    addProgSugg.style.display = 'none';
+});
+
+function setSelect(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  for (let o of el.options) { if (o.value === val || o.text === val) { o.selected = true; return; } }
+}
+
+function openEdit(id, s) {
+  document.getElementById('editForm').action = `/central/calendar/${id}/edit`;
+  document.getElementById('editProgName').value   = s.programme_name || '';
+  document.getElementById('editDur').value        = s.duration_hrs || '';
+  document.getElementById('editStart').value      = s.plan_start || '';
+  document.getElementById('editEnd').value        = s.plan_end || '';
+  document.getElementById('editTimeFrom').value   = s.time_from || '';
+  document.getElementById('editTimeTo').value     = s.time_to || '';
+  document.getElementById('editPax').value        = s.planned_pax || '';
+  document.getElementById('editTrainer').value    = s.trainer_vendor || '';
+  setSelect('editProgType', s.prog_type || '');
+  setSelect('editMode',     s.mode || '');
+  setSelect('editLevel',    s.level || '');
+  setSelect('editAudience', s.target_audience || '');
+  setSelect('editMonth',    s.planned_month || '');
+  setSelect('editStatus',   s.status || '');
+  new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+</script>
+{% endblock %}
