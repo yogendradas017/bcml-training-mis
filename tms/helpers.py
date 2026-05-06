@@ -215,6 +215,11 @@ def _calc_summary(plant_id, month_filter, db):
     fy   = _fy_label()
     mn = MONTH_NUM.get(month_filter, '') if month_filter else ''
     month_clause_2c = f"AND strftime('%m', p.start_date) = '{mn}'" if mn else ("AND 1=0" if month_filter else "")
+    # For augmenting programme counts with central-hosted sessions attended by this plant's
+    # employees. Central sessions have no programme_details row in the plant's scope, so we
+    # derive them from emp_training (host_plant_id=99) joined with the central calendar.
+    # Filter by month using emp_training.month (set when the row was created from QR scan).
+    central_month_clause = "AND et.month=?" if month_filter else ""
 
     for pt in PROG_TYPES:
         clause = "AND t.month=?" if month_filter else ""
@@ -238,6 +243,38 @@ def _calc_summary(plant_id, month_filter, db):
         total_progs  = pq[3] or 0
         int_prog     = pq[4] or 0
         ext_prog     = pq[5] or 0
+
+        # ── Augment with central-hosted sessions ──────────────────────────────
+        # For each distinct central session attended by this plant's employees,
+        # determine the collar mix (only this plant's attendees) and count the
+        # session under BC / WC / Common. Each session is counted exactly once.
+        central_params = [plant_id, pt] + ([month_filter] if month_filter else [])
+        central_rows = db.execute(f'''
+            SELECT et.session_code,
+                   SUM(CASE WHEN e.collar='Blue Collared'  THEN 1 ELSE 0 END) AS bc_cnt,
+                   SUM(CASE WHEN e.collar='White Collared' THEN 1 ELSE 0 END) AS wc_cnt
+            FROM emp_training et
+            LEFT JOIN employees e
+                   ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
+            WHERE et.plant_id=? AND et.host_plant_id=99
+              AND et.prog_type=? {central_month_clause}
+            GROUP BY et.session_code
+        ''', central_params).fetchall()
+        for r in central_rows:
+            bc_cnt = r['bc_cnt'] or 0
+            wc_cnt = r['wc_cnt'] or 0
+            if bc_cnt and wc_cnt:
+                common_progs += 1
+            elif bc_cnt:
+                bc_progs += 1
+            elif wc_cnt:
+                wc_progs += 1
+            else:
+                # Attendee with no collar mapped (e.g. corp member) → still count total
+                pass
+            total_progs += 1
+            # Central sessions are external by nature (cross-plant, central-led)
+            ext_prog += 1
 
         bc_seats = db.execute(f'''SELECT COUNT(*) FROM emp_training t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
