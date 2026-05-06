@@ -266,7 +266,8 @@ def _register(app):
     @app.route('/feedback-reports')
     @spoc_or_central_required
     def feedback_reports_index():
-        plant_id = session['plant_id']
+        role = session.get('role')
+        plant_id = CENTRAL_PLANT_ID if role in ('central', 'admin') else session['plant_id']
         db = get_db()
         rows = db.execute('''
             SELECT c.id AS cal_id, c.session_code, c.programme_name,
