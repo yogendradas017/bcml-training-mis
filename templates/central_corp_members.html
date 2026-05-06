@@ -45,12 +45,12 @@
           </td>
           <td style="padding:6px 14px;">
             <button class="btn btn-outline-primary btn-sm" style="font-size:11px;"
-                    onclick="openEdit({{ m.id }}, '{{ m.name|e }}', '{{ m.designation|e }}',
-                                      '{{ m.department|e }}', '{{ m.email|e }}', {{ m.is_active }})">
+                    onclick='openEdit({{ m.id }}, {{ m.name|tojson }}, {{ (m.designation or "")|tojson }},
+                                      {{ (m.department or "")|tojson }}, {{ (m.email or "")|tojson }}, {{ m.is_active }})'>
               <i class="bi bi-pencil"></i>
             </button>
             <form method="POST" action="{{ url_for('central_corp_member_delete', member_id=m.id) }}"
-                  style="display:inline;" onsubmit="return confirm('Delete {{ m.name }}?')">
+                  style="display:inline;" onsubmit="return confirm('Delete ' + {{ m.name|tojson }} + '?')">
               <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size:11px;">
                 <i class="bi bi-trash"></i>
               </button>
