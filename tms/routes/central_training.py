@@ -159,9 +159,11 @@ def _register(app):
                                qr_map=qr_map,
                                fb_counts=fb_counts)
 
-    @app.route('/central/calendar/add', methods=['POST'])
+    @app.route('/central/calendar/add', methods=['GET', 'POST'])
     @central_required
     def central_calendar_add():
+        if request.method == 'GET':
+            return redirect(url_for('central_calendar'))
         f = request.form
         db = get_db()
         prog_name = _canonical_prog(f['programme_name'].strip(), CENTRAL_PLANT_ID, db)
@@ -197,9 +199,11 @@ def _register(app):
         flash(f'Central session {session_code} added.', 'success')
         return redirect(url_for('central_calendar'))
 
-    @app.route('/central/calendar/<int:cal_id>/edit', methods=['POST'])
+    @app.route('/central/calendar/<int:cal_id>/edit', methods=['GET', 'POST'])
     @central_required
     def central_calendar_edit(cal_id):
+        if request.method == 'GET':
+            return redirect(url_for('central_calendar'))
         db = get_db()
         existing = db.execute('SELECT status FROM calendar WHERE id=? AND plant_id=?',
                               (cal_id, CENTRAL_PLANT_ID)).fetchone()
@@ -231,9 +235,11 @@ def _register(app):
         flash('Session updated.', 'success')
         return redirect(url_for('central_calendar'))
 
-    @app.route('/central/calendar/<int:cal_id>/delete', methods=['POST'])
+    @app.route('/central/calendar/<int:cal_id>/delete', methods=['GET', 'POST'])
     @central_required
     def central_calendar_delete(cal_id):
+        if request.method == 'GET':
+            return redirect(url_for('central_calendar'))
         db = get_db()
         cal = db.execute('SELECT session_code, status FROM calendar WHERE id=? AND plant_id=?',
                          (cal_id, CENTRAL_PLANT_ID)).fetchone()
