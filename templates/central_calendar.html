@@ -102,12 +102,13 @@
         </div>
         <div class="modal-body">
           <div class="row g-3">
-            <div class="col-12">
+            <div class="col-12" style="position:relative;">
               <label class="form-label fw-semibold">Programme Name <span class="text-danger">*</span></label>
               <input type="text" name="programme_name" id="addProgName" class="form-control" required
                      placeholder="Type to search or enter new…" autocomplete="off">
               <div id="addProgSugg" style="border:1px solid #d1d5db;border-top:none;border-radius:0 0 8px 8px;
-                   background:#fff;max-height:180px;overflow-y:auto;display:none;position:relative;z-index:1000;">
+                   background:#fff;max-height:180px;overflow-y:auto;display:none;
+                   position:absolute;left:12px;right:12px;z-index:1060;box-shadow:0 4px 12px rgba(0,0,0,.1);">
               </div>
             </div>
             <div class="col-md-4">
