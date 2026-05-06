@@ -93,13 +93,17 @@ def _register(app):
     @app.route('/calendar/<int:cal_id>/qr/generate', methods=['POST'])
     @spoc_or_central_required
     def qr_generate(cal_id):
-        plant_id = session['plant_id']
+        role = session.get('role')
         db = get_db()
-        cal = db.execute('SELECT * FROM calendar WHERE id=? AND plant_id=?',
-                         (cal_id, plant_id)).fetchone()
+        if role in ('central', 'admin'):
+            cal = db.execute('SELECT * FROM calendar WHERE id=?', (cal_id,)).fetchone()
+        else:
+            cal = db.execute('SELECT * FROM calendar WHERE id=? AND plant_id=?',
+                             (cal_id, session['plant_id'])).fetchone()
         if not cal:
             flash('Session not found.', 'danger')
             return _cal_home()
+        plant_id = cal['plant_id']
 
         stage = request.form.get('stage', 'attendance')
         if stage not in ('attendance', 'feedback'):
@@ -118,7 +122,6 @@ def _register(app):
         ).fetchone()
 
         if existing:
-            # Reactivate + refresh token
             new_token = secrets.token_urlsafe(16)
             db.execute('''UPDATE session_qr SET token=?, is_active=1, expires_at=?,
                           created_at=datetime('now','localtime'), created_by=?
@@ -179,14 +182,18 @@ def _register(app):
     @app.route('/calendar/<int:cal_id>/set-pin', methods=['POST'])
     @spoc_or_central_required
     def qr_set_pin(cal_id):
+        role = session.get('role')
         plant_id = session['plant_id']
         db = get_db()
         pin = request.form.get('pin', '').strip()
         if pin and (len(pin) != 4 or not pin.isdigit()):
             flash('PIN must be exactly 4 digits.', 'danger')
             return redirect(url_for('qr_live', cal_id=cal_id))
-        db.execute('UPDATE calendar SET session_pin=? WHERE id=? AND plant_id=?',
-                   (pin or None, cal_id, plant_id))
+        if role in ('central', 'admin'):
+            db.execute('UPDATE calendar SET session_pin=? WHERE id=?', (pin or None, cal_id))
+        else:
+            db.execute('UPDATE calendar SET session_pin=? WHERE id=? AND plant_id=?',
+                       (pin or None, cal_id, plant_id))
         db.commit()
         if pin:
             flash(f'Session PIN set to {pin}. Announce it to participants.', 'success')
@@ -199,13 +206,17 @@ def _register(app):
     @app.route('/calendar/<int:cal_id>/live')
     @spoc_or_central_required
     def qr_live(cal_id):
-        plant_id = session['plant_id']
+        role = session.get('role')
         db = get_db()
-        cal = db.execute('SELECT * FROM calendar WHERE id=? AND plant_id=?',
-                         (cal_id, plant_id)).fetchone()
+        if role in ('central', 'admin'):
+            cal = db.execute('SELECT * FROM calendar WHERE id=?', (cal_id,)).fetchone()
+        else:
+            cal = db.execute('SELECT * FROM calendar WHERE id=? AND plant_id=?',
+                             (cal_id, session['plant_id'])).fetchone()
         if not cal:
             flash('Session not found.', 'danger')
             return _cal_home()
+        plant_id = cal['plant_id']
 
         qr_rows = db.execute(
             'SELECT * FROM session_qr WHERE plant_id=? AND session_code=? ORDER BY stage',
