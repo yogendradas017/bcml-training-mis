@@ -128,10 +128,10 @@ def _register(app):
     @central_required
     def central_calendar():
         db = get_db()
-        sessions = db.execute(
+        sessions = [dict(s) for s in db.execute(
             'SELECT * FROM calendar WHERE plant_id=? ORDER BY id DESC',
             (CENTRAL_PLANT_ID,)
-        ).fetchall()
+        ).fetchall()]
         master_programmes = [r[0] for r in db.execute(
             'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name',
             (CENTRAL_PLANT_ID,)
