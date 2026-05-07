@@ -5,8 +5,7 @@
 <!-- Fresh Upload — admin only -->
 {% if session.role == 'admin' %}
 <div class="card mb-3" style="border-left:5px solid #10b981;">
-  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2"
-       style="background:linear-gradient(135deg,#065f46,#10b981);color:#fff;">
+  <div class="card-header ch-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
     <span><i class="bi bi-shield-check-fill me-1"></i> Fresh TNI Upload</span>
     <span class="badge" style="background:rgba(255,255,255,0.2);font-size:11px;">Recommended first-time setup</span>
   </div>
@@ -25,7 +24,7 @@
 
 <!-- TNI Analyzer — row-by-row review path -->
 <div class="card mb-4" style="border-left:5px solid #2e6da4;">
-  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:linear-gradient(135deg,#2e6da4,#2e6da4);color:#fff;">
+  <div class="card-header ch-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
     <span><i class="bi bi-search me-1"></i> Bulk Upload TNI — with Data Analyzer</span>
     <a href="{{ url_for('tni_template') }}" class="btn btn-warning btn-sm fw-bold">
       <i class="bi bi-file-earmark-arrow-down"></i> Download Template First
@@ -167,7 +166,7 @@
 
 <!-- TNI Records -->
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
+  <div class="card-header ch-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
     <span><i class="bi bi-clipboard-data"></i> TNI Records — <strong id="tni-total">{{ total }}</strong> entries</span>
     <div class="d-flex gap-2 align-items-center flex-wrap">
       <span class="badge" style="background:#d1fae5;color:#065f46;" id="tni-showing">Loading...</span>
@@ -307,10 +306,10 @@ const TNI = {
         ? '<span class="badge badge-bc">Blue</span>'
         : r.collar === 'White Collared'
           ? '<span class="badge badge-wc">White</span>'
-          : '<span class="badge bg-secondary">—</span>';
+          : '<span class="badge-unit">—</span>';
       const doneBadge = r.completed === 'Yes'
         ? '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>'
-        : '<span class="badge bg-secondary">Pending</span>';
+        : '<span class="badge-unit">Pending</span>';
       const chk = (this.selectAll || this.selectedIds.has(r.id)) ? 'checked' : '';
       const src = r.source || 'TNI Driven';
       const [bg, fg] = SRC_COLORS[src] || ['#e5e7eb','#374151'];
@@ -331,7 +330,7 @@ const TNI = {
         <td>${collarBadge}</td>
         <td style="font-size:13px;">${r.department||'—'}</td>
         <td><strong>${r.programme_name}</strong></td>
-        <td><span class="badge bg-secondary" style="font-size:11px;">${r.prog_type||'—'}</span></td>
+        <td><span class="badge-unit" style="font-size:11px;">${r.prog_type||'—'}</span></td>
         <td style="font-size:13px;">${r.mode||'—'}</td>
         <td>${srcCell}</td>
         <td>${r.planned_hours}</td>

@@ -168,7 +168,7 @@
           <td style="padding:6px 14px;color:#9ca3af;">{{ loop.index }}</td>
           <td style="padding:6px 14px;font-family:monospace;">{{ a.emp_code }}</td>
           <td style="padding:6px 14px;font-weight:500;">{{ a.name or '—' }}</td>
-          {% if is_central %}<td style="padding:6px 14px;"><span class="badge bg-secondary">{{ a.unit_code or '—' }}</span></td>{% endif %}
+          {% if is_central %}<td style="padding:6px 14px;"><span class="badge-unit">{{ a.unit_code or '—' }}</span></td>{% endif %}
           <td style="padding:6px 14px;">{{ a.designation or '—' }}</td>
           <td style="padding:6px 14px;">{{ a.department or '—' }}</td>
           <td style="padding:6px 14px;color:#6b7280;">{{ a.created_at[:16] if a.created_at else '—' }}</td>
@@ -204,7 +204,7 @@ function refresh() {
           <td style="padding:6px 14px;color:#9ca3af;">${i+1}</td>
           <td style="padding:6px 14px;font-family:monospace;">${r.emp_code}</td>
           <td style="padding:6px 14px;font-weight:500;">${r.name||'—'}</td>
-          ${IS_CENTRAL ? `<td style="padding:6px 14px;"><span class="badge bg-secondary">${r.unit_code||'—'}</span></td>` : ''}
+          ${IS_CENTRAL ? `<td style="padding:6px 14px;"><span class="badge-unit">${r.unit_code||'—'}</span></td>` : ''}
           <td style="padding:6px 14px;">${r.designation||'—'}</td>
           <td style="padding:6px 14px;">${r.department||'—'}</td>
           <td style="padding:6px 14px;color:#6b7280;">${(r.scanned_at||'').slice(0,16)||'—'}</td>

@@ -4,7 +4,7 @@
 
 <!-- Bulk Upload -->
 <div class="card mb-4" style="border-left:4px solid #2e6da4;">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1e4c7a,#2e6da4);color:#fff;">
+  <div class="card-header ch-dark d-flex justify-content-between align-items-center">
     <span><i class="bi bi-cloud-upload"></i> Bulk Upload Programme Details (Excel / CSV)</span>
     <a href="{{ url_for('programme_template') }}" class="btn btn-light btn-sm">
       <i class="bi bi-file-earmark-arrow-down"></i> Download Template
@@ -27,7 +27,7 @@
 </div>
 
 <div class="card mb-4">
-  <div class="card-header" style="background:linear-gradient(135deg,#1e4c7a,#2e6da4);color:#fff;">
+  <div class="card-header ch-dark">
     <i class="bi bi-journal-plus"></i> Add Single Programme Record
   </div>
   <div class="card-body">
@@ -112,7 +112,7 @@
 
 <!-- Records Table -->
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
+  <div class="card-header ch-dark d-flex justify-content-between align-items-center">
     <span><i class="bi bi-journal-text"></i> Programme Records — <strong>{{ records|length }}</strong> entries</span>
   </div>
   <div class="card-body pb-2 pt-3">
@@ -156,14 +156,14 @@
             <td>{{ loop.index }}</td>
             <td><code style="font-size:11px;">{{ rec.session_code }}</code></td>
             <td><strong>{{ rec.programme_name or '—' }}</strong></td>
-            <td><span class="badge bg-secondary" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
+            <td><span class="badge-unit" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
             <td>{{ rec.start_date or '—' }}</td>
             <td>{{ rec.hours_actual }}</td>
             <td>{{ rec.faculty_name or '—' }}</td>
             <td>
               {% if rec.int_ext == 'Internal' %}<span class="badge" style="background:#dbeafe;color:#1d4ed8;">Internal</span>
               {% elif rec.int_ext == 'External' %}<span class="badge" style="background:#fef3c7;color:#92400e;">External</span>
-              {% else %}<span class="badge bg-secondary">{{ rec.int_ext or '—' }}</span>{% endif %}
+              {% else %}<span class="badge-unit">{{ rec.int_ext or '—' }}</span>{% endif %}
             </td>
             <td>{{ "%.0f"|format(rec.cost or 0) }}</td>
             <td>{{ rec.course_feedback or '—' }}</td>

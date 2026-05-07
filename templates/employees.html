@@ -5,7 +5,7 @@
 {% if recent_exited and not show_exited %}
 <!-- Undo Exit — Dedicated Section at Top -->
 <div class="card mb-4" style="border:2px solid #f59e0b;">
-  <div class="card-header d-flex align-items-center gap-2" style="background:linear-gradient(135deg,#92400e,#d97706);color:#fff;">
+  <div class="card-header ch-dark d-flex align-items-center gap-2">
     <i class="bi bi-arrow-counterclockwise fs-5"></i>
     <div>
       <strong>Undo Exit</strong> &nbsp;—&nbsp; {{ recent_exited|length }} employee(s) exited recently
@@ -223,7 +223,7 @@
               {% elif emp.collar == 'White Collared' %}
               <span class="badge badge-wc">White</span>
               {% else %}
-              <span class="badge bg-secondary">{{ emp.collar or '—' }}</span>
+              <span class="badge-unit">{{ emp.collar or '—' }}</span>
               {% endif %}
             </td>
             <td style="font-size:13px;">{{ emp.department or '—' }}</td>
