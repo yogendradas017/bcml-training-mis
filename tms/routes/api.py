@@ -3,7 +3,8 @@ from flask import request, session, jsonify, render_template
 from tms.constants import PROG_TYPES
 from tms.db import get_db
 from tms.decorators import login_required, spoc_required
-from tms.helpers import _fy_label, _derive_audience
+import datetime
+from tms.helpers import _fy_label, _derive_audience, _calc_compliance
 
 
 def _register(app):
@@ -151,6 +152,54 @@ def _register(app):
             'source':       source,
             'target_month': month_row['target_month'] if month_row else '',
             'avg_hrs':      avg_hrs,
+        })
+
+    @app.route('/api/dashboard-monthly')
+    @spoc_required
+    def api_dashboard_monthly():
+        db  = get_db()
+        pid = session['plant_id']
+
+        # Per-month training attendance stats
+        raw = db.execute('''
+            SELECT strftime('%m', start_date) as mo,
+                   COUNT(*) as seats,
+                   COALESCE(SUM(hrs), 0) as hrs
+            FROM emp_training
+            WHERE plant_id=? AND start_date IS NOT NULL AND start_date!=''
+            GROUP BY mo
+        ''', (pid,)).fetchall()
+        mo_map = {r['mo']: {'seats': r['seats'], 'hrs': round(r['hrs'], 1)} for r in raw}
+
+        # Sessions conducted per month from programme_details
+        sess_raw = db.execute('''
+            SELECT strftime('%m', pd.start_date) as mo, COUNT(*) as n
+            FROM programme_details pd
+            JOIN calendar c ON pd.session_code = c.session_code
+            WHERE c.plant_id=? AND pd.start_date IS NOT NULL AND pd.start_date!=''
+            GROUP BY mo
+        ''', (pid,)).fetchall()
+        sess_map = {r['mo']: r['n'] for r in sess_raw}
+
+        FY = [('04','April'),('05','May'),('06','June'),('07','July'),
+              ('08','August'),('09','September'),('10','October'),('11','November'),
+              ('12','December'),('01','January'),('02','February'),('03','March')]
+
+        monthly = []
+        for mo_num, mo_name in FY:
+            d = mo_map.get(mo_num, {'seats': 0, 'hrs': 0.0})
+            monthly.append({'month': mo_name, 'mo': mo_num,
+                            'seats': d['seats'], 'hrs': d['hrs'],
+                            'sessions': sess_map.get(mo_num, 0)})
+
+        comp = _calc_compliance(pid, db)
+        cur_mo = datetime.datetime.now().strftime('%m')
+
+        return jsonify({
+            'monthly': monthly,
+            'compliance': {'bc_pct': round(comp.get('bc_pct', 0), 1),
+                           'wc_pct': round(comp.get('wc_pct', 0), 1)},
+            'cur_mo': cur_mo
         })
 
     @app.route('/intelligence')
