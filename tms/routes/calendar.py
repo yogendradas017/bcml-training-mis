@@ -9,7 +9,7 @@ from tms.helpers import (
     _is_ajax, _canonical_prog, _get_or_create_prog_code, _new_session_code,
     _derive_audience, _sync_calendar_from_2c,
     _read_upload_file, _clean, _safe_float, _error_excel_response,
-    _current_fy, _in_current_fy,
+    _current_fy, _in_current_fy, _parse_date_strict,
 )
 
 import openpyxl
@@ -80,7 +80,11 @@ def _register(app):
         plant_id = session['plant_id']
         f = request.form
         db = get_db()
-        prog_name = _canonical_prog(f['programme_name'].strip(), plant_id, db)
+        prog_name_raw = f['programme_name'].strip()
+        prog_name = _canonical_prog(prog_name_raw, plant_id, db, strict=True)
+        if prog_name is None:
+            flash(f'Programme "{prog_name_raw}" not found in Programme Master. Add it to the master list first.', 'danger')
+            return redirect(url_for('training_calendar'))
         prog_type = f.get('prog_type', '')
 
         prog_code    = _get_or_create_prog_code(plant_id, prog_name, prog_type, db)
@@ -154,7 +158,11 @@ def _register(app):
         if existing and existing['status'] == 'Conducted':
             flash('Conducted sessions cannot be edited.', 'danger')
             return redirect(url_for('training_calendar'))
-        edit_prog         = _canonical_prog(f.get('programme_name','').strip(), plant_id, db)
+        edit_prog_raw     = f.get('programme_name','').strip()
+        edit_prog         = _canonical_prog(edit_prog_raw, plant_id, db, strict=True)
+        if edit_prog is None:
+            flash(f'Programme "{edit_prog_raw}" not found in Programme Master. Add it to the master list first.', 'danger')
+            return redirect(url_for('training_calendar'))
         tni_audience_edit = _derive_audience(plant_id, edit_prog, db)
         form_audience_edit = f.get('target_audience', '')
         edit_audience     = tni_audience_edit if tni_audience_edit else form_audience_edit
@@ -224,7 +232,7 @@ def _register(app):
         ws = wb.active
         ws.title = 'Calendar_Bulk_Upload'
         headers = ['Programme Name', 'Type of Programme', 'Source', 'Planned Month',
-                   'Plan Start (YYYY-MM-DD)', 'Plan End (YYYY-MM-DD)', 'Duration (Hrs)',
+                   'Plan Start (DD-MM-YYYY)', 'Plan End (DD-MM-YYYY)', 'Duration (Hrs)',
                    'Level', 'Mode', 'Target Audience', 'Planned Pax', 'Trainer/Vendor']
         hdr_fill = PatternFill('solid', fgColor='1F4E79')
         hdr_font = Font(bold=True, color='FFFFFF')
@@ -232,12 +240,13 @@ def _register(app):
             cell = ws.cell(row=1, column=i, value=h)
             cell.fill = hdr_fill; cell.font = hdr_font
             ws.column_dimensions[get_column_letter(i)].width = 24
-        ws.append(['Fire Safety Training', 'EHS/HR', 'TNI', 'June', '2026-06-10', '2026-06-10', 4, 'General', 'Classroom', 'Blue Collared', 30, 'Internal Faculty'])
-        ws.append(['Leadership Skills', 'Behavioural/Leadership', 'Management', 'July', '2026-07-05', '2026-07-06', 8, 'Specialized', 'Classroom', 'White Collared', 20, 'External Vendor'])
-        ws['A5'] = 'VALID Types: Behavioural/Leadership | Cane | Commercial | EHS/HR | IT | Technical'
-        ws['A6'] = 'VALID Modes: Classroom | OJT | SOP | Online'
-        ws['A7'] = 'VALID Audience: Blue Collared | White Collared | Common'
-        ws['A8'] = 'VALID Months: April | May | June | July | August | September | October | November | December | January | February | March'
+        ws.append(['Fire Safety Training', 'EHS/HR', 'TNI Driven', 'June', '10-06-2026', '10-06-2026', 4, 'General', 'Classroom', 'Blue Collared', 30, 'Internal Faculty'])
+        ws.append(['Leadership Skills', 'Behavioural/Leadership', 'New Requirement', 'July', '05-07-2026', '06-07-2026', 8, 'Specialized', 'Classroom', 'White Collared', 20, 'External Vendor'])
+        ws['A5'] = 'NOTE: Dates MUST be DD-MM-YYYY (e.g. 15-06-2026).'
+        ws['A6'] = 'VALID Types: Behavioural/Leadership | Cane | Commercial | EHS/HR | IT | Technical'
+        ws['A7'] = 'VALID Modes: Classroom | OJT | SOP | Online'
+        ws['A8'] = 'VALID Audience: Blue Collared | White Collared | Common'
+        ws['A9'] = 'VALID Months: April | May | June | July | August | September | October | November | December | January | February | March'
         out = io.BytesIO(); wb.save(out); out.seek(0)
         return send_file(out, download_name='Calendar_Bulk_Upload_Template.xlsx', as_attachment=True,
                          mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -262,8 +271,14 @@ def _register(app):
             raw_src   = _clean(row, ['source']) or ''
             source    = raw_src if raw_src in ('TNI Driven', 'New Requirement') else 'TNI Driven'
             month     = _clean(row, ['planned month', 'month'])
-            plan_start= _clean(row, ['plan start (yyyy-mm-dd)', 'plan start', 'start date'])
-            plan_end  = _clean(row, ['plan end (yyyy-mm-dd)', 'plan end', 'end date'])
+            raw_start = _clean(row, ['plan start (dd-mm-yyyy)', 'plan start (yyyy-mm-dd)', 'plan start', 'start date'])
+            raw_end   = _clean(row, ['plan end (dd-mm-yyyy)', 'plan end (yyyy-mm-dd)', 'plan end', 'end date'])
+            try:
+                plan_start = _parse_date_strict(raw_start)
+                plan_end   = _parse_date_strict(raw_end)
+            except ValueError as e:
+                errors.append(f'Row {i+2}: Date format error — {e}. Use DD-MM-YYYY (e.g. 15-06-2026).')
+                continue
             duration  = _safe_float(_clean(row, ['duration (hrs)', 'duration', 'hrs'])) or 0
             level     = _clean(row, ['level'])
             mode      = _clean(row, ['mode'])
@@ -276,7 +291,11 @@ def _register(app):
             if not prog_type:
                 errors.append(f'Row {i+2}: Type of Programme is required.')
                 continue
-            prog_name    = _canonical_prog(prog_name, plant_id, db)
+            canonical = _canonical_prog(prog_name, plant_id, db, strict=True)
+            if canonical is None:
+                errors.append(f'Row {i+2}: Programme "{prog_name}" not in Programme Master — add it first.')
+                continue
+            prog_name    = canonical
             tni_aud      = _derive_audience(plant_id, prog_name, db)
             audience     = tni_aud if tni_aud else audience
             prog_code    = _get_or_create_prog_code(plant_id, prog_name, prog_type, db)

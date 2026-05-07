@@ -9,7 +9,7 @@ from tms.decorators import spoc_required
 from tms.helpers import (
     _is_ajax, _canonical_prog, _date_to_month, _safe_float,
     _read_upload_file, _clean, _error_excel_response,
-    _current_fy, _in_current_fy,
+    _current_fy, _in_current_fy, _parse_date_strict,
 )
 
 import openpyxl
@@ -26,9 +26,11 @@ def _register(app):
         db = get_db()
         records = db.execute('''
             SELECT t.*, e.name as emp_name, e.designation, e.grade, e.collar,
-                   e.department, e.section
+                   e.department, e.section,
+                   c.source as cal_source
             FROM emp_training t
             LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+            LEFT JOIN calendar c ON c.session_code=t.session_code AND c.plant_id=t.plant_id
             WHERE t.plant_id=?
             ORDER BY t.id DESC
         ''', (plant_id,)).fetchall()
@@ -47,12 +49,13 @@ def _register(app):
         plant_id = session['plant_id']
         f = request.form
         db = get_db()
-        emp_code     = f['emp_code']
-        session_code = f.get('session_code', '').strip()
-        start_date   = f.get('start_date', '')
-        end_date     = f.get('end_date', '')
+        emp_code       = f['emp_code']
+        session_code   = f.get('session_code', '').strip()
+        start_date     = f.get('start_date', '')
+        end_date       = f.get('end_date', '')
+        prog_name_raw  = f.get('programme_name', '').strip()
 
-        prog_name = _canonical_prog(f.get('programme_name', '').strip(), plant_id, db)
+        prog_name = None
         prog_type = level = mode = cal_new = ''
         if session_code:
             cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
@@ -66,7 +69,13 @@ def _register(app):
                 if not start_date: start_date = cal['plan_start'] or ''
                 if not end_date:   end_date   = cal['plan_end'] or ''
             else:
-                flash(f'Session code "{session_code}" not found in calendar — record saved without calendar link.', 'warning')
+                flash(f'Session code "{session_code}" not found in calendar.', 'warning')
+
+        if not prog_name:
+            prog_name = _canonical_prog(prog_name_raw, plant_id, db, strict=True)
+            if prog_name is None:
+                flash(f'Programme "{prog_name_raw}" not found in Programme Master. Add it to the master list first.', 'danger')
+                return redirect(url_for('emp_training'))
 
         if not prog_type and prog_name:
             mr = db.execute('SELECT prog_type FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
@@ -144,7 +153,8 @@ def _register(app):
             cell.fill = hdr_fill; cell.font = hdr_font
             ws.column_dimensions[get_column_letter(i)].width = 26
         ws.append(['21700011', 'BCM/EHS/001/B01', 'Fire Safety Training', 'EHS/HR', '10-06-2026', '10-06-2026', 4, 'Training Hall', 3.5, 4.2])
-        ws.append(['21101568', '', 'MS Office Basics', 'IT/MIS', '05-07-2026', '06-07-2026', 8, 'Computer Lab', '', 4.0])
+        ws.append(['21101568', '', 'MS Office Basics', 'IT', '05-07-2026', '06-07-2026', 8, 'Computer Lab', '', 4.0])
+        ws['A5'] = 'NOTE: Dates MUST be DD-MM-YYYY (e.g. 15-06-2026). Session Code optional — if given, Programme/Type auto-fill from Calendar.'
         ws['A5'] = 'NOTE: Session Code is optional. If provided, Programme Name/Type/Mode auto-fill from Calendar.'
         out = io.BytesIO()
         wb.save(out); out.seek(0)
@@ -165,26 +175,20 @@ def _register(app):
             flash(f'Could not read file: {e}', 'danger')
             return redirect(url_for('emp_training'))
 
-        def _parse_date(raw):
-            """Normalize any date format to YYYY-MM-DD for storage."""
-            s = str(raw).strip()[:10] if raw else ''
-            if not s:
-                return ''
-            for fmt in ('%d-%m-%Y', '%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
-                try:
-                    return _dt.strptime(s, fmt).strftime('%Y-%m-%d')
-                except ValueError:
-                    continue
-            return s
-
         db = get_db(); inserted = 0; errors = []; total_rows = len(df)
         for i, row in df.iterrows():
             emp_code     = _clean(row, ['employee code', 'emp code', 'empcode'])
             session_code = _clean(row, ['session code', 'session code (optional)', 'sessioncode'])
             prog_name    = _clean(row, ['programme name', 'program name', 'training name'])
             file_type    = _clean(row, ['type of programme', 'type', 'prog type', 'programme type'])
-            start_date   = _parse_date(_clean(row, ['start date', 'start date (dd-mm-yyyy)', 'start date (yyyy-mm-dd)', 'startdate', 'date']))
-            end_date     = _parse_date(_clean(row, ['end date', 'end date (dd-mm-yyyy)', 'end date (yyyy-mm-dd)', 'enddate']))
+            raw_start    = _clean(row, ['start date (dd-mm-yyyy)', 'start date', 'startdate', 'date'])
+            raw_end      = _clean(row, ['end date (dd-mm-yyyy)', 'end date', 'enddate'])
+            try:
+                start_date = _parse_date_strict(raw_start)
+                end_date   = _parse_date_strict(raw_end)
+            except ValueError as e:
+                errors.append(f'Row {i+2}: Date format error — {e}. Use DD-MM-YYYY (e.g. 15-06-2026).')
+                continue
             hrs          = _safe_float(_clean(row, ['hours', 'hrs', 'duration'])) or 0
             venue        = _clean(row, ['venue'])
             pre_r        = _safe_float(_clean(row, ['pre-session rating', 'pre rating', 'pre_rating']))
@@ -209,8 +213,8 @@ def _register(app):
                     level      = cal['level']
                     mode       = cal['mode']
                     cal_new    = 'Calendar Program'
-                    start_date = start_date or _parse_date(cal['plan_start'] or '')
-                    end_date   = end_date or _parse_date(cal['plan_end'] or '')
+                    start_date = start_date or (cal['plan_start'] or '')
+                    end_date   = end_date or (cal['plan_end'] or '')
 
             if not prog_name:
                 errors.append(f'Row {i+2}: Programme Name required (no session code matched).')
@@ -228,7 +232,11 @@ def _register(app):
                 continue
 
             if not cal_new:
-                prog_name = _canonical_prog(prog_name, plant_id, db)
+                canonical = _canonical_prog(prog_name, plant_id, db, strict=True)
+                if canonical is None:
+                    errors.append(f'Row {i+2}: Programme "{prog_name}" not in Programme Master — add it first or link a Session Code.')
+                    continue
+                prog_name = canonical
             month = _date_to_month(start_date)
             db.execute('''INSERT OR IGNORE INTO emp_training
                 (plant_id,emp_code,session_code,programme_name,start_date,end_date,

@@ -15,7 +15,7 @@ def _register(app):
         sel_month  = request.args.get('month', '')
         db         = get_db()
         summary_rows = _calc_summary(plant_id, sel_month, db)
-        totals       = _calc_totals(summary_rows)
+        totals       = _calc_totals(summary_rows, db=db, plant_id=plant_id)
         compliance   = _calc_compliance(plant_id, db)
         return render_template('summary.html', summary_rows=summary_rows,
                                totals=totals, compliance=compliance,

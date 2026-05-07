@@ -9,7 +9,7 @@ from tms.decorators import spoc_required
 from tms.helpers import (
     _is_ajax, _smart_title, _prog_in_use, _canonical_prog,
     _read_upload_file, _clean, _safe_float, _error_excel_response,
-    _sync_master_from_tni, _current_fy, _in_current_fy,
+    _sync_master_from_tni, _current_fy, _in_current_fy, _parse_date_strict,
 )
 
 import openpyxl
@@ -328,12 +328,15 @@ def _register(app):
 
         cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
                          (session_code, plant_id)).fetchone()
-        prog_name = cal['programme_name'] if cal else f.get('programme_name','')
-        prog_type = cal['prog_type']      if cal else ''
-        level     = cal['level']          if cal else ''
-        cal_new   = 'Calendar Program'    if cal else 'New Program'
-        mode      = cal['mode']           if cal else ''
-        audience  = cal['target_audience'] if cal else ''
+        if not cal:
+            flash(f'Session code "{session_code}" not found in calendar. Only planned sessions can be recorded in 2C.', 'danger')
+            return redirect(url_for('programme_details'))
+        prog_name = cal['programme_name']
+        prog_type = cal['prog_type']
+        level     = cal['level']
+        cal_new   = 'Calendar Program'
+        mode      = cal['mode']
+        audience  = cal['target_audience'] or ''
 
         hours = float(f.get('hours_actual') or 0)
         if hours <= 0:
@@ -406,7 +409,7 @@ def _register(app):
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = '2C_Bulk_Upload'
-        headers = ['Session Code', 'Actual Start Date (YYYY-MM-DD)', 'Actual End Date (YYYY-MM-DD)',
+        headers = ['Session Code', 'Actual Start Date (DD-MM-YYYY)', 'Actual End Date (DD-MM-YYYY)',
                    'Actual Hours', 'Faculty Name', 'Internal/External', 'Cost (Rs.)', 'Venue',
                    'Course Feedback (1-5)', 'Faculty Feedback (1-5)',
                    'Trainer FB Participants (1-5)', 'Trainer FB Facilities (1-5)']
@@ -416,8 +419,8 @@ def _register(app):
             cell = ws.cell(row=1, column=i, value=h)
             cell.fill = hdr_fill; cell.font = hdr_font
             ws.column_dimensions[get_column_letter(i)].width = 26
-        ws.append(['BCM/EHS/001/B01', '2026-06-10', '2026-06-10', 4, 'Mr. Ramesh Kumar', 'Internal', 0, 'Training Hall', 4.2, 4.0, 3.8, 4.1])
-        ws['A4'] = 'NOTE: Session Code must exist in Training Calendar. Internal/External options: Internal | External | Online'
+        ws.append(['BCM/EHS/001/B01', '10-06-2026', '10-06-2026', 4, 'Mr. Ramesh Kumar', 'Internal', 0, 'Training Hall', 4.2, 4.0, 3.8, 4.1])
+        ws['A4'] = 'NOTE: Dates MUST be DD-MM-YYYY (e.g. 15-06-2026). Session Code must exist in Training Calendar. Internal/External: Internal | External | Online'
         out = io.BytesIO(); wb.save(out); out.seek(0)
         return send_file(out, download_name='2C_Programme_Bulk_Upload_Template.xlsx', as_attachment=True,
                          mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -437,9 +440,15 @@ def _register(app):
             return redirect(url_for('programme_details'))
         db = get_db(); inserted = 0; errors = []
         for i, row in df.iterrows():
-            sc         = _clean(row, ['session code', 'session_code'])
-            start_date = _clean(row, ['actual start date (yyyy-mm-dd)', 'start date', 'actual start date'])
-            end_date   = _clean(row, ['actual end date (yyyy-mm-dd)', 'end date', 'actual end date'])
+            sc        = _clean(row, ['session code', 'session_code'])
+            raw_start = _clean(row, ['actual start date (dd-mm-yyyy)', 'actual start date (yyyy-mm-dd)', 'start date', 'actual start date'])
+            raw_end   = _clean(row, ['actual end date (dd-mm-yyyy)', 'actual end date (yyyy-mm-dd)', 'end date', 'actual end date'])
+            try:
+                start_date = _parse_date_strict(raw_start)
+                end_date   = _parse_date_strict(raw_end)
+            except ValueError as e:
+                errors.append(f'Row {i+2}: Date format error — {e}. Use DD-MM-YYYY (e.g. 15-06-2026).')
+                continue
             hrs        = _safe_float(_clean(row, ['actual hours', 'hours', 'hrs'])) or 0
             faculty    = _clean(row, ['faculty name', 'faculty'])
             int_ext    = _clean(row, ['internal/external', 'int/ext', 'internal external'])

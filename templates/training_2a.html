@@ -125,16 +125,16 @@
   </div>
   <div class="card-body pb-2 pt-3">
     <div class="d-flex gap-2 flex-wrap">
-      <div class="position-relative flex-grow-1" style="max-width:300px;">
+      <div class="position-relative flex-grow-1" style="max-width:280px;">
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
-        <input type="text" class="form-control" placeholder="Search name, emp code, programme, session..." style="padding-left:34px;" oninput="TBL.search('training2aTable',this.value)">
+        <input type="text" class="form-control form-control-sm" placeholder="Search name, code, programme…" style="padding-left:34px;" oninput="TBL.search('training2aTable',this.value)">
       </div>
-      <select class="form-select" style="width:150px;" onchange="TBL.filter('training2aTable','collar',this.value)">
+      <select class="form-select form-select-sm" style="width:130px;" onchange="TBL.filter('training2aTable','collar',this.value)">
         <option value="">All Collar</option>
         <option value="Blue Collared">Blue Collar</option>
         <option value="White Collared">White Collar</option>
       </select>
-      <select class="form-select" style="width:170px;" onchange="TBL.filter('training2aTable','type',this.value)">
+      <select class="form-select form-select-sm" style="width:160px;" onchange="TBL.filter('training2aTable','type',this.value)">
         <option value="">All Types</option>
         <option>Behavioural/Leadership</option>
         <option>Cane</option>
@@ -143,7 +143,13 @@
         <option>IT</option>
         <option>Technical</option>
       </select>
-      <select class="form-select" style="width:140px;" onchange="TBL.filter('training2aTable','month',this.value)">
+      <select class="form-select form-select-sm" style="width:130px;" onchange="TBL.filter('training2aTable','source',this.value)">
+        <option value="">All Sources</option>
+        <option value="TNI Driven">TNI Driven</option>
+        <option value="New Requirement">New Req</option>
+        <option value="Central">Central</option>
+      </select>
+      <select class="form-select form-select-sm" style="width:120px;" onchange="TBL.filter('training2aTable','month',this.value)">
         <option value="">All Months</option>
         <option>April</option><option>May</option><option>June</option>
         <option>July</option><option>August</option><option>September</option>
@@ -153,59 +159,78 @@
     </div>
   </div>
   <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover mb-0" id="training2aTable" style="font-size:13px;">
-        <thead>
+    <div class="table-responsive" style="overflow-x:auto;">
+      <table class="table table-hover table-sm mb-0" id="training2aTable" style="font-size:12px;min-width:1100px;">
+        <thead style="background:#1a1f35;color:#fff;white-space:nowrap;">
           <tr>
-            <th><input type="checkbox" class="cb-all"></th>
-            <th>#</th><th>Employee</th><th>Collar</th><th>Session</th>
-            <th>Programme</th><th>Type</th><th>Source</th><th>Start Date</th>
-            <th>Hrs</th><th>Pre</th><th>Post</th><th>Venue</th><th>Month</th><th>Action</th>
+            <th style="width:32px;padding:8px 6px;"><input type="checkbox" class="cb-all"></th>
+            <th style="width:36px;padding:8px 4px;">#</th>
+            <th style="min-width:150px;padding:8px 8px;">Employee</th>
+            <th style="width:60px;padding:8px 4px;">Collar</th>
+            <th style="width:130px;padding:8px 6px;">Session</th>
+            <th style="min-width:160px;padding:8px 8px;">Programme</th>
+            <th style="width:90px;padding:8px 4px;">Type</th>
+            <th style="width:80px;padding:8px 4px;">Source</th>
+            <th style="width:90px;padding:8px 4px;">Start Date</th>
+            <th style="width:48px;padding:8px 4px;">Hrs</th>
+            <th style="width:40px;padding:8px 4px;">Pre</th>
+            <th style="width:40px;padding:8px 4px;">Post</th>
+            <th style="width:90px;padding:8px 4px;">Venue</th>
+            <th style="width:65px;padding:8px 4px;">Month</th>
+            <th style="width:50px;padding:8px 4px;">Action</th>
           </tr>
         </thead>
         <tbody>
           {% for rec in records %}
-          <tr data-collar="{{ rec.collar or '' }}" data-type="{{ rec.prog_type or '' }}" data-month="{{ rec.month or '' }}">
-            <td><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
-            <td>{{ loop.index }}</td>
-            <td>
-              <strong>{{ rec.emp_name or rec.emp_code }}</strong><br>
+          {% set src = 'Central' if rec.host_plant_id == 99 else (rec.cal_source or '') %}
+          <tr data-collar="{{ rec.collar or '' }}" data-type="{{ rec.prog_type or '' }}"
+              data-month="{{ rec.month or '' }}" data-source="{{ src }}">
+            <td style="padding:6px;"><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
+            <td style="padding:6px 4px;color:#6b7280;">{{ loop.index }}</td>
+            <td style="padding:6px 8px;">
+              <strong style="font-size:12px;">{{ rec.emp_name or rec.emp_code }}</strong><br>
               <small class="text-muted">{{ rec.emp_code }}</small>
             </td>
-            <td>
-              {% if rec.collar == 'Blue Collared' %}<span class="badge badge-bc">Blue</span>
-              {% elif rec.collar == 'White Collared' %}<span class="badge badge-wc">White</span>
-              {% else %}—{% endif %}
+            <td style="padding:6px 4px;">
+              {% if rec.collar == 'Blue Collared' %}<span class="badge badge-bc" style="font-size:10px;">Blue</span>
+              {% elif rec.collar == 'White Collared' %}<span class="badge badge-wc" style="font-size:10px;">White</span>
+              {% else %}<span class="text-muted">—</span>{% endif %}
             </td>
-            <td><code style="font-size:11px;">{{ rec.session_code or '—' }}</code></td>
-            <td><strong>{{ rec.programme_name }}</strong></td>
-            <td><span class="badge bg-secondary" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
-            <td>
+            <td style="padding:6px;"><code style="font-size:10px;word-break:break-all;">{{ rec.session_code or '—' }}</code></td>
+            <td style="padding:6px 8px;font-weight:600;font-size:12px;">{{ rec.programme_name }}</td>
+            <td style="padding:6px 4px;">
+              <span class="badge bg-secondary" style="font-size:10px;white-space:nowrap;">{{ rec.prog_type or '—' }}</span>
+            </td>
+            <td style="padding:6px 4px;">
               {% if rec.host_plant_id == 99 %}
-              <span class="badge bg-primary" style="font-size:10px;" title="Central Training — New Requirement">Central</span>
-              {% elif rec.cal_new == 'New Requirement' %}
-              <span class="badge bg-warning text-dark" style="font-size:10px;">New Req</span>
+                <span class="badge bg-primary" style="font-size:10px;">Central</span>
+              {% elif rec.cal_source == 'New Requirement' %}
+                <span class="badge bg-warning text-dark" style="font-size:10px;">New Req</span>
+              {% elif rec.cal_source == 'TNI Driven' %}
+                <span class="badge bg-success" style="font-size:10px;">TNI</span>
+              {% elif rec.session_code %}
+                <span class="badge bg-secondary" style="font-size:10px;">Linked</span>
               {% else %}
-              <span style="color:#9ca3af;font-size:11px;">—</span>
+                <span class="text-muted" style="font-size:11px;">Manual</span>
               {% endif %}
             </td>
-            <td>{{ rec.start_date | fmt_date }}</td>
-            <td><strong>{{ rec.hrs }}</strong></td>
-            <td>{{ rec.pre_rating or '—' }}</td>
-            <td>{{ rec.post_rating or '—' }}</td>
-            <td>{{ rec.venue or '—' }}</td>
-            <td>{{ rec.month or '—' }}</td>
-            <td>
+            <td style="padding:6px 4px;white-space:nowrap;">{{ rec.start_date | fmt_date }}</td>
+            <td style="padding:6px 4px;font-weight:700;text-align:center;">{{ rec.hrs }}</td>
+            <td style="padding:6px 4px;text-align:center;color:#6b7280;">{{ rec.pre_rating or '—' }}</td>
+            <td style="padding:6px 4px;text-align:center;color:#6b7280;">{{ rec.post_rating or '—' }}</td>
+            <td style="padding:6px 4px;color:#6b7280;font-size:11px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ rec.venue or '' }}">{{ rec.venue or '—' }}</td>
+            <td style="padding:6px 4px;white-space:nowrap;color:#6b7280;">{{ rec.month or '—' }}</td>
+            <td style="padding:6px 4px;">
               <form method="POST" action="{{ url_for('delete_emp_training', rec_id=rec.id) }}" style="display:inline;">
-                <button type="button" class="btn btn-sm btn-outline-danger"
+                <button type="button" class="btn btn-sm btn-outline-danger" style="padding:2px 6px;"
                         onclick="ajaxDelete(this,'Delete this training record?')">
-                  <i class="bi bi-trash"></i>
+                  <i class="bi bi-trash" style="font-size:11px;"></i>
                 </button>
               </form>
             </td>
           </tr>
           {% else %}
-          <tr data-empty="1"><td colspan="14" class="text-center text-muted py-4">No training records yet. Add above.</td></tr>
+          <tr data-empty="1"><td colspan="15" class="text-center text-muted py-4">No training records yet. Add above.</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -435,6 +435,7 @@ const TBL = {
   }
 };
 window.TBL = TBL;
+window.BulkSelect = BulkSelect;
 
 /* ═══════════════════════════════════════════════════
    AJAX ROW DELETE
