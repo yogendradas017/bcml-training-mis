@@ -849,43 +849,23 @@ gsap.registerPlugin(ScrollTrigger);
 (function initBgPaths() {
   var SVG_NS = 'http://www.w3.org/2000/svg';
 
-  var _maskIdx = 0;
-
   function buildLayer(container, strokeColor, position) {
-    var uid = 'bgm' + (++_maskIdx);
     var svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', '0 0 696 316');
     svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
     svg.setAttribute('aria-hidden', 'true');
+
+    /* CSS mask in element coords — correct space regardless of viewBox scaling */
+    var cssMask = 'radial-gradient(ellipse 62% 46% at 50% 50%,' +
+      'transparent 0%,transparent 38%,' +
+      'rgba(0,0,0,.12) 52%,rgba(0,0,0,.55) 64%,black 80%)';
     Object.assign(svg.style, {
       position: 'absolute', inset: '0',
       width: '100%', height: '100%',
-      zIndex: '0', pointerEvents: 'none', display: 'block'
+      zIndex: '0', pointerEvents: 'none', display: 'block',
+      maskImage: cssMask,
+      webkitMaskImage: cssMask
     });
-
-    /* radial fade mask — fades to transparent in center so lines don't cut through text */
-    var defs = document.createElementNS(SVG_NS, 'defs');
-    var grad = document.createElementNS(SVG_NS, 'radialGradient');
-    grad.setAttribute('id', uid + 'g');
-    grad.setAttribute('cx', '50%'); grad.setAttribute('cy', '50%'); grad.setAttribute('r', '50%');
-    [['0%','0'],['38%','0'],['68%','1'],['100%','1']].forEach(function(s){
-      var stop = document.createElementNS(SVG_NS,'stop');
-      stop.setAttribute('offset', s[0]);
-      stop.setAttribute('stop-color','white');
-      stop.setAttribute('stop-opacity', s[1]);
-      grad.appendChild(stop);
-    });
-    var mask = document.createElementNS(SVG_NS, 'mask');
-    mask.setAttribute('id', uid + 'm');
-    var mrect = document.createElementNS(SVG_NS, 'rect');
-    mrect.setAttribute('width','696'); mrect.setAttribute('height','316');
-    mrect.setAttribute('fill','url(#' + uid + 'g)');
-    mask.appendChild(mrect);
-    defs.appendChild(grad); defs.appendChild(mask);
-    svg.appendChild(defs);
-
-    var g = document.createElementNS(SVG_NS, 'g');
-    g.setAttribute('mask', 'url(#' + uid + 'm)');
 
     var N = 36;
     for (var i = 0; i < N; i++) {
@@ -906,10 +886,10 @@ gsap.registerPlugin(ScrollTrigger);
       el.setAttribute('stroke-width', (0.5 + i * 0.03).toFixed(2));
       el.setAttribute('stroke-linecap', 'round');
 
-      var baseOp = 0.1 + i * 0.03;
+      var baseOp = 0.07 + i * 0.022;
       el.style.opacity = baseOp * 0.5;
 
-      g.appendChild(el);
+      svg.appendChild(el);
 
       (function(elem, bOp) {
         var dur = 20 + Math.random() * 10;
@@ -923,7 +903,6 @@ gsap.registerPlugin(ScrollTrigger);
         gsap.to(elem, { opacity: bOp, duration: dur*0.5, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: delay });
       })(el, baseOp);
     }
-    svg.appendChild(g);
     container.insertBefore(svg, container.firstChild);
   }
 
