@@ -920,3 +920,139 @@ th:has(.cb-all), td:has(.cb-row) { width: 36px; text-align: center; }
 .btn-action-danger:hover  { background: #fee2e2; border-color: #f87171; color: #b91c1c; }
 .btn-action-success { color: #059669; border-color: #6ee7b7; background: #f0fdf4; }
 .btn-action-success:hover { background: #dcfce7; border-color: #34d399; color: #047857; }
+
+/* ══════════════════════════════════════════════════════════════
+   DASHBOARD — ANALYTICS COMPONENTS
+══════════════════════════════════════════════════════════════ */
+
+/* ── COMPACT KPI CARD ───────────────────────────────────────── */
+.kpi-card {
+  background: var(--c-white); border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg); overflow: hidden;
+  box-shadow: var(--shadow-sm); height: 100%;
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+.kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.kpi-accent { height: 4px; background: var(--kpi-color, var(--c-primary)); }
+.kpi-body { padding: 18px 20px 14px; }
+.kpi-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.kpi-icon-wrap {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--kpi-bg, #ebf4ff);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.kpi-icon-wrap i { font-size: 18px; color: var(--kpi-color, var(--c-primary)); }
+.kpi-num { font-size: 28px; font-weight: 800; color: var(--c-text); line-height: 1; letter-spacing: -.5px; }
+.kpi-lbl { font-size: 10.5px; color: var(--c-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; margin-top: 3px; }
+.kpi-divider { height: 1px; background: var(--c-border); margin: 12px 0; }
+
+/* Split bar (BC / WC stacked) */
+.kpi-split-bar { height: 5px; border-radius: 99px; overflow: hidden; background: #f1f5f9; margin-bottom: 8px; display: flex; }
+.kpi-split-bc { height: 100%; background: #2e6da4; flex-shrink: 0; border-radius: 99px 0 0 99px; transition: width 1.1s cubic-bezier(.4,0,.2,1); }
+.kpi-split-wc { height: 100%; background: #059669; flex-shrink: 0; border-radius: 0 99px 99px 0; transition: width 1.1s cubic-bezier(.4,0,.2,1); }
+
+/* Chips */
+.kpi-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.kpi-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 99px; font-size: 11px; font-weight: 700;
+}
+.kpi-chip-bc { background: #dbeafe; color: #1e40af; }
+.kpi-chip-wc { background: #dcfce7; color: #166534; }
+
+/* Progress bar */
+.kpi-prog-wrap { height: 5px; background: #f1f5f9; border-radius: 99px; overflow: hidden; margin: 10px 0; }
+.kpi-prog-fill { height: 100%; border-radius: 99px; background: var(--kpi-color, var(--c-primary)); transition: width 1.1s cubic-bezier(.4,0,.2,1); }
+
+/* Footer */
+.kpi-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.kpi-foot-lbl { font-size: 11.5px; color: var(--c-muted); }
+.kpi-foot-val { font-size: 11.5px; font-weight: 700; color: var(--c-text); }
+.kpi-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+  background: var(--kpi-bg, #ebf4ff); color: var(--kpi-color, var(--c-primary));
+}
+
+/* Mini stat grid */
+.kpi-mini-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.kpi-mini { background: var(--c-bg); border-radius: 8px; padding: 8px; text-align: center; }
+.kpi-mini-v { font-size: 17px; font-weight: 800; color: var(--c-text); line-height: 1; }
+.kpi-mini-l { font-size: 9.5px; color: var(--c-muted); margin-top: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
+
+/* ── ANALYTICS CARD ─────────────────────────────────────────── */
+.analytics-card {
+  background: var(--c-white); border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg); overflow: hidden;
+  box-shadow: var(--shadow-sm); height: 100%; display: flex; flex-direction: column;
+}
+.analytics-hd {
+  padding: 13px 18px; border-bottom: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+}
+.analytics-title { font-size: 13px; font-weight: 700; color: var(--c-text); }
+.analytics-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: #ebf4ff; color: var(--c-primary); }
+.analytics-body { padding: 16px 18px; flex: 1; }
+
+/* ── COMPLIANCE GAUGES ──────────────────────────────────────── */
+.gauge-pair { display: flex; gap: 10px; justify-content: center; align-items: center; }
+.gauge-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.gauge-svg { width: 110px; height: 110px; display: block; }
+.gauge-svg circle { fill: none; stroke-width: 10; stroke-linecap: round; }
+.gauge-track { stroke: #edf2f7; }
+.gauge-fill-bc { stroke: #2e6da4; }
+.gauge-fill-wc { stroke: #059669; }
+.gauge-lbl { font-size: 11px; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: .4px; }
+.gauge-sep { width: 1px; height: 80px; background: var(--c-border); flex-shrink: 0; }
+.gauge-foot {
+  padding: 9px 18px; border-top: 1px solid var(--c-border);
+  font-size: 10.5px; color: var(--c-muted); text-align: center;
+}
+
+/* ── MONTHLY BAR CHART ──────────────────────────────────────── */
+.chart-toggle { display: flex; gap: 3px; background: #f1f5f9; border-radius: 7px; padding: 3px; }
+.ct-btn {
+  padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 600;
+  border: none; background: transparent; color: var(--c-muted); cursor: pointer;
+  transition: all var(--transition); white-space: nowrap;
+}
+.ct-btn.active { background: var(--c-white); color: var(--c-primary); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+
+.month-chart-wrap { min-height: 150px; }
+.chart-bars { display: flex; align-items: flex-end; gap: 3px; height: 130px; padding-bottom: 2px; }
+.cbar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; min-width: 0; }
+.cbar-val { font-size: 8.5px; color: transparent; font-weight: 700; min-height: 11px; text-align: center; white-space: nowrap; transition: color var(--transition); overflow: hidden; }
+.cbar-bar-wrap { width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.cbar-bar { width: 80%; max-width: 28px; border-radius: 4px 4px 0 0; background: #d6e4f0; min-height: 3px; transition: background var(--transition), height .5s cubic-bezier(.4,0,.2,1); }
+.cbar-col:hover .cbar-bar { background: #a8c8e0; }
+.cbar-col.active .cbar-bar { background: var(--c-primary); }
+.cbar-col.active .cbar-val { color: var(--c-primary); }
+.cbar-mo { font-size: 8.5px; color: var(--c-muted); white-space: nowrap; transition: color var(--transition); }
+.cbar-col.active .cbar-mo { color: var(--c-primary); font-weight: 700; }
+.cbar-col.cur-mo .cbar-bar { background: #b8d4ea; }
+.cbar-col.cur-mo:hover .cbar-bar { background: #90b9d9; }
+.cbar-col.cur-mo.active .cbar-bar { background: var(--c-primary); }
+.cbar-col.cur-mo .cbar-mo::after { content: '·'; font-size: 14px; color: var(--c-primary); line-height: 0; vertical-align: middle; }
+
+/* Month detail */
+.month-detail {
+  background: #f8fafc; border: 1px solid var(--c-border); border-radius: 10px;
+  padding: 10px 14px; display: flex; align-items: center; gap: 12px;
+  flex-wrap: wrap; margin-top: 8px; min-height: 50px;
+}
+.md-chip {
+  font-size: 12px; font-weight: 800; color: var(--c-primary); background: #ebf4ff;
+  padding: 4px 10px; border-radius: 6px; white-space: nowrap; flex-shrink: 0;
+}
+.md-stats { display: flex; gap: 16px; flex-wrap: wrap; flex: 1; }
+.md-stat { display: flex; flex-direction: column; }
+.md-v { font-size: 17px; font-weight: 800; color: var(--c-text); line-height: 1; }
+.md-l { font-size: 10px; color: var(--c-muted); margin-top: 2px; font-weight: 600; }
+
+/* Loading skeleton */
+.chart-skel { display: flex; align-items: flex-end; gap: 3px; height: 130px; padding: 0; }
+.csb {
+  flex: 1; border-radius: 4px 4px 0 0;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e4edf5 50%, #f1f5f9 75%);
+  background-size: 200% 100%; animation: csb-shimmer 1.5s infinite;
+}
+@keyframes csb-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }

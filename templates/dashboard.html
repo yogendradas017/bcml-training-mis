@@ -2,109 +2,176 @@
 {% block page_title %}Dashboard{% endblock %}
 {% block content %}
 
-<!-- KPI Cards -->
-{% set bc_pct = (stats.blue_collar / stats.total_emp * 100)|round(0)|int if stats.total_emp else 0 %}
-{% set wc_pct = (stats.white_collar / stats.total_emp * 100)|round(0)|int if stats.total_emp else 0 %}
-{% set sess_pct = (stats.conducted / stats.sessions * 100)|round(0)|int if stats.sessions else 0 %}
-{% set avg_hrs = (stats.manhours / stats.trainings)|round(1) if stats.trainings else 0 %}
-<div class="row g-3 mb-4 stagger">
-  <div class="col-6 col-md-3 fade-up">
-    <div class="sc sc-violet">
-      <div class="sc-body">
-        <div class="sc-icon"><i class="bi bi-people-fill"></i></div>
-        <div class="sc-val">{{ stats.total_emp }}</div>
-        <div class="sc-lbl">Active Employees</div>
-        <div class="sc-sub">{{ stats.blue_collar }} Blue &middot; {{ stats.white_collar }} White</div>
-      </div>
-      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3 fade-up">
-    <div class="sc sc-blue">
-      <div class="sc-body">
-        <div class="sc-icon"><i class="bi bi-person-badge-fill"></i></div>
-        <div class="sc-val">{{ stats.blue_collar }}</div>
-        <div class="sc-lbl">Blue Collar</div>
-        <div class="sc-sub">{{ bc_pct }}% of workforce</div>
-      </div>
-      <div class="sc-track"><div class="sc-fill" style="width:{{ bc_pct }}%"></div></div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3 fade-up">
-    <div class="sc sc-green">
-      <div class="sc-body">
-        <div class="sc-icon"><i class="bi bi-person-badge-fill"></i></div>
-        <div class="sc-val">{{ stats.white_collar }}</div>
-        <div class="sc-lbl">White Collar</div>
-        <div class="sc-sub">{{ wc_pct }}% of workforce</div>
-      </div>
-      <div class="sc-track"><div class="sc-fill" style="width:{{ wc_pct }}%"></div></div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3 fade-up">
-    <div class="sc sc-amber">
-      <div class="sc-body">
-        <div class="sc-icon"><i class="bi bi-clipboard-check-fill"></i></div>
-        <div class="sc-val">{{ stats.tni_count }}</div>
-        <div class="sc-lbl">TNI Entries</div>
-        <div class="sc-sub">Training needs identified</div>
-      </div>
-      <div class="sc-track"><div class="sc-fill" style="width:{% if stats.tni_count and stats.total_emp %}{{ [bc_pct, 100]|min }}{% else %}0{% endif %}%"></div></div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3 fade-up">
-    <div class="sc sc-indigo">
-      <div class="sc-body">
-        <div class="sc-icon"><i class="bi bi-calendar3"></i></div>
-        <div class="sc-val">{{ stats.sessions }}</div>
-        <div class="sc-lbl">Sessions Planned</div>
-        <div class="sc-sub">FY 2026–27 calendar</div>
-      </div>
-      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3 fade-up">
-    <div class="sc sc-teal">
-      <div class="sc-body">
-        <div class="sc-icon"><i class="bi bi-check-circle-fill"></i></div>
-        <div class="sc-val">{{ stats.conducted }}</div>
-        <div class="sc-lbl">Sessions Conducted</div>
-        <div class="sc-sub">
-          {% if stats.sessions %}
-          <span class="{% if sess_pct >= 75 %}up{% elif sess_pct >= 40 %}{% else %}down{% endif %}">{{ sess_pct }}%</span> completion rate
-          {% else %}No sessions planned{% endif %}
+{%- set bc_pct   = (stats.blue_collar  / stats.total_emp * 100)|round(0)|int if stats.total_emp else 0 -%}
+{%- set wc_pct   = (stats.white_collar / stats.total_emp * 100)|round(0)|int if stats.total_emp else 0 -%}
+{%- set sess_pct = (stats.conducted    / stats.sessions  * 100)|round(0)|int if stats.sessions  else 0 -%}
+{%- set avg_hrs  = (stats.manhours / stats.trainings)|round(1) if stats.trainings else 0 -%}
+
+<!-- ── ROW 1: COMPACT KPI CARDS ─────────────────────────────── -->
+<div class="row g-3 mb-3">
+
+  <!-- Workforce (BC + WC merged) -->
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="kpi-card" style="--kpi-color:#6366f1;--kpi-bg:#eef2ff;">
+      <div class="kpi-accent"></div>
+      <div class="kpi-body">
+        <div class="kpi-header">
+          <div>
+            <div class="kpi-num" data-count="{{ stats.total_emp }}">{{ stats.total_emp }}</div>
+            <div class="kpi-lbl">Active Workforce</div>
+          </div>
+          <div class="kpi-icon-wrap"><i class="bi bi-people-fill"></i></div>
+        </div>
+        <div class="kpi-split-bar">
+          <div class="kpi-split-bc" id="kpi-bc-fill" style="width:0%"></div>
+          <div class="kpi-split-wc" id="kpi-wc-fill" style="width:0%"></div>
+        </div>
+        <div class="kpi-chips">
+          <span class="kpi-chip kpi-chip-bc">
+            <i class="bi bi-circle-fill" style="font-size:6px;"></i>
+            <span data-count="{{ stats.blue_collar }}">{{ stats.blue_collar }}</span>&nbsp;Blue
+          </span>
+          <span class="kpi-chip kpi-chip-wc">
+            <i class="bi bi-circle-fill" style="font-size:6px;"></i>
+            <span data-count="{{ stats.white_collar }}">{{ stats.white_collar }}</span>&nbsp;White
+          </span>
+          <span style="font-size:10.5px;color:var(--c-muted);margin-left:auto;">{{ bc_pct }}%&nbsp;·&nbsp;{{ wc_pct }}%</span>
         </div>
       </div>
-      <div class="sc-track"><div class="sc-fill" style="width:{{ sess_pct }}%"></div></div>
     </div>
   </div>
-  <div class="col-6 col-md-3 fade-up">
-    <div class="sc sc-cyan">
-      <div class="sc-body">
-        <div class="sc-icon"><i class="bi bi-person-check-fill"></i></div>
-        <div class="sc-val">{{ stats.trainings }}</div>
-        <div class="sc-lbl">Training Records</div>
-        <div class="sc-sub">Individual attendances logged</div>
-      </div>
-      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3 fade-up">
-    <div class="sc sc-rose">
-      <div class="sc-body">
-        <div class="sc-icon"><i class="bi bi-clock-history"></i></div>
-        <div class="sc-val">{{ "%.0f"|format(stats.manhours) }}</div>
-        <div class="sc-lbl">Total Man-Hours</div>
-        <div class="sc-sub">
-          {% if avg_hrs %}~{{ avg_hrs }} hrs avg / record{% else %}Across all programmes{% endif %}
+
+  <!-- Sessions -->
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="kpi-card" style="--kpi-color:#2e6da4;--kpi-bg:#ebf4ff;">
+      <div class="kpi-accent"></div>
+      <div class="kpi-body">
+        <div class="kpi-header">
+          <div>
+            <div class="kpi-num">
+              <span data-count="{{ stats.conducted }}">{{ stats.conducted }}</span><span style="font-size:14px;font-weight:500;color:var(--c-muted);"> / {{ stats.sessions }}</span>
+            </div>
+            <div class="kpi-lbl">Sessions Conducted / Planned</div>
+          </div>
+          <div class="kpi-icon-wrap"><i class="bi bi-calendar3"></i></div>
+        </div>
+        <div class="kpi-prog-wrap">
+          <div class="kpi-prog-fill" id="kpi-sess-fill" style="width:0%"></div>
+        </div>
+        <div class="kpi-foot">
+          <span class="kpi-badge">{{ sess_pct }}% complete</span>
+          <span class="kpi-foot-lbl">&middot; <strong>{{ stats.tni_count }}</strong> TNI entries on record</span>
         </div>
       </div>
-      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- Training Activity -->
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="kpi-card" style="--kpi-color:#0891b2;--kpi-bg:#ecfeff;">
+      <div class="kpi-accent"></div>
+      <div class="kpi-body">
+        <div class="kpi-header">
+          <div>
+            <div class="kpi-num" data-count="{{ stats.manhours|round(0)|int }}">{{ "%.0f"|format(stats.manhours) }}</div>
+            <div class="kpi-lbl">Total Man-Hours</div>
+          </div>
+          <div class="kpi-icon-wrap"><i class="bi bi-clock-history"></i></div>
+        </div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-mini-row">
+          <div class="kpi-mini">
+            <div class="kpi-mini-v" data-count="{{ stats.trainings }}">{{ stats.trainings }}</div>
+            <div class="kpi-mini-l">Attendances</div>
+          </div>
+          <div class="kpi-mini">
+            <div class="kpi-mini-v">{{ avg_hrs or '—' }}</div>
+            <div class="kpi-mini-l">Avg Hrs / Rec</div>
+          </div>
+          <div class="kpi-mini">
+            <div class="kpi-mini-v" data-count="{{ stats.tni_count }}">{{ stats.tni_count }}</div>
+            <div class="kpi-mini-l">TNI Needs</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Quick Actions -->
+<!-- ── ROW 2: ANALYTICS ──────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <!-- Compliance Ring Gauges -->
+  <div class="col-12 col-md-5 col-lg-4">
+    <div class="analytics-card">
+      <div class="analytics-hd">
+        <span class="analytics-title"><i class="bi bi-bullseye me-1" style="color:var(--c-primary);"></i>Compliance</span>
+        <span class="analytics-badge">FY 2026–27</span>
+      </div>
+      <div class="analytics-body" style="display:flex;flex-direction:column;justify-content:center;">
+        <div class="gauge-pair">
+          <div class="gauge-wrap">
+            <svg id="gauge-bc" class="gauge-svg" viewBox="0 0 120 120">
+              <circle class="gauge-track" cx="60" cy="60" r="42" transform="rotate(-90 60 60)"/>
+              <circle class="gauge-fill gauge-fill-bc" cx="60" cy="60" r="42"
+                      stroke-dasharray="263.9" stroke-dashoffset="263.9"
+                      transform="rotate(-90 60 60)"/>
+              <text id="gauge-bc-pct" x="60" y="56" text-anchor="middle"
+                    font-size="20" font-weight="900" fill="#1d1d1f" font-family="Inter,system-ui,sans-serif">0</text>
+              <text x="60" y="70" text-anchor="middle" font-size="9" fill="#6e6e73" font-family="Inter,system-ui,sans-serif">%</text>
+            </svg>
+            <div class="gauge-lbl">Blue Collar</div>
+          </div>
+          <div class="gauge-sep"></div>
+          <div class="gauge-wrap">
+            <svg id="gauge-wc" class="gauge-svg" viewBox="0 0 120 120">
+              <circle class="gauge-track" cx="60" cy="60" r="42" transform="rotate(-90 60 60)"/>
+              <circle class="gauge-fill gauge-fill-wc" cx="60" cy="60" r="42"
+                      stroke-dasharray="263.9" stroke-dashoffset="263.9"
+                      transform="rotate(-90 60 60)"/>
+              <text id="gauge-wc-pct" x="60" y="56" text-anchor="middle"
+                    font-size="20" font-weight="900" fill="#1d1d1f" font-family="Inter,system-ui,sans-serif">0</text>
+              <text x="60" y="70" text-anchor="middle" font-size="9" fill="#6e6e73" font-family="Inter,system-ui,sans-serif">%</text>
+            </svg>
+            <div class="gauge-lbl">White Collar</div>
+          </div>
+        </div>
+      </div>
+      <div class="gauge-foot">Live TNI coverage · updates on page load</div>
+    </div>
+  </div>
+
+  <!-- Monthly Bar Chart -->
+  <div class="col-12 col-md-7 col-lg-8">
+    <div class="analytics-card">
+      <div class="analytics-hd">
+        <span class="analytics-title"><i class="bi bi-bar-chart-fill me-1" style="color:var(--c-primary);"></i>Monthly Training</span>
+        <div class="chart-toggle">
+          <button class="ct-btn active" data-metric="seats">Seats</button>
+          <button class="ct-btn" data-metric="hrs">Man-Hrs</button>
+          <button class="ct-btn" data-metric="sessions">Sessions</button>
+        </div>
+      </div>
+      <div class="analytics-body" style="padding-bottom:10px;">
+        <div class="month-chart-wrap">
+          <div id="chart-area">
+            <div class="chart-skel">
+              {% set bar_heights = [25,40,55,70,45,30,65,85,50,60,35,20] %}
+              {% for h in bar_heights %}
+              <div class="csb" style="height:{{ h }}px;"></div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <div class="month-detail" id="month-detail">
+          <span style="font-size:11px;color:var(--c-muted);width:100%;text-align:center;">Loading monthly breakdown…</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── QUICK ACTIONS ─────────────────────────────────────────── -->
 <div class="section-hd">Quick Actions</div>
 <div class="row g-3">
   {% set modules = [
@@ -118,7 +185,7 @@
   {% for endpoint, icon, grad, title, desc in modules %}
   <div class="col-12 col-md-6 col-lg-4">
     <a href="{{ url_for(endpoint) }}" class="text-decoration-none">
-      <div class="card card-lift" style="border-top: 3px solid transparent; border-image: {{ grad }} 1;">
+      <div class="card card-lift" style="border-top:3px solid transparent;border-image:{{ grad }} 1;">
         <div class="card-body d-flex align-items-center gap-3 py-3">
           <div style="width:44px;height:44px;border-radius:12px;background:{{ grad }};display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15);">
             <i class="bi {{ icon }}" style="font-size:19px;color:#fff;"></i>
@@ -136,7 +203,7 @@
 
   <div class="col-12 col-md-6 col-lg-4">
     <a href="{{ url_for('export_excel', plant_id=session.plant_id) }}" class="text-decoration-none">
-      <div class="card card-lift" style="border-top: 3px solid #22c55e;">
+      <div class="card card-lift" style="border-top:3px solid #22c55e;">
         <div class="card-body d-flex align-items-center gap-3 py-3">
           <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#16a34a,#22c55e);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(22,163,74,.25);">
             <i class="bi bi-file-earmark-excel-fill" style="font-size:19px;color:#fff;"></i>
@@ -151,4 +218,154 @@
     </a>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var CUR_METRIC  = 'seats';
+  var CUR_IDX     = null;
+  var MONTHLY     = null;
+
+  /* ── counter animation ──────────────────────────────────────── */
+  function animNum(el, target, dur) {
+    if (!el) return;
+    target = parseFloat(target) || 0;
+    var s = 0, t0 = null;
+    function step(ts) {
+      if (!t0) t0 = ts;
+      var p = Math.min((ts - t0) / dur, 1);
+      var e = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(s + e * (target - s)).toLocaleString();
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  document.querySelectorAll('[data-count]').forEach(function (el) {
+    animNum(el, el.dataset.count, 1100);
+  });
+
+  /* ── static bar animations ──────────────────────────────────── */
+  setTimeout(function () {
+    var bcf = document.getElementById('kpi-bc-fill');
+    var wcf = document.getElementById('kpi-wc-fill');
+    if (bcf) bcf.style.width = '{{ bc_pct }}%';
+    if (wcf) wcf.style.width = '{{ wc_pct }}%';
+    var sf = document.getElementById('kpi-sess-fill');
+    if (sf) sf.style.width = '{{ sess_pct }}%';
+  }, 60);
+
+  /* ── gauge ──────────────────────────────────────────────────── */
+  function drawGauge(id, pct) {
+    var svg  = document.getElementById(id);
+    if (!svg) return;
+    var r    = 42;
+    var circ = 2 * Math.PI * r;
+    var fill = svg.querySelector('.gauge-fill');
+    if (!fill) return;
+    fill.setAttribute('stroke-dasharray', circ.toFixed(1));
+    fill.setAttribute('stroke-dashoffset', circ.toFixed(1));
+    fill.style.transition = 'none';
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        fill.style.transition = 'stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1)';
+        fill.setAttribute('stroke-dashoffset', (circ * (1 - pct / 100)).toFixed(1));
+      });
+    });
+    animNum(document.getElementById(id + '-pct'), pct, 1400);
+  }
+
+  /* ── chart ──────────────────────────────────────────────────── */
+  function renderChart(monthly, metric, curMo) {
+    var area = document.getElementById('chart-area');
+    if (!area) return;
+
+    var vals = monthly.map(function (m) {
+      return metric === 'seats' ? m.seats : (metric === 'hrs' ? m.hrs : m.sessions);
+    });
+    var maxV = Math.max.apply(null, vals) || 1;
+    var maxH = 110;
+
+    var html = '<div class="chart-bars">';
+    monthly.forEach(function (m, i) {
+      var v   = vals[i];
+      var h   = v > 0 ? Math.max(Math.round((v / maxV) * maxH), 4) : 0;
+      var cur = m.mo === curMo;
+      var lbl = m.month.substring(0, 3);
+      var dv  = v ? (metric === 'hrs' ? parseFloat(v).toFixed(1) : v) : '';
+      html += '<div class="cbar-col' + (cur ? ' cur-mo' : '') + '" data-idx="' + i + '" onclick="window._dbSel(' + i + ')" title="' + m.month + ': ' + (v || 0) + '">';
+      html += '<div class="cbar-val">' + dv + '</div>';
+      html += '<div class="cbar-bar-wrap"><div class="cbar-bar" style="height:' + h + 'px"></div></div>';
+      html += '<div class="cbar-mo">' + lbl + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    area.innerHTML = html;
+
+    if (CUR_IDX !== null) highlightBar(CUR_IDX);
+  }
+
+  function highlightBar(idx) {
+    document.querySelectorAll('.cbar-col').forEach(function (el) {
+      el.classList.remove('active');
+    });
+    var col = document.querySelector('.cbar-col[data-idx="' + idx + '"]');
+    if (col) col.classList.add('active');
+  }
+
+  function selectBar(idx) {
+    CUR_IDX = idx;
+    highlightBar(idx);
+    if (MONTHLY) showDetail(MONTHLY[idx]);
+  }
+  window._dbSel = selectBar;
+
+  function showDetail(m) {
+    var d = document.getElementById('month-detail');
+    if (!d || !m) return;
+    d.innerHTML =
+      '<span class="md-chip">' + m.month + '</span>' +
+      '<div class="md-stats">' +
+        '<div class="md-stat"><div class="md-v">' + (m.seats || 0).toLocaleString() + '</div><div class="md-l">Person Seats</div></div>' +
+        '<div class="md-stat"><div class="md-v">' + parseFloat(m.hrs || 0).toFixed(1) + '</div><div class="md-l">Man-Hours</div></div>' +
+        '<div class="md-stat"><div class="md-v">' + (m.sessions || 0) + '</div><div class="md-l">Sessions Done</div></div>' +
+      '</div>';
+  }
+
+  /* ── metric toggle ──────────────────────────────────────────── */
+  document.querySelectorAll('.ct-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.ct-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      CUR_METRIC = btn.dataset.metric;
+      if (MONTHLY) renderChart(MONTHLY, CUR_METRIC, _curMo);
+    });
+  });
+
+  var _curMo = '';
+
+  /* ── fetch ──────────────────────────────────────────────────── */
+  fetch('/api/dashboard-monthly')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      MONTHLY = data.monthly;
+      _curMo  = data.cur_mo;
+
+      drawGauge('gauge-bc', data.compliance.bc_pct);
+      drawGauge('gauge-wc', data.compliance.wc_pct);
+
+      renderChart(MONTHLY, CUR_METRIC, _curMo);
+
+      var curIdx = 0;
+      MONTHLY.forEach(function (m, i) { if (m.mo === _curMo) curIdx = i; });
+      selectBar(curIdx);
+    })
+    .catch(function () {
+      var area = document.getElementById('chart-area');
+      if (area) area.innerHTML = '<p style="color:var(--c-muted);font-size:12px;padding:16px 0;">Unable to load monthly data.</p>';
+    });
+
+})();
+</script>
 {% endblock %}
