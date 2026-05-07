@@ -2,7 +2,7 @@
 <!-- BCML Training MIS — Apple Product Page × Swiss Typography × Dense UI Mockups -->
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>BCML Training MIS — Sign in</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
@@ -27,7 +27,7 @@ nav{position:sticky;top:0;z-index:400;background:rgba(250,250,252,.88);backdrop-
 .nsign:hover{background:#3a3a3f;}
 
 /* ── HERO TOP ── */
-.hero{background:#050505;padding:96px 36px 64px;text-align:center;position:relative;overflow:clip;}
+.hero{background:#050505;padding:96px 36px 64px;text-align:center;position:relative;overflow:hidden;}
 .hero::before{content:'';position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse 70% 55% at 50% -10%,rgba(46,109,164,.18),transparent 70%);pointer-events:none;}
 .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:5px 16px;font-size:11px;font-weight:600;color:rgba(255,255,255,.55);letter-spacing:.06em;text-transform:uppercase;margin-bottom:28px;}
 .bdot{width:6px;height:6px;border-radius:50%;background:#34c267;box-shadow:0 0 8px rgba(52,194,103,.6);}
@@ -287,6 +287,75 @@ table.st tbody tr.hi td{color:rgba(255,255,255,.82);}
 .reveal-r.vis{opacity:1;transform:perspective(1200px) rotateY(-12deg);}
 .reveal-l{opacity:0;transform:translateX(-32px) perspective(1200px) rotateY(12deg);transition:opacity .8s cubic-bezier(.4,0,.2,1),transform .8s cubic-bezier(.4,0,.2,1);}
 .reveal-l.vis{opacity:1;transform:perspective(1200px) rotateY(12deg);}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media(max-width:768px){
+  .ni{padding:0 20px;height:48px;}
+  .bsep,.btms{display:none;}
+  .bname{font-size:13px;letter-spacing:-.2px;}
+  .na{display:none;}
+  .nsign{padding:6px 14px;font-size:12px;}
+  /* Hero */
+  .hero{padding:56px 20px 32px;}
+  .hero h1{font-size:clamp(38px,10vw,56px);letter-spacing:-3px;}
+  .hero-sub{font-size:15px;margin-bottom:28px;}
+  .hctas{flex-direction:column;align-items:center;gap:10px;}
+  .cta1,.cta2{width:100%;max-width:300px;justify-content:center;font-size:15px;}
+  /* Stage / browser mockup */
+  .stage{padding:0 12px 48px;}
+  .hero-browser{transform:none!important;animation:none!important;box-shadow:0 24px 56px rgba(0,0,0,.65);}
+  .bsb{display:none;}
+  .bapp{min-height:240px;}
+  /* Trust */
+  .trust{padding:24px 20px;}
+  .tchip{font-size:11px;padding:6px 12px;}
+  /* Feature sections */
+  .sec{padding:56px 20px;}
+  .rl,.rr{display:flex;flex-direction:column;gap:32px;}
+  .rr>.smk{order:-1;}
+  .secsub{font-size:15px;}
+  /* Modules */
+  .mods{padding:56px 20px;}
+  .mods-head{margin-bottom:32px;}
+  .mods-sub{font-size:15px;}
+  .mgrid{grid-template-columns:1fr;gap:12px;}
+  .mcard{padding:24px 18px 18px;}
+  /* Sign in */
+  .signin{padding:56px 20px;}
+  .signin-h{font-size:34px;letter-spacing:-1.5px;}
+  .signin-sub{font-size:14px;}
+  .gform{padding:24px 18px;}
+  .footer{padding:16px 20px;}
+  /* Perf: disable heavy 3D/parallax transforms on mobile */
+  .smki{animation:none!important;}
+  .reveal-r.vis,.reveal-l.vis{transform:none!important;}
+}
+@media(min-width:769px) and (max-width:1080px){
+  .ni{padding:0 24px;}
+  .rl,.rr{grid-template-columns:1fr 1fr;gap:48px;}
+  .mgrid{grid-template-columns:repeat(2,1fr);}
+  .sec{padding:80px 28px;}
+  .mods{padding:80px 28px;}
+  .sech{font-size:clamp(28px,3.5vw,48px);}
+}
+@media(max-height:600px) and (orientation:landscape) and (max-width:900px){
+  .ni{height:42px;}
+  .hero{padding:36px 20px 20px;}
+  .hero h1{font-size:clamp(28px,6vw,44px);letter-spacing:-2px;}
+  .hero-sub{font-size:14px;margin-bottom:18px;}
+  .hctas{flex-direction:row;gap:10px;}
+  .cta1,.cta2{font-size:14px;padding:10px 22px;}
+  .stage{padding:0 20px 32px;}
+  .signin{padding:36px 20px;}
+  .signin-h{font-size:28px;}
+}
+/* Safe-area: horizontal insets for notch/island in landscape */
+@supports (padding:env(safe-area-inset-left)){
+  .ni{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));}
+  @media(min-width:769px){
+    .ni{padding-left:max(36px,env(safe-area-inset-left));padding-right:max(36px,env(safe-area-inset-right));}
+  }
+}
 </style>
 </head>
 <body>
