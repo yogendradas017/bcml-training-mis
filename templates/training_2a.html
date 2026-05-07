@@ -4,7 +4,7 @@
 
 <!-- Bulk Upload -->
 <div class="card mb-4" style="border-left:5px solid #0d6efd;">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:#0d6efd;color:#fff;">
+  <div class="card-header ch-dark d-flex justify-content-between align-items-center">
     <span><i class="bi bi-cloud-upload"></i> Bulk Upload Training Records (Excel / CSV)</span>
     <a href="{{ url_for('training_template') }}" class="btn btn-light btn-sm">
       <i class="bi bi-file-earmark-arrow-down"></i> Download Template
@@ -31,7 +31,7 @@
 </div>
 
 <div class="card mb-4">
-  <div class="card-header" style="background:#198754;color:#fff;">
+  <div class="card-header ch-dark">
     <i class="bi bi-person-check"></i> Add Single Training Record
   </div>
   <div class="card-body">
@@ -117,7 +117,7 @@
 
 <!-- Records Table -->
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;">
+  <div class="card-header ch-dark d-flex justify-content-between align-items-center">
     <span><i class="bi bi-table"></i> Training Records — <strong>{{ records|length }}</strong> entries</span>
     <span class="badge" style="background:#dbeafe;color:#1d4ed8;">
       Total Hours: {{ records|sum(attribute='hrs')|round(1) }}
@@ -199,7 +199,7 @@
             <td style="padding:6px;"><code style="font-size:10px;word-break:break-all;">{{ rec.session_code or '—' }}</code></td>
             <td style="padding:6px 8px;font-weight:600;font-size:12px;">{{ rec.programme_name }}</td>
             <td style="padding:6px 4px;">
-              <span class="badge bg-secondary" style="font-size:10px;white-space:nowrap;">{{ rec.prog_type or '—' }}</span>
+              <span class="badge-unit" style="font-size:10px;white-space:nowrap;">{{ rec.prog_type or '—' }}</span>
             </td>
             <td style="padding:6px 4px;">
               {% if rec.host_plant_id == 99 %}
@@ -209,7 +209,7 @@
               {% elif rec.cal_source == 'TNI Driven' %}
                 <span class="badge bg-success" style="font-size:10px;">TNI</span>
               {% elif rec.session_code %}
-                <span class="badge bg-secondary" style="font-size:10px;">Linked</span>
+                <span class="badge-unit" style="font-size:10px;">Linked</span>
               {% else %}
                 <span class="text-muted" style="font-size:11px;">Manual</span>
               {% endif %}
