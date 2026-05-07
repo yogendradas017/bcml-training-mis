@@ -5,11 +5,11 @@
 {% if recent_exited and not show_exited %}
 <!-- Undo Exit — Dedicated Section at Top -->
 <div class="card mb-4" style="border:2px solid #f59e0b;">
-  <div class="card-header ch-dark d-flex align-items-center gap-2">
-    <i class="bi bi-arrow-counterclockwise fs-5"></i>
+  <div class="ch" style="gap:12px;">
+    <i class="bi bi-arrow-counterclockwise" style="font-size:16px;color:#d97706;"></i>
     <div>
       <strong>Undo Exit</strong> &nbsp;—&nbsp; {{ recent_exited|length }} employee(s) exited recently
-      <div style="font-size:11px;opacity:.85;">Available within 7 days of exit date</div>
+      <div style="font-size:11px;color:var(--c-muted);margin-top:1px;">Available within 7 days of exit date</div>
     </div>
   </div>
   <div class="card-body p-0">
@@ -23,14 +23,14 @@
         {% for emp in recent_exited %}
         <tr>
           <td class="text-muted">{{ loop.index }}</td>
-          <td><code>{{ emp.emp_code }}</code></td>
+          <td><span class="emp-code">{{ emp.emp_code }}</span></td>
           <td><strong>{{ emp.name }}</strong></td>
           <td><span class="badge bg-warning text-dark">{{ emp.exit_date or '—' }}</span></td>
           <td style="color:#6b7280;">{{ emp.exit_reason or '—' }}</td>
           <td>
             <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}"
                   onsubmit="return confirm('Undo exit for this employee?')">
-              <button type="submit" class="btn btn-sm btn-success py-0 px-3">
+              <button type="submit" class="btn-action btn-action-success">
                 <i class="bi bi-arrow-counterclockwise"></i> Undo Exit
               </button>
             </form>
@@ -45,13 +45,13 @@
 
 <!-- Add Employee Form -->
 <div class="card mb-4">
-  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+  <div class="ch" style="justify-content:space-between;">
     <span><i class="bi bi-person-plus"></i> Add New Employee</span>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('emp_bulk_template') }}" class="btn btn-sm btn-light">
-        <i class="bi bi-file-earmark-arrow-down"></i> Download Template
+      <a href="{{ url_for('emp_bulk_template') }}" class="btn btn-sm btn-outline-secondary" style="font-size:12px;">
+        <i class="bi bi-file-earmark-arrow-down"></i> Template
       </a>
-      <button class="btn btn-sm btn-success" type="button" data-bs-toggle="collapse" data-bs-target="#bulkUploadSection">
+      <button class="btn btn-sm btn-outline-secondary" style="font-size:12px;" type="button" data-bs-toggle="collapse" data-bs-target="#bulkUploadSection">
         <i class="bi bi-upload"></i> Bulk Upload
       </button>
     </div>
@@ -160,16 +160,16 @@
 
 <!-- Employee List -->
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:#1a3a5c; color:#fff;">
+  <div class="ch-dark" style="justify-content:space-between;">
     <span><i class="bi bi-people"></i>
       {% if show_exited %}All Employees (including exited){% else %}Active Employees{% endif %}
       — <strong>{{ employees|length }}</strong>
     </span>
     <div class="d-flex gap-2">
       {% if show_exited %}
-      <a href="{{ url_for('employees') }}" class="btn btn-sm btn-light">Show Active Only</a>
+      <a href="{{ url_for('employees') }}" class="btn btn-sm btn-light" style="font-size:12px;">Show Active Only</a>
       {% else %}
-      <a href="{{ url_for('employees') }}?show_exited=1" class="btn btn-sm btn-outline-light">Show Exited Too</a>
+      <a href="{{ url_for('employees') }}?show_exited=1" class="btn btn-sm btn-outline-light" style="font-size:12px;">Show Exited Too</a>
       {% endif %}
     </div>
   </div>
@@ -213,7 +213,7 @@
           {% for emp in employees %}
           <tr {% if not emp.is_active %}class="table-secondary text-muted"{% endif %} data-collar="{{ emp.collar or '' }}" data-dept="{{ emp.department or '' }}" data-gender="{{ emp.gender or '' }}" data-status="{{ 'Active' if emp.is_active else 'Exited' }}">
             <td>{{ loop.index }}</td>
-            <td><code>{{ emp.emp_code }}</code></td>
+            <td><span class="emp-code">{{ emp.emp_code }}</span></td>
             <td><strong>{{ emp.name }}</strong></td>
             <td style="font-size:13px;">{{ emp.designation or '—' }}</td>
             <td style="font-size:12px;">{{ emp.grade or '—' }}</td>
@@ -230,15 +230,15 @@
             <td style="font-size:13px;">{{ emp.gender or '—' }}</td>
             <td>
               {% if emp.is_active %}
-              <span class="badge bg-success">Active</span>
+              <span class="badge badge-active">Active</span>
               {% else %}
-              <span class="badge bg-danger">Exited</span>
-              {% if emp.exit_date %}<br><small>{{ emp.exit_date }}</small>{% endif %}
+              <span class="badge badge-exited">Exited</span>
+              {% if emp.exit_date %}<br><small class="text-muted" style="font-size:11px;">{{ emp.exit_date }}</small>{% endif %}
               {% endif %}
             </td>
             <td>
               {% if emp.is_active %}
-              <button class="btn btn-sm btn-outline-danger exit-btn"
+              <button class="btn-action btn-action-danger exit-btn"
                       data-emp-id="{{ emp.id }}"
                       data-emp-name="{{ emp.name }}"
                       data-exit-url="{{ url_for('exit_employee', emp_id=emp.id) }}">
@@ -247,7 +247,7 @@
               {% else %}
               <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}"
                     style="display:inline;">
-                <button type="submit" class="btn btn-sm btn-outline-success"
+                <button type="submit" class="btn-action btn-action-success"
                         onclick="return confirm('Reactivate {{ emp.name }}?')">
                   <i class="bi bi-arrow-counterclockwise"></i> Reactivate
                 </button>
