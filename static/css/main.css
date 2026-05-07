@@ -439,7 +439,7 @@ body {
 }
 .table thead th:first-child { border-radius: 0; }
 /* zebra stripes */
-.table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background var(--transition), border-left var(--transition); }
+.table tbody tr { border-bottom: 1px solid #e8ecf0; transition: background var(--transition), border-left var(--transition); }
 .table tbody tr:nth-child(even) { background-color: #fafbff; }
 .table tbody tr:hover {
   background: linear-gradient(90deg, #f0f6ff, #f0f6ff) !important;
@@ -823,3 +823,28 @@ th:has(.cb-all), td:has(.cb-row) { width: 36px; text-align: center; }
 .comp-code  { font-size: 10px; color: var(--c-muted); margin-top: 1px; }
 .comp-pct   { font-size: 1.7rem; font-weight: 900; line-height: 1.1; margin: 8px 0 2px; }
 .comp-lbl   { font-size: 10.5px; color: var(--c-muted); }
+
+/* ── EMP CODE CHIP ──────────────────────────────────────────── */
+.emp-code {
+  font-family: ui-monospace, 'SF Mono', monospace;
+  font-size: 11.5px; color: #374151;
+  background: #f3f4f6; padding: 2px 7px;
+  border-radius: 5px; letter-spacing: .3px;
+}
+
+/* ── STATUS BADGES ──────────────────────────────────────────── */
+.badge-active { background: #dcfce7; color: #166534; }
+.badge-exited { background: #fee2e2; color: #991b1b; }
+
+/* ── ACTION BUTTONS (small text+icon) ───────────────────────── */
+.btn-action {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  text-decoration: none; transition: all var(--transition);
+  background: transparent; white-space: nowrap; line-height: 1.4;
+}
+.btn-action-danger  { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
+.btn-action-danger:hover  { background: #fee2e2; border-color: #f87171; color: #b91c1c; }
+.btn-action-success { color: #059669; border-color: #6ee7b7; background: #f0fdf4; }
+.btn-action-success:hover { background: #dcfce7; border-color: #34d399; color: #047857; }
