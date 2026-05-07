@@ -16,9 +16,9 @@
   {% for num, icon, label, sub in steps_info %}
   <div style="flex:1;text-align:center;padding:14px 8px;background:#f8fafc;border:1px solid #e5e7eb;
        border-radius:{% if loop.first %}12px 0 0 12px{% elif loop.last %}0 12px 12px 0{% else %}0{% endif %};">
-    <div style="width:32px;height:32px;border-radius:50%;background:#6366f1;color:#fff;
+    <div style="width:32px;height:32px;border-radius:50%;background:#2e6da4;color:#fff;
          display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;margin-bottom:6px;">{{ num }}</div>
-    <div><i class="bi {{ icon }}" style="color:#6366f1;font-size:16px;display:block;margin-bottom:3px;"></i></div>
+    <div><i class="bi {{ icon }}" style="color:#2e6da4;font-size:16px;display:block;margin-bottom:3px;"></i></div>
     <div style="font-weight:700;color:#1e3a5f;font-size:12px;">{{ label }}</div>
     <div style="color:#9ca3af;font-size:11px;">{{ sub }}</div>
   </div>
@@ -30,8 +30,8 @@
 </div>
 
 <!-- Step 1: Upload messy file -->
-<div class="card mb-4" style="border-left:5px solid #6366f1;">
-  <div class="card-header" style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;">
+<div class="card mb-4" style="border-left:5px solid #2e6da4;">
+  <div class="card-header" style="background:linear-gradient(135deg,#2e6da4,#2e6da4);color:#fff;">
     <i class="bi bi-cloud-upload me-1"></i> Step 1 — Upload Your Messy TNI File
   </div>
   <div class="card-body">
@@ -58,7 +58,7 @@
           <div class="form-text" style="font-size:11px;">Use if your file has a title/logo above the headers.</div>
         </div>
         <div class="col-md-2">
-          <button type="submit" class="btn w-100 fw-semibold" style="background:#6366f1;color:#fff;border:none;">
+          <button type="submit" class="btn w-100 fw-semibold" style="background:#2e6da4;color:#fff;border:none;">
             <i class="bi bi-download me-1"></i> Get Review File
           </button>
         </div>
@@ -68,9 +68,9 @@
 </div>
 
 <!-- Step 2: What you get -->
-<div class="card mb-4" style="border:1px dashed #c7d2fe;background:#f5f3ff;">
+<div class="card mb-4" style="border:1px dashed #bdd6f5;background:#f0f6ff;">
   <div class="card-body py-3">
-    <div style="font-size:13px;font-weight:700;color:#4f46e5;margin-bottom:10px;">
+    <div style="font-size:13px;font-weight:700;color:#2e6da4;margin-bottom:10px;">
       <i class="bi bi-file-earmark-excel me-1"></i> What the Review Excel looks like
     </div>
     <div class="row g-2" style="font-size:12px;">

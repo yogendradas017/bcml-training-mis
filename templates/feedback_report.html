@@ -24,9 +24,9 @@
 {# ── Overall scorecards ──────────────────────────────────────────────────── #}
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
-    <div class="card text-center h-100" style="border-top:4px solid #6366f1;">
+    <div class="card text-center h-100" style="border-top:4px solid #2e6da4;">
       <div class="card-body py-3">
-        <div style="font-size:32px;font-weight:700;color:#6366f1;">{{ rows|length }}</div>
+        <div style="font-size:32px;font-weight:700;color:#2e6da4;">{{ rows|length }}</div>
         <div style="font-size:12px;color:#6b7280;">Responses</div>
       </div>
     </div>
@@ -103,7 +103,7 @@
           <td style="padding:5px 12px;">{{ label }}</td>
           <td class="text-center" style="padding:5px 8px;color:#ef4444;">{{ s.sd }}</td>
           <td class="text-center" style="padding:5px 8px;color:#f97316;">{{ s.d }}</td>
-          <td class="text-center" style="padding:5px 8px;color:#6366f1;">{{ s.a }}</td>
+          <td class="text-center" style="padding:5px 8px;color:#2e6da4;">{{ s.a }}</td>
           <td class="text-center" style="padding:5px 8px;color:#10b981;">{{ s.sa }}</td>
           <td class="text-center" style="padding:5px 8px;font-weight:600;">{{ s.avg or '—' }}</td>
           <td class="text-center" style="padding:5px 8px;">
@@ -153,7 +153,7 @@
           <td style="padding:5px 12px;">{{ label }}</td>
           <td class="text-center" style="padding:5px 8px;color:#ef4444;">{{ s.sd }}</td>
           <td class="text-center" style="padding:5px 8px;color:#f97316;">{{ s.d }}</td>
-          <td class="text-center" style="padding:5px 8px;color:#6366f1;">{{ s.a }}</td>
+          <td class="text-center" style="padding:5px 8px;color:#2e6da4;">{{ s.a }}</td>
           <td class="text-center" style="padding:5px 8px;color:#10b981;">{{ s.sa }}</td>
           <td class="text-center" style="padding:5px 8px;font-weight:600;">{{ s.avg or '—' }}</td>
           <td class="text-center" style="padding:5px 8px;">
@@ -246,7 +246,7 @@
                        'q_inputs_appropriate','q_communication_clear',
                        'q_queries_responded','q_well_involved'] %}
           <td class="text-center" style="padding:5px 6px;font-weight:600;
-              color:{% if r[q]==4 %}#059669{% elif r[q]==3 %}#6366f1{% elif r[q]==2 %}#d97706{% elif r[q]==1 %}#dc2626{% else %}#9ca3af{% endif %};">
+              color:{% if r[q]==4 %}#059669{% elif r[q]==3 %}#2e6da4{% elif r[q]==2 %}#d97706{% elif r[q]==1 %}#dc2626{% else %}#9ca3af{% endif %};">
             {{ r[q] or '—' }}
           </td>
           {% endfor %}

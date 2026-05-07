@@ -7,7 +7,7 @@
   <div class="col-md-4">
     <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Unique Programmes — FY {{ fy }}</div>
-      <div class="sc-val" style="font-size:36px;font-weight:800;color:#6366f1;line-height:1;">{{ unique_progs }}</div>
+      <div class="sc-val" style="font-size:36px;font-weight:800;color:#2e6da4;line-height:1;">{{ unique_progs }}</div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
         <span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">{{ progs_in_demand }} in demand</span>
         <span style="font-size:11px;color:#9ca3af;">still uncovered</span>
@@ -56,7 +56,7 @@
 {% if session_modes %}
 <div class="row g-3 mb-4">
   {% for sm in session_modes %}
-  {% set color = '#6366f1' if sm.mode == 'Classroom' else '#10b981' if sm.mode == 'OJT' else '#3b82f6' if sm.mode == 'Online' else '#f59e0b' if sm.mode == 'SOP' else '#9ca3af' %}
+  {% set color = '#2e6da4' if sm.mode == 'Classroom' else '#10b981' if sm.mode == 'OJT' else '#3b82f6' if sm.mode == 'Online' else '#f59e0b' if sm.mode == 'SOP' else '#9ca3af' %}
   <div class="col">
     <div style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:16px 18px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">{{ sm.mode }}</div>

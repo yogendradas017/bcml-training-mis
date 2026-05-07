@@ -26,7 +26,7 @@
   {% set cards = [
     ('Blue Collar', compliance.bc_pct, compliance.bc_actual, compliance.bc_mandate, compliance.bc_emp, 12, '#3b82f6', '#1d4ed8'),
     ('White Collar', compliance.wc_pct, compliance.wc_actual, compliance.wc_mandate, compliance.wc_emp, 24, '#10b981', '#065f46'),
-    ('Overall', compliance.total_pct, compliance.bc_actual + compliance.wc_actual, compliance.bc_mandate + compliance.wc_mandate, compliance.bc_emp + compliance.wc_emp, '—', '#8b5cf6', '#5b21b6'),
+    ('Overall', compliance.total_pct, compliance.bc_actual + compliance.wc_actual, compliance.bc_mandate + compliance.wc_mandate, compliance.bc_emp + compliance.wc_emp, '—', '#1a7a3c', '#1e4c7a'),
   ] %}
   {% for label, pct, actual, mandate, emp, hrs, c1, c2 in cards %}
   <div class="col-md-4">
@@ -84,15 +84,15 @@
           <th colspan="6" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;">No. of Programmes</th>
           <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;">Person Seats Trained</th>
           <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;">Man-Hours</th>
-          <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;background:#5b21b6;">% Covered (TNI)</th>
+          <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;background:#1e4c7a;">% Covered (TNI) — YTD Cumulative</th>
         </tr>
         <tr style="background:#2e5585;color:#fff;text-align:center;font-size:10px;">
           <th style="padding:5px 2px;">BC</th><th style="padding:5px 2px;">WC</th><th style="padding:5px 2px;">Cmn</th><th style="padding:5px 2px;">Tot</th><th style="padding:5px 2px;">Int</th><th style="padding:5px 2px;">Ext</th>
           <th style="padding:5px 2px;">BC</th><th style="padding:5px 2px;">WC</th><th style="padding:5px 2px;">Tot</th>
           <th style="padding:5px 2px;">BC</th><th style="padding:5px 2px;">WC</th><th style="padding:5px 2px;">Tot</th>
-          <th style="padding:5px 2px;background:#4c1d95;">BC%</th>
-          <th style="padding:5px 2px;background:#4c1d95;">WC%</th>
-          <th style="padding:5px 2px;background:#4c1d95;">Tot%</th>
+          <th style="padding:5px 2px;background:#1e4c7a;">BC%</th>
+          <th style="padding:5px 2px;background:#1e4c7a;">WC%</th>
+          <th style="padding:5px 2px;background:#1e4c7a;">Tot%</th>
         </tr>
       </thead>
       <tbody>
@@ -130,9 +130,9 @@
           <td style="padding:7px 3px;">{{ totals.bc_hrs or 0 }}</td>
           <td style="padding:7px 3px;">{{ totals.wc_hrs or 0 }}</td>
           <td style="padding:7px 3px;">{{ totals.total_hrs or 0 }}</td>
-          <td style="padding:7px 3px;background:#4c1d95;">{{ totals.bc_cov or 0 }}%</td>
-          <td style="padding:7px 3px;background:#4c1d95;">{{ totals.wc_cov or 0 }}%</td>
-          <td style="padding:7px 3px;background:#4c1d95;">{{ totals.tot_cov or 0 }}%</td>
+          <td style="padding:7px 3px;background:#1e4c7a;">{{ totals.bc_cov or 0 }}%</td>
+          <td style="padding:7px 3px;background:#1e4c7a;">{{ totals.wc_cov or 0 }}%</td>
+          <td style="padding:7px 3px;background:#1e4c7a;">{{ totals.tot_cov or 0 }}%</td>
         </tr>
       </tfoot>
     </table>

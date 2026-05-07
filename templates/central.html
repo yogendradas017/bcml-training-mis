@@ -174,7 +174,7 @@
         </div>
         <div class="d-flex gap-3">
           <div>
-            <div style="font-size:22px;font-weight:800;color:#4f46e5;line-height:1;">{{ q.sessions }}</div>
+            <div style="font-size:22px;font-weight:800;color:#2e6da4;line-height:1;">{{ q.sessions }}</div>
             <div style="font-size:11px;color:#9ca3af;">Sessions</div>
           </div>
           <div>
@@ -217,7 +217,7 @@
             {% for q in quarterly %}
             {% set pq = q.plants[i] %}
             <td style="border-left:2px solid #f1f5f9;">
-              <span class="badge" style="background:#ede9fe;color:#5b21b6;">{{ pq.sessions }}</span>
+              <span class="badge" style="background:#e8f0fe;color:#1e4c7a;">{{ pq.sessions }}</span>
             </td>
             <td>
               <span class="badge" style="background:#d1fae5;color:#065f46;">{{ pq.manhours }}</span>
@@ -230,7 +230,7 @@
           <tr>
             <td><strong>TOTAL</strong></td>
             {% for q in quarterly %}
-            <td style="border-left:2px solid #c7d2fe;"><strong>{{ q.sessions }}</strong></td>
+            <td style="border-left:2px solid #bdd6f5;"><strong>{{ q.sessions }}</strong></td>
             <td><strong>{{ q.manhours }}</strong></td>
             {% endfor %}
           </tr>

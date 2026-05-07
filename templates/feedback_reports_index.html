@@ -33,7 +33,7 @@
             {{ r.plan_start or '—' }}{% if r.plan_end and r.plan_end != r.plan_start %} – {{ r.plan_end }}{% endif %}
           </td>
           <td style="padding:8px 14px;">
-            <span class="badge" style="background:{% if r.status=='Conducted' %}#059669{% elif r.status=='To Be Planned' %}#9ca3af{% else %}#6366f1{% endif %};">
+            <span class="badge" style="background:{% if r.status=='Conducted' %}#059669{% elif r.status=='To Be Planned' %}#9ca3af{% else %}#2e6da4{% endif %};">
               {{ r.status }}
             </span>
           </td>

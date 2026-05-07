@@ -166,7 +166,11 @@ def _register(app):
             return redirect(url_for('central_calendar'))
         f = request.form
         db = get_db()
-        prog_name = _canonical_prog(f['programme_name'].strip(), CENTRAL_PLANT_ID, db)
+        prog_name_raw = f['programme_name'].strip()
+        prog_name = _canonical_prog(prog_name_raw, CENTRAL_PLANT_ID, db, strict=True)
+        if prog_name is None:
+            flash(f'Programme "{prog_name_raw}" not found in Central Programme Master. Add it to the master list first.', 'danger')
+            return redirect(url_for('central_calendar'))
         prog_type = f.get('prog_type', '')
         dur = float(f.get('duration_hrs') or 0)
         if dur <= 0:
