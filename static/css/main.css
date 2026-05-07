@@ -20,7 +20,7 @@
   --transition: .18s cubic-bezier(.4,0,.2,1);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
 body {
   font-family: 'Inter', system-ui, sans-serif;
   background: var(--c-bg);
@@ -28,6 +28,7 @@ body {
   font-size: 14px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ── SCROLLBAR ─────────────────────────────────────────────── */
@@ -101,10 +102,11 @@ body {
 ══════════════════════════════════════════════════════════════ */
 .sidebar {
   position: fixed; top: 0; left: 0;
-  width: var(--sb-w); height: 100vh;
+  width: var(--sb-w); height: 100vh; height: 100dvh;
   background: linear-gradient(175deg, #0d1117 0%, #161b27 50%, #0d1117 100%);
   display: flex; flex-direction: column;
   overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: thin; scrollbar-color: #1f2937 transparent;
   z-index: 1000;
   border-right: 1px solid rgba(255,255,255,.04);
@@ -222,7 +224,9 @@ body {
 /* ══════════════════════════════════════════════════════════════
    MAIN LAYOUT
 ══════════════════════════════════════════════════════════════ */
-.main-wrap { margin-left: var(--sb-w); min-height: 100vh; display: flex; flex-direction: column; width: calc(100vw - var(--sb-w)); overflow-x: auto; }
+/* overflow-x intentionally removed — fixes position:sticky topbar in Safari.
+   html { overflow-x: hidden } above is the backstop against body overflow. */
+.main-wrap { margin-left: var(--sb-w); min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; width: calc(100vw - var(--sb-w)); }
 
 /* ── TOPBAR ────────────────────────────────────────────────── */
 .topbar {
@@ -233,7 +237,7 @@ body {
   border-bottom: 1px solid rgba(0,0,0,.08);
   padding: 0 28px;
   display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; z-index: 500;
+  position: -webkit-sticky; position: sticky; top: 0; z-index: 500;
   box-shadow: 0 1px 0 rgba(0,0,0,.04);
 }
 .topbar-left { display: flex; align-items: center; gap: 10px; }
@@ -681,7 +685,7 @@ body {
   :root { --sb-w: 220px; }
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
-  .main-wrap { margin-left: 0; width: 100vw; }
+  .main-wrap { margin-left: 0; width: 100%; }
   .topbar { padding: 0 16px; }
   .page-body { padding: 20px 16px; }
   #menu-btn { display: flex; }
@@ -702,6 +706,66 @@ body {
   .btn { padding: 8px 14px; font-size: 12.5px; }
   .topbar-title { font-size: 13px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .user-btn .uname { display: none; }
+}
+/* ══════════════════════════════════════════════════════════════
+   CROSS-DEVICE & SAFARI COMPATIBILITY
+══════════════════════════════════════════════════════════════ */
+
+/* Safe-area insets — iPhone notch / Dynamic Island / home indicator */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .sidebar { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  @media (max-width: 992px) {
+    .topbar {
+      padding-left:  max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+    }
+  }
+}
+
+/* Suppress tap highlight & improve touch responsiveness */
+a, button, .btn, .btn-action, .btn-icon, .plant-chip,
+.pager-btn, .sb-nav a, .user-btn, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Landscape phone — compact sidebar header, tighter page */
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 992px) {
+  .sb-brand { padding: 10px 14px; }
+  .sb-logo-box { width: 44px; height: 44px; }
+  .sb-logo-box img { width: 40px; height: 40px; }
+  .sb-brand-name { font-size: 10px; }
+  .sb-brand-sub { display: none; }
+  .sb-label { padding: 10px 16px 4px; }
+  .page-body { padding: 10px 14px; }
+  .sc { padding: 14px 14px; gap: 6px; }
+  .sc-val { font-size: 20px; }
+  .sc-icon { font-size: 18px; margin-bottom: 2px; }
+  .topbar { height: 44px; }
+}
+
+/* Extra-small phones (< 360px width) */
+@media (max-width: 359px) {
+  .topbar-title { max-width: 100px; }
+  .t-plant { display: none; }
+  .page-body { padding: 10px; }
+  .sc-val { font-size: 20px; }
+}
+
+/* Mid-tablet (769–991px) — slightly more padding than mobile */
+@media (min-width: 769px) and (max-width: 991px) {
+  .page-body { padding: 18px 20px; }
+}
+
+/* Large desktop (≥ 1440px) — generous spacing */
+@media (min-width: 1440px) {
+  .page-body { padding: 28px 40px; }
+}
+
+/* Ultra-wide / TV (≥ 1920px) */
+@media (min-width: 1920px) {
+  :root { --sb-w: 240px; }
+  .page-body { padding: 32px 56px; }
 }
 /* ══════════════════════════════════════════════════════════════
    BULK ACTION BAR
