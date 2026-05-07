@@ -26,21 +26,21 @@ nav{position:sticky;top:0;z-index:400;background:rgba(250,250,252,.88);backdrop-
 .nsign:hover{background:#3a3a3f;}
 
 /* ── HERO TOP ── */
-.hero{background:#fff;padding:96px 36px 64px;text-align:center;position:relative;overflow:clip;}
-.hero::before{content:'';position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse 70% 55% at 50% -10%,rgba(46,109,164,.07),transparent 70%);pointer-events:none;}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;background:#f5f5f7;border:1px solid #e8e8ed;border-radius:99px;padding:5px 16px;font-size:11px;font-weight:600;color:#6e6e73;letter-spacing:.06em;text-transform:uppercase;margin-bottom:28px;}
+.hero{background:#050505;padding:96px 36px 64px;text-align:center;position:relative;overflow:clip;}
+.hero::before{content:'';position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse 70% 55% at 50% -10%,rgba(46,109,164,.18),transparent 70%);pointer-events:none;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:5px 16px;font-size:11px;font-weight:600;color:rgba(255,255,255,.55);letter-spacing:.06em;text-transform:uppercase;margin-bottom:28px;}
 .bdot{width:6px;height:6px;border-radius:50%;background:#34c267;box-shadow:0 0 8px rgba(52,194,103,.6);}
-.hero h1{font-size:clamp(52px,8vw,100px);font-weight:800;line-height:1.02;letter-spacing:-5px;color:#1d1d1f;margin-bottom:22px;}
-.hero h1 .acc{background:linear-gradient(135deg,#2e6da4,#1a7a3c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
-.hero-sub{font-size:19px;font-weight:400;color:#6e6e73;line-height:1.6;max-width:540px;margin:0 auto 42px;}
+.hero h1{font-size:clamp(52px,8vw,100px);font-weight:800;line-height:1.02;letter-spacing:-5px;color:#fff;margin-bottom:22px;}
+.hero h1 .acc{background:linear-gradient(135deg,#4f9fd4,#34c267);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-sub{font-size:19px;font-weight:400;color:rgba(255,255,255,.58);line-height:1.6;max-width:540px;margin:0 auto 42px;}
 .hctas{display:flex;gap:12px;justify-content:center;margin-bottom:0;}
-.cta1{display:inline-flex;align-items:center;gap:8px;font-size:16px;font-weight:600;background:#1d1d1f;color:#fff;padding:13px 28px;border-radius:24px;text-decoration:none;transition:background .15s;}
-.cta1:hover{background:#3a3a3f;}
-.cta2{display:inline-flex;align-items:center;gap:8px;font-size:16px;font-weight:600;color:#2e6da4;padding:13px 28px;border-radius:24px;text-decoration:none;border:1.5px solid #d2d2d7;transition:border-color .15s,background .15s;}
-.cta2:hover{border-color:#2e6da4;background:#f0f6ff;}
+.cta1{display:inline-flex;align-items:center;gap:8px;font-size:16px;font-weight:600;background:#fff;color:#1d1d1f;padding:13px 28px;border-radius:24px;text-decoration:none;transition:background .15s,color .15s;}
+.cta1:hover{background:#e8e8ed;color:#000;}
+.cta2{display:inline-flex;align-items:center;gap:8px;font-size:16px;font-weight:600;color:#7ab8e8;padding:13px 28px;border-radius:24px;text-decoration:none;border:1.5px solid rgba(255,255,255,.18);transition:border-color .15s,background .15s;}
+.cta2:hover{border-color:#7ab8e8;background:rgba(46,109,164,.14);}
 
 /* ── HERO STAGE (dark) ── */
-.stage{background:linear-gradient(180deg,#fff 0%,#fff 4%,#0a0d14 10%,#0a0d14 100%);padding:0 36px 100px;position:relative;overflow:hidden;}
+.stage{background:#0a0d14;padding:0 36px 100px;position:relative;overflow:hidden;}
 .stage-glow{position:absolute;top:120px;left:50%;transform:translateX(-50%);width:1100px;height:480px;background:radial-gradient(ellipse,rgba(46,109,164,.22) 0%,rgba(26,122,60,.14) 45%,transparent 70%);pointer-events:none;animation:gP 9s ease-in-out infinite alternate;}
 @keyframes gP{0%{opacity:.6;transform:translateX(-50%) scale(1)}100%{opacity:1;transform:translateX(-50%) scale(1.06)}}
 .stage-inner{max-width:1160px;margin:0 auto;position:relative;z-index:1;}
@@ -849,7 +849,10 @@ gsap.registerPlugin(ScrollTrigger);
 (function initBgPaths() {
   var SVG_NS = 'http://www.w3.org/2000/svg';
 
+  var _maskIdx = 0;
+
   function buildLayer(container, strokeColor, position) {
+    var uid = 'bgm' + (++_maskIdx);
     var svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', '0 0 696 316');
     svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
@@ -859,6 +862,30 @@ gsap.registerPlugin(ScrollTrigger);
       width: '100%', height: '100%',
       zIndex: '0', pointerEvents: 'none', display: 'block'
     });
+
+    /* radial fade mask — fades to transparent in center so lines don't cut through text */
+    var defs = document.createElementNS(SVG_NS, 'defs');
+    var grad = document.createElementNS(SVG_NS, 'radialGradient');
+    grad.setAttribute('id', uid + 'g');
+    grad.setAttribute('cx', '50%'); grad.setAttribute('cy', '50%'); grad.setAttribute('r', '50%');
+    [['0%','0'],['38%','0'],['68%','1'],['100%','1']].forEach(function(s){
+      var stop = document.createElementNS(SVG_NS,'stop');
+      stop.setAttribute('offset', s[0]);
+      stop.setAttribute('stop-color','white');
+      stop.setAttribute('stop-opacity', s[1]);
+      grad.appendChild(stop);
+    });
+    var mask = document.createElementNS(SVG_NS, 'mask');
+    mask.setAttribute('id', uid + 'm');
+    var mrect = document.createElementNS(SVG_NS, 'rect');
+    mrect.setAttribute('width','696'); mrect.setAttribute('height','316');
+    mrect.setAttribute('fill','url(#' + uid + 'g)');
+    mask.appendChild(mrect);
+    defs.appendChild(grad); defs.appendChild(mask);
+    svg.appendChild(defs);
+
+    var g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('mask', 'url(#' + uid + 'm)');
 
     var N = 36;
     for (var i = 0; i < N; i++) {
@@ -882,8 +909,7 @@ gsap.registerPlugin(ScrollTrigger);
       var baseOp = 0.1 + i * 0.03;
       el.style.opacity = baseOp * 0.5;
 
-      var len = 0; // calculate after append
-      svg.appendChild(el);
+      g.appendChild(el);
 
       (function(elem, bOp) {
         var dur = 20 + Math.random() * 10;
@@ -897,6 +923,7 @@ gsap.registerPlugin(ScrollTrigger);
         gsap.to(elem, { opacity: bOp, duration: dur*0.5, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: delay });
       })(el, baseOp);
     }
+    svg.appendChild(g);
     container.insertBefore(svg, container.firstChild);
   }
 
@@ -908,8 +935,8 @@ gsap.registerPlugin(ScrollTrigger);
     Array.from(hero.children).forEach(function(c) {
       if (c.tagName !== 'svg') { c.style.position = 'relative'; c.style.zIndex = '1'; }
     });
-    buildLayer(hero,  '#1d1d1f', 1);
-    buildLayer(hero,  '#1d1d1f', -1);
+    buildLayer(hero,  '#ffffff', 1);
+    buildLayer(hero,  '#ffffff', -1);
   }
 
   /* ── Signin section: white lines on dark glass ── */
