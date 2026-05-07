@@ -3,37 +3,54 @@
 {% block content %}
 
 <!-- Grand Totals -->
+{% set grand_sess_pct = (grand.conducted / grand.sessions * 100)|round(0)|int if grand.sessions else 0 %}
 <div class="row g-3 mb-4 stagger">
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-violet">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-people-fill"></i></div>
-      <div class="sc-val">{{ grand.total_emp }}</div>
-      <div class="sc-lbl">Total Employees (All Plants)</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-people-fill"></i></div>
+        <div class="sc-val">{{ grand.total_emp }}</div>
+        <div class="sc-lbl">Total Employees</div>
+        <div class="sc-sub">Across {{ plants|length }} plants</div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
     </div>
   </div>
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-blue">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-calendar3"></i></div>
-      <div class="sc-val">{{ grand.sessions }}</div>
-      <div class="sc-lbl">Sessions Planned</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-calendar3"></i></div>
+        <div class="sc-val">{{ grand.sessions }}</div>
+        <div class="sc-lbl">Sessions Planned</div>
+        <div class="sc-sub">FY 2026–27</div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
     </div>
   </div>
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-green">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-check-circle-fill"></i></div>
-      <div class="sc-val">{{ grand.conducted }}</div>
-      <div class="sc-lbl">Sessions Conducted</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-check-circle-fill"></i></div>
+        <div class="sc-val">{{ grand.conducted }}</div>
+        <div class="sc-lbl">Sessions Conducted</div>
+        <div class="sc-sub">
+          {% if grand.sessions %}
+          <span class="{% if grand_sess_pct >= 75 %}up{% elif grand_sess_pct < 40 %}down{% endif %}">{{ grand_sess_pct }}%</span> completion rate
+          {% else %}No sessions yet{% endif %}
+        </div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:{{ grand_sess_pct }}%"></div></div>
     </div>
   </div>
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-amber">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-clock-history"></i></div>
-      <div class="sc-val">{{ grand.manhours }}</div>
-      <div class="sc-lbl">Total Man-Hours</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-clock-history"></i></div>
+        <div class="sc-val">{{ grand.manhours }}</div>
+        <div class="sc-lbl">Total Man-Hours</div>
+        <div class="sc-sub">Combined all plants</div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
     </div>
   </div>
 </div>
