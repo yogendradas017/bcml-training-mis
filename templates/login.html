@@ -27,7 +27,7 @@ nav{position:sticky;top:0;z-index:400;background:rgba(250,250,252,.88);backdrop-
 
 /* ── HERO TOP ── */
 .hero{background:#fff;padding:96px 36px 64px;text-align:center;position:relative;overflow:clip;}
-.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 55% at 50% -10%,rgba(46,109,164,.07),transparent 70%);pointer-events:none;}
+.hero::before{content:'';position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse 70% 55% at 50% -10%,rgba(46,109,164,.07),transparent 70%);pointer-events:none;}
 .hero-badge{display:inline-flex;align-items:center;gap:8px;background:#f5f5f7;border:1px solid #e8e8ed;border-radius:99px;padding:5px 16px;font-size:11px;font-weight:600;color:#6e6e73;letter-spacing:.06em;text-transform:uppercase;margin-bottom:28px;}
 .bdot{width:6px;height:6px;border-radius:50%;background:#34c267;box-shadow:0 0 8px rgba(52,194,103,.6);}
 .hero h1{font-size:clamp(52px,8vw,100px);font-weight:800;line-height:1.02;letter-spacing:-5px;color:#1d1d1f;margin-bottom:22px;}
@@ -840,6 +840,90 @@ table.st tbody tr.hi td{color:rgba(255,255,255,.82);}
 
 <script>
 gsap.registerPlugin(ScrollTrigger);
+
+/* ══════════════════════════════════════════════
+   BACKGROUND PATHS — exact 21st.dev port
+   Animated stroke lines behind hero + signin.
+   Paths stay in SVG layer (z:0), content z:1+.
+══════════════════════════════════════════════ */
+(function initBgPaths() {
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+
+  function buildLayer(container, strokeColor, position) {
+    var svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 696 316');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    svg.setAttribute('aria-hidden', 'true');
+    Object.assign(svg.style, {
+      position: 'absolute', inset: '0',
+      width: '100%', height: '100%',
+      zIndex: '0', pointerEvents: 'none', display: 'block'
+    });
+
+    var N = 36;
+    for (var i = 0; i < N; i++) {
+      var d = [
+        'M-' + (380 - i*5*position) + ' -' + (189 + i*6),
+        'C-' + (380 - i*5*position) + ' -' + (189 + i*6),
+        ' -' + (312 - i*5*position) + ' ' + (216 - i*6),
+        ' '  + (152 - i*5*position) + ' ' + (343 - i*6),
+        'C'  + (616 - i*5*position) + ' ' + (470 - i*6),
+        ' '  + (684 - i*5*position) + ' ' + (875 - i*6),
+        ' '  + (684 - i*5*position) + ' ' + (875 - i*6)
+      ].join('');
+
+      var el = document.createElementNS(SVG_NS, 'path');
+      el.setAttribute('d', d);
+      el.setAttribute('fill', 'none');
+      el.setAttribute('stroke', strokeColor);
+      el.setAttribute('stroke-width', (0.5 + i * 0.03).toFixed(2));
+      el.setAttribute('stroke-linecap', 'round');
+
+      var baseOp = 0.1 + i * 0.03;
+      el.style.opacity = baseOp * 0.5;
+
+      var len = 0; // calculate after append
+      svg.appendChild(el);
+
+      (function(elem, bOp) {
+        var dur = 20 + Math.random() * 10;
+        var delay = Math.random() * dur;
+        var l = elem.getTotalLength ? elem.getTotalLength() : 900;
+        elem.style.strokeDasharray  = (l * 0.3) + ' ' + l;
+        elem.style.strokeDashoffset = '0';
+
+        gsap.to(elem, { strokeDashoffset: -l, duration: dur, ease: 'none', repeat: -1, yoyo: true, delay: delay });
+        gsap.to(elem, { strokeDasharray: l + ' ' + l, duration: dur*0.5, ease: 'power1.inOut', yoyo: true, repeat: -1, delay: delay });
+        gsap.to(elem, { opacity: bOp, duration: dur*0.5, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: delay });
+      })(el, baseOp);
+    }
+    container.insertBefore(svg, container.firstChild);
+  }
+
+  /* ── Hero section: 2 layers (position ±1), dark lines on white ── */
+  var hero = document.querySelector('.hero');
+  if (hero) {
+    hero.style.position = 'relative';
+    /* lift all direct children above SVG layer */
+    Array.from(hero.children).forEach(function(c) {
+      if (c.tagName !== 'svg') { c.style.position = 'relative'; c.style.zIndex = '1'; }
+    });
+    buildLayer(hero,  '#1d1d1f', 1);
+    buildLayer(hero,  '#1d1d1f', -1);
+  }
+
+  /* ── Signin section: white lines on dark glass ── */
+  var signin = document.querySelector('.signin');
+  if (signin) {
+    signin.style.position = 'relative';
+    signin.style.overflow = 'hidden';
+    Array.from(signin.children).forEach(function(c) {
+      c.style.position = 'relative'; c.style.zIndex = '1';
+    });
+    buildLayer(signin, '#ffffff', 1);
+    buildLayer(signin, '#ffffff', -1);
+  }
+})();
 
 // ── PARALLAX: hero text layers ──
 gsap.to('.hero-badge', { y: -30, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 } });
