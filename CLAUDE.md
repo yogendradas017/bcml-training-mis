@@ -23,13 +23,29 @@ run.bat
 
 **Environment variables:**
 - `SECRET_KEY` — Flask secret (defaults to a hardcoded dev key)
-- `DATABASE_PATH` — override SQLite path (used on Railway; default is `data/training.db`)
+- `DATABASE_PATH` — override SQLite path (used on Render; default is `data/training.db`)
 
 Templates auto-reload without server restart (`TEMPLATES_AUTO_RELOAD = True`). Python code changes require a restart.
 
+## Deployment (Render)
+
+Platform: **Render.com** — auto-deploys from `origin/main` on every push.
+
+```bash
+# Deploy a change
+git add <files>
+git commit -m "description"
+git push origin main   # Render picks this up automatically
+```
+
+- `Procfile` defines the start command: `gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120`
+- `railway.toml` exists in the repo but is **not used** — Render is the live platform
+- Persistent SQLite DB is mounted as a Render disk at `/app/data`; `DATABASE_PATH` env var points there
+- Static assets are cache-busted via `STATIC_VER` (set from `git rev-parse --short HEAD` at startup)
+
 ## Architecture
 
-Modular Flask app: thin `app.py` (entry point, ~50 lines) + domain route modules under `tms/routes/` + SQLite (`data/training.db`) + Jinja2 templates. No ORM — all SQL is raw with `sqlite3`. Deployed on Railway via `railway.toml`.
+Modular Flask app: thin `app.py` (entry point, ~50 lines) + domain route modules under `tms/routes/` + SQLite (`data/training.db`) + Jinja2 templates. No ORM — all SQL is raw with `sqlite3`. Deployed on Render via `Procfile`.
 
 **Module layout:**
 - `tms/constants.py` — all enums, plant list, month list, type abbreviations
