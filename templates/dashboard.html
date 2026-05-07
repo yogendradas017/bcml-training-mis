@@ -2,70 +2,104 @@
 {% block page_title %}Dashboard{% endblock %}
 {% block content %}
 
-<!-- Stat Cards -->
+<!-- KPI Cards -->
+{% set bc_pct = (stats.blue_collar / stats.total_emp * 100)|round(0)|int if stats.total_emp else 0 %}
+{% set wc_pct = (stats.white_collar / stats.total_emp * 100)|round(0)|int if stats.total_emp else 0 %}
+{% set sess_pct = (stats.conducted / stats.sessions * 100)|round(0)|int if stats.sessions else 0 %}
+{% set avg_hrs = (stats.manhours / stats.trainings)|round(1) if stats.trainings else 0 %}
 <div class="row g-3 mb-4 stagger">
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-violet">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-people-fill"></i></div>
-      <div class="sc-val">{{ stats.total_emp }}</div>
-      <div class="sc-lbl">Active Employees</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-people-fill"></i></div>
+        <div class="sc-val">{{ stats.total_emp }}</div>
+        <div class="sc-lbl">Active Employees</div>
+        <div class="sc-sub">{{ stats.blue_collar }} Blue &middot; {{ stats.white_collar }} White</div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
     </div>
   </div>
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-blue">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-person-badge-fill"></i></div>
-      <div class="sc-val">{{ stats.blue_collar }}</div>
-      <div class="sc-lbl">Blue Collar</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-person-badge-fill"></i></div>
+        <div class="sc-val">{{ stats.blue_collar }}</div>
+        <div class="sc-lbl">Blue Collar</div>
+        <div class="sc-sub">{{ bc_pct }}% of workforce</div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:{{ bc_pct }}%"></div></div>
     </div>
   </div>
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-green">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-person-badge-fill"></i></div>
-      <div class="sc-val">{{ stats.white_collar }}</div>
-      <div class="sc-lbl">White Collar</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-person-badge-fill"></i></div>
+        <div class="sc-val">{{ stats.white_collar }}</div>
+        <div class="sc-lbl">White Collar</div>
+        <div class="sc-sub">{{ wc_pct }}% of workforce</div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:{{ wc_pct }}%"></div></div>
     </div>
   </div>
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-amber">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-clipboard-check-fill"></i></div>
-      <div class="sc-val">{{ stats.tni_count }}</div>
-      <div class="sc-lbl">TNI Entries</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-clipboard-check-fill"></i></div>
+        <div class="sc-val">{{ stats.tni_count }}</div>
+        <div class="sc-lbl">TNI Entries</div>
+        <div class="sc-sub">Training needs identified</div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:{% if stats.tni_count and stats.total_emp %}{{ [bc_pct, 100]|min }}{% else %}0{% endif %}%"></div></div>
     </div>
   </div>
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-indigo">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-calendar3"></i></div>
-      <div class="sc-val">{{ stats.sessions }}</div>
-      <div class="sc-lbl">Sessions Planned</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-calendar3"></i></div>
+        <div class="sc-val">{{ stats.sessions }}</div>
+        <div class="sc-lbl">Sessions Planned</div>
+        <div class="sc-sub">FY 2026–27 calendar</div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
     </div>
   </div>
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-teal">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-check-circle-fill"></i></div>
-      <div class="sc-val">{{ stats.conducted }}</div>
-      <div class="sc-lbl">Sessions Conducted</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-check-circle-fill"></i></div>
+        <div class="sc-val">{{ stats.conducted }}</div>
+        <div class="sc-lbl">Sessions Conducted</div>
+        <div class="sc-sub">
+          {% if stats.sessions %}
+          <span class="{% if sess_pct >= 75 %}up{% elif sess_pct >= 40 %}{% else %}down{% endif %}">{{ sess_pct }}%</span> completion rate
+          {% else %}No sessions planned{% endif %}
+        </div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:{{ sess_pct }}%"></div></div>
     </div>
   </div>
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-cyan">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-person-check-fill"></i></div>
-      <div class="sc-val">{{ stats.trainings }}</div>
-      <div class="sc-lbl">Training Records</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-person-check-fill"></i></div>
+        <div class="sc-val">{{ stats.trainings }}</div>
+        <div class="sc-lbl">Training Records</div>
+        <div class="sc-sub">Individual attendances logged</div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
     </div>
   </div>
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-rose">
-      <div class="sc-shimmer"></div>
-      <div class="sc-icon"><i class="bi bi-clock-history"></i></div>
-      <div class="sc-val">{{ "%.0f"|format(stats.manhours) }}</div>
-      <div class="sc-lbl">Total Man-Hours</div>
+      <div class="sc-body">
+        <div class="sc-icon"><i class="bi bi-clock-history"></i></div>
+        <div class="sc-val">{{ "%.0f"|format(stats.manhours) }}</div>
+        <div class="sc-lbl">Total Man-Hours</div>
+        <div class="sc-sub">
+          {% if avg_hrs %}~{{ avg_hrs }} hrs avg / record{% else %}Across all programmes{% endif %}
+        </div>
+      </div>
+      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
     </div>
   </div>
 </div>
