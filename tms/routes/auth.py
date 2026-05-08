@@ -47,6 +47,20 @@ def _register(app):
         session.clear()
         return redirect(url_for('login'))
 
+    @app.route('/admin/users')
+    def admin_users():
+        if session.get('role') != 'admin':
+            return redirect(url_for('index'))
+        db = get_db()
+        rows = db.execute('''
+            SELECT u.id, u.username, u.role, u.must_change_password,
+                   p.name AS plant_name
+            FROM users u
+            LEFT JOIN plants p ON p.id = u.plant_id
+            ORDER BY u.role, u.username
+        ''').fetchall()
+        return render_template('admin_users.html', users=rows)
+
     @app.route('/admin/plant/<int:plant_id>')
     def admin_select_plant(plant_id):
         if session.get('role') != 'admin':

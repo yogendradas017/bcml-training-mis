@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block page_title %}User Management{% endblock %}
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="alert alert-{{ 'danger' if cat=='danger' else ('warning' if cat=='warning' else 'success') }} alert-dismissible fade show py-2" style="font-size:13px;border-radius:8px;">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endwith %}
+
+<div class="card mb-4">
+  <div class="ch-dark"><i class="bi bi-people-fill"></i> User Accounts &mdash; Password Management</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:13px;white-space:nowrap;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Plant</th>
+            <th>Password Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td class="text-muted">{{ loop.index }}</td>
+            <td>
+              <strong>{{ u.username }}</strong>
+              {% if u.username == session.username %}
+              <span style="font-size:10px;color:var(--c-primary);margin-left:5px;">(you)</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.role == 'admin' %}
+              <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:10.5px;font-weight:700;">Admin</span>
+              {% elif u.role == 'central' %}
+              <span class="badge" style="background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:700;">Central</span>
+              {% else %}
+              <span class="badge" style="background:#dbeafe;color:#1e40af;font-size:10.5px;font-weight:700;">SPOC</span>
+              {% endif %}
+            </td>
+            <td style="color:var(--c-muted);">{{ u.plant_name or '—' }}</td>
+            <td>
+              {% if u.must_change_password %}
+              <span style="font-size:11.5px;color:#d97706;font-weight:700;">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>Must set new password
+              </span>
+              {% else %}
+              <span style="font-size:11.5px;color:#059669;font-weight:600;">
+                <i class="bi bi-shield-check me-1"></i>OK
+              </span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.username != session.username %}
+              <form method="POST" action="{{ url_for('admin_reset_password', user_id=u.id) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('Reset password for {{ u.username }} to default?\nThey will be forced to create a new password on next login.')">
+                <button type="submit" class="btn-action btn-action-danger" style="font-size:11.5px;">
+                  <i class="bi bi-arrow-counterclockwise"></i> Reset to Default
+                </button>
+              </form>
+              {% else %}
+              <a href="{{ url_for('change_password') }}" class="btn-action btn-action-success" style="font-size:11.5px;">
+                <i class="bi bi-key-fill"></i> Change Mine
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch"><i class="bi bi-info-circle" style="color:var(--c-primary);"></i> How it works</div>
+  <div class="card-body" style="font-size:13px;color:var(--c-muted);line-height:1.9;">
+    <div class="row g-3">
+      <div class="col-12 col-md-6">
+        <div style="font-weight:700;color:var(--c-text);margin-bottom:4px;"><i class="bi bi-1-circle-fill me-2" style="color:var(--c-primary);"></i>SPOC forgets password</div>
+        SPOC contacts Corporate L&amp;D. Admin clicks <strong>Reset to Default</strong> here.
+        Default password is set to <code style="font-size:12px;">bcml@1234</code>.
+      </div>
+      <div class="col-12 col-md-6">
+        <div style="font-weight:700;color:var(--c-text);margin-bottom:4px;"><i class="bi bi-2-circle-fill me-2" style="color:var(--c-primary);"></i>SPOC logs in next time</div>
+        System detects <em>must change password</em> flag and forces the SPOC
+        to set a personal new password before entering the app.
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
