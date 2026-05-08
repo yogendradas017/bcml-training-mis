@@ -122,6 +122,40 @@ Three roles enforced via decorators (`@spoc_required`, `@central_required`, `@ad
 ### TMS-Wide Consistency Rule
 **When changing any field, label, enum value, or source — check and fix it across ALL templates and ALL routes, not just the touched file.** This applies to: source dropdowns, audience values, prog_type enums, collar values.
 
+### End-to-End Training Cycle Flow
+
+```
+Employees → TNI Upload → Programme Master → Calendar → 2C (Conducted) → 2A (Attendance) → Monthly Summary
+```
+
+**Step-by-step:**
+
+1. **Employee Master** — SPOC adds/maintains headcount (`employees`). `collar` determines BC vs WC split throughout.
+
+2. **TNI Upload** — SPOC uploads training needs (`tni`). Each row = one employee nominated for one programme. Source file is Excel; `_smart_analyze_rows()` fuzzy-matches programme names before import. SPOC reviews & confirms ambiguous matches at `/tni/analyze/confirm`.
+
+3. **Programme Master sync** — After TNI import, SPOC runs "Sync from TNI" to rebuild `programme_master` from TNI data. Manually-added New Requirement programmes must be re-added after sync. No programme outside `programme_master` can appear in Calendar / 2A / 2C.
+
+4. **Training Calendar** — SPOC plans sessions (`calendar`). Session code auto-generated as `UNIT/TYPE/NNN/YY-YY/BNN`. `target_audience` auto-derived from TNI via `_derive_audience()`; SPOC cannot override it for TNI-driven programmes.
+
+5. **Programme Details (2C)** — SPOC records a conducted session (`programme_details`). Only sessions in `calendar` are selectable. Saving sets `calendar.status = 'Conducted'`; deletion reverts it to `'To Be Planned'`. Programme metadata (type, mode, audience) is copied from `calendar` — SPOC only fills faculty, dates, cost, feedback.
+
+6. **Training Records (2A)** — SPOC logs individual attendance (`emp_training`). Session code links record to calendar for auto-fill. Employee must exist and be active. Non-TNI attendees count in seats/manhours but **not** in coverage %.
+
+7. **Monthly Summary** — Auto-calculated on page load (`_calc_summary` / `_calc_totals`):
+   - **No. of Programmes** → distinct programme names in `programme_details` by audience
+   - **Person Seats / Man-Hours** → `emp_training` joined with `employees` for collar
+   - **Coverage %** → TNI-trained employees ÷ TNI-nominated employees, per prog_type + collar
+   - **BC% / WC% Compliance** → `_calc_compliance()` — overall coverage by collar type
+
+8. **Export** — Excel download via `/export/<plant_id>` generates full MIS in BCML format.
+
+**Compliance data path:**
+```
+tni (nominated) + emp_training (attended) → _calc_compliance() → bc_pct / wc_pct
+                                          → /api/dashboard-monthly → Dashboard gauges
+```
+
 ### Performance
 - SQLite WAL mode enabled per connection (`PRAGMA journal_mode=WAL`)
 - TNI data endpoint (`/tni/data`) uses paginated server-side fetch (30/page) with debounced search (320ms)
