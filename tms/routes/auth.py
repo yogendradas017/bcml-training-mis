@@ -1,10 +1,10 @@
 from datetime import date
 from flask import render_template, request, redirect, url_for, session, flash
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from tms.constants import PLANT_MAP
 from tms.db import get_db
-from tms.decorators import spoc_required
+from tms.decorators import spoc_required, login_required
 
 
 def _register(app):
@@ -33,6 +33,9 @@ def _register(app):
                 if user['plant_id']:
                     session['plant_name'] = PLANT_MAP[user['plant_id']]['name']
                     session['unit_code']  = PLANT_MAP[user['plant_id']]['unit_code']
+                if user['must_change_password']:
+                    flash('Please set a new password before continuing.', 'warning')
+                    return redirect(url_for('change_password'))
                 if user['role'] in ('central', 'admin'):
                     return redirect(url_for('central_dashboard'))
                 return redirect(url_for('spoc_dashboard'))
@@ -117,6 +120,49 @@ def _register(app):
         plant_name = db.execute('SELECT name FROM plants WHERE id=?', (plant_id,)).fetchone()['name']
         flash(f'Restored {restored} TNI rows for {plant_name} ({fy_year}). Programme master rebuilt.', 'success')
         return redirect(url_for('admin_tni_archives'))
+
+    @app.route('/change-password', methods=['GET', 'POST'])
+    @login_required
+    def change_password():
+        db = get_db()
+        if request.method == 'POST':
+            current = request.form.get('current_password', '')
+            new_pw  = request.form.get('new_password', '').strip()
+            confirm = request.form.get('confirm_password', '').strip()
+            user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
+            if not check_password_hash(user['password'], current):
+                flash('Current password is incorrect.', 'danger')
+                return redirect(url_for('change_password'))
+            if len(new_pw) < 6:
+                flash('New password must be at least 6 characters.', 'danger')
+                return redirect(url_for('change_password'))
+            if new_pw != confirm:
+                flash('Passwords do not match.', 'danger')
+                return redirect(url_for('change_password'))
+            db.execute('UPDATE users SET password=?, must_change_password=0 WHERE id=?',
+                       (generate_password_hash(new_pw), session['user_id']))
+            db.commit()
+            flash('Password changed successfully.', 'success')
+            role = session.get('role')
+            return redirect(url_for('central_dashboard') if role in ('central', 'admin') else url_for('spoc_dashboard'))
+        return render_template('change_password.html')
+
+    @app.route('/admin/reset-password/<int:user_id>', methods=['POST'])
+    @login_required
+    def admin_reset_password(user_id):
+        if session.get('role') != 'admin':
+            flash('Access denied.', 'danger')
+            return redirect(url_for('index'))
+        db = get_db()
+        user = db.execute('SELECT username FROM users WHERE id=?', (user_id,)).fetchone()
+        if not user:
+            flash('User not found.', 'danger')
+            return redirect(url_for('central_dashboard'))
+        db.execute('UPDATE users SET password=?, must_change_password=1 WHERE id=?',
+                   (generate_password_hash('bcml@1234'), user_id))
+        db.commit()
+        flash(f"Password for '{user['username']}' reset to default. User must change on next login.", 'success')
+        return redirect(url_for('central_dashboard'))
 
     @app.route('/dashboard')
     @spoc_required
