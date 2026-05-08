@@ -152,6 +152,7 @@
             {% endif %}
             <span class="ud-item"><i class="bi bi-shield-check"></i> Role: {{ session.role|title }}</span>
             <hr class="ud-divider">
+            <a href="{{ url_for('change_password') }}" class="ud-item"><i class="bi bi-key-fill"></i> Change Password</a>
             <a href="{{ url_for('logout') }}" class="ud-item ud-logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
           </div>
         </div>
