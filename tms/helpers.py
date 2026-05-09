@@ -305,33 +305,37 @@ def _calc_summary(plant_id, month_filter, db):
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', p_wc).fetchone()[0]
 
-        bc_fixed = db.execute('''SELECT COUNT(DISTINCT t.emp_code) FROM tni t
+        # nomination-level coverage: count rows not distinct employees
+        bc_fixed = db.execute('''SELECT COUNT(*) FROM tni t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.prog_type=? AND t.fy_year=? AND e.collar='Blue Collared'
               AND t.source='TNI Driven' ''',
             [plant_id, pt, fy]).fetchone()[0]
-        wc_fixed = db.execute('''SELECT COUNT(DISTINCT t.emp_code) FROM tni t
+        wc_fixed = db.execute('''SELECT COUNT(*) FROM tni t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.prog_type=? AND t.fy_year=? AND e.collar='White Collared'
               AND t.source='TNI Driven' ''',
             [plant_id, pt, fy]).fetchone()[0]
 
-        bc_cum = db.execute('''SELECT COUNT(DISTINCT et.emp_code) FROM emp_training et
-            JOIN employees e ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
-            WHERE et.plant_id=? AND LOWER(et.prog_type)=LOWER(?) AND e.collar='Blue Collared'
+        # fulfilled nominations: tni row matched by emp_code + programme_name in emp_training
+        bc_cum = db.execute('''SELECT COUNT(*) FROM tni t
+            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+            WHERE t.plant_id=? AND t.prog_type=? AND t.fy_year=? AND e.collar='Blue Collared'
+              AND t.source='TNI Driven'
               AND EXISTS (
-                  SELECT 1 FROM tni t WHERE t.emp_code=et.emp_code AND t.plant_id=et.plant_id
-                  AND LOWER(t.prog_type)=LOWER(et.prog_type) AND t.fy_year=?
-                  AND t.source='TNI Driven'
+                  SELECT 1 FROM emp_training et
+                  WHERE et.emp_code=t.emp_code AND et.plant_id=t.plant_id
+                  AND LOWER(et.programme_name)=LOWER(t.programme_name)
               ) ''',
             [plant_id, pt, fy]).fetchone()[0]
-        wc_cum = db.execute('''SELECT COUNT(DISTINCT et.emp_code) FROM emp_training et
-            JOIN employees e ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
-            WHERE et.plant_id=? AND LOWER(et.prog_type)=LOWER(?) AND e.collar='White Collared'
+        wc_cum = db.execute('''SELECT COUNT(*) FROM tni t
+            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+            WHERE t.plant_id=? AND t.prog_type=? AND t.fy_year=? AND e.collar='White Collared'
+              AND t.source='TNI Driven'
               AND EXISTS (
-                  SELECT 1 FROM tni t WHERE t.emp_code=et.emp_code AND t.plant_id=et.plant_id
-                  AND LOWER(t.prog_type)=LOWER(et.prog_type) AND t.fy_year=?
-                  AND t.source='TNI Driven'
+                  SELECT 1 FROM emp_training et
+                  WHERE et.emp_code=t.emp_code AND et.plant_id=t.plant_id
+                  AND LOWER(et.programme_name)=LOWER(t.programme_name)
               ) ''',
             [plant_id, pt, fy]).fetchone()[0]
 
@@ -368,29 +372,31 @@ def _calc_totals(rows, db=None, plant_id=None):
                 t[k] = round(t.get(k, 0) + (v or 0), 1)
     if db is not None and plant_id is not None:
         fy = _fy_label()
-        t['bc_fixed'] = db.execute('''SELECT COUNT(DISTINCT t.emp_code) FROM tni t
+        t['bc_fixed'] = db.execute('''SELECT COUNT(*) FROM tni t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.fy_year=? AND e.collar='Blue Collared'
               AND t.source='TNI Driven' ''', [plant_id, fy]).fetchone()[0]
-        t['wc_fixed'] = db.execute('''SELECT COUNT(DISTINCT t.emp_code) FROM tni t
+        t['wc_fixed'] = db.execute('''SELECT COUNT(*) FROM tni t
             JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             WHERE t.plant_id=? AND t.fy_year=? AND e.collar='White Collared'
               AND t.source='TNI Driven' ''', [plant_id, fy]).fetchone()[0]
-        t['bc_cum'] = db.execute('''SELECT COUNT(DISTINCT et.emp_code) FROM emp_training et
-            JOIN employees e ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
-            WHERE et.plant_id=? AND e.collar='Blue Collared'
+        t['bc_cum'] = db.execute('''SELECT COUNT(*) FROM tni t
+            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+            WHERE t.plant_id=? AND t.fy_year=? AND e.collar='Blue Collared'
+              AND t.source='TNI Driven'
               AND EXISTS (
-                  SELECT 1 FROM tni t WHERE t.emp_code=et.emp_code AND t.plant_id=et.plant_id
-                  AND LOWER(t.prog_type)=LOWER(et.prog_type)
-                  AND t.fy_year=? AND t.source='TNI Driven'
+                  SELECT 1 FROM emp_training et
+                  WHERE et.emp_code=t.emp_code AND et.plant_id=t.plant_id
+                  AND LOWER(et.programme_name)=LOWER(t.programme_name)
               ) ''', [plant_id, fy]).fetchone()[0]
-        t['wc_cum'] = db.execute('''SELECT COUNT(DISTINCT et.emp_code) FROM emp_training et
-            JOIN employees e ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
-            WHERE et.plant_id=? AND e.collar='White Collared'
+        t['wc_cum'] = db.execute('''SELECT COUNT(*) FROM tni t
+            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+            WHERE t.plant_id=? AND t.fy_year=? AND e.collar='White Collared'
+              AND t.source='TNI Driven'
               AND EXISTS (
-                  SELECT 1 FROM tni t WHERE t.emp_code=et.emp_code AND t.plant_id=et.plant_id
-                  AND LOWER(t.prog_type)=LOWER(et.prog_type)
-                  AND t.fy_year=? AND t.source='TNI Driven'
+                  SELECT 1 FROM emp_training et
+                  WHERE et.emp_code=t.emp_code AND et.plant_id=t.plant_id
+                  AND LOWER(et.programme_name)=LOWER(t.programme_name)
               ) ''', [plant_id, fy]).fetchone()[0]
     else:
         t['bc_fixed'] = sum(r.get('bc_fixed', 0) or 0 for r in rows)
