@@ -1,13 +1,37 @@
 import os
+import logging
 import subprocess
-from flask import Flask, g, flash, redirect, request, url_for
+from datetime import timedelta
+from flask import Flask, g, flash, redirect, request, url_for, render_template, session
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from tms.constants import BASE_DIR
 from tms.db import get_db, init_db
 
+logging.basicConfig(
+    level=logging.WARNING,
+    format='%(asctime)s [%(levelname)s] %(message)s'
+)
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'bcml-tms-2627-xK9pQ')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+
+csrf    = CSRFProtect(app)
+limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri='memory://')
+
+# Session: stays alive 8 hours; survives browser close
+app.config['SESSION_PERMANENT']          = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+
+# Security: only send session cookie over HTTPS in production
+_on_render = bool(os.environ.get('RENDER'))
+app.config['SESSION_COOKIE_SECURE']   = _on_render
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 try:
     _sv = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'],
@@ -43,6 +67,32 @@ def upload_too_large(e):
     return redirect(request.referrer or url_for('index'))
 
 
+@app.errorhandler(404)
+def not_found(e):
+    if 'user_id' in session:
+        flash('Page not found.', 'warning')
+        return redirect(url_for('index'))
+    return redirect(url_for('login'))
+
+
+@app.errorhandler(500)
+def server_error(e):
+    logging.error(f'500 error: {e}', exc_info=True)
+    flash('Server error. Please try again or contact Corporate L&D.', 'danger')
+    return redirect(request.referrer or url_for('index'))
+
+
+@app.route('/health')
+@csrf.exempt
+def health():
+    try:
+        db = get_db()
+        db.execute('SELECT 1')
+        return {'status': 'ok'}, 200
+    except Exception as e:
+        return {'status': 'error', 'detail': str(e)}, 500
+
+
 # Register all routes (deferred imports — app is defined above)
 from tms.routes import (auth, employees, tni, programme, calendar, training,
                         summary, central, export, api, qr, central_training)
@@ -59,6 +109,14 @@ export.           _register(app)
 api.              _register(app)
 qr.               _register(app)
 central_training. _register(app)
+
+# Rate-limit login: 20 attempts/minute per IP
+limiter.limit('20 per minute')(app.view_functions['login'])
+
+# CSRF-exempt public QR submission routes (no session on phone scan)
+for _vf in ('attend', 'submit_feedback'):
+    if _vf in app.view_functions:
+        csrf.exempt(app.view_functions[_vf])
 
 
 try:

@@ -8,6 +8,7 @@ from tms.constants import GENDERS, GRADES, CATEGORIES, COLLARS, PH_OPTIONS, TEMP
 from tms.db import get_db
 from tms.decorators import spoc_required
 from tms.helpers import normalise_collar
+from tms.audit import log_action
 
 try:
     import openpyxl
@@ -109,6 +110,7 @@ def _register(app):
                  f.get('gender', ''), f.get('physically_handicapped', 'No'),
                  f.get('remarks', '')))
             db.commit()
+            log_action('RECORD_ADD', f"emp:{f['emp_code'].strip()}")
             flash(f"Employee {f['name'].strip()} added successfully.", 'success')
         except sqlite3.IntegrityError:
             flash(f"Employee code {f['emp_code'].strip()} already exists.", 'danger')
@@ -129,6 +131,7 @@ def _register(app):
         db.execute('UPDATE employees SET is_active=0, exit_date=?, exit_reason=? WHERE id=? AND plant_id=?',
                    (exit_date, exit_reason, emp_id, session['plant_id']))
         db.commit()
+        log_action('RECORD_EDIT', f"emp_exit:{emp_id}")
         flash('Employee marked as exited.', 'warning')
         return redirect(url_for('employees'))
 
@@ -139,6 +142,7 @@ def _register(app):
         db.execute('UPDATE employees SET is_active=1, exit_date=NULL, exit_reason=NULL WHERE id=? AND plant_id=?',
                    (emp_id, session['plant_id']))
         db.commit()
+        log_action('RECORD_EDIT', f"emp_reactivate:{emp_id}")
         flash('Employee reactivated.', 'success')
         return redirect(url_for('employees') + '?show_exited=1')
 
@@ -292,6 +296,7 @@ def _register(app):
         db.commit()
 
         if inserted:
+            log_action('BULK_UPLOAD', f"employees:{inserted}")
             flash(f'{inserted} employee(s) uploaded successfully.', 'success')
         if errors:
             for e in errors:

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block page_title %}Audit Log{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <h4 class="mb-0 fw-semibold"><i class="bi bi-shield-lock-fill me-2" style="color:#fbbf24;"></i>Audit Log</h4>
+  <span class="badge bg-secondary">Last 500 entries</span>
+</div>
+
+<form method="GET" class="row g-2 mb-4">
+  <div class="col-auto flex-grow-1">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search username, detail, IP…">
+  </div>
+  <div class="col-auto">
+    <select name="action" class="form-select">
+      <option value="">All Actions</option>
+      {% for a in actions %}
+      <option value="{{ a }}" {% if a == sel_action %}selected{% endif %}>{{ a }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Filter</button>
+    <a href="{{ url_for('admin_audit_log') }}" class="btn btn-outline-secondary ms-1">Clear</a>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover align-middle" style="font-size:13px;">
+    <thead class="table-dark">
+      <tr>
+        <th>Timestamp</th>
+        <th>User</th>
+        <th>Plant</th>
+        <th>Action</th>
+        <th>Detail</th>
+        <th>IP Address</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td class="text-nowrap text-secondary">{{ log.ts }}</td>
+        <td>{{ log.username or '—' }}</td>
+        <td>{{ log.plant_id or '—' }}</td>
+        <td>
+          <span class="badge
+            {% if log.action in ('LOGIN_OK',) %}bg-success
+            {% elif log.action in ('LOGIN_FAIL','ACCOUNT_LOCKED') %}bg-danger
+            {% elif log.action in ('LOGOUT',) %}bg-secondary
+            {% elif log.action in ('RECORD_DELETE','BULK_DELETE') %}bg-warning text-dark
+            {% elif log.action.startswith('PWD') %}bg-info text-dark
+            {% else %}bg-primary
+            {% endif %}">{{ log.action }}</span>
+        </td>
+        <td style="max-width:320px;word-break:break-word;">{{ log.detail or '' }}</td>
+        <td class="text-secondary">{{ log.ip_address or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-secondary py-4">No log entries found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -113,6 +113,7 @@
           <td style="padding:9px 14px;text-align:center;">
             <form method="POST" action="{{ url_for('programme_master_delete', prog_id=p.id) }}"
                   onsubmit="return confirm('Remove \'{{ p.name|replace("'","\\'") }}\'?');" style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-link p-0" style="color:#d1d5db;font-size:14px;" title="Delete"
                       onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='#d1d5db'">
                 <i class="bi bi-trash3"></i>
@@ -278,6 +279,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
 <div class="modal fade" id="addModal" tabindex="-1">
   <div class="modal-dialog">
     <form method="POST" action="{{ url_for('programme_master_add') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-content">
         <div class="modal-header" style="background:#1a1f35;color:#fff;">
           <h5 class="modal-title fs-6">Add Programme to Master</h5>
@@ -327,6 +329,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
 <div class="modal fade" id="bulkModal" tabindex="-1">
   <div class="modal-dialog">
     <form method="POST" action="{{ url_for('programme_master_bulk') }}" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-content">
         <div class="modal-header" style="background:#1a1f35;color:#fff;">
           <h5 class="modal-title fs-6">Bulk Upload Programme Master</h5>

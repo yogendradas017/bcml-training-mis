@@ -46,6 +46,7 @@
     </ul>
 
     <form method="POST" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="mb-3">
         <label class="form-label fw-semibold">Select TNI File</label>
         <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
@@ -206,6 +207,7 @@
   </div>
 </div>
 <form method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="confirm" value="{{ token }}">
   <div class="d-flex gap-2 flex-wrap">
     <button type="submit" class="btn btn-success px-4 fw-semibold">

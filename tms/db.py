@@ -362,6 +362,19 @@ def _migrate_central_user_plant(db):
         logging.warning(f'_migrate_central_user_plant failed: {e}')
 
 
+def _migrate_audit_lockout(db):
+    import logging
+    try:
+        cols = {r[1] for r in db.execute("PRAGMA table_info(users)")}
+        if 'failed_attempts' not in cols:
+            db.execute("ALTER TABLE users ADD COLUMN failed_attempts INTEGER DEFAULT 0")
+        if 'locked_until' not in cols:
+            db.execute("ALTER TABLE users ADD COLUMN locked_until TEXT")
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_audit_lockout failed: {e}')
+
+
 def init_db():
     from tms.helpers import (
         _cleanse_master_spelling, _cleanse_programme_names, _cleanup_stale_analyze_files
@@ -384,6 +397,7 @@ def init_db():
     _migrate_emp_training_host(db)
     _migrate_corp_members(db)
     _migrate_central_user_plant(db)
+    _migrate_audit_lockout(db)
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
                    (p['id'], p['name'], p['unit_code']))

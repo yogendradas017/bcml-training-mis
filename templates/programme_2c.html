@@ -15,6 +15,7 @@
       Session Code must already exist in Calendar. Required: <strong>Session Code, Actual Start Date</strong>.
     </p>
     <form method="POST" action="{{ url_for('programme_bulk_upload') }}" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="d-flex gap-2 align-items-end">
         <div>
           <label class="form-label">Select Excel or CSV file</label>
@@ -36,6 +37,7 @@
       Select a <strong>Session Code</strong> from the Calendar — details auto-fill. Participants count auto-calculated from 2A records.
     </div>
     <form method="POST" action="{{ url_for('add_programme_details') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">Session Code <span class="required-star">*</span></label>
@@ -171,6 +173,7 @@
             <td><strong>{{ "%.1f"|format(rec.man_hours or 0) }}</strong></td>
             <td>
               <form method="POST" action="{{ url_for('delete_programme', rec_id=rec.id) }}" style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="button" class="btn btn-sm btn-outline-danger"
                         onclick="ajaxDelete(this,'Delete programme record for {{ rec.session_code }}?')">
                   <i class="bi bi-trash"></i>

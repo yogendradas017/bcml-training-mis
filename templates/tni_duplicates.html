@@ -12,6 +12,7 @@
     {% if rows %}
     <form method="POST" action="{{ url_for('tni_duplicates_delete') }}"
           onsubmit="return confirm('Remove {{ total_extra }} duplicate rows? The earliest entry for each pair will be kept.');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn btn-danger btn-sm">Remove All Duplicates (keep oldest)</button>
     </form>
     {% endif %}

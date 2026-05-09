@@ -51,6 +51,7 @@
             </button>
             <form method="POST" action="{{ url_for('central_corp_member_delete', member_id=m.id) }}"
                   style="display:inline;" onsubmit="return confirm('Delete ' + {{ m.name|tojson }} + '?')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size:11px;">
                 <i class="bi bi-trash"></i>
               </button>
@@ -70,6 +71,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <form method="POST" action="{{ url_for('central_corp_member_add') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-header"><h5 class="modal-title">Add Corp Member</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
@@ -111,6 +113,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <form method="POST" id="editForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-header"><h5 class="modal-title">Edit Corp Member</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">

@@ -15,6 +15,7 @@ from tms.helpers import (
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
+from tms.audit import log_action
 
 
 def _register(app):
@@ -120,6 +121,7 @@ def _register(app):
              int(f.get('planned_pax') or 0), f.get('trainer_vendor',''),
              'To Be Planned'))
         db.commit()
+        log_action('RECORD_ADD', f"cal:{session_code}")
         msg = f'Session {session_code} added.'
         if tni_audience and form_audience and form_audience != tni_audience:
             msg += f' Audience set to "{tni_audience}" (locked from TNI — TNI has both BC & WC employees).'
@@ -142,6 +144,7 @@ def _register(app):
                        (session['plant_id'], cal['session_code']))
         db.execute('DELETE FROM calendar WHERE id=? AND plant_id=?', (cal_id, session['plant_id']))
         db.commit()
+        log_action('RECORD_DELETE', f"cal:{cal_id}")
         if _is_ajax():
             return '', 204
         flash('Calendar entry deleted.', 'warning')
@@ -195,6 +198,7 @@ def _register(app):
              f.get('status','To Be Planned'),
              cal_id, plant_id))
         db.commit()
+        log_action('RECORD_EDIT', f"cal:{cal_id}")
         msg = 'Session updated.'
         if tni_audience_edit and form_audience_edit and form_audience_edit != tni_audience_edit:
             msg += f' Audience locked to "{tni_audience_edit}" from TNI.'
@@ -222,6 +226,7 @@ def _register(app):
                 db.execute(f'DELETE FROM calendar WHERE id IN ({ph}) AND plant_id=? AND status != "Conducted"', chunk + [plant_id])
                 deleted += len(chunk)
             db.commit()
+            log_action('BULK_DELETE', f"cal:{deleted}")
             flash(f'{deleted} calendar sessions deleted.', 'warning')
         return redirect(url_for('training_calendar'))
 
@@ -313,5 +318,6 @@ def _register(app):
             if inserted:
                 flash(f'Bulk upload complete: {inserted} sessions added. {len(errors)} rows had errors — downloading error report.', 'warning')
             return _error_excel_response(errors, inserted, 'Calendar_Upload_Errors.xlsx')
+        log_action('BULK_UPLOAD', f"cal:{inserted}")
         flash(f'Bulk upload complete: {inserted} sessions added to calendar.', 'success')
         return redirect(url_for('training_calendar'))

@@ -21,8 +21,9 @@ if not exist ".deps_installed" (
     echo. > .deps_installed
 )
 
-REM Gemini API key for AI validation
-set GEMINI_API_KEY=AIzaSyAnQtp7Cs3bpkfsAN7TNR39iR-xbl3Gk9I
+REM Set your Gemini API key as an environment variable before running:
+REM   set GEMINI_API_KEY=your-key-here
+REM Or add it to a .env file (never commit the key to git)
 
 REM Initialise DB and seed employees on first run
 if not exist "data\training.db" (

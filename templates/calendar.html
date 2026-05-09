@@ -15,6 +15,7 @@
       Download the template, fill session details, then upload. Required: <strong>Programme Name, Type of Programme</strong>. Session Code auto-generates.
     </p>
     <form method="POST" action="{{ url_for('calendar_bulk_upload') }}" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="d-flex gap-2 align-items-end">
         <div>
           <label class="form-label">Select Excel or CSV file</label>
@@ -32,6 +33,7 @@
   </div>
   <div class="card-body">
     <form method="POST" action="{{ url_for('add_calendar') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row g-3">
         <div class="col-md-5">
           <label class="form-label">Programme Name <span class="required-star">*</span></label>
@@ -328,6 +330,7 @@
                   {% else %}
                   <li>
                     <form method="POST" action="{{ url_for('qr_generate', cal_id=s.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="stage" value="attendance">
                       <button type="submit" class="dropdown-item">
                         <i class="bi bi-qr-code me-1"></i> Generate Attendance QR
@@ -343,6 +346,7 @@
                   {% else %}
                   <li>
                     <form method="POST" action="{{ url_for('qr_generate', cal_id=s.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="stage" value="feedback">
                       <button type="submit" class="dropdown-item">
                         <i class="bi bi-qr-code me-1"></i> Generate Feedback QR
@@ -358,6 +362,7 @@
               </div>
               {% if s.status != 'Conducted' %}
               <form method="POST" action="{{ url_for('delete_calendar', cal_id=s.id) }}" style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="button" class="btn btn-sm btn-outline-danger" style="padding:2px 6px;"
                         onclick="ajaxDelete(this,'Delete session {{ s.session_code }}?')">
                   <i class="bi bi-trash"></i>
@@ -381,6 +386,7 @@
 <div class="modal fade" id="editModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <form method="POST" id="editForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-content">
         <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#2563a8);color:#fff;">
           <h5 class="modal-title fs-6"><i class="bi bi-pencil-square me-1"></i> Edit Calendar Session</h5>

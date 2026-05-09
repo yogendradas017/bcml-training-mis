@@ -93,23 +93,13 @@ Three roles enforced via decorators (`@spoc_required`, `@central_required`, `@ad
 
 **Programme name canonicalization** — `_canonical_prog()` fuzzy-matches raw names (cutoff 0.82) against `programme_master`. If no match is found it returns the original string unchanged (does not block saving). `_smart_title()` normalises casing using a domain vocab (e.g. "5S", "EHS", "SOP" stay uppercase).
 
-**2C Programme Details entry flow.**
-1. The Session Code dropdown is bound to `calendar` — only sessions that exist in the calendar can be recorded in 2C.
-2. On save, programme name, type, level, mode, and audience are auto-copied from the `calendar` row; only dates, faculty, cost, and feedback scores are entered by the SPOC.
-3. Saving a 2C record sets `calendar.status = 'Conducted'`. Deleting it resets status to `'To Be Planned'`.
-4. `cal_new` is set to `'Calendar Program'` if the session exists in calendar, `'New Program'` otherwise.
+**2C flow:** Session Code → auto-fills from `calendar` → save sets `status='Conducted'`; delete resets to `'To Be Planned'`. `cal_new` = `'Calendar Program'` if session exists in calendar, else `'New Program'`.
 
-**2A Training Records entry flow.**
-1. Session Code is optional. If provided and found in `calendar`, programme name/type/level/mode are auto-filled; start/end dates default to calendar plan dates if not provided.
-2. If no session code is given, the SPOC must supply the programme name — it is fuzzy-matched via `_canonical_prog()` against `programme_master`.
-3. Employee code must exist and be active in the `employees` table for the plant.
+**2A flow:** Session Code optional; if found in `calendar`, programme/dates auto-filled. Employee must be active. Non-TNI attendees count in seats/manhours but not coverage %.
 
-**Monthly Summary calculation** (`_calc_summary` / `_calc_totals`):
-- No. of Programmes → from `programme_details` (2C) `audience` field
-- Person Seats / Man-Hours → from `emp_training` (2A) joined with `employees` for collar
-- Coverage % = Cumulative trained (TNI emp who actually trained) / Fixed (all TNI nominated emp for that prog_type+collar). Non-TNI attendees count in seats but not coverage.
+**Summary calc** (`_calc_summary`/`_calc_totals`): Programmes from `programme_details`; seats/manhours from `emp_training`+`employees`; coverage = TNI-trained ÷ TNI-nominated per prog_type+collar.
 
-**TNI analysis pipeline** — `_smart_analyze_rows()` fuzzy-matches uploaded rows against master vocab, flags low-confidence matches, stores a JSON file (`data/tni_analyze_*.json`). SPOC reviews and confirms via `/tni/analyze/confirm`.
+**TNI pipeline:** `_smart_analyze_rows()` fuzzy-matches Excel rows → JSON in `data/tni_analyze_*.json`; SPOC confirms at `/tni/analyze/confirm`.
 
 ### Startup Migrations
 `init_db()` (called at process start) runs:
@@ -122,39 +112,11 @@ Three roles enforced via decorators (`@spoc_required`, `@central_required`, `@ad
 ### TMS-Wide Consistency Rule
 **When changing any field, label, enum value, or source — check and fix it across ALL templates and ALL routes, not just the touched file.** This applies to: source dropdowns, audience values, prog_type enums, collar values.
 
-### End-to-End Training Cycle Flow
+### Training Cycle
 
-```
-Employees → TNI Upload → Programme Master → Calendar → 2C (Conducted) → 2A (Attendance) → Monthly Summary
-```
+`Employees → TNI Upload → Programme Master (sync) → Calendar → 2C (Conducted) → 2A (Attendance) → Monthly Summary → Export`
 
-**Step-by-step:**
-
-1. **Employee Master** — SPOC adds/maintains headcount (`employees`). `collar` determines BC vs WC split throughout.
-
-2. **TNI Upload** — SPOC uploads training needs (`tni`). Each row = one employee nominated for one programme. Source file is Excel; `_smart_analyze_rows()` fuzzy-matches programme names before import. SPOC reviews & confirms ambiguous matches at `/tni/analyze/confirm`.
-
-3. **Programme Master sync** — After TNI import, SPOC runs "Sync from TNI" to rebuild `programme_master` from TNI data. Manually-added New Requirement programmes must be re-added after sync. No programme outside `programme_master` can appear in Calendar / 2A / 2C.
-
-4. **Training Calendar** — SPOC plans sessions (`calendar`). Session code auto-generated as `UNIT/TYPE/NNN/YY-YY/BNN`. `target_audience` auto-derived from TNI via `_derive_audience()`; SPOC cannot override it for TNI-driven programmes.
-
-5. **Programme Details (2C)** — SPOC records a conducted session (`programme_details`). Only sessions in `calendar` are selectable. Saving sets `calendar.status = 'Conducted'`; deletion reverts it to `'To Be Planned'`. Programme metadata (type, mode, audience) is copied from `calendar` — SPOC only fills faculty, dates, cost, feedback.
-
-6. **Training Records (2A)** — SPOC logs individual attendance (`emp_training`). Session code links record to calendar for auto-fill. Employee must exist and be active. Non-TNI attendees count in seats/manhours but **not** in coverage %.
-
-7. **Monthly Summary** — Auto-calculated on page load (`_calc_summary` / `_calc_totals`):
-   - **No. of Programmes** → distinct programme names in `programme_details` by audience
-   - **Person Seats / Man-Hours** → `emp_training` joined with `employees` for collar
-   - **Coverage %** → TNI-trained employees ÷ TNI-nominated employees, per prog_type + collar
-   - **BC% / WC% Compliance** → `_calc_compliance()` — overall coverage by collar type
-
-8. **Export** — Excel download via `/export/<plant_id>` generates full MIS in BCML format.
-
-**Compliance data path:**
-```
-tni (nominated) + emp_training (attended) → _calc_compliance() → bc_pct / wc_pct
-                                          → /api/dashboard-monthly → Dashboard gauges
-```
+Compliance path: `tni` (nominated) + `emp_training` (attended) → `_calc_compliance()` → `bc_pct`/`wc_pct` → `/api/dashboard-monthly` → Dashboard gauges.
 
 ### Performance
 - SQLite WAL mode enabled per connection (`PRAGMA journal_mode=WAL`)

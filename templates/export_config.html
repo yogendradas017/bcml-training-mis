@@ -10,6 +10,7 @@
 </div>
 
 <form method="POST" action="{{ url_for('export_excel', plant_id=plant.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div class="row g-3">
 
   {# ── Sheet Selection ── #}
