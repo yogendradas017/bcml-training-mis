@@ -22,6 +22,7 @@ from tms.helpers import (
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
+from tms.audit import log_action
 
 
 def _register(app):
@@ -189,6 +190,7 @@ def _register(app):
             return redirect(url_for('tni'))
         _sync_master_from_tni(plant_id, db)
         db.commit()
+        log_action('RECORD_ADD', f"tni:{emp_code}:{prog_name}")
         flash('TNI entry added.', 'success')
         return redirect(url_for('tni'))
 
@@ -218,6 +220,7 @@ def _register(app):
         db = get_db()
         db.execute('DELETE FROM tni WHERE id=? AND plant_id=?', (tni_id, session['plant_id']))
         db.commit()
+        log_action('RECORD_DELETE', f"tni:{tni_id}")
         if _is_ajax():
             return '', 204
         flash('TNI entry deleted.', 'warning')
@@ -252,6 +255,7 @@ def _register(app):
             if count:
                 db.execute(f'DELETE FROM tni WHERE id IN (SELECT t.id {join_sql})', params)
                 db.commit()
+                log_action('BULK_DELETE', f"tni:{count}")
                 flash(f'{count} TNI entries deleted.', 'warning')
         else:
             ids = request.form.getlist('ids[]')
@@ -263,6 +267,7 @@ def _register(app):
                     db.execute(f'DELETE FROM tni WHERE id IN ({ph}) AND plant_id=?', chunk + [plant_id])
                     deleted += len(chunk)
                 db.commit()
+                log_action('BULK_DELETE', f"tni:{deleted}")
                 flash(f'{deleted} TNI entries deleted.', 'warning')
         return redirect(url_for('tni'))
 
@@ -523,6 +528,7 @@ def _register(app):
             if inserted:
                 flash(f'Bulk upload complete: {inserted} TNI entries added. {len(errors)} rows had errors — downloading error report.', 'warning')
             return _error_excel_response(errors, inserted, 'TNI_Upload_Errors.xlsx')
+        log_action('BULK_UPLOAD', f"tni:{inserted}")
         flash(f'Bulk upload complete: {inserted} TNI entries added successfully.', 'success')
         return redirect(url_for('tni'))
 

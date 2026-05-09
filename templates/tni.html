@@ -99,6 +99,7 @@
   </div>
   <div class="card-body">
     <form method="POST" action="{{ url_for('add_tni') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">Employee <span class="required-star">*</span></label>
@@ -336,6 +337,7 @@ const TNI = {
         <td>${r.planned_hours}</td>
         <td>${doneBadge}</td>
         <td><form method="POST" action="${r.delete_url}" style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="button" class="btn btn-sm btn-outline-danger" onclick="ajaxDelete(this,'Delete this TNI entry?')">
             <i class="bi bi-trash"></i></button></form></td>
       </tr>`;

@@ -61,6 +61,7 @@
               <form method="POST" action="{{ url_for('admin_reset_password', user_id=u.id) }}"
                     style="display:inline;"
                     onsubmit="return confirm('Reset password for {{ u.username }} to default?\nThey will be forced to create a new password on next login.')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn-action btn-action-danger" style="font-size:11.5px;">
                   <i class="bi bi-arrow-counterclockwise"></i> Reset to Default
                 </button>

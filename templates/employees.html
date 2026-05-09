@@ -30,6 +30,7 @@
           <td>
             <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}"
                   onsubmit="return confirm('Undo exit for this employee?')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn-action btn-action-success">
                 <i class="bi bi-arrow-counterclockwise"></i> Undo Exit
               </button>
@@ -61,6 +62,7 @@
   <div class="collapse" id="bulkUploadSection">
     <div class="card-body border-bottom" style="background:#f0fdf4;">
       <form method="POST" action="{{ url_for('emp_bulk_upload') }}" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="d-flex align-items-end gap-3 flex-wrap">
           <div>
             <label class="form-label fw-semibold mb-1" style="font-size:13px;">
@@ -83,6 +85,7 @@
   <!-- Single Add Form -->
   <div class="card-body">
     <form method="POST" action="{{ url_for('add_employee') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row g-3">
         <div class="col-md-3">
           <label class="form-label">Employee Code <span class="required-star">*</span></label>
@@ -247,6 +250,7 @@
               {% else %}
               <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}"
                     style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn-action btn-action-success"
                         onclick="return confirm('Reactivate {{ emp.name }}?')">
                   <i class="bi bi-arrow-counterclockwise"></i> Reactivate
@@ -274,6 +278,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="POST" id="exitModalForm" action="">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">Exit Date</label>

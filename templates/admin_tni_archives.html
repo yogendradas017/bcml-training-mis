@@ -57,6 +57,7 @@
           <td style="padding:8px 14px;">
             <form method="POST" action="{{ url_for('admin_tni_restore') }}"
                   onsubmit="return confirm('Restore {{ a.row_count }} rows for {{ a.plant_name }} ({{ a.fy_year }})?\n\nThis will REPLACE current TNI data for that plant+FY.')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="token" value="{{ a.archive_token }}">
               <button type="submit" class="btn btn-warning btn-sm px-3 fw-semibold">
                 <i class="bi bi-arrow-counterclockwise me-1"></i>Restore

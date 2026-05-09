@@ -97,6 +97,7 @@
           Upload the downloaded Excel file. TMS reads the question columns and imports all valid responses into TNI.
         </p>
         <form method="POST" action="{{ url_for('tni_msforms_import') }}" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label class="form-label fw-semibold" style="font-size:13px;">Select MS Forms response Excel</label>
             <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>

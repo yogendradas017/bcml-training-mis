@@ -17,6 +17,7 @@
       Required columns: <strong>Employee Code, Programme Name, Start Date, Hours</strong>
     </p>
     <form method="POST" action="{{ url_for('training_bulk_upload') }}" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="d-flex gap-2 align-items-end">
         <div>
           <label class="form-label">Select Excel or CSV file</label>
@@ -40,6 +41,7 @@
       Select a <strong>Session Code</strong> — programme details will auto-fill. Or enter manually for ad-hoc trainings.
     </div>
     <form method="POST" action="{{ url_for('add_emp_training') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">Employee <span class="required-star">*</span></label>
@@ -222,6 +224,7 @@
             <td style="padding:6px 4px;white-space:nowrap;color:#6b7280;">{{ rec.month or '—' }}</td>
             <td style="padding:6px 4px;">
               <form method="POST" action="{{ url_for('delete_emp_training', rec_id=rec.id) }}" style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="button" class="btn btn-sm btn-outline-danger" style="padding:2px 6px;"
                         onclick="ajaxDelete(this,'Delete this training record?')">
                   <i class="bi bi-trash" style="font-size:11px;"></i>

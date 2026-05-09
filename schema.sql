@@ -208,3 +208,16 @@ CREATE INDEX IF NOT EXISTS idx_training_plant ON emp_training(plant_id);
 CREATE INDEX IF NOT EXISTS idx_et_lookup ON emp_training(plant_id, emp_code, programme_name);
 CREATE INDEX IF NOT EXISTS idx_corp_active ON corp_members(is_active, name);
 CREATE INDEX IF NOT EXISTS idx_prog_plant ON programme_details(plant_id);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts          TEXT    DEFAULT (datetime('now','localtime')),
+    user_id     INTEGER,
+    username    TEXT,
+    plant_id    INTEGER,
+    action      TEXT    NOT NULL,
+    detail      TEXT,
+    ip_address  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_audit_ts   ON audit_log(ts);
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(username);

@@ -64,6 +64,7 @@
               </a>
               {% else %}
               <form method="POST" action="{{ url_for('qr_generate', cal_id=s.id) }}" style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="stage" value="attendance">
                 <button class="btn btn-primary btn-sm" style="font-size:10px;" title="Generate Attendance QR">
                   <i class="bi bi-qr-code"></i> +Att
@@ -77,6 +78,7 @@
               </a>
               {% else %}
               <form method="POST" action="{{ url_for('qr_generate', cal_id=s.id) }}" style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="stage" value="feedback">
                 <button class="btn btn-success btn-sm" style="font-size:10px;" title="Generate Feedback QR">
                   <i class="bi bi-qr-code"></i> +FB
@@ -100,6 +102,7 @@
             {% endif %}
             <form method="POST" action="{{ url_for('central_calendar_delete', cal_id=s.id) }}"
                   style="display:inline;" onsubmit="return confirm('Delete this session?')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size:10px;">
                 <i class="bi bi-trash"></i>
               </button>
@@ -119,6 +122,7 @@
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <form method="POST" action="{{ url_for('central_calendar_add') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-header" style="background:#1a1f35;color:#fff;">
           <h5 class="modal-title">Add Central Session</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -213,6 +217,7 @@
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <form method="POST" id="editForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-header" style="background:#1a1f35;color:#fff;">
           <h5 class="modal-title">Edit Session</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>

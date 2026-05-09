@@ -15,6 +15,7 @@ from tms.helpers import (
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
+from tms.audit import log_action
 
 
 def _register(app):
@@ -366,6 +367,7 @@ def _register(app):
         db.execute("UPDATE calendar SET status='Conducted' WHERE session_code=? AND plant_id=?",
                    (session_code, plant_id))
         db.commit()
+        log_action('RECORD_ADD', f"2c:{session_code}")
         flash(f'Programme {session_code} details saved.', 'success')
         return redirect(url_for('programme_details'))
 
@@ -380,6 +382,7 @@ def _register(app):
             db.execute("UPDATE calendar SET status='To Be Planned' WHERE session_code=? AND plant_id=?",
                        (rec['session_code'], session['plant_id']))
             db.commit()
+            log_action('RECORD_DELETE', f"2c:{rec['session_code']}")
         if _is_ajax():
             return '', 204
         flash('Programme record deleted.', 'warning')
@@ -400,6 +403,7 @@ def _register(app):
                            (r['session_code'], plant_id))
             db.execute(f'DELETE FROM programme_details WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
             db.commit()
+            log_action('BULK_DELETE', f"2c:{len(ids)}")
             flash(f'{len(ids)} programme records deleted.', 'warning')
         return redirect(url_for('programme_details'))
 
@@ -487,5 +491,6 @@ def _register(app):
             if inserted:
                 flash(f'Bulk upload complete: {inserted} programme records saved. {len(errors)} rows had errors — downloading error report.', 'warning')
             return _error_excel_response(errors, inserted, 'Programme2C_Upload_Errors.xlsx')
+        log_action('BULK_UPLOAD', f"2c:{inserted}")
         flash(f'Bulk upload complete: {inserted} programme records saved.', 'success')
         return redirect(url_for('programme_details'))

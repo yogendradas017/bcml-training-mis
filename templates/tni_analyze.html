@@ -41,6 +41,7 @@
           <strong>Upload any file</strong> — TMS template, Balrampur format, any headers, any column order. TMS auto-detects everything.
         </div>
         <form method="POST" action="{{ url_for('tni_analyze') }}" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-2">
             <label class="form-label fw-semibold mb-1" style="font-size:13px;">Select file (.xlsx / .xls / .csv)</label>
             <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
@@ -268,6 +269,7 @@
 
 <!-- Action bar -->
 <form method="POST" action="{{ url_for('tni_analyze_confirm') }}" id="tni-confirm-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="aid" value="{{ aid }}">
   <div class="d-flex gap-3 align-items-center flex-wrap">
     <button type="submit" class="btn px-5 py-2 fw-semibold" style="background:#10b981;color:#fff;border:none;font-size:14px;">

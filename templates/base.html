@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/main.css') }}?v={{ config.STATIC_VER }}" rel="stylesheet">
-  
+  <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
 <body>
 
@@ -109,6 +109,9 @@
     </a></li>
     <li><a href="{{ url_for('admin_tni_archives') }}" class="{% if request.endpoint=='admin_tni_archives' %}active{% endif %}" style="color:#fbbf24;">
       <i class="bi bi-archive-fill"></i> TNI Archives
+    </a></li>
+    <li><a href="{{ url_for('admin_audit_log') }}" class="{% if request.endpoint=='admin_audit_log' %}active{% endif %}" style="color:#fbbf24;">
+      <i class="bi bi-shield-lock-fill"></i> Audit Log
     </a></li>
     {% endif %}
   </ul>
@@ -231,5 +234,41 @@
 
 {% block scripts %}{% endblock %}
 {% block modals %}{% endblock %}
+
+<script>
+// Auto-inject CSRF token into all non-GET fetch() calls
+(function(){
+  const tok = document.querySelector('meta[name="csrf-token"]')?.content;
+  if (!tok) return;
+  const orig = window.fetch;
+  window.fetch = function(url, opts){
+    opts = opts || {};
+    if (!opts.method || opts.method.toUpperCase() === 'GET') return orig(url, opts);
+    opts.headers = Object.assign({'X-CSRFToken': tok}, opts.headers || {});
+    return orig(url, opts);
+  };
+})();
+
+{% if session.user_id %}
+// Idle session timeout: warn at 25 min, auto-logout at 30 min
+(function(){
+  const WARN=25*60*1000, OUT=30*60*1000;
+  let wt, ot;
+  function reset(){
+    clearTimeout(wt); clearTimeout(ot);
+    wt = setTimeout(function(){
+      if(confirm('Your session will expire in 5 minutes due to inactivity. Click OK to stay logged in.')) reset();
+    }, WARN);
+    ot = setTimeout(function(){
+      window.location = '{{ url_for("logout") }}';
+    }, OUT);
+  }
+  ['click','keydown','mousemove','touchstart'].forEach(function(e){
+    document.addEventListener(e, reset, {passive:true});
+  });
+  reset();
+})();
+{% endif %}
+</script>
 </body>
 </html>

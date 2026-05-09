@@ -15,6 +15,7 @@ from tms.helpers import (
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
+from tms.audit import log_action
 
 
 def _register(app):
@@ -106,6 +107,7 @@ def _register(app):
             flash('Duplicate record — this employee already has a training entry for this programme on this date.', 'warning')
             return redirect(url_for('emp_training'))
         db.commit()
+        log_action('RECORD_ADD', f"2a:{emp_code}:{prog_name}")
         flash('Training record added.', 'success')
         return redirect(url_for('emp_training'))
 
@@ -115,6 +117,7 @@ def _register(app):
         db = get_db()
         db.execute('DELETE FROM emp_training WHERE id=? AND plant_id=?', (rec_id, session['plant_id']))
         db.commit()
+        log_action('RECORD_DELETE', f"2a:{rec_id}")
         if _is_ajax():
             return '', 204
         flash('Training record deleted.', 'warning')
@@ -134,6 +137,7 @@ def _register(app):
                 db.execute(f'DELETE FROM emp_training WHERE id IN ({ph}) AND plant_id=?', chunk + [plant_id])
                 deleted += len(chunk)
             db.commit()
+            log_action('BULK_DELETE', f"2a:{deleted}")
             flash(f'{deleted} training records deleted.', 'warning')
         return redirect(url_for('emp_training'))
 
@@ -254,5 +258,6 @@ def _register(app):
             if inserted:
                 flash(f'Bulk upload complete: {inserted} records added.{skip_msg} {len(errors)} rows had errors — downloading error report.', 'warning')
             return _error_excel_response(errors, inserted, 'Training2A_Upload_Errors.xlsx')
+        log_action('BULK_UPLOAD', f"2a:{inserted}")
         flash(f'Bulk upload complete: {inserted} training records added successfully.{skip_msg}', 'success')
         return redirect(url_for('emp_training'))
