@@ -101,11 +101,11 @@
 <!-- ── ROW 2: ANALYTICS ──────────────────────────────────────── -->
 <div class="row g-3 mb-4">
 
-  <!-- Compliance Ring Gauges -->
-  <div class="col-12 col-md-5 col-lg-4">
+  <!-- Training Hours vs Target Ring Gauges -->
+  <div class="col-12 col-md-5 col-lg-5">
     <div class="analytics-card">
       <div class="analytics-hd">
-        <span class="analytics-title"><i class="bi bi-bullseye me-1" style="color:var(--c-primary);"></i>Compliance</span>
+        <span class="analytics-title"><i class="bi bi-bullseye me-1" style="color:var(--c-primary);"></i>Training Hours vs Target</span>
         <span class="analytics-badge">FY 2026–27</span>
       </div>
       <div class="analytics-body" style="display:flex;flex-direction:column;justify-content:center;">
@@ -121,6 +121,7 @@
               <text x="60" y="70" text-anchor="middle" font-size="9" fill="#6e6e73" font-family="Inter,system-ui,sans-serif">%</text>
             </svg>
             <div class="gauge-lbl">Blue Collar</div>
+            <div class="gauge-sub">Target 12 hrs/yr</div>
           </div>
           <div class="gauge-sep"></div>
           <div class="gauge-wrap">
@@ -134,15 +135,30 @@
               <text x="60" y="70" text-anchor="middle" font-size="9" fill="#6e6e73" font-family="Inter,system-ui,sans-serif">%</text>
             </svg>
             <div class="gauge-lbl">White Collar</div>
+            <div class="gauge-sub">Target 24 hrs/yr</div>
+          </div>
+          <div class="gauge-sep"></div>
+          <div class="gauge-wrap">
+            <svg id="gauge-ov" class="gauge-svg" viewBox="0 0 120 120">
+              <circle class="gauge-track" cx="60" cy="60" r="42" transform="rotate(-90 60 60)"/>
+              <circle class="gauge-fill gauge-fill-ov" cx="60" cy="60" r="42"
+                      stroke-dasharray="263.9" stroke-dashoffset="263.9"
+                      transform="rotate(-90 60 60)"/>
+              <text id="gauge-ov-pct" x="60" y="56" text-anchor="middle"
+                    font-size="20" font-weight="900" fill="#1d1d1f" font-family="Inter,system-ui,sans-serif">0</text>
+              <text x="60" y="70" text-anchor="middle" font-size="9" fill="#6e6e73" font-family="Inter,system-ui,sans-serif">%</text>
+            </svg>
+            <div class="gauge-lbl">Overall</div>
+            <div class="gauge-sub">Combined</div>
           </div>
         </div>
       </div>
-      <div class="gauge-foot">Live TNI coverage · updates on page load</div>
+      <div class="gauge-foot">Manhour compliance · BC: 12 hrs/yr · WC: 24 hrs/yr</div>
     </div>
   </div>
 
   <!-- Monthly Bar Chart -->
-  <div class="col-12 col-md-7 col-lg-8">
+  <div class="col-12 col-md-7 col-lg-7">
     <div class="analytics-card">
       <div class="analytics-hd">
         <span class="analytics-title"><i class="bi bi-bar-chart-fill me-1" style="color:var(--c-primary);"></i>Monthly Training</span>
@@ -354,6 +370,7 @@
 
       drawGauge('gauge-bc', data.compliance.bc_pct);
       drawGauge('gauge-wc', data.compliance.wc_pct);
+      drawGauge('gauge-ov', data.compliance.total_pct);
 
       renderChart(MONTHLY, CUR_METRIC, _curMo);
 

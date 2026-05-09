@@ -197,8 +197,9 @@ def _register(app):
 
         return jsonify({
             'monthly': monthly,
-            'compliance': {'bc_pct': round(comp.get('bc_pct', 0), 1),
-                           'wc_pct': round(comp.get('wc_pct', 0), 1)},
+            'compliance': {'bc_pct':    round(comp.get('bc_pct',    0), 1),
+                           'wc_pct':    round(comp.get('wc_pct',    0), 1),
+                           'total_pct': round(comp.get('total_pct', 0), 1)},
             'cur_mo': cur_mo
         })
 
