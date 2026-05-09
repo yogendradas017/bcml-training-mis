@@ -114,7 +114,7 @@ central_training. _register(app)
 limiter.limit('20 per minute')(app.view_functions['login'])
 
 # CSRF-exempt public QR submission routes (no session on phone scan)
-for _vf in ('attend', 'submit_feedback'):
+for _vf in ('qr_attend', 'qr_feedback'):
     if _vf in app.view_functions:
         csrf.exempt(app.view_functions[_vf])
 
