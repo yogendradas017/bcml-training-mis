@@ -3,7 +3,7 @@ import logging
 import subprocess
 from datetime import timedelta
 from flask import Flask, g, flash, redirect, request, url_for, render_template, session
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -59,6 +59,12 @@ def fmt_date(value):
         return _dt.strptime(s, '%Y-%m-%d').strftime('%d-%m-%Y')
     except ValueError:
         return s
+
+
+@app.errorhandler(CSRFError)
+def csrf_error(e):
+    flash('Session expired or form was stale — please try again.', 'warning')
+    return redirect(request.referrer or url_for('login')), 400
 
 
 @app.errorhandler(413)
