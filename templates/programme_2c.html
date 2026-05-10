@@ -251,36 +251,31 @@
 TBL.init('prog2cTable', 30);
 BulkSelect.init('prog2cTable', '{{ url_for("programme_bulk_delete") }}');
 
-// Autofill from data attributes — attached to native change event so it works
-// whether TomSelect loads from CDN or falls back to a plain <select>
+// Session data embedded at render time — no DOM traversal, no fetch
+const _SESS2C = {
+  {% for s in cal_sessions %}
+  {{ s.session_code | tojson }}: {n:{{ (s.programme_name or '') | tojson }},t:{{ (s.prog_type or '') | tojson }},h:{{ s.duration_hrs or 0 }},ps:{{ (s.plan_start or '') | tojson }},pe:{{ (s.plan_end or '') | tojson }}},
+  {% endfor %}
+};
+function _fill2C(val) {
+  if (!val) return;
+  var d = _SESS2C[val];
+  if (!d) return;
+  document.getElementById('pc_prog_name').value = d.n || '';
+  document.getElementById('pc_prog_type').value = d.t || '';
+  document.getElementById('pc_hours').value     = d.h || 0;
+  if (d.ps) document.getElementById('pc_start_date').value = d.ps;
+  if (d.pe) document.getElementById('pc_end_date').value   = d.pe;
+}
 (function(){
   var sel = document.getElementById('pc_session_code');
-  sel.addEventListener('change', function(){
-    var opt = this.options[this.selectedIndex];
-    if (!opt || !opt.value) return;
-    document.getElementById('pc_prog_name').value = opt.dataset.name || '';
-    document.getElementById('pc_prog_type').value = opt.dataset.type || '';
-    document.getElementById('pc_hours').value     = opt.dataset.hrs  || 0;
-    if (opt.dataset.ps) document.getElementById('pc_start_date').value = opt.dataset.ps;
-    if (opt.dataset.pe) document.getElementById('pc_end_date').value   = opt.dataset.pe;
-  });
+  // Fallback: native select (no TomSelect)
+  sel.addEventListener('change', function(){ _fill2C(this.value); });
   if (typeof TomSelect !== 'undefined') {
     new TomSelect(sel, {
       allowEmptyOption: true,
       placeholder: 'Type session code or programme name...',
-      onChange: function(val){
-        if (!val) return;
-        var o = sel.options[sel.selectedIndex];
-        if (!o || o.value !== val) {
-          for (var i=0;i<sel.options.length;i++) { if (sel.options[i].value===val){o=sel.options[i];break;} }
-        }
-        if (!o) return;
-        document.getElementById('pc_prog_name').value = o.dataset.name || '';
-        document.getElementById('pc_prog_type').value = o.dataset.type || '';
-        document.getElementById('pc_hours').value     = o.dataset.hrs  || 0;
-        if (o.dataset.ps) document.getElementById('pc_start_date').value = o.dataset.ps;
-        if (o.dataset.pe) document.getElementById('pc_end_date').value   = o.dataset.pe;
-      }
+      onChange: function(val){ _fill2C(val); }
     });
   }
 })();

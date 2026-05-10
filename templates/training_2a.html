@@ -254,39 +254,33 @@
 TBL.init('training2aTable', 30);
 BulkSelect.init('training2aTable', '{{ url_for("training_bulk_delete") }}');
 
-// Autofill from data attributes — native change fires whether TomSelect is present or not
+// Session data embedded at render time — no DOM traversal, no fetch
+const _SESS2A = {
+  {% for s in sessions %}
+  {{ s.session_code | tojson }}: {n:{{ (s.programme_name or '') | tojson }},t:{{ (s.prog_type or '') | tojson }},m:{{ (s.mode or '') | tojson }},h:{{ s.duration_hrs or 0 }},ps:{{ (s.plan_start or '') | tojson }},pe:{{ (s.plan_end or '') | tojson }}},
+  {% endfor %}
+};
+function _fill2A(val) {
+  if (!val) return;
+  var d = _SESS2A[val];
+  if (!d) return;
+  var s = function(id,v){ var el=document.getElementById(id); if(el) el.value=v||''; };
+  s('tr_prog_name',      d.n);
+  s('tr_prog_type_disp', d.t);
+  s('tr_mode_disp',      d.m);
+  s('tr_hrs',            d.h || 0);
+  if (d.ps) s('tr_start_date', d.ps);
+  if (d.pe) s('tr_end_date',   d.pe);
+}
 (function(){
   var sel = document.getElementById('tr_session_code');
-  sel.addEventListener('change', function(){
-    var opt = this.options[this.selectedIndex];
-    if (!opt || !opt.value) return;
-    var set = function(id, v){ var el = document.getElementById(id); if (el) el.value = v || ''; };
-    set('tr_prog_name',      opt.dataset.name);
-    set('tr_prog_type_disp', opt.dataset.type);
-    set('tr_mode_disp',      opt.dataset.mode);
-    set('tr_hrs',            opt.dataset.hrs || 0);
-    if (opt.dataset.ps) set('tr_start_date', opt.dataset.ps);
-    if (opt.dataset.pe) set('tr_end_date',   opt.dataset.pe);
-  });
+  // Fallback: native select (no TomSelect)
+  sel.addEventListener('change', function(){ _fill2A(this.value); });
   if (typeof TomSelect !== 'undefined') {
     new TomSelect(sel, {
       allowEmptyOption: true,
       placeholder: 'Type session code or programme name...',
-      onChange: function(val){
-        if (!val) return;
-        var o = sel.options[sel.selectedIndex];
-        if (!o || o.value !== val) {
-          for (var i=0;i<sel.options.length;i++) { if (sel.options[i].value===val){o=sel.options[i];break;} }
-        }
-        if (!o) return;
-        var s2 = function(id, v){ var el = document.getElementById(id); if (el) el.value = v || ''; };
-        s2('tr_prog_name',      o.dataset.name);
-        s2('tr_prog_type_disp', o.dataset.type);
-        s2('tr_mode_disp',      o.dataset.mode);
-        s2('tr_hrs',            o.dataset.hrs || 0);
-        if (o.dataset.ps) s2('tr_start_date', o.dataset.ps);
-        if (o.dataset.pe) s2('tr_end_date',   o.dataset.pe);
-      }
+      onChange: function(val){ _fill2A(val); }
     });
   }
 })();
