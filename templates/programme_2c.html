@@ -251,26 +251,39 @@
 TBL.init('prog2cTable', 30);
 BulkSelect.init('prog2cTable', '{{ url_for("programme_bulk_delete") }}');
 
-// Searchable session code dropdown
-new TomSelect('#pc_session_code', {
-  allowEmptyOption: true,
-  placeholder: 'Type session code or programme name...',
-  onChange: function(val) {
-    if (!val) return;
-    // TomSelect keeps original <select> hidden in DOM — read data attributes from it
-    const sel = document.getElementById('pc_session_code');
-    let opt = null;
-    for (let i = 0; i < sel.options.length; i++) {
-      if (sel.options[i].value === val) { opt = sel.options[i]; break; }
-    }
-    if (!opt) return;
+// Autofill from data attributes — attached to native change event so it works
+// whether TomSelect loads from CDN or falls back to a plain <select>
+(function(){
+  var sel = document.getElementById('pc_session_code');
+  sel.addEventListener('change', function(){
+    var opt = this.options[this.selectedIndex];
+    if (!opt || !opt.value) return;
     document.getElementById('pc_prog_name').value = opt.dataset.name || '';
     document.getElementById('pc_prog_type').value = opt.dataset.type || '';
     document.getElementById('pc_hours').value     = opt.dataset.hrs  || 0;
     if (opt.dataset.ps) document.getElementById('pc_start_date').value = opt.dataset.ps;
     if (opt.dataset.pe) document.getElementById('pc_end_date').value   = opt.dataset.pe;
+  });
+  if (typeof TomSelect !== 'undefined') {
+    new TomSelect(sel, {
+      allowEmptyOption: true,
+      placeholder: 'Type session code or programme name...',
+      onChange: function(val){
+        if (!val) return;
+        var o = sel.options[sel.selectedIndex];
+        if (!o || o.value !== val) {
+          for (var i=0;i<sel.options.length;i++) { if (sel.options[i].value===val){o=sel.options[i];break;} }
+        }
+        if (!o) return;
+        document.getElementById('pc_prog_name').value = o.dataset.name || '';
+        document.getElementById('pc_prog_type').value = o.dataset.type || '';
+        document.getElementById('pc_hours').value     = o.dataset.hrs  || 0;
+        if (o.dataset.ps) document.getElementById('pc_start_date').value = o.dataset.ps;
+        if (o.dataset.pe) document.getElementById('pc_end_date').value   = o.dataset.pe;
+      }
+    });
   }
-});
+})();
 
 (function(){
   const today = new Date();
