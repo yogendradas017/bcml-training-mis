@@ -44,7 +44,12 @@
           <select name="session_code" id="pc_session_code" class="form-select" required>
             <option value="">-- Type to search session --</option>
             {% for s in cal_sessions %}
-            <option value="{{ s.session_code }}">{{ s.session_code }} — {{ s.programme_name }}</option>
+            <option value="{{ s.session_code }}"
+                    data-name="{{ s.programme_name or '' }}"
+                    data-type="{{ s.prog_type or '' }}"
+                    data-hrs="{{ s.duration_hrs or 0 }}"
+                    data-ps="{{ s.plan_start or '' }}"
+                    data-pe="{{ s.plan_end or '' }}">{{ s.session_code }} — {{ s.programme_name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -243,28 +248,6 @@
 {% endblock %}
 {% block scripts %}
 <script>
-const _CAL = {};
-{% for s in cal_sessions %}
-_CAL[{{ s.session_code | tojson }}] = {
-  name: {{ (s.programme_name or '') | tojson }},
-  type: {{ (s.prog_type or '') | tojson }},
-  hrs:  {{ s.duration_hrs or 0 }},
-  ps:   {{ (s.plan_start or '') | tojson }},
-  pe:   {{ (s.plan_end or '') | tojson }}
-};
-{% endfor %}
-
-function fillSessionDetails2c(code) {
-  if (!code) return;
-  const d = _CAL[code];
-  if (!d) return;
-  document.getElementById('pc_prog_name').value = d.name;
-  document.getElementById('pc_prog_type').value = d.type;
-  document.getElementById('pc_hours').value     = d.hrs;
-  if (d.ps) document.getElementById('pc_start_date').value = d.ps;
-  if (d.pe) document.getElementById('pc_end_date').value   = d.pe;
-}
-
 TBL.init('prog2cTable', 30);
 BulkSelect.init('prog2cTable', '{{ url_for("programme_bulk_delete") }}');
 
@@ -272,7 +255,21 @@ BulkSelect.init('prog2cTable', '{{ url_for("programme_bulk_delete") }}');
 new TomSelect('#pc_session_code', {
   allowEmptyOption: true,
   placeholder: 'Type session code or programme name...',
-  onChange: function(val) { fillSessionDetails2c(val); }
+  onChange: function(val) {
+    if (!val) return;
+    // TomSelect keeps original <select> hidden in DOM — read data attributes from it
+    const sel = document.getElementById('pc_session_code');
+    let opt = null;
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === val) { opt = sel.options[i]; break; }
+    }
+    if (!opt) return;
+    document.getElementById('pc_prog_name').value = opt.dataset.name || '';
+    document.getElementById('pc_prog_type').value = opt.dataset.type || '';
+    document.getElementById('pc_hours').value     = opt.dataset.hrs  || 0;
+    if (opt.dataset.ps) document.getElementById('pc_start_date').value = opt.dataset.ps;
+    if (opt.dataset.pe) document.getElementById('pc_end_date').value   = opt.dataset.pe;
+  }
 });
 
 (function(){
