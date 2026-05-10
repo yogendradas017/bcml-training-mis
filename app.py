@@ -101,7 +101,7 @@ def health():
 
 # Register all routes (deferred imports — app is defined above)
 from tms.routes import (auth, employees, tni, programme, calendar, training,
-                        summary, central, export, api, qr, central_training, reports)
+                        summary, central, export, api, qr, central_training, reports, requests)
 
 auth.             _register(app)
 employees.        _register(app)
@@ -116,6 +116,7 @@ api.              _register(app)
 qr.               _register(app)
 central_training. _register(app)
 reports.          _register(app)
+requests.         _register(app)
 
 # Rate-limit login: 20 attempts/minute per IP
 limiter.limit('20 per minute')(app.view_functions['login'])

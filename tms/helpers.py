@@ -40,8 +40,9 @@ def _read_upload_file_path(path):
 
 
 def _clean(row, keys):
+    cols = row.keys() if hasattr(row, 'keys') else row.index
     for k in keys:
-        for col in row.index:
+        for col in cols:
             if str(col).strip().lower() == k:
                 val = str(row[col]).strip()
                 return '' if val.lower() in ('nan', 'none', '') else val
@@ -81,6 +82,12 @@ def _in_current_fy(date_str):
         return date.fromisoformat(s) <= d <= date.fromisoformat(e)
     except (ValueError, TypeError):
         return False
+
+
+def _tni_is_locked():
+    """True if today is past March 31 of the current FY (TNI write window closed)."""
+    _, fy_end = _current_fy()
+    return date.today() > date.fromisoformat(fy_end)
 
 
 def _date_to_month(date_str):
@@ -198,17 +205,21 @@ def _sync_master_from_tni(plant_id, db):
         WHERE plant_id=? AND fy_year=? AND programme_name IS NOT NULL AND programme_name != ""
         GROUP BY programme_name
     ''', (fy, fy, plant_id, fy)).fetchall()
+    if not rows:
+        return
+    # Batch INSERT — single executemany instead of N individual INSERTs
+    db.executemany(
+        'INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, source) VALUES(?,?,?,?)',
+        [(plant_id, r['programme_name'], r['top_type'], r['derived_source']) for r in rows]
+    )
     for r in rows:
-        db.execute('''INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, source)
-                      VALUES(?,?,?,?)''',
-                   (plant_id, r['programme_name'], r['top_type'], r['derived_source']))
         if r['top_type']:
-            db.execute('''UPDATE programme_master SET prog_type=?
-                          WHERE plant_id=? AND LOWER(name)=LOWER(?) AND (prog_type IS NULL OR prog_type="")''',
-                       (r['top_type'], plant_id, r['programme_name']))
-        db.execute('''UPDATE programme_master SET source=?
-                      WHERE plant_id=? AND LOWER(name)=LOWER(?)''',
-                   (r['derived_source'], plant_id, r['programme_name']))
+            db.execute(
+                'UPDATE programme_master SET prog_type=? WHERE plant_id=? AND LOWER(name)=LOWER(?) AND (prog_type IS NULL OR prog_type="")',
+                (r['top_type'], plant_id, r['programme_name']))
+        db.execute(
+            'UPDATE programme_master SET source=? WHERE plant_id=? AND LOWER(name)=LOWER(?)',
+            (r['derived_source'], plant_id, r['programme_name']))
 
 
 def _prog_in_use(prog_name, plant_id, db):
@@ -811,13 +822,17 @@ def _apply_word_fixes(s):
     return ' '.join(out)
 
 
-def _canonical_prog(raw_name, plant_id, db, strict=False):
+def _canonical_prog(raw_name, plant_id, db, strict=False, _master=None):
+    """_master: pre-loaded list of programme names — pass to avoid per-row DB query in bulk loops."""
     if not raw_name or not raw_name.strip():
         return raw_name
     from difflib import get_close_matches as gcm
-    master = [r[0] for r in db.execute(
-        'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
-    ).fetchall()] or []
+    if _master is None:
+        master = [r[0] for r in db.execute(
+            'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
+        ).fetchall()] or []
+    else:
+        master = _master
     master_lower = [m.lower() for m in master]
     corrected = _apply_word_fixes(raw_name.strip())
     raw_lower = corrected.lower()
