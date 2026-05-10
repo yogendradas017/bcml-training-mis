@@ -12,11 +12,10 @@ function fillEmpDetails(empCode, prefix) {
 }
 
 // Auto-fill session details into Training 2A form
-// Session codes contain '/' so encode each segment separately
 function fillSessionDetails(code) {
   if (!code) return;
-  fetch('/api/session/' + code.split('/').map(encodeURIComponent).join('/'))
-    .then(r => r.json())
+  fetch('/api/session-info?code=' + encodeURIComponent(code))
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(d => {
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
       set('tr_prog_name',      d.programme_name);
@@ -25,7 +24,8 @@ function fillSessionDetails(code) {
       set('tr_hrs',            d.duration_hrs);
       if (d.plan_start) set('tr_start_date', d.plan_start);
       if (d.plan_end)   set('tr_end_date',   d.plan_end);
-    });
+    })
+    .catch(e => console.warn('session-info fetch failed:', e));
 }
 
 // Auto-dismiss success/warning alerts after 5 seconds
