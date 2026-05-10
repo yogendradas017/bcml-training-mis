@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block page_title %}Override Requests{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <div class="page-hdr-title">Override Requests</div>
+    <div class="page-hdr-sub">SPOC override requests — review, approve, or reject</div>
+  </div>
+</div>
+
+{% set pending = rows | selectattr('status', 'equalto', 'Pending') | list %}
+{% set resolved = rows | rejectattr('status', 'equalto', 'Pending') | list %}
+
+{% if pending %}
+<div class="card shadow-sm mb-4 border-warning">
+  <div class="card-header fw-semibold" style="background:#92400e;color:#fff;">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>Pending Requests ({{ pending|length }})
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th><th>Date</th><th>Plant</th><th>Requested By</th>
+          <th>Type</th><th>Details</th><th style="min-width:260px;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in pending %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td style="font-size:12px;white-space:nowrap;">{{ r.ts[:16] }}</td>
+          <td style="font-size:12px;">{{ r.plant_name or r.plant_id }}</td>
+          <td style="font-size:12px;">{{ r.requested_by }}</td>
+          <td style="font-size:12px;">
+            {% if r.request_type == 'TNI_ADD' %}<span class="badge bg-primary">TNI Add</span>
+            {% elif r.request_type == 'MARK_CONDUCTED' %}<span class="badge bg-info text-dark">Mark Conducted</span>
+            {% elif r.request_type == 'MANUAL_ATTENDANCE' %}<span class="badge bg-secondary">Manual Attendance</span>
+            {% else %}<span class="badge bg-dark">Other</span>{% endif %}
+          </td>
+          <td style="font-size:12px;max-width:300px;">{{ r.details }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('admin_review_request', req_id=r.id) }}" class="d-flex gap-2 align-items-start flex-wrap">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="text" name="review_note" class="form-control form-control-sm" style="min-width:140px;" placeholder="Optional note to SPOC">
+              <button name="action" value="approve" class="btn btn-success btn-sm">
+                <i class="bi bi-check-lg"></i> Approve
+              </button>
+              <button name="action" value="reject" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-x-lg"></i> Reject
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-success mb-4">
+  <i class="bi bi-check-circle-fill me-2"></i>No pending override requests.
+</div>
+{% endif %}
+
+{% if resolved %}
+<div class="card shadow-sm">
+  <div class="card-header fw-semibold" style="background:#1a1f35;color:#fff;">
+    <i class="bi bi-archive me-2"></i>Resolved Requests
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th><th>Date</th><th>Plant</th><th>By</th><th>Type</th><th>Status</th><th>Reviewed By</th><th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in resolved %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td style="font-size:12px;white-space:nowrap;">{{ r.ts[:16] }}</td>
+          <td style="font-size:12px;">{{ r.plant_name or r.plant_id }}</td>
+          <td style="font-size:12px;">{{ r.requested_by }}</td>
+          <td style="font-size:12px;">
+            {% if r.request_type == 'TNI_ADD' %}TNI Add
+            {% elif r.request_type == 'MARK_CONDUCTED' %}Mark Conducted
+            {% elif r.request_type == 'MANUAL_ATTENDANCE' %}Manual Attendance
+            {% else %}Other{% endif %}
+          </td>
+          <td>
+            <span class="badge {% if r.status == 'Approved' %}bg-success{% else %}bg-danger{% endif %}" style="font-size:11px;">{{ r.status }}</span>
+          </td>
+          <td style="font-size:12px;">{{ r.reviewed_by or '—' }}</td>
+          <td style="font-size:12px;color:#6b7280;">{{ r.review_note or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

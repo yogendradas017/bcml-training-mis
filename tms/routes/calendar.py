@@ -156,11 +156,23 @@ def _register(app):
         plant_id = session['plant_id']
         f = request.form
         db = get_db()
-        existing = db.execute('SELECT status FROM calendar WHERE id=? AND plant_id=?',
+        existing = db.execute('SELECT status, session_code FROM calendar WHERE id=? AND plant_id=?',
                               (cal_id, plant_id)).fetchone()
         if existing and existing['status'] == 'Conducted':
             flash('Conducted sessions cannot be edited.', 'danger')
             return redirect(url_for('training_calendar'))
+        if f.get('status') == 'Conducted' and session.get('role') != 'admin':
+            sc = existing['session_code'] if existing else None
+            has_qr = sc and db.execute(
+                'SELECT 1 FROM session_qr WHERE plant_id=? AND session_code=? AND is_active=1',
+                (plant_id, sc)).fetchone()
+            has_feedback = sc and db.execute(
+                'SELECT 1 FROM feedback_response WHERE plant_id=? AND session_code=?',
+                (plant_id, sc)).fetchone()
+            if not has_qr or not has_feedback:
+                missing = 'QR code not generated' if not has_qr else 'no feedback responses received via QR'
+                flash(f'Cannot mark Conducted — {missing}. Generate a QR code for this session and collect at least one feedback response, or contact admin for an override.', 'danger')
+                return redirect(url_for('training_calendar'))
         edit_prog_raw     = f.get('programme_name','').strip()
         edit_prog         = _canonical_prog(edit_prog_raw, plant_id, db, strict=True)
         if edit_prog is None:

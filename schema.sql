@@ -221,3 +221,19 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_ts   ON audit_log(ts);
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(username);
+
+
+CREATE TABLE IF NOT EXISTS spoc_requests (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts           TEXT    DEFAULT (datetime('now','localtime')),
+    plant_id     INTEGER NOT NULL REFERENCES plants(id),
+    requested_by TEXT    NOT NULL,
+    request_type TEXT    NOT NULL CHECK(request_type IN ('TNI_ADD','MARK_CONDUCTED','MANUAL_ATTENDANCE','OTHER')),
+    details      TEXT    NOT NULL,
+    status       TEXT    DEFAULT 'Pending' CHECK(status IN ('Pending','Approved','Rejected')),
+    reviewed_by  TEXT,
+    reviewed_at  TEXT,
+    review_note  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_spoc_req_plant  ON spoc_requests(plant_id, status);
+CREATE INDEX IF NOT EXISTS idx_spoc_req_status ON spoc_requests(status);

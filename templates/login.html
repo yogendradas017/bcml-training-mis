@@ -10,7 +10,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'Inter',-apple-system,'Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;background:#fff;color:#1d1d1f}
+body{font-family:'Inter',-apple-system,'Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:clip;background:#fff;color:#1d1d1f}
 
 /* ── NAV ── */
 nav{position:sticky;top:0;z-index:400;background:rgba(250,250,252,.88);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(0,0,0,.07);}
@@ -328,6 +328,9 @@ table.st tbody tr.hi td{color:rgba(255,255,255,.82);}
   .footer{padding:16px 20px;}
   /* Perf: disable heavy 3D/parallax transforms on mobile */
   .smki{animation:none!important;}
+  /* Fix initial hidden-state translateX that widens layout on mobile */
+  .reveal-r{transform:translateY(24px);}
+  .reveal-l{transform:translateY(24px);}
   .reveal-r.vis,.reveal-l.vis{transform:none!important;}
 }
 @media(min-width:769px) and (max-width:1080px){
@@ -1029,19 +1032,17 @@ gsap.registerPlugin(ScrollTrigger);
   }
 })();
 
-// ── PARALLAX: hero text layers ──
-gsap.to('.hero-badge', { y: -30, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 } });
-gsap.to('.hero h1',    { y: -55, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 } });
-gsap.to('.hero-sub',   { y: -40, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 } });
-gsap.to('.hctas',      { y: -25, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 } });
-
-// ── PARALLAX: stage glow drifts up ──
-gsap.to('.stage-glow', { y: -180, ease: 'none', scrollTrigger: { trigger: '.stage', start: 'top bottom', end: 'bottom top', scrub: 1.5 } });
-
-// ── PARALLAX: feature mockups ──
-document.querySelectorAll('.smki').forEach(el => {
-  gsap.fromTo(el, { y: 40 }, { y: -40, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 1 } });
-});
+// ── PARALLAX: desktop only (scrub hijacks touch scroll on mobile) ──
+if (window.innerWidth > 768) {
+  gsap.to('.hero-badge', { y: -30, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 } });
+  gsap.to('.hero h1',    { y: -55, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 } });
+  gsap.to('.hero-sub',   { y: -40, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 } });
+  gsap.to('.hctas',      { y: -25, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 } });
+  gsap.to('.stage-glow', { y: -180, ease: 'none', scrollTrigger: { trigger: '.stage', start: 'top bottom', end: 'bottom top', scrub: 1.5 } });
+  document.querySelectorAll('.smki').forEach(el => {
+    gsap.fromTo(el, { y: 40 }, { y: -40, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 1 } });
+  });
+}
 
 // ── ENTRANCE: trust chips staggered ──
 gsap.from('.tchip', { opacity: 0, y: 18, stagger: 0.07, duration: 0.55, ease: 'power2.out',
@@ -1065,9 +1066,9 @@ const obs = new IntersectionObserver((entries) => {
 }, { threshold: 0.12 });
 document.querySelectorAll('.reveal, .reveal-r, .reveal-l').forEach(el => obs.observe(el));
 
-// ── Mouse-tracking 3D tilt on hero browser ──
+// ── Mouse-tracking 3D tilt on hero browser (desktop only) ──
 const hbr = document.querySelector('.hero-browser');
-if (hbr) {
+if (hbr && window.innerWidth > 768) {
   document.addEventListener('mousemove', (ev) => {
     const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
     const dx = (ev.clientX - cx) / cx, dy = (ev.clientY - cy) / cy;

@@ -375,6 +375,30 @@ def _migrate_audit_lockout(db):
         logging.warning(f'_migrate_audit_lockout failed: {e}')
 
 
+def _migrate_spoc_requests(db):
+    import logging
+    try:
+        db.executescript('''
+            CREATE TABLE IF NOT EXISTS spoc_requests (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts           TEXT    DEFAULT (datetime('now','localtime')),
+                plant_id     INTEGER NOT NULL,
+                requested_by TEXT    NOT NULL,
+                request_type TEXT    NOT NULL CHECK(request_type IN ('TNI_ADD','MARK_CONDUCTED','MANUAL_ATTENDANCE','OTHER')),
+                details      TEXT    NOT NULL,
+                status       TEXT    DEFAULT 'Pending' CHECK(status IN ('Pending','Approved','Rejected')),
+                reviewed_by  TEXT,
+                reviewed_at  TEXT,
+                review_note  TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_spoc_req_plant  ON spoc_requests(plant_id, status);
+            CREATE INDEX IF NOT EXISTS idx_spoc_req_status ON spoc_requests(status);
+        ''')
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_spoc_requests failed: {e}')
+
+
 def init_db():
     from tms.helpers import (
         _cleanse_master_spelling, _cleanse_programme_names, _cleanup_stale_analyze_files
@@ -398,6 +422,7 @@ def init_db():
     _migrate_corp_members(db)
     _migrate_central_user_plant(db)
     _migrate_audit_lockout(db)
+    _migrate_spoc_requests(db)
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
                    (p['id'], p['name'], p['unit_code']))

@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block page_title %}Override Request{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <div class="page-hdr-title">Override Request</div>
+    <div class="page-hdr-sub">Submit a request when TNI window is closed or QR requirement needs waiver</div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header fw-semibold" style="background:#1a1f35;color:#fff;">
+        <i class="bi bi-send-fill me-2"></i>New Override Request
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('spoc_submit_request') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Request Type <span class="text-danger">*</span></label>
+            <select name="request_type" class="form-select" required>
+              <option value="">— Select type —</option>
+              <option value="TNI_ADD">TNI Add / Edit (FY window closed)</option>
+              <option value="MARK_CONDUCTED">Mark Session as Conducted (QR waiver)</option>
+              <option value="MANUAL_ATTENDANCE">Manual Attendance Entry</option>
+              <option value="OTHER">Other</option>
+            </select>
+            <div class="form-text">Choose the control you need overridden.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Details <span class="text-danger">*</span></label>
+            <textarea name="details" class="form-control" rows="5" required minlength="20"
+              placeholder="Provide full context: employee code(s), programme name, session code, reason for override, and any supporting justification."></textarea>
+            <div class="form-text">Be specific — admin will use this to approve or reject.</div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-send"></i> Submit Request
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header fw-semibold" style="background:#1a1f35;color:#fff;">
+        <i class="bi bi-clock-history me-2"></i>My Previous Requests
+      </div>
+      <div class="card-body p-0">
+        {% if my_requests %}
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in my_requests %}
+              <tr>
+                <td style="font-size:12px;white-space:nowrap;">{{ r.ts[:16] }}</td>
+                <td style="font-size:12px;">
+                  {% if r.request_type == 'TNI_ADD' %}TNI Add
+                  {% elif r.request_type == 'MARK_CONDUCTED' %}Mark Conducted
+                  {% elif r.request_type == 'MANUAL_ATTENDANCE' %}Manual Attendance
+                  {% else %}Other{% endif %}
+                </td>
+                <td>
+                  <span class="badge {% if r.status == 'Approved' %}bg-success{% elif r.status == 'Rejected' %}bg-danger{% else %}bg-warning text-dark{% endif %}" style="font-size:11px;">
+                    {{ r.status }}
+                  </span>
+                </td>
+                <td style="font-size:12px;color:#6b7280;">{{ r.review_note or '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4" style="font-size:13px;">No requests submitted yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
