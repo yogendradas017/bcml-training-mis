@@ -301,16 +301,34 @@ def _register(app):
         db = get_db()
         records = db.execute('''
             SELECT p.*,
+                   c.source as cal_source,
                    (SELECT COUNT(*) FROM emp_training t WHERE t.session_code=p.session_code AND t.plant_id=p.plant_id) as participants,
                    (SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t WHERE t.session_code=p.session_code AND t.plant_id=p.plant_id) as man_hours
             FROM programme_details p
+            LEFT JOIN calendar c ON c.session_code=p.session_code AND c.plant_id=p.plant_id
             WHERE p.plant_id=?
             ORDER BY p.id DESC
         ''', (plant_id,)).fetchall()
+
+        # Central 2C rows where this plant's employees attended — read-only
+        central_records = db.execute('''
+            SELECT p.*,
+                   c.source as cal_source,
+                   COUNT(t.id) as participants,
+                   COALESCE(SUM(t.hrs),0) as man_hours
+            FROM programme_details p
+            JOIN emp_training t ON t.session_code=p.session_code AND t.plant_id=?
+            LEFT JOIN calendar c ON c.session_code=p.session_code AND c.plant_id=99
+            WHERE p.plant_id=99
+            GROUP BY p.id
+            ORDER BY p.start_date DESC
+        ''', (plant_id,)).fetchall()
+
         cal_sessions = db.execute(
             "SELECT session_code, programme_name FROM calendar WHERE plant_id=? ORDER BY session_code",
             (plant_id,)).fetchall()
         return render_template('programme_2c.html', records=records,
+                               central_records=central_records,
                                cal_sessions=cal_sessions,
                                int_ext=INT_EXT, audiences=AUDIENCES, months=MONTHS_FY)
 
@@ -330,7 +348,12 @@ def _register(app):
         cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
                          (session_code, plant_id)).fetchone()
         if not cal:
-            flash(f'Session code "{session_code}" not found in calendar. Only planned sessions can be recorded in 2C.', 'danger')
+            is_central = db.execute('SELECT 1 FROM calendar WHERE session_code=? AND plant_id=99',
+                                    (session_code,)).fetchone()
+            if is_central:
+                flash(f'Session {session_code} is a centrally managed programme. Programme details (2C) are entered by the Central L&D team. Record your employees\' attendance in Training Records (2A) using this session code.', 'warning')
+            else:
+                flash(f'Session code "{session_code}" not found in calendar. Only planned sessions can be recorded in 2C.', 'danger')
             return redirect(url_for('programme_details'))
         prog_name = cal['programme_name']
         prog_type = cal['prog_type']
@@ -467,7 +490,11 @@ def _register(app):
                 continue
             cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=?', (sc, plant_id)).fetchone()
             if not cal:
-                errors.append(f'Row {i+2}: Session Code {sc} not found in Calendar.')
+                is_central = db.execute('SELECT 1 FROM calendar WHERE session_code=? AND plant_id=99', (sc,)).fetchone()
+                if is_central:
+                    errors.append(f'Row {i+2}: Session {sc} is centrally managed — record attendance in 2A, not 2C.')
+                else:
+                    errors.append(f'Row {i+2}: Session Code {sc} not found in Calendar.')
                 continue
             if db.execute('SELECT 1 FROM programme_details WHERE session_code=? AND plant_id=?', (sc, plant_id)).fetchone():
                 errors.append(f'Row {i+2}: Session {sc} already has programme details recorded.')

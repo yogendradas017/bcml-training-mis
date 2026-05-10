@@ -10,6 +10,7 @@ from tms.db import get_db
 from tms.decorators import spoc_required, central_required, spoc_or_central_required
 from tms.helpers import _date_to_month
 from tms.constants import CENTRAL_PLANT_ID
+from tms.audit import log_action
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -645,6 +646,9 @@ def _register(app):
         if changed == 0:
             return redirect(url_for('qr_thanks', token=token,
                                     msg='already_marked', emp_name=emp_name), 303)
+        log_action('RECORD_ADD',
+                   f"qr_attend:{emp_code}:{qr['session_code']}",
+                   username=emp_code, plant_id=emp_plant if qr['plant_id'] == CENTRAL_PLANT_ID else qr['plant_id'])
         return redirect(url_for('qr_thanks', token=token,
                                 msg='attendance_ok', emp_name=emp_name), 303)
 
@@ -709,5 +713,7 @@ def _register(app):
         db.commit()
         _recompute_feedback_aggregates(qr['plant_id'], qr['session_code'], db)
         db.commit()
-
+        log_action('RECORD_ADD',
+                   f"qr_feedback:{emp_code or 'anon'}:{qr['session_code']}",
+                   username=emp_code or 'anonymous', plant_id=qr['plant_id'])
         return redirect(url_for('qr_thanks', token=token, msg='feedback_ok'), 303)

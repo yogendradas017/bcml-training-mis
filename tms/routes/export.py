@@ -149,8 +149,8 @@ def _register(app):
             ws4.append([])
             ws4.append([hc(ws4, h) for h in
                 ['Sr.','Emp Code','Name','Designation','Grade','Collar','Dept','Section',
-                 'Start Date','End Date','Hrs','Programme Name','Type','Level','Mode',
-                 'Cal/New','Pre Rating','Post Rating','Venue','Month']])
+                 'Session Code','Start Date','End Date','Hrs','Programme Name','Type','Level','Mode',
+                 'Source','Pre Rating','Post Rating','Venue','Month']])
             where  = ['t.plant_id=?']; params = [plant_id]
             if month_f:  where.append('t.month=?');       params.append(month_f)
             if collar_f: where.append('e.collar=?');      params.append(collar_f)
@@ -161,11 +161,13 @@ def _register(app):
                     FROM emp_training t LEFT JOIN employees e
                       ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
                     WHERE {" AND ".join(where)} ORDER BY t.id''', params), 1):
+                src = 'New Requirement' if t['host_plant_id'] == 99 else (t['cal_new'] or '')
                 ws4.append([r, t['emp_code'], t['emp_name'] or '', t['designation'] or '',
                             t['grade'] or '', t['collar'] or '', t['department'] or '',
-                            t['section'] or '', t['start_date'] or '', t['end_date'] or '',
+                            t['section'] or '', t['session_code'] or '',
+                            t['start_date'] or '', t['end_date'] or '',
                             t['hrs'], t['programme_name'], t['prog_type'] or '',
-                            t['level'] or '', t['mode'] or '', t['cal_new'] or '',
+                            t['level'] or '', t['mode'] or '', src,
                             t['pre_rating'], t['post_rating'], t['venue'] or '', t['month'] or ''])
 
         # ── Sheet 5: 2C Programme Details ─────────────────────────────────────
@@ -186,9 +188,10 @@ def _register(app):
             where  = ['p.plant_id=?']; params = [plant_id]
             join   = 'LEFT JOIN calendar c ON c.session_code=p.session_code AND c.plant_id=p.plant_id'
             if month_f: where.append('c.planned_month=?'); params.append(month_f)
-            for r, p in enumerate(db.execute(
-                    f'SELECT p.* FROM programme_details p {join} WHERE {" AND ".join(where)} ORDER BY p.id', params), 1):
-                ws5.append([r, p['session_code'], p['programme_name'], p['prog_type'] or '',
+            row_num = 1
+            for p in db.execute(
+                    f'SELECT p.* FROM programme_details p {join} WHERE {" AND ".join(where)} ORDER BY p.id', params):
+                ws5.append([row_num, p['session_code'], p['programme_name'], p['prog_type'] or '',
                             p['level'] or '', p['cal_new'] or '', p['mode'] or '',
                             p['start_date'] or '', p['end_date'] or '', p['audience'] or '',
                             p['hours_actual'], p['faculty_name'] or '', p['int_ext'] or '',
@@ -197,6 +200,25 @@ def _register(app):
                             p['trainer_fb_facilities'],
                             pax_map.get(p['session_code'], 0),
                             round(hrs_map.get(p['session_code'], 0), 1)])
+                row_num += 1
+            # Central programme details where this plant's employees attended
+            central_2c = db.execute('''
+                SELECT DISTINCT p.* FROM programme_details p
+                JOIN emp_training t ON t.session_code=p.session_code AND t.plant_id=?
+                WHERE p.plant_id=99
+                ORDER BY p.start_date
+            ''', (plant_id,)).fetchall()
+            for p in central_2c:
+                ws5.append([row_num, p['session_code'], p['programme_name'], p['prog_type'] or '',
+                            p['level'] or '', 'Central', p['mode'] or '',
+                            p['start_date'] or '', p['end_date'] or '', p['audience'] or '',
+                            p['hours_actual'], p['faculty_name'] or '', p['int_ext'] or '',
+                            p['cost'], p['venue'] or '', p['course_feedback'],
+                            p['faculty_feedback'], p['trainer_fb_participants'],
+                            p['trainer_fb_facilities'],
+                            pax_map.get(p['session_code'], 0),
+                            round(hrs_map.get(p['session_code'], 0), 1)])
+                row_num += 1
 
         # ── suffix for filename ────────────────────────────────────────────────
         suffix = f"_{month_f}" if month_f else ''

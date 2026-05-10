@@ -195,13 +195,96 @@ def _register(app):
         comp = _calc_compliance(pid, db)
         cur_mo = datetime.datetime.now().strftime('%m')
 
+        bc_target    = comp.get('bc_mandate', 0)
+        wc_target    = comp.get('wc_mandate', 0)
+        bc_actual    = comp.get('bc_actual',  0)
+        wc_actual    = comp.get('wc_actual',  0)
+        total_actual = round(bc_actual + wc_actual, 1)
+        total_target = bc_target + wc_target
+        total_mh_pct = round(total_actual / total_target * 100, 1) if total_target else 0
+
         return jsonify({
             'monthly': monthly,
-            'compliance': {'bc_pct':    round(comp.get('bc_pct',    0), 1),
-                           'wc_pct':    round(comp.get('wc_pct',    0), 1),
-                           'total_pct': round(comp.get('total_pct', 0), 1)},
+            'compliance': {
+                'bc_pct':      round(comp.get('bc_pct',    0), 1),
+                'wc_pct':      round(comp.get('wc_pct',    0), 1),
+                'total_pct':   round(comp.get('total_pct', 0), 1),
+                'bc_mh_pct':   round(comp.get('bc_pct',    0), 1),
+                'wc_mh_pct':   round(comp.get('wc_pct',    0), 1),
+                'total_mh_pct': total_mh_pct,
+                'bc_actual':   bc_actual,   'bc_target':   bc_target,
+                'wc_actual':   wc_actual,   'wc_target':   wc_target,
+                'total_actual': total_actual, 'total_target': total_target,
+            },
             'cur_mo': cur_mo
         })
+
+    @app.route('/api/manhour-drilldown')
+    @spoc_required
+    def api_manhour_drilldown():
+        pid    = session['plant_id']
+        collar = request.args.get('collar', 'ALL').upper()
+        db     = get_db()
+
+        if collar == 'BC':
+            collar_where = "AND e.collar='Blue Collared'"
+        elif collar == 'WC':
+            collar_where = "AND e.collar='White Collared'"
+        else:
+            collar_where = ''
+
+        dept_rows = db.execute(f'''
+            SELECT e.department, e.collar,
+                   COUNT(DISTINCT e.emp_code)   AS emp_count,
+                   COALESCE(SUM(et.hrs), 0)     AS actual_hrs
+            FROM employees e
+            LEFT JOIN emp_training et
+                   ON et.emp_code=e.emp_code AND et.plant_id=e.plant_id
+            WHERE e.plant_id=? AND e.is_active=1 {collar_where}
+              AND e.department IS NOT NULL AND e.department!=''
+            GROUP BY e.department, e.collar
+            ORDER BY e.department
+        ''', (pid,)).fetchall()
+
+        dept_map = {}
+        for r in dept_rows:
+            dept = r['department']
+            if dept not in dept_map:
+                dept_map[dept] = {'dept': dept, 'emp_count': 0, 'actual_hrs': 0.0, 'target_hrs': 0.0}
+            d = dept_map[dept]
+            d['emp_count']  += r['emp_count']
+            d['actual_hrs'] += r['actual_hrs']
+            d['target_hrs'] += r['emp_count'] * (12 if r['collar'] == 'Blue Collared' else 24 if r['collar'] == 'White Collared' else 0)
+
+        departments = []
+        for d in sorted(dept_map.values(), key=lambda x: x['dept']):
+            pct = round(d['actual_hrs'] / d['target_hrs'] * 100, 1) if d['target_hrs'] else 0
+            departments.append({'dept': d['dept'], 'emp_count': d['emp_count'],
+                                'actual_hrs': round(d['actual_hrs'], 1),
+                                'target_hrs': round(d['target_hrs'], 1), 'pct': pct})
+
+        emp_rows = db.execute(f'''
+            SELECT e.emp_code, e.name, e.department, e.collar,
+                   COALESCE(SUM(et.hrs), 0) AS actual_hrs
+            FROM employees e
+            LEFT JOIN emp_training et
+                   ON et.emp_code=e.emp_code AND et.plant_id=e.plant_id
+            WHERE e.plant_id=? AND e.is_active=1 {collar_where}
+            GROUP BY e.emp_code, e.name, e.department, e.collar
+            ORDER BY e.department, e.name
+        ''', (pid,)).fetchall()
+
+        employees = []
+        for r in emp_rows:
+            tgt    = 12 if r['collar'] == 'Blue Collared' else 24 if r['collar'] == 'White Collared' else 0
+            actual = round(r['actual_hrs'], 1)
+            pct    = round(actual / tgt * 100, 1) if tgt else 0
+            status = 'Met' if pct >= 100 else ('Zero' if actual == 0 else 'Low')
+            employees.append({'emp_code': r['emp_code'], 'name': r['name'],
+                              'department': r['department'] or '', 'collar': r['collar'] or '',
+                              'actual_hrs': actual, 'target_hrs': tgt, 'pct': pct, 'status': status})
+
+        return jsonify({'departments': departments, 'employees': employees})
 
     @app.route('/intelligence')
     @spoc_required
