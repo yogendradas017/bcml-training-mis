@@ -46,10 +46,13 @@
         <div class="col-md-4">
           <label class="form-label">Employee <span class="required-star">*</span></label>
           <select name="emp_code" id="tr_emp_code" class="form-select" required
-                  onchange="fillEmpDetails(this.value,'tr')">
+                  onchange="fillEmpDetails(this,'tr')">
             <option value="">-- Select Employee --</option>
             {% for emp in employees %}
-            <option value="{{ emp.emp_code }}">{{ emp.name }} ({{ emp.emp_code }})</option>
+            <option value="{{ emp.emp_code }}"
+                    data-grade="{{ emp.grade or '' }}"
+                    data-collar="{{ emp.collar or '' }}"
+                    data-dept="{{ emp.department or '' }}">{{ emp.name }} ({{ emp.emp_code }})</option>
             {% endfor %}
           </select>
         </div>

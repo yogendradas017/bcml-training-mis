@@ -260,8 +260,8 @@
     </div>
   </div>
   <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover table-sm mb-0" id="calTable" style="font-size:12px;">
+    <div class="table-responsive tbl-scroll-hint">
+      <table class="table table-hover table-sm mb-0" id="calTable" style="font-size:12px;min-width:980px;">
         <thead>
           <tr>
             <th style="width:30px;"><input type="checkbox" class="cb-all"></th>
@@ -316,8 +316,8 @@
               </button>
               {% endif %}
               {# QR dropdown #}
-              <div class="dropdown d-inline-block position-static">
-                <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" data-bs-offset="0,2" title="QR Codes" style="padding:2px 6px;">
+              <div class="dropdown d-inline-block">
+                <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" data-bs-offset="0,2" data-bs-strategy="fixed" title="QR Codes" style="padding:2px 6px;">
                   <i class="bi bi-qr-code"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" style="font-size:13px;min-width:200px;">
@@ -516,7 +516,7 @@ const _calProgTs = new TomSelect('#cal_prog_name', {
 function _fetchCoverage(val) {
   if (!val) { document.getElementById('tni-coverage-panel').style.display='none'; return; }
     fetch('/api/tni-coverage?q=' + encodeURIComponent(val))
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(d => {
         if (!d.demand) { document.getElementById('tni-coverage-panel').style.display='none'; return; }
         document.getElementById('tni-cp-name').textContent      = val;
@@ -565,7 +565,8 @@ function _fetchCoverage(val) {
           addAud.disabled = false;
           if (addBadge) addBadge.style.display = 'none';
         }
-      });
+      })
+      .catch(() => { document.getElementById('tni-coverage-panel').style.display='none'; });
 }
 
 function _unlockAddAudience() {
@@ -600,7 +601,7 @@ function openEdit(id, prog, type, source, month, start, end, tfrom, tto, hrs, le
   const eBadge = document.getElementById('e-audience-lock-badge');
   if (prog) {
     fetch('/api/tni-coverage?q=' + encodeURIComponent(prog))
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(d => {
         if (d.tni_locked && d.audience) {
           eAud.value    = d.audience;
@@ -610,7 +611,8 @@ function openEdit(id, prog, type, source, month, start, end, tfrom, tto, hrs, le
           eAud.disabled = false;
           if (eBadge) eBadge.style.display = 'none';
         }
-      });
+      })
+      .catch(() => { eAud.disabled = false; if (eBadge) eBadge.style.display = 'none'; });
   } else {
     eAud.disabled = false;
     if (eBadge) eBadge.style.display = 'none';
@@ -619,6 +621,18 @@ function openEdit(id, prog, type, source, month, start, end, tfrom, tto, hrs, le
 }
 
 PROG_AC.setup(document.getElementById('e_prog'));
+
+// Scroll-hint shadow — remove when user reaches right edge
+(function(){
+  const wrap = document.querySelector('.tbl-scroll-hint');
+  if (!wrap) return;
+  function check() {
+    const atEnd = wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 4;
+    wrap.classList.toggle('scrolled-end', atEnd);
+  }
+  wrap.addEventListener('scroll', check, { passive: true });
+  check();
+})();
 
 // FY date bounds + enforce min hours > 0
 (function(){

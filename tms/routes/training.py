@@ -39,7 +39,7 @@ def _register(app):
             ORDER BY t.id DESC
         ''', (plant_id,)).fetchall()
         emps = db.execute(
-            'SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name',
+            'SELECT emp_code, name, grade, collar, department FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name',
             (plant_id,)).fetchall()
         # Plant's own calendar + central calendar sessions (for cross-plant attendance entry)
         own_sessions = db.execute(
