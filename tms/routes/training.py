@@ -43,10 +43,12 @@ def _register(app):
             (plant_id,)).fetchall()
         # Plant's own calendar + central calendar sessions (for cross-plant attendance entry)
         own_sessions = db.execute(
-            "SELECT session_code, programme_name, 0 as is_central FROM calendar WHERE plant_id=? ORDER BY session_code",
+            "SELECT session_code, programme_name, prog_type, mode, duration_hrs, plan_start, plan_end,"
+            " 0 as is_central FROM calendar WHERE plant_id=? ORDER BY session_code",
             (plant_id,)).fetchall()
         central_sessions = db.execute(
-            "SELECT session_code, programme_name, 1 as is_central FROM calendar WHERE plant_id=99 ORDER BY session_code"
+            "SELECT session_code, programme_name, prog_type, mode, duration_hrs, plan_start, plan_end,"
+            " 1 as is_central FROM calendar WHERE plant_id=99 ORDER BY session_code"
         ).fetchall()
         sessions_list = list(own_sessions) + list(central_sessions)
         return render_template('training_2a.html', records=records, employees=emps,

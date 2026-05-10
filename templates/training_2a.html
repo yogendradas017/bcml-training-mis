@@ -66,7 +66,13 @@
           <select name="session_code" id="tr_session_code" class="form-select">
             <option value="">-- Type to search session --</option>
             {% for s in sessions %}
-            <option value="{{ s.session_code }}">
+            <option value="{{ s.session_code }}"
+                    data-name="{{ s.programme_name or '' }}"
+                    data-type="{{ s.prog_type or '' }}"
+                    data-mode="{{ s.mode or '' }}"
+                    data-hrs="{{ s.duration_hrs or 0 }}"
+                    data-ps="{{ s.plan_start or '' }}"
+                    data-pe="{{ s.plan_end or '' }}">
               {% if s.is_central %}[CENTRAL] {% endif %}{{ s.session_code }} — {{ s.programme_name }}
             </option>
             {% endfor %}
@@ -249,7 +255,22 @@ BulkSelect.init('training2aTable', '{{ url_for("training_bulk_delete") }}');
 new TomSelect('#tr_session_code', {
   allowEmptyOption: true,
   placeholder: 'Type session code or programme name...',
-  onChange: function(val) { fillSessionDetails(val); }
+  onChange: function(val) {
+    if (!val) return;
+    const sel = document.getElementById('tr_session_code');
+    let opt = null;
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === val) { opt = sel.options[i]; break; }
+    }
+    if (!opt) return;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    set('tr_prog_name',      opt.dataset.name);
+    set('tr_prog_type_disp', opt.dataset.type);
+    set('tr_mode_disp',      opt.dataset.mode);
+    set('tr_hrs',            opt.dataset.hrs || 0);
+    if (opt.dataset.ps) set('tr_start_date', opt.dataset.ps);
+    if (opt.dataset.pe) set('tr_end_date',   opt.dataset.pe);
+  }
 });
 
 PROG_AC.setup(document.getElementById('tr_prog_name'));
