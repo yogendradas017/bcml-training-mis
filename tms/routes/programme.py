@@ -325,7 +325,8 @@ def _register(app):
         ''', (plant_id,)).fetchall()
 
         cal_sessions = db.execute(
-            "SELECT session_code, programme_name FROM calendar WHERE plant_id=? ORDER BY session_code",
+            "SELECT session_code, programme_name, prog_type, duration_hrs, plan_start, plan_end"
+            " FROM calendar WHERE plant_id=? ORDER BY session_code",
             (plant_id,)).fetchall()
         return render_template('programme_2c.html', records=records,
                                central_records=central_records,
