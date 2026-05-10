@@ -213,19 +213,21 @@ document.querySelectorAll('.pm-type-opt').forEach(opt => {
   opt.onclick = async function() {
     _hideAll();
     const val = this.dataset.val;
-    const res = await fetch(`/programme-master/${_ctx.id}/set-type`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({prog_type: val})
-    });
-    const data = await res.json();
-    if (data.ok) {
-      const row = document.querySelector(`tr[data-id="${_ctx.id}"]`);
-      row.dataset.progType = val;
-      _ctx.type = val;
-      const td  = row.querySelector('td:nth-child(4)');
-      const c   = TYPE_COLORS[val] || {bg:'#f3f4f6', color:'#374151'};
-      td.innerHTML = `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;background:${c.bg};color:${c.color};">${val}</span>`;
-    }
+    try {
+      const res = await fetch(`/programme-master/${_ctx.id}/set-type`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({prog_type: val})
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const row = document.querySelector(`tr[data-id="${_ctx.id}"]`);
+        row.dataset.progType = val;
+        _ctx.type = val;
+        const td  = row.querySelector('td:nth-child(4)');
+        const c   = TYPE_COLORS[val] || {bg:'#f3f4f6', color:'#374151'};
+        td.innerHTML = `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;background:${c.bg};color:${c.color};">${val}</span>`;
+      } else { alert('Failed to update type. Please refresh and try again.'); }
+    } catch(e) { alert('Network error. Please check your connection and try again.'); }
   };
 });
 
@@ -233,11 +235,13 @@ document.getElementById('pm-ctx-toggle-src').onclick = async function(e) {
   e.preventDefault();
   _hideAll();
   const newSrc = _ctx.source === 'New Requirement' ? 'TNI Requirement' : 'New Requirement';
+  try {
   const res = await fetch(`/programme-master/${_ctx.id}/set-source`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({source: newSrc})
   });
   const data = await res.json();
+  if (!data.ok) { alert('Failed to update source. Please refresh and try again.'); return; }
   if (data.ok) {
     const row   = document.querySelector(`tr[data-id="${_ctx.id}"]`);
     row.dataset.source = newSrc;
@@ -251,6 +255,7 @@ document.getElementById('pm-ctx-toggle-src').onclick = async function(e) {
       badge.innerHTML = '<i class="bi bi-diagram-3 me-1"></i>TNI Req.';
     }
   }
+  } catch(e) { alert('Network error. Please check your connection and try again.'); }
 };
 
 document.getElementById('pm-ctx-delete').onclick = function(e) {

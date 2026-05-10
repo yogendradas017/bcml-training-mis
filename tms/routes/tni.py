@@ -15,7 +15,7 @@ from tms.helpers import (
     _is_ajax, _get_programme_names, _canonical_prog, _sync_master_from_tni,
     _read_upload_file, _read_upload_file_path, _clean, _safe_float,
     _error_excel_response, _process_fresh_tni, _parse_msforms_excel,
-    _smart_analyze_rows, _fy_label,
+    _smart_analyze_rows, _fy_label, _tni_is_locked,
     _error_excel_for_tni, _cleanse_programme_names,
 )
 
@@ -36,7 +36,7 @@ def _register(app):
         total = db.execute(
             'SELECT COUNT(DISTINCT emp_code || "|" || programme_name) FROM tni WHERE plant_id=? AND fy_year=?',
             (plant_id, fy)).fetchone()[0]
-        emps = db.execute('SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name', (plant_id,)).fetchall()
+        emps = db.execute('SELECT emp_code, name, grade, collar, department FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name', (plant_id,)).fetchall()
         programmes = _get_programme_names(plant_id, db)
         depts = [r[0] for r in db.execute(
             'SELECT DISTINCT department FROM employees WHERE plant_id=? AND department IS NOT NULL AND department != "" ORDER BY department',
@@ -130,6 +130,9 @@ def _register(app):
     @spoc_required
     def add_tni():
         plant_id = session['plant_id']
+        if _tni_is_locked() and session.get('role') != 'admin':
+            flash('TNI window is closed (FY ended March 31). Contact admin to submit an override request.', 'danger')
+            return redirect(url_for('tni'))
         f = request.form
         db = get_db()
 
@@ -217,6 +220,9 @@ def _register(app):
     @app.route('/tni/<int:tni_id>/delete', methods=['POST'])
     @spoc_required
     def delete_tni(tni_id):
+        if _tni_is_locked() and session.get('role') != 'admin':
+            flash('TNI window is closed. Contact admin to submit an override request.', 'danger')
+            return redirect(url_for('tni'))
         db = get_db()
         db.execute('DELETE FROM tni WHERE id=? AND plant_id=?', (tni_id, session['plant_id']))
         db.commit()
@@ -230,6 +236,9 @@ def _register(app):
     @spoc_required
     def tni_bulk_delete():
         plant_id = session['plant_id']
+        if _tni_is_locked() and session.get('role') != 'admin':
+            flash('TNI window is closed. Contact admin to submit an override request.', 'danger')
+            return redirect(url_for('tni'))
         db = get_db()
         if request.form.get('select_all') == '1':
             q         = request.form.get('q', '').strip()
@@ -492,6 +501,9 @@ def _register(app):
     @spoc_required
     def tni_bulk_upload():
         plant_id = session['plant_id']
+        if _tni_is_locked() and session.get('role') != 'admin':
+            flash('TNI window is closed (FY ended March 31). Contact admin to submit an override request.', 'danger')
+            return redirect(url_for('tni'))
         f = request.files.get('file')
         if not f or f.filename == '':
             flash('No file selected.', 'danger')
@@ -503,7 +515,15 @@ def _register(app):
             return redirect(url_for('tni'))
 
         db = get_db(); inserted = 0; errors = []
-        for i, row in df.iterrows():
+        # Pre-load master once and employee set once — avoids N DB queries in loop
+        master_cache = [r[0] for r in db.execute(
+            'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
+        ).fetchall()] or []
+        active_emps = {r[0] for r in db.execute(
+            'SELECT emp_code FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)
+        ).fetchall()}
+        fy = _fy_label()
+        for i, row in enumerate(df.to_dict('records')):
             emp_code  = _clean(row, ['employee code', 'emp code', 'empcode', 'employee_code'])
             prog_name = _clean(row, ['programme name', 'program name', 'programme_name', 'training name'])
             prog_type = _clean(row, ['type of programme', 'type', 'prog type', 'programme type'])
@@ -513,14 +533,12 @@ def _register(app):
             if not emp_code or not prog_name:
                 errors.append(f'Row {i+2}: Employee Code and Programme Name are required.')
                 continue
-            emp = db.execute('SELECT 1 FROM employees WHERE emp_code=? AND plant_id=? AND is_active=1',
-                             (emp_code, plant_id)).fetchone()
-            if not emp:
+            if emp_code not in active_emps:
                 errors.append(f'Row {i+2}: Employee {emp_code} not found in your plant.')
                 continue
-            prog_name = _canonical_prog(prog_name, plant_id, db)
+            prog_name = _canonical_prog(prog_name, plant_id, db, _master=master_cache)
             db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,fy_year) VALUES(?,?,?,?,?,?,?)',
-                       (plant_id, emp_code, prog_name, prog_type, mode, hours, _fy_label()))
+                       (plant_id, emp_code, prog_name, prog_type, mode, hours, fy))
             inserted += 1
         _sync_master_from_tni(plant_id, db)
         db.commit()
@@ -536,6 +554,9 @@ def _register(app):
     @spoc_required
     def tni_fresh_upload():
         plant_id = session['plant_id']
+        if _tni_is_locked() and session.get('role') != 'admin':
+            flash('TNI window is closed (FY ended March 31). Only admin can upload TNI after the financial year end.', 'danger')
+            return redirect(url_for('tni'))
         db = get_db()
 
         if request.method == 'GET':
@@ -581,7 +602,7 @@ def _register(app):
             db.commit()
             try: os.remove(tmp_path)
             except Exception: pass
-
+            log_action('BULK_UPLOAD', f"tni_fresh:{len(rows)}")
             flash(f'Fresh upload complete: {len(rows)} TNI entries saved. '
                   f'{len(result["unique_progs"])} unique programmes are now your master list. '
                   f'Previous {archived_count} rows archived (ref: {confirm_token[:8]})', 'success')
@@ -727,6 +748,10 @@ def _register(app):
     @app.route('/tni/analyze/confirm', methods=['POST'])
     @spoc_required
     def tni_analyze_confirm():
+        plant_id = session['plant_id']
+        if _tni_is_locked() and session.get('role') != 'admin':
+            flash('TNI window is closed (FY ended March 31). Contact admin to submit an override request.', 'danger')
+            return redirect(url_for('tni'))
         aid  = request.form.get('aid', '')
         path = os.path.join(BASE_DIR, 'data', f'tni_analyze_{aid}.json')
         if not aid or not os.path.exists(path):
