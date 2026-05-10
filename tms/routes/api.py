@@ -27,13 +27,8 @@ def _register(app):
             'category': emp['category'], 'gender': emp['gender']
         })
 
-    @app.route('/api/session/<path:session_code>')
-    @login_required
-    def api_session(session_code):
-        plant_id = session.get('plant_id')
-        if not plant_id:
-            return jsonify({})
-        db  = get_db()
+    def _session_lookup(session_code, plant_id):
+        db = get_db()
         cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
                          (session_code.strip(), plant_id)).fetchone()
         if not cal:
@@ -44,6 +39,25 @@ def _register(app):
             'plan_start': cal['plan_start'], 'plan_end': cal['plan_end'],
             'duration_hrs': cal['duration_hrs'], 'target_audience': cal['target_audience']
         })
+
+    @app.route('/api/session-info')
+    @login_required
+    def api_session_info():
+        plant_id = session.get('plant_id')
+        if not plant_id:
+            return jsonify({})
+        session_code = request.args.get('code', '').strip()
+        if not session_code:
+            return jsonify({})
+        return _session_lookup(session_code, plant_id)
+
+    @app.route('/api/session/<path:session_code>')
+    @login_required
+    def api_session(session_code):
+        plant_id = session.get('plant_id')
+        if not plant_id:
+            return jsonify({})
+        return _session_lookup(session_code, plant_id)
 
     @app.route('/api/employees_list')
     @login_required

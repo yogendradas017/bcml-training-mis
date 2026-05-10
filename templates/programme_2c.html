@@ -245,16 +245,16 @@
 <script>
 function fillSessionDetails2c(code) {
   if (!code) return;
-  // Use encodeURIComponent on each segment to handle slashes in session codes
-  fetch('/api/session/' + code.split('/').map(encodeURIComponent).join('/'))
-    .then(r => r.json())
+  fetch('/api/session-info?code=' + encodeURIComponent(code))
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(d => {
       document.getElementById('pc_prog_name').value  = d.programme_name || '';
       document.getElementById('pc_prog_type').value  = d.prog_type || '';
       document.getElementById('pc_hours').value      = d.duration_hrs || 0;
       if (d.plan_start) document.getElementById('pc_start_date').value = d.plan_start;
       if (d.plan_end)   document.getElementById('pc_end_date').value   = d.plan_end;
-    });
+    })
+    .catch(e => console.warn('session-info fetch failed:', e));
 }
 
 TBL.init('prog2cTable', 30);
