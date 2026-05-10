@@ -47,14 +47,21 @@ def _register(app):
             plant_summaries.append({**p,
                 'blue_collar': bc, 'white_collar': wc, 'total_emp': bc + wc,
                 'sessions': sessions_cnt, 'conducted': conducted_cnt,
+                'own_sessions': own_sessions, 'own_conducted': own_conducted,
                 'manhours': round(manhours, 1),
                 'bc_pct': bc_pct, 'wc_pct': wc_pct
             })
+        # Deduplicate central sessions in grand total — count DISTINCT session_codes across all plants
+        grand_central = db.execute(
+            "SELECT COUNT(DISTINCT session_code) FROM emp_training "
+            "WHERE host_plant_id=99 AND session_code IS NOT NULL AND session_code!=''"
+            " AND start_date>=? AND start_date<=?",
+            (fy_start, fy_end)).fetchone()[0]
         grand = {
             'total_emp': sum(p['total_emp'] for p in plant_summaries),
             'manhours':  round(sum(p['manhours'] for p in plant_summaries), 1),
-            'sessions':  sum(p['sessions'] for p in plant_summaries),
-            'conducted': sum(p['conducted'] for p in plant_summaries),
+            'sessions':  sum(p['own_sessions'] for p in plant_summaries) + grand_central,
+            'conducted': sum(p['own_conducted'] for p in plant_summaries) + grand_central,
         }
 
         # Quarter date ranges: use start_date bounds instead of free-text month field

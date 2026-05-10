@@ -28,19 +28,27 @@ def _register(app):
         records = db.execute('''
             SELECT t.*, e.name as emp_name, e.designation, e.grade, e.collar,
                    e.department, e.section,
-                   c.source as cal_source
+                   COALESCE(c.source, cc.source) as cal_source,
+                   CASE WHEN t.host_plant_id=99 THEN 1 ELSE 0 END as is_central
             FROM emp_training t
             LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            LEFT JOIN calendar c ON c.session_code=t.session_code AND c.plant_id=t.plant_id
+            LEFT JOIN calendar c  ON c.session_code=t.session_code AND c.plant_id=t.plant_id
+            LEFT JOIN calendar cc ON cc.session_code=t.session_code AND cc.plant_id=99
+                                  AND t.host_plant_id=99
             WHERE t.plant_id=?
             ORDER BY t.id DESC
         ''', (plant_id,)).fetchall()
         emps = db.execute(
             'SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name',
             (plant_id,)).fetchall()
-        sessions_list = db.execute(
-            "SELECT session_code, programme_name FROM calendar WHERE plant_id=? ORDER BY session_code",
+        # Plant's own calendar + central calendar sessions (for cross-plant attendance entry)
+        own_sessions = db.execute(
+            "SELECT session_code, programme_name, 0 as is_central FROM calendar WHERE plant_id=? ORDER BY session_code",
             (plant_id,)).fetchall()
+        central_sessions = db.execute(
+            "SELECT session_code, programme_name, 1 as is_central FROM calendar WHERE plant_id=99 ORDER BY session_code"
+        ).fetchall()
+        sessions_list = list(own_sessions) + list(central_sessions)
         return render_template('training_2a.html', records=records, employees=emps,
                                sessions=sessions_list, months=MONTHS_FY)
 
@@ -58,9 +66,15 @@ def _register(app):
 
         prog_name = None
         prog_type = level = mode = cal_new = ''
+        host_plant_id = None
         if session_code:
             cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
                              (session_code, plant_id)).fetchone()
+            if not cal:
+                cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=99',
+                                 (session_code,)).fetchone()
+                if cal:
+                    host_plant_id = 99
             if cal:
                 prog_name  = cal['programme_name']
                 prog_type  = cal['prog_type']
@@ -96,18 +110,19 @@ def _register(app):
         month = _date_to_month(start_date)
         db.execute('''INSERT OR IGNORE INTO emp_training
             (plant_id,emp_code,session_code,programme_name,start_date,end_date,
-             hrs,prog_type,level,mode,cal_new,pre_rating,post_rating,venue,month)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+             hrs,prog_type,level,mode,cal_new,pre_rating,post_rating,venue,month,host_plant_id)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
             (plant_id, emp_code, session_code, prog_name,
              start_date, end_date, hrs,
              prog_type, level, mode, cal_new,
              _safe_float(f.get('pre_rating')), _safe_float(f.get('post_rating')),
-             f.get('venue',''), month))
+             f.get('venue',''), month, host_plant_id))
         if db.execute('SELECT changes()').fetchone()[0] == 0:
             flash('Duplicate record — this employee already has a training entry for this programme on this date.', 'warning')
             return redirect(url_for('emp_training'))
         db.commit()
-        log_action('RECORD_ADD', f"2a:{emp_code}:{prog_name}")
+        tag = '[central]' if host_plant_id == 99 else ''
+        log_action('RECORD_ADD', f"2a{tag}:{emp_code}:{prog_name}")
         flash('Training record added.', 'success')
         return redirect(url_for('emp_training'))
 
@@ -208,9 +223,15 @@ def _register(app):
                 continue
 
             prog_type = level = mode = cal_new = ''
+            host_plant_id_row = None
             if session_code:
                 cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
                                  (session_code, plant_id)).fetchone()
+                if not cal:
+                    cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=99',
+                                     (session_code,)).fetchone()
+                    if cal:
+                        host_plant_id_row = 99
                 if cal:
                     prog_name  = prog_name or cal['programme_name']
                     prog_type  = cal['prog_type']
@@ -244,11 +265,11 @@ def _register(app):
             month = _date_to_month(start_date)
             db.execute('''INSERT OR IGNORE INTO emp_training
                 (plant_id,emp_code,session_code,programme_name,start_date,end_date,
-                 hrs,prog_type,level,mode,cal_new,pre_rating,post_rating,venue,month)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                 hrs,prog_type,level,mode,cal_new,pre_rating,post_rating,venue,month,host_plant_id)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (plant_id, emp_code, session_code, prog_name,
                  start_date, end_date, hrs, prog_type, level, mode, cal_new,
-                 pre_r, post_r, venue, month))
+                 pre_r, post_r, venue, month, host_plant_id_row))
             if db.execute('SELECT changes()').fetchone()[0]:
                 inserted += 1
         db.commit()

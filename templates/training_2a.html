@@ -66,7 +66,9 @@
           <select name="session_code" id="tr_session_code" class="form-select">
             <option value="">-- Type to search session --</option>
             {% for s in sessions %}
-            <option value="{{ s.session_code }}">{{ s.session_code }} — {{ s.programme_name }}</option>
+            <option value="{{ s.session_code }}">
+              {% if s.is_central %}[CENTRAL] {% endif %}{{ s.session_code }} — {{ s.programme_name }}
+            </option>
             {% endfor %}
           </select>
         </div>
@@ -149,7 +151,6 @@
         <option value="">All Sources</option>
         <option value="TNI Driven">TNI Driven</option>
         <option value="New Requirement">New Req</option>
-        <option value="Central">Central</option>
       </select>
       <select class="form-select form-select-sm" style="width:120px;" onchange="TBL.filter('training2aTable','month',this.value)">
         <option value="">All Months</option>
@@ -184,7 +185,7 @@
         </thead>
         <tbody>
           {% for rec in records %}
-          {% set src = 'Central' if rec.host_plant_id == 99 else (rec.cal_source or '') %}
+          {% set src = rec.cal_source or '' %}
           <tr data-collar="{{ rec.collar or '' }}" data-type="{{ rec.prog_type or '' }}"
               data-month="{{ rec.month or '' }}" data-source="{{ src }}">
             <td style="padding:6px;"><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
@@ -204,9 +205,7 @@
               <span class="badge-unit" style="font-size:10px;white-space:nowrap;">{{ rec.prog_type or '—' }}</span>
             </td>
             <td style="padding:6px 4px;">
-              {% if rec.host_plant_id == 99 %}
-                <span class="badge bg-primary" style="font-size:10px;">Central</span>
-              {% elif rec.cal_source == 'New Requirement' %}
+              {% if rec.cal_source == 'New Requirement' %}
                 <span class="badge bg-warning text-dark" style="font-size:10px;">New Req</span>
               {% elif rec.cal_source == 'TNI Driven' %}
                 <span class="badge bg-success" style="font-size:10px;">TNI</span>

@@ -61,6 +61,7 @@
         <div class="kpi-foot">
           <span class="kpi-badge">{{ sess_pct }}% complete</span>
           <span class="kpi-foot-lbl">&middot; <strong>{{ stats.tni_count }}</strong> TNI entries on record</span>
+          {% if stats.central_sessions %}<span class="kpi-foot-lbl">&middot; <strong>{{ stats.central_sessions }}</strong> central session{{ 's' if stats.central_sessions != 1 }} (Corp L&amp;D)</span>{% endif %}
         </div>
       </div>
     </div>
@@ -106,11 +107,15 @@
     <div class="analytics-card">
       <div class="analytics-hd">
         <span class="analytics-title"><i class="bi bi-bullseye me-1" style="color:var(--c-primary);"></i>Training Hours vs Target</span>
-        <span class="analytics-badge">FY 2026–27</span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="analytics-badge">FY 2026–27</span>
+          <button type="button" class="gauge-interactive-badge" onclick="openDrilldown('ALL')"><i class="bi bi-cursor-fill"></i> Click to explore</button>
+        </div>
       </div>
       <div class="analytics-body" style="display:flex;flex-direction:column;justify-content:center;">
         <div class="gauge-pair">
-          <div class="gauge-wrap">
+          <div class="gauge-wrap" title="Click to drill into Blue Collar employees">
+            <div class="gauge-click-ring"></div>
             <svg id="gauge-bc" class="gauge-svg" viewBox="0 0 120 120">
               <circle class="gauge-track" cx="60" cy="60" r="42" transform="rotate(-90 60 60)"/>
               <circle class="gauge-fill gauge-fill-bc" cx="60" cy="60" r="42"
@@ -121,10 +126,13 @@
               <text x="60" y="70" text-anchor="middle" font-size="9" fill="#6e6e73" font-family="Inter,system-ui,sans-serif">%</text>
             </svg>
             <div class="gauge-lbl">Blue Collar</div>
-            <div class="gauge-sub">Target 12 hrs/yr</div>
+            <div class="gauge-sub">Target {{ stats.blue_collar }} × 12 = {{ (stats.blue_collar * 12)|int }} hrs</div>
+            <div class="gauge-abs" id="gauge-bc-abs">— / — hrs</div>
+            <div class="gauge-hint"><i class="bi bi-zoom-in"></i> Drill down</div>
           </div>
           <div class="gauge-sep"></div>
-          <div class="gauge-wrap">
+          <div class="gauge-wrap" title="Click to drill into White Collar employees">
+            <div class="gauge-click-ring"></div>
             <svg id="gauge-wc" class="gauge-svg" viewBox="0 0 120 120">
               <circle class="gauge-track" cx="60" cy="60" r="42" transform="rotate(-90 60 60)"/>
               <circle class="gauge-fill gauge-fill-wc" cx="60" cy="60" r="42"
@@ -135,10 +143,13 @@
               <text x="60" y="70" text-anchor="middle" font-size="9" fill="#6e6e73" font-family="Inter,system-ui,sans-serif">%</text>
             </svg>
             <div class="gauge-lbl">White Collar</div>
-            <div class="gauge-sub">Target 24 hrs/yr</div>
+            <div class="gauge-sub">Target {{ stats.white_collar }} × 24 = {{ (stats.white_collar * 24)|int }} hrs</div>
+            <div class="gauge-abs" id="gauge-wc-abs">— / — hrs</div>
+            <div class="gauge-hint"><i class="bi bi-zoom-in"></i> Drill down</div>
           </div>
           <div class="gauge-sep"></div>
-          <div class="gauge-wrap">
+          <div class="gauge-wrap" title="Click to drill into all employees">
+            <div class="gauge-click-ring"></div>
             <svg id="gauge-ov" class="gauge-svg" viewBox="0 0 120 120">
               <circle class="gauge-track" cx="60" cy="60" r="42" transform="rotate(-90 60 60)"/>
               <circle class="gauge-fill gauge-fill-ov" cx="60" cy="60" r="42"
@@ -149,11 +160,13 @@
               <text x="60" y="70" text-anchor="middle" font-size="9" fill="#6e6e73" font-family="Inter,system-ui,sans-serif">%</text>
             </svg>
             <div class="gauge-lbl">Overall</div>
-            <div class="gauge-sub">Combined</div>
+            <div class="gauge-sub">Target {{ (stats.blue_collar * 12 + stats.white_collar * 24)|int }} hrs total</div>
+            <div class="gauge-abs" id="gauge-ov-abs">— / — hrs</div>
+            <div class="gauge-hint"><i class="bi bi-zoom-in"></i> Drill down</div>
           </div>
         </div>
       </div>
-      <div class="gauge-foot">Manhour compliance · BC: 12 hrs/yr · WC: 24 hrs/yr</div>
+      <div class="gauge-foot">Manhour compliance · BC: 12 hrs/yr · WC: 24 hrs/yr · <i class="bi bi-hand-index-thumb-fill" style="color:var(--c-primary);"></i> Click any gauge to explore employee data</div>
     </div>
   </div>
 
@@ -232,6 +245,98 @@
         </div>
       </div>
     </a>
+  </div>
+</div>
+<!-- ── MANHOUR DRILLDOWN MODAL (Power BI style) ──────────────── -->
+<div class="modal fade" id="mhDrillModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-content dd-shell">
+      <div class="modal-header py-2 px-3">
+        <h6 class="modal-title mb-0 d-flex align-items-center gap-2">
+          <i class="bi bi-graph-up-arrow" style="color:var(--c-primary);"></i>
+          Training Hours Drilldown
+          <span class="dd-collar-badge" id="dd-collar-label">All</span>
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="dd-toolbar">
+        <div class="dd-crumbs" id="dd-crumbs">
+          <button type="button" class="dd-crumb-btn" id="dd-crumb-root">
+            <i class="bi bi-grid-3x3-gap-fill"></i> All Departments
+          </button>
+          <span class="dd-crumb-sep" id="dd-crumb-sep" style="display:none;">
+            <i class="bi bi-chevron-right"></i>
+          </span>
+          <span class="dd-crumb-current" id="dd-crumb-current" style="display:none;"></span>
+        </div>
+        <div class="dd-toolbar-right">
+          <div class="dd-search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" id="dd-search" class="dd-search-input" placeholder="Search…" oninput="ddFilter(this.value)">
+          </div>
+          <button type="button" class="dd-back-btn" id="dd-back-btn" style="display:none;" onclick="ddDrillOut()">
+            <i class="bi bi-arrow-left"></i> Back
+          </button>
+        </div>
+      </div>
+
+      <div class="dd-kpi-strip">
+        <div class="dd-kpi-chip dd-kpi-met">
+          <div class="dd-kpi-v" id="dd-kpi-met">—</div>
+          <div class="dd-kpi-l">At Target</div>
+        </div>
+        <div class="dd-kpi-chip dd-kpi-low">
+          <div class="dd-kpi-v" id="dd-kpi-low">—</div>
+          <div class="dd-kpi-l">Below Target</div>
+        </div>
+        <div class="dd-kpi-chip dd-kpi-zero">
+          <div class="dd-kpi-v" id="dd-kpi-zero">—</div>
+          <div class="dd-kpi-l">Zero Hours</div>
+        </div>
+        <div class="dd-kpi-chip dd-kpi-total">
+          <div class="dd-kpi-v" id="dd-kpi-total">—</div>
+          <div class="dd-kpi-l">Total Employees</div>
+        </div>
+        <div class="dd-kpi-chip dd-kpi-overall ms-auto">
+          <div class="dd-kpi-v" id="dd-kpi-overall">—</div>
+          <div class="dd-kpi-l">Overall Compliance</div>
+        </div>
+      </div>
+
+      <div class="modal-body p-0 dd-viewport">
+        <div class="dd-loading" id="dd-loading">
+          <div class="dd-spinner"></div>
+          <div>Loading drilldown…</div>
+        </div>
+
+        <div class="dd-panel dd-panel-dept is-active" id="dd-view-dept">
+          <div class="dd-cards" id="dd-dept-cards">
+            <div style="grid-column:1/-1;" class="dd-empty">
+              <i class="bi bi-bar-chart"></i>
+              <div>Click a gauge ring to load drilldown.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dd-panel dd-panel-emp" id="dd-view-emp">
+          <div class="dd-emp-header">
+            <div>#</div>
+            <div>Employee</div>
+            <div>Department</div>
+            <div class="dd-c-collar">Collar</div>
+            <div>Hours</div>
+            <div class="dd-c-prog">Progress</div>
+            <div class="dd-c-pct">%</div>
+            <div>Status</div>
+          </div>
+          <div class="dd-emp-rows" id="dd-emp-rows"></div>
+          <div class="dd-empty" id="dd-emp-empty" style="display:none;">
+            <i class="bi bi-inbox"></i><div>No employees match your search.</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -362,15 +467,32 @@
   var _curMo = '';
 
   /* ── fetch ──────────────────────────────────────────────────── */
+  function fmtHrs(v) { return parseFloat(v || 0).toFixed(1); }
+
   fetch('/api/dashboard-monthly')
     .then(function (r) { return r.json(); })
     .then(function (data) {
       MONTHLY = data.monthly;
       _curMo  = data.cur_mo;
+      var c   = data.compliance;
 
-      drawGauge('gauge-bc', data.compliance.bc_pct);
-      drawGauge('gauge-wc', data.compliance.wc_pct);
-      drawGauge('gauge-ov', data.compliance.total_pct);
+      drawGauge('gauge-bc', c.bc_mh_pct);
+      drawGauge('gauge-wc', c.wc_mh_pct);
+      drawGauge('gauge-ov', c.total_mh_pct);
+
+      var bca = document.getElementById('gauge-bc-abs');
+      var wca = document.getElementById('gauge-wc-abs');
+      var ova = document.getElementById('gauge-ov-abs');
+      if (bca) bca.textContent = fmtHrs(c.bc_actual) + ' / ' + fmtHrs(c.bc_target) + ' hrs';
+      if (wca) wca.textContent = fmtHrs(c.wc_actual) + ' / ' + fmtHrs(c.wc_target) + ' hrs';
+      var ovAct = c.total_actual != null ? c.total_actual : ((c.bc_actual || 0) + (c.wc_actual || 0));
+      var ovTgt = c.total_target != null ? c.total_target : ((c.bc_target || 0) + (c.wc_target || 0));
+      if (ova) ova.textContent = fmtHrs(ovAct) + ' / ' + fmtHrs(ovTgt) + ' hrs';
+
+      var collars = ['BC', 'WC', 'ALL'];
+      document.querySelectorAll('.gauge-wrap').forEach(function (wrap, i) {
+        wrap.addEventListener('click', function () { openDrilldown(collars[i] || 'ALL'); });
+      });
 
       renderChart(MONTHLY, CUR_METRIC, _curMo);
 
@@ -383,6 +505,271 @@
       if (area) area.innerHTML = '<p style="color:var(--c-muted);font-size:12px;padding:16px 0;">Unable to load monthly data.</p>';
     });
 
+})();
+</script>
+<script>
+/* ── Manhour Drilldown — Power BI style ────────────────────── */
+(function () {
+  var DD = { collar:'ALL', view:'dept', selectedDept:null, departments:[], employees:[], search:'', loaded:false };
+  var EL = {};
+
+  function gel(id) { return document.getElementById(id); }
+  function cacheEls() {
+    EL.collarLbl    = gel('dd-collar-label');
+    EL.crumbRoot    = gel('dd-crumb-root');
+    EL.crumbSep     = gel('dd-crumb-sep');
+    EL.crumbCurrent = gel('dd-crumb-current');
+    EL.backBtn      = gel('dd-back-btn');
+    EL.search       = gel('dd-search');
+    EL.loading      = gel('dd-loading');
+    EL.viewDept     = gel('dd-view-dept');
+    EL.viewEmp      = gel('dd-view-emp');
+    EL.deptCards    = gel('dd-dept-cards');
+    EL.empRows      = gel('dd-emp-rows');
+    EL.empEmpty     = gel('dd-emp-empty');
+    EL.kpiMet       = gel('dd-kpi-met');
+    EL.kpiLow       = gel('dd-kpi-low');
+    EL.kpiZero      = gel('dd-kpi-zero');
+    EL.kpiTotal     = gel('dd-kpi-total');
+    EL.kpiOverall   = gel('dd-kpi-overall');
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function tier(pct, actual) {
+    if (actual === 0)  return 'tier-zero';
+    if (pct   >= 100)  return 'tier-met';
+    if (pct   >= 50)   return 'tier-mid';
+    return 'tier-low';
+  }
+
+  /* ── Open ──────────────────────────────────────────────────── */
+  window.openDrilldown = function (collar) {
+    cacheEls();
+    DD.collar = collar || 'ALL';
+    DD.view = 'dept'; DD.selectedDept = null; DD.search = ''; DD.loaded = false;
+    if (EL.search) EL.search.value = '';
+    var labels = {BC:'Blue Collar', WC:'White Collar', ALL:'All Employees'};
+    if (EL.collarLbl) EL.collarLbl.textContent = labels[DD.collar] || 'All';
+    new bootstrap.Modal(gel('mhDrillModal')).show();
+    if (EL.loading) EL.loading.classList.add('is-active');
+    showPanel('dept', false);
+    updateBreadcrumb();
+
+    fetch('/api/manhour-drilldown?collar=' + encodeURIComponent(DD.collar))
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        DD.departments = data.departments || [];
+        DD.employees   = data.employees   || [];
+        DD.loaded = true;
+        if (EL.loading) EL.loading.classList.remove('is-active');
+        renderDeptCards();
+        renderKpiStrip();
+      })
+      .catch(function(){
+        if (EL.loading) EL.loading.classList.remove('is-active');
+        if (EL.deptCards) EL.deptCards.innerHTML = '<div class="dd-empty" style="grid-column:1/-1;"><i class="bi bi-exclamation-triangle"></i><div>Failed to load data.</div></div>';
+      });
+  };
+
+  /* ── Drill in / out ────────────────────────────────────────── */
+  window.ddDrillIn = function (dept) {
+    if (!DD.loaded) return;
+    DD.selectedDept = dept; DD.view = 'emp'; DD.search = '';
+    if (EL.search) EL.search.value = '';
+    updateBreadcrumb();
+    renderEmpRows();
+    renderKpiStrip();
+    showPanel('emp', true);
+  };
+
+  window.ddDrillOut = function () {
+    DD.view = 'dept'; DD.selectedDept = null; DD.search = '';
+    if (EL.search) EL.search.value = '';
+    updateBreadcrumb();
+    renderKpiStrip();
+    showPanel('dept', true);
+    requestAnimationFrame(animateCardBars);
+  };
+
+  /* ── Panel slide transition ────────────────────────────────── */
+  function showPanel(view, animate) {
+    var inc = view === 'dept' ? EL.viewDept : EL.viewEmp;
+    var out = view === 'dept' ? EL.viewEmp  : EL.viewDept;
+    if (!inc || !out) return;
+    if (!animate) {
+      out.classList.remove('is-active');
+      inc.classList.add('is-active');
+      return;
+    }
+    out.classList.remove('is-active');
+    out.classList.add(view === 'emp' ? 'is-leaving-left' : 'is-entering-right');
+    inc.classList.remove('is-active','is-leaving-left','is-entering-right');
+    inc.classList.add(view === 'emp' ? 'is-entering-right' : 'is-leaving-left');
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        inc.classList.remove('is-entering-right','is-leaving-left');
+        inc.classList.add('is-active');
+      });
+    });
+    setTimeout(function(){ out.classList.remove('is-leaving-left','is-entering-right'); }, 320);
+  }
+
+  /* ── Breadcrumb ────────────────────────────────────────────── */
+  function updateBreadcrumb() {
+    var atEmp = DD.view === 'emp';
+    if (EL.crumbSep)     EL.crumbSep.style.display     = atEmp ? '' : 'none';
+    if (EL.crumbCurrent) EL.crumbCurrent.style.display  = atEmp ? '' : 'none';
+    if (EL.backBtn)      EL.backBtn.style.display       = atEmp ? '' : 'none';
+    if (EL.crumbRoot) {
+      EL.crumbRoot.style.cursor = atEmp ? 'pointer' : 'default';
+      EL.crumbRoot.style.color  = atEmp ? 'var(--c-primary)' : '';
+      EL.crumbRoot.onclick = atEmp ? function(){ ddDrillOut(); } : null;
+    }
+    if (atEmp && EL.crumbCurrent && DD.selectedDept != null) {
+      var cnt = DD.employees.filter(function(e){ return e.department === DD.selectedDept; }).length;
+      EL.crumbCurrent.innerHTML = esc(DD.selectedDept) +
+        ' <span class="dd-crumb-count">' + cnt + '</span>';
+    }
+  }
+
+  /* ── Department cards ──────────────────────────────────────── */
+  function renderDeptCards() {
+    if (!EL.deptCards) return;
+    var rows = DD.departments;
+    if (DD.search) {
+      var q = DD.search.toLowerCase();
+      rows = rows.filter(function(d){ return (d.dept||'').toLowerCase().indexOf(q) !== -1; });
+    }
+    if (!rows.length) {
+      EL.deptCards.innerHTML = '<div class="dd-empty" style="grid-column:1/-1;"><i class="bi bi-inbox"></i><div>No departments match.</div></div>';
+      return;
+    }
+    var empByDept = {};
+    DD.employees.forEach(function(e){
+      var d = e.department || '';
+      if (!empByDept[d]) empByDept[d] = {met:0, low:0, zero:0};
+      if (e.status==='Met') empByDept[d].met++;
+      else if (e.status==='Zero') empByDept[d].zero++;
+      else empByDept[d].low++;
+    });
+
+    var html = '';
+    rows.forEach(function(r) {
+      var t   = tier(r.pct, r.actual_hrs);
+      var pct = Math.min(Math.max(r.pct||0, 0), 100);
+      var deptJson = esc(JSON.stringify(r.dept || ''));
+      var eb = empByDept[r.dept||''] || {met:0,low:0,zero:0};
+      html += '<div class="dd-card ' + t + '" onclick="ddDrillIn(' + deptJson + ')">' +
+        '<div class="dd-card-head">' +
+          '<div class="dd-card-name">' + esc(r.dept||'—') + '</div>' +
+          '<div class="dd-card-pct">' + (r.pct||0) + '%</div>' +
+        '</div>' +
+        '<div class="dd-card-meta">' +
+          '<span><strong>' + r.emp_count + '</strong> employees</span>' +
+          '<span><strong>' + r.actual_hrs + '</strong> / ' + r.target_hrs + ' hrs</span>' +
+        '</div>' +
+        '<div class="dd-card-bar"><div class="dd-card-bar-fill" data-target="' + pct + '"></div></div>' +
+        '<div class="dd-card-chips">' +
+          '<span class="dd-mini-chip dd-mc-met"><strong>' + eb.met  + '</strong> Met</span>' +
+          '<span class="dd-mini-chip dd-mc-low"><strong>' + eb.low  + '</strong> Low</span>' +
+          '<span class="dd-mini-chip dd-mc-zero"><strong>' + eb.zero + '</strong> Zero</span>' +
+        '</div>' +
+        '<div class="dd-card-foot">' +
+          '<span>Click to view employees</span>' +
+          '<span class="dd-card-cta">Drill in <i class="bi bi-arrow-right"></i></span>' +
+        '</div>' +
+      '</div>';
+    });
+    EL.deptCards.innerHTML = html;
+    requestAnimationFrame(animateCardBars);
+  }
+
+  function animateCardBars() {
+    document.querySelectorAll('#dd-dept-cards .dd-card-bar-fill').forEach(function(f){
+      f.style.width = '0%';
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){ f.style.width = (f.dataset.target||0) + '%'; });
+      });
+    });
+  }
+
+  /* ── Employee rows ─────────────────────────────────────────── */
+  function renderEmpRows() {
+    if (!EL.empRows) return;
+    var rows = DD.employees;
+    if (DD.selectedDept != null)
+      rows = rows.filter(function(e){ return e.department === DD.selectedDept; });
+    if (DD.search) {
+      var q = DD.search.toLowerCase();
+      rows = rows.filter(function(e){
+        return ((e.emp_code||'')+' '+(e.name||'')+' '+(e.department||'')).toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    if (EL.empEmpty) EL.empEmpty.style.display = rows.length ? 'none' : '';
+    if (!rows.length) { EL.empRows.innerHTML = ''; return; }
+
+    var html = '';
+    rows.forEach(function(r, i){
+      var t   = tier(r.pct, r.actual_hrs);
+      var pct = Math.min(Math.max(r.pct||0, 0), 100);
+      var stCls = r.status==='Met' ? 'met' : r.status==='Zero' ? 'zero' : 'low';
+      var cs = (r.collar||'').replace(' Collared','');
+      var cCls = cs === 'Blue' ? 'bc' : 'wc';
+      var barClr = t==='tier-met' ? '#22c55e' : t==='tier-mid' ? '#f59e0b' : t==='tier-low' ? '#ef4444' : '#94a3b8';
+      html += '<div class="dd-emp-row">' +
+        '<div>' + (i+1) + '</div>' +
+        '<div><strong>' + esc(r.name||'—') + '</strong><br><code>' + esc(r.emp_code||'') + '</code></div>' +
+        '<div>' + esc(r.department||'—') + '</div>' +
+        '<div class="dd-c-collar"><span class="dd-emp-collar ' + cCls + '">' + esc(cs) + '</span></div>' +
+        '<div>' + r.actual_hrs + ' / ' + r.target_hrs + '</div>' +
+        '<div class="dd-c-prog"><div class="dd-emp-bar"><div class="dd-emp-bar-fill" data-target="' + pct + '" style="background:' + barClr + ';"></div></div></div>' +
+        '<div class="dd-c-pct"><strong>' + (r.pct||0) + '%</strong></div>' +
+        '<div><span class="dd-emp-status ' + stCls + '">' + esc(r.status) + '</span></div>' +
+      '</div>';
+    });
+    EL.empRows.innerHTML = html;
+    requestAnimationFrame(function(){
+      EL.empRows.querySelectorAll('.dd-emp-bar-fill').forEach(function(f){
+        f.style.width = '0%';
+        requestAnimationFrame(function(){
+          requestAnimationFrame(function(){ f.style.width = (f.dataset.target||0) + '%'; });
+        });
+      });
+    });
+  }
+
+  /* ── KPI strip ─────────────────────────────────────────────── */
+  function renderKpiStrip() {
+    var pool = DD.employees.slice();
+    if (DD.view === 'emp' && DD.selectedDept != null)
+      pool = pool.filter(function(e){ return e.department === DD.selectedDept; });
+    var met=0, low=0, zero=0, act=0, tgt=0;
+    pool.forEach(function(e){
+      if (e.status==='Met') met++; else if (e.status==='Zero') zero++; else low++;
+      act += +e.actual_hrs||0; tgt += +e.target_hrs||0;
+    });
+    var ov = tgt ? Math.round(act/tgt*100) : 0;
+    if (EL.kpiMet)     EL.kpiMet.textContent     = met;
+    if (EL.kpiLow)     EL.kpiLow.textContent     = low;
+    if (EL.kpiZero)    EL.kpiZero.textContent    = zero;
+    if (EL.kpiTotal)   EL.kpiTotal.textContent   = pool.length;
+    if (EL.kpiOverall) EL.kpiOverall.textContent = ov + '%';
+  }
+
+  /* ── Search ────────────────────────────────────────────────── */
+  window.ddFilter = function(q){
+    DD.search = (q||'').trim();
+    if (DD.view === 'dept') renderDeptCards(); else renderEmpRows();
+  };
+
+  window.ddSwitchTab  = function(){};  // no-op shim
+  window.ddDrillIn    = window.ddDrillIn;
+  window.ddDrillOut   = window.ddDrillOut;
 })();
 </script>
 {% endblock %}

@@ -8,6 +8,7 @@ from tms.helpers import (
     _get_or_create_prog_code, _new_session_code,
     _canonical_prog, _current_fy, _in_current_fy,
 )
+from tms.audit import log_action
 
 
 def _register(app):
@@ -200,6 +201,7 @@ def _register(app):
              int(f.get('planned_pax') or 0), f.get('trainer_vendor', ''),
              'To Be Planned', 1))
         db.commit()
+        log_action('RECORD_ADD', f"central_cal:{session_code}")
         flash(f'Central session {session_code} added.', 'success')
         return redirect(url_for('central_calendar'))
 
@@ -236,6 +238,7 @@ def _register(app):
              f.get('status', 'To Be Planned'),
              cal_id, CENTRAL_PLANT_ID))
         db.commit()
+        log_action('RECORD_EDIT', f"central_cal:{cal_id}")
         flash('Session updated.', 'success')
         return redirect(url_for('central_calendar'))
 
@@ -255,6 +258,7 @@ def _register(app):
         db.execute('DELETE FROM calendar WHERE id=? AND plant_id=?',
                    (cal_id, CENTRAL_PLANT_ID))
         db.commit()
+        log_action('RECORD_DELETE', f"central_cal:{cal['session_code']}")
         flash('Session deleted.', 'warning')
         return redirect(url_for('central_calendar'))
 

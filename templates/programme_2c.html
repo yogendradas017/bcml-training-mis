@@ -147,7 +147,7 @@
           <tr>
             <th><input type="checkbox" class="cb-all"></th>
             <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th>
-            <th>Start Date</th><th>Hrs</th><th>Faculty</th><th>Int/Ext</th>
+            <th>Source</th><th>Start Date</th><th>Hrs</th><th>Faculty</th><th>Int/Ext</th>
             <th>Cost (&#8377;)</th><th>Course FB</th><th>Participants</th><th>Man-Hrs</th><th>Action</th>
           </tr>
         </thead>
@@ -159,6 +159,11 @@
             <td><code style="font-size:11px;">{{ rec.session_code }}</code></td>
             <td><strong>{{ rec.programme_name or '—' }}</strong></td>
             <td><span class="badge-unit" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
+            <td>
+              {% if rec.cal_source == 'New Requirement' %}<span class="badge bg-warning text-dark" style="font-size:11px;">New Req</span>
+              {% elif rec.cal_source == 'TNI Driven' %}<span class="badge bg-success" style="font-size:11px;">TNI</span>
+              {% else %}<span class="text-muted" style="font-size:11px;">—</span>{% endif %}
+            </td>
             <td>{{ rec.start_date or '—' }}</td>
             <td>{{ rec.hours_actual }}</td>
             <td>{{ rec.faculty_name or '—' }}</td>
@@ -182,13 +187,59 @@
             </td>
           </tr>
           {% else %}
-          <tr data-empty="1"><td colspan="14" class="text-center text-muted py-4">No programme records yet. Add above.</td></tr>
+          <tr data-empty="1"><td colspan="15" class="text-center text-muted py-4">No programme records yet. Add above.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
 </div>
+{% if central_records %}
+<div class="card mt-4" style="border-left:4px solid #7c3aed;">
+  <div class="card-header ch-dark d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-building"></i> Corporate L&amp;D — Centrally Conducted Sessions
+      <span class="badge ms-2" style="background:#7c3aed;font-size:11px;">{{ central_records|length }}</span>
+    </span>
+    <span style="font-size:11px;opacity:.75;">Read-only · Session code <code style="color:#c4b5fd;">CEN/…</code> identifies central sessions · Details entered by Corporate L&amp;D</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="prog2cCentralTable" style="font-size:13px;">
+        <thead>
+          <tr>
+            <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th>
+            <th>Source</th><th>Start Date</th><th>Hrs</th><th>Faculty</th><th>Int/Ext</th>
+            <th>Cost (&#8377;)</th><th>Course FB</th><th>Participants</th><th>Man-Hrs</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rec in central_records %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td><code style="font-size:11px;color:#7c3aed;">{{ rec.session_code }}</code></td>
+            <td><strong>{{ rec.programme_name or '—' }}</strong></td>
+            <td><span class="badge-unit" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
+            <td><span class="badge bg-warning text-dark" style="font-size:11px;">New Req</span></td>
+            <td>{{ rec.start_date or '—' }}</td>
+            <td>{{ rec.hours_actual }}</td>
+            <td>{{ rec.faculty_name or '—' }}</td>
+            <td>
+              {% if rec.int_ext == 'Internal' %}<span class="badge" style="background:#dbeafe;color:#1d4ed8;">Internal</span>
+              {% elif rec.int_ext == 'External' %}<span class="badge" style="background:#fef3c7;color:#92400e;">External</span>
+              {% else %}<span class="badge-unit">{{ rec.int_ext or '—' }}</span>{% endif %}
+            </td>
+            <td>{{ "%.0f"|format(rec.cost or 0) }}</td>
+            <td>{{ rec.course_feedback or '—' }}</td>
+            <td><strong>{{ rec.participants }}</strong></td>
+            <td><strong>{{ "%.1f"|format(rec.man_hours or 0) }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 {% block scripts %}
 <script>
