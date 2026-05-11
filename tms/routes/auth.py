@@ -270,4 +270,9 @@ def _register(app):
             'trainings':    db.execute('SELECT COUNT(*) FROM emp_training WHERE plant_id=? AND start_date BETWEEN ? AND ?', (plant_id, fy_start, fy_end)).fetchone()[0],
             'manhours':     db.execute('SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND start_date BETWEEN ? AND ?', (plant_id, fy_start, fy_end)).fetchone()[0],
         }
-        return render_template('dashboard.html', stats=stats)
+        tni_by_type = db.execute(
+            'SELECT prog_type, COUNT(DISTINCT emp_code || "|" || programme_name) as cnt'
+            ' FROM tni WHERE plant_id=? AND fy_year=? AND prog_type IS NOT NULL AND prog_type!=""'
+            ' GROUP BY prog_type ORDER BY cnt DESC',
+            (plant_id, fy)).fetchall()
+        return render_template('dashboard.html', stats=stats, tni_by_type=tni_by_type)
