@@ -100,7 +100,10 @@ def _register(app):
             if mr and mr['prog_type']:
                 prog_type = mr['prog_type']
 
-        hrs = float(f.get('hrs') or 0)
+        try:
+            hrs = float(f.get('hrs') or 0)
+        except (ValueError, TypeError):
+            hrs = 0
         if hrs <= 0:
             flash('Training hours must be greater than 0.', 'danger')
             return redirect(url_for('emp_training'))

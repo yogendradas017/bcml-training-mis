@@ -142,13 +142,13 @@
         <label class="form-label fw-semibold" style="font-size:13px;">
           {% if lang=='hi' %}मुख्य सीख{% else %}Key Learnings{% endif %}
         </label>
-        <textarea name="key_learnings" class="form-control" rows="2" style="font-size:13px;"></textarea>
+        <textarea name="key_learnings" class="form-control" rows="2" style="font-size:13px;" maxlength="1000"></textarea>
       </div>
       <div class="mb-4">
         <label class="form-label fw-semibold" style="font-size:13px;">
           {% if lang=='hi' %}सुझाव{% else %}Suggestions for Improvement{% endif %}
         </label>
-        <textarea name="suggestions" class="form-control" rows="2" style="font-size:13px;"></textarea>
+        <textarea name="suggestions" class="form-control" rows="2" style="font-size:13px;" maxlength="1000"></textarea>
       </div>
 
       <button type="submit" id="submitBtn" class="btn btn-success w-100 py-3 fw-bold" style="font-size:16px;">

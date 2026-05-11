@@ -176,13 +176,14 @@ def _register(app):
             FROM tni t WHERE plant_id=? AND programme_name IS NOT NULL AND programme_name != ""
             GROUP BY programme_name
         ''', (plant_id,)).fetchall()}
-        db.execute('DELETE FROM programme_master WHERE plant_id=?', (plant_id,))
+        # Only wipe TNI-sourced rows — New Requirement entries added manually survive
+        db.execute("DELETE FROM programme_master WHERE plant_id=? AND source='TNI Requirement'", (plant_id,))
         for name in tni_progs:
             prog_type = tni_types.get(name) or existing.get(name)
             db.execute('INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, source) VALUES(?,?,?,?)',
                        (plant_id, name, prog_type, 'TNI Requirement'))
         db.commit()
-        flash(f'Programme Master rebuilt from TNI data — {len(tni_progs)} unique programme(s).', 'success')
+        flash(f'Programme Master synced from TNI — {len(tni_progs)} TNI programme(s) updated. New Requirement entries preserved.', 'success')
         return redirect(url_for('programme_master'))
 
     @app.route('/programme-master/bulk', methods=['POST'])
@@ -363,7 +364,10 @@ def _register(app):
         mode      = cal['mode']
         audience  = cal['target_audience'] or ''
 
-        hours = float(f.get('hours_actual') or 0)
+        try:
+            hours = float(f.get('hours_actual') or 0)
+        except (ValueError, TypeError):
+            hours = 0
         if hours <= 0:
             flash('Actual hours must be greater than 0.', 'danger')
             return redirect(url_for('programme_details'))

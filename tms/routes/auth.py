@@ -4,7 +4,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from tms.constants import PLANT_MAP
 from tms.db import get_db
-from tms.decorators import spoc_required, login_required
+from tms.decorators import spoc_required, login_required, admin_required
+from tms.helpers import _current_fy
 from tms.audit import log_action
 
 
@@ -21,8 +22,11 @@ def _register(app):
     @app.route('/login', methods=['GET', 'POST'])
     def login():
         if request.method == 'POST':
-            username = request.form['username'].strip().lower()
-            password = request.form['password']
+            username = request.form.get('username', '').strip().lower()
+            password = request.form.get('password', '')
+            if not username or not password:
+                flash('Username and password are required.', 'danger')
+                return render_template('login.html')
             db = get_db()
             user = db.execute('SELECT * FROM users WHERE username=?', (username,)).fetchone()
 
@@ -85,9 +89,8 @@ def _register(app):
         return redirect(url_for('login'))
 
     @app.route('/admin/users')
+    @admin_required
     def admin_users():
-        if session.get('role') != 'admin':
-            return redirect(url_for('index'))
         db = get_db()
         rows = db.execute('''
             SELECT u.id, u.username, u.role, u.must_change_password,
@@ -100,9 +103,8 @@ def _register(app):
         return render_template('admin_users.html', users=rows)
 
     @app.route('/admin/audit-log')
+    @admin_required
     def admin_audit_log():
-        if session.get('role') != 'admin':
-            return redirect(url_for('index'))
         db = get_db()
         q       = request.args.get('q', '').strip()
         action  = request.args.get('action', '').strip()
@@ -126,9 +128,8 @@ def _register(app):
                                q=q, sel_action=action)
 
     @app.route('/admin/plant/<int:plant_id>')
+    @admin_required
     def admin_select_plant(plant_id):
-        if session.get('role') != 'admin':
-            return redirect(url_for('index'))
         plant = PLANT_MAP.get(plant_id)
         if not plant:
             flash('Plant not found.', 'danger')
@@ -140,18 +141,16 @@ def _register(app):
         return redirect(url_for('spoc_dashboard'))
 
     @app.route('/admin/clear-plant')
+    @admin_required
     def admin_clear_plant():
-        if session.get('role') != 'admin':
-            return redirect(url_for('index'))
         session.pop('plant_id',   None)
         session.pop('plant_name', None)
         session.pop('unit_code',  None)
         return redirect(url_for('central_dashboard'))
 
     @app.route('/admin/tni-archives')
+    @admin_required
     def admin_tni_archives():
-        if session.get('role') != 'admin':
-            return redirect(url_for('index'))
         db = get_db()
         archives = db.execute('''
             SELECT a.archive_token, a.archived_at, a.plant_id,
@@ -164,9 +163,8 @@ def _register(app):
         return render_template('admin_tni_archives.html', archives=archives)
 
     @app.route('/admin/tni-archives/restore', methods=['POST'])
+    @admin_required
     def admin_tni_restore():
-        if session.get('role') != 'admin':
-            return redirect(url_for('index'))
         token = request.form.get('token', '').strip()
         if not token:
             flash('No archive token provided.', 'danger')
@@ -253,19 +251,23 @@ def _register(app):
     def spoc_dashboard():
         plant_id = session['plant_id']
         db = get_db()
+        fy_start, fy_end = _current_fy()
         central_attended = db.execute(
             "SELECT COUNT(DISTINCT session_code) FROM emp_training "
-            "WHERE plant_id=? AND host_plant_id=99 AND session_code IS NOT NULL AND session_code!=''",
-            (plant_id,)).fetchone()[0]
+            "WHERE plant_id=? AND host_plant_id=99 AND session_code IS NOT NULL AND session_code!=''"
+            " AND start_date BETWEEN ? AND ?",
+            (plant_id, fy_start, fy_end)).fetchone()[0]
+        from tms.helpers import _fy_label
+        fy = _fy_label()
         stats = {
             'total_emp':    db.execute('SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)).fetchone()[0],
             'blue_collar':  db.execute("SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='Blue Collared'", (plant_id,)).fetchone()[0],
             'white_collar': db.execute("SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='White Collared'", (plant_id,)).fetchone()[0],
-            'tni_count':    db.execute('SELECT COUNT(DISTINCT emp_code || "|" || programme_name) FROM tni WHERE plant_id=?', (plant_id,)).fetchone()[0],
-            'sessions':     db.execute('SELECT COUNT(*) FROM calendar WHERE plant_id=?', (plant_id,)).fetchone()[0],
-            'conducted':    db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted'", (plant_id,)).fetchone()[0],
+            'tni_count':    db.execute('SELECT COUNT(DISTINCT emp_code || "|" || programme_name) FROM tni WHERE plant_id=? AND fy_year=?', (plant_id, fy)).fetchone()[0],
+            'sessions':     db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=? AND plan_start BETWEEN ? AND ?", (plant_id, fy_start, fy_end)).fetchone()[0],
+            'conducted':    db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted' AND plan_start BETWEEN ? AND ?", (plant_id, fy_start, fy_end)).fetchone()[0],
             'central_sessions': central_attended,
-            'trainings':    db.execute('SELECT COUNT(*) FROM emp_training WHERE plant_id=?', (plant_id,)).fetchone()[0],
-            'manhours':     db.execute('SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=?', (plant_id,)).fetchone()[0],
+            'trainings':    db.execute('SELECT COUNT(*) FROM emp_training WHERE plant_id=? AND start_date BETWEEN ? AND ?', (plant_id, fy_start, fy_end)).fetchone()[0],
+            'manhours':     db.execute('SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND start_date BETWEEN ? AND ?', (plant_id, fy_start, fy_end)).fetchone()[0],
         }
         return render_template('dashboard.html', stats=stats)
