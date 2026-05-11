@@ -60,7 +60,10 @@ def _register(app):
         plant_id = session['plant_id']
         f = request.form
         db = get_db()
-        emp_code       = f['emp_code']
+        emp_code       = f.get('emp_code', '').strip()
+        if not emp_code:
+            flash('Employee Code is required.', 'danger')
+            return redirect(url_for('emp_training'))
         session_code   = f.get('session_code', '').strip()
         start_date     = f.get('start_date', '')
         end_date       = f.get('end_date', '')
@@ -178,8 +181,7 @@ def _register(app):
             ws.column_dimensions[get_column_letter(i)].width = 26
         ws.append(['21700011', 'BCM/EHS/001/B01', 'Fire Safety Training', 'EHS/HR', '10-06-2026', '10-06-2026', 4, 'Training Hall', 3.5, 4.2])
         ws.append(['21101568', '', 'MS Office Basics', 'IT', '05-07-2026', '06-07-2026', 8, 'Computer Lab', '', 4.0])
-        ws['A5'] = 'NOTE: Dates MUST be DD-MM-YYYY (e.g. 15-06-2026). Session Code optional — if given, Programme/Type auto-fill from Calendar.'
-        ws['A5'] = 'NOTE: Session Code is optional. If provided, Programme Name/Type/Mode auto-fill from Calendar.'
+        ws['A5'] = 'NOTE: Session Code is optional. If provided, Programme Name/Type/Mode auto-fill from Calendar. Dates must be DD-MM-YYYY.'
         out = io.BytesIO()
         wb.save(out); out.seek(0)
         return send_file(out, download_name='2A_Training_Bulk_Upload_Template.xlsx', as_attachment=True,

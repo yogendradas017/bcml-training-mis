@@ -167,7 +167,7 @@ def _register(app):
             return redirect(url_for('central_calendar'))
         f = request.form
         db = get_db()
-        prog_name_raw = f['programme_name'].strip()
+        prog_name_raw = f.get('programme_name', '').strip()
         prog_name = _canonical_prog(prog_name_raw, CENTRAL_PLANT_ID, db, strict=True)
         if prog_name is None:
             flash(f'Programme "{prog_name_raw}" not found in Central Programme Master. Add it to the master list first.', 'danger')
@@ -252,7 +252,7 @@ def _register(app):
             sc = db.execute('SELECT session_code FROM calendar WHERE id=?', (cal_id,)).fetchone()
             sc = sc['session_code'] if sc else None
             has_qr = sc and db.execute(
-                'SELECT 1 FROM qr_session WHERE plant_id=? AND session_code=?',
+                'SELECT 1 FROM session_qr WHERE plant_id=? AND session_code=?',
                 (CENTRAL_PLANT_ID, sc)).fetchone()
             has_feedback = sc and db.execute(
                 'SELECT 1 FROM feedback_response WHERE plant_id=? AND session_code=?',

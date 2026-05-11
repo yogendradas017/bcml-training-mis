@@ -81,7 +81,7 @@ def _register(app):
         plant_id = session['plant_id']
         f = request.form
         db = get_db()
-        prog_name_raw = f['programme_name'].strip()
+        prog_name_raw = f.get('programme_name', '').strip()
         prog_name = _canonical_prog(prog_name_raw, plant_id, db, strict=True)
         if prog_name is None:
             flash(f'Programme "{prog_name_raw}" not found in Programme Master. Add it to the master list first.', 'danger')

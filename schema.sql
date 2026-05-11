@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS users (
     password TEXT NOT NULL,
     role TEXT NOT NULL CHECK(role IN ('spoc','central','admin')),
     plant_id INTEGER REFERENCES plants(id),
-    must_change_password INTEGER DEFAULT 1
+    must_change_password INTEGER DEFAULT 1,
+    failed_attempts INTEGER DEFAULT 0,
+    locked_until TEXT
 );
 
 CREATE TABLE IF NOT EXISTS employees (
