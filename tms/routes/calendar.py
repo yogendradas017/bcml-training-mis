@@ -170,8 +170,7 @@ def _register(app):
                 'SELECT 1 FROM feedback_response WHERE plant_id=? AND session_code=?',
                 (plant_id, sc)).fetchone()
             if not has_qr or not has_feedback:
-                missing = 'QR code not generated' if not has_qr else 'no feedback responses received via QR'
-                flash(f'Cannot mark Conducted — {missing}. Generate a QR code for this session and collect at least one feedback response, or contact admin for an override.', 'danger')
+                flash("Can't mark Conducted. Process: Generate QR code → Mark Attendance → Collect Feedback. Contact Corporate L&D for assistance.", 'danger')
                 return redirect(url_for('training_calendar'))
         edit_prog_raw     = f.get('programme_name','').strip()
         edit_prog         = _canonical_prog(edit_prog_raw, plant_id, db, strict=True)
