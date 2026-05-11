@@ -9,7 +9,7 @@
   --c-muted:    #6e6e73;
   --c-primary:  #2e6da4;
   --c-primary2: #1a7a3c;
-  --sb-w:       220px;
+  --sb-w:       200px;
   --topbar-h:   54px;
   --radius-sm:  8px;
   --radius-md:  12px;
@@ -323,7 +323,7 @@ body {
 #menu-btn:hover { background: #f3f4f6; }
 
 /* ── PAGE BODY ─────────────────────────────────────────────── */
-.page-body { padding: 20px 24px; flex: 1; }
+.page-body { padding: 16px 16px; flex: 1; }
 
 /* ══════════════════════════════════════════════════════════════
    ALERTS
@@ -793,8 +793,8 @@ a, button, .btn, .btn-action, .btn-icon, .plant-chip,
 
 /* Ultra-wide / TV (≥ 1920px) */
 @media (min-width: 1920px) {
-  :root { --sb-w: 240px; }
-  .page-body { padding: 32px 56px; }
+  :root { --sb-w: 220px; }
+  .page-body { padding: 24px 32px; }
 }
 /* ══════════════════════════════════════════════════════════════
    BULK ACTION BAR
