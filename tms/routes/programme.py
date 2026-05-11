@@ -340,7 +340,7 @@ def _register(app):
         plant_id = session['plant_id']
         f = request.form
         db = get_db()
-        session_code = f['session_code'].strip()
+        session_code = f.get('session_code', '').strip()
 
         if db.execute('SELECT 1 FROM programme_details WHERE session_code=? AND plant_id=?',
                       (session_code, plant_id)).fetchone():
