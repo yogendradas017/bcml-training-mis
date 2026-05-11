@@ -4,7 +4,7 @@ from tms.constants import PROG_TYPES
 from tms.db import get_db
 from tms.decorators import login_required, spoc_required
 import datetime
-from tms.helpers import _fy_label, _derive_audience, _calc_compliance
+from tms.helpers import _fy_label, _derive_audience, _calc_compliance, _current_fy
 
 
 def _register(app):
@@ -102,6 +102,7 @@ def _register(app):
             return jsonify({})
         db  = get_db()
         fy  = _fy_label()
+        fy_start, fy_end = _current_fy()
 
         canonical = prog_name
         exact = db.execute('SELECT 1 FROM tni WHERE plant_id=? AND programme_name=? LIMIT 1',
@@ -117,8 +118,9 @@ def _register(app):
                                       (plant_id, canonical)).fetchone()[0]
         sessions_planned = db.execute('SELECT COUNT(*) FROM calendar WHERE plant_id=? AND programme_name=? AND session_code LIKE ?',
                                       (plant_id, canonical, f'%/{fy}/%')).fetchone()[0]
-        covered          = db.execute('SELECT COUNT(DISTINCT emp_code) FROM emp_training WHERE plant_id=? AND programme_name=?',
-                                      (plant_id, canonical)).fetchone()[0]
+        covered          = db.execute(
+            'SELECT COUNT(DISTINCT emp_code) FROM emp_training WHERE plant_id=? AND programme_name=? AND start_date BETWEEN ? AND ?',
+            (plant_id, canonical, fy_start, fy_end)).fetchone()[0]
         uncovered = max(0, demand - covered)
         pct       = round(covered / demand * 100) if demand > 0 else 0
 
@@ -239,6 +241,7 @@ def _register(app):
         pid    = session['plant_id']
         collar = request.args.get('collar', 'ALL').upper()
         db     = get_db()
+        fy_start, fy_end = _current_fy()
 
         if collar == 'BC':
             collar_where = "AND e.collar='Blue Collared'"
@@ -254,11 +257,12 @@ def _register(app):
             FROM employees e
             LEFT JOIN emp_training et
                    ON et.emp_code=e.emp_code AND et.plant_id=e.plant_id
+                  AND et.start_date BETWEEN ? AND ?
             WHERE e.plant_id=? AND e.is_active=1 {collar_where}
               AND e.department IS NOT NULL AND e.department!=''
             GROUP BY e.department, e.collar
             ORDER BY e.department
-        ''', (pid,)).fetchall()
+        ''', (fy_start, fy_end, pid)).fetchall()
 
         dept_map = {}
         for r in dept_rows:
@@ -283,10 +287,11 @@ def _register(app):
             FROM employees e
             LEFT JOIN emp_training et
                    ON et.emp_code=e.emp_code AND et.plant_id=e.plant_id
+                  AND et.start_date BETWEEN ? AND ?
             WHERE e.plant_id=? AND e.is_active=1 {collar_where}
             GROUP BY e.emp_code, e.name, e.department, e.collar
             ORDER BY e.department, e.name
-        ''', (pid,)).fetchall()
+        ''', (fy_start, fy_end, pid)).fetchall()
 
         employees = []
         for r in emp_rows:
@@ -315,8 +320,12 @@ def _register(app):
             'SELECT programme_name, COUNT(DISTINCT emp_code) as demand FROM tni WHERE plant_id=? GROUP BY programme_name ORDER BY demand DESC',
             (plant_id,)).fetchall()
 
+        fy_start, fy_end = _current_fy()
         covered_map = {}
-        for r in db.execute('SELECT programme_name, COUNT(DISTINCT emp_code) as cnt FROM emp_training WHERE plant_id=? GROUP BY programme_name', (plant_id,)):
+        for r in db.execute(
+                'SELECT programme_name, COUNT(DISTINCT emp_code) as cnt FROM emp_training'
+                ' WHERE plant_id=? AND start_date BETWEEN ? AND ? GROUP BY programme_name',
+                (plant_id, fy_start, fy_end)):
             covered_map[r['programme_name']] = r['cnt']
 
         sessions_map = {}
