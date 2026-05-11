@@ -435,7 +435,6 @@ const TBL = {
   }
 };
 window.TBL = TBL;
-window.BulkSelect = BulkSelect;
 
 /* ═══════════════════════════════════════════════════
    AJAX ROW DELETE
@@ -539,3 +538,4 @@ const BulkSelect = {
     document.getElementById('bulk-bar').classList.remove('show');
   }
 };
+window.BulkSelect = BulkSelect;
