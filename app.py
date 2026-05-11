@@ -86,7 +86,7 @@ def upload_too_large(e):
 
 @app.route('/favicon.ico')
 def favicon():
-    return '', 204
+    return app.send_static_file('favicon.ico')
 
 
 @app.errorhandler(404)
