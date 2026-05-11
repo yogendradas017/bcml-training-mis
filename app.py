@@ -73,10 +73,18 @@ def upload_too_large(e):
     return redirect(request.referrer or url_for('index'))
 
 
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204
+
+
 @app.errorhandler(404)
 def not_found(e):
+    # Don't flash for non-HTML requests (browser favicon, fetch/XHR calls)
+    wants_html = 'text/html' in request.accept_mimetypes.values()
     if 'user_id' in session:
-        flash('Page not found.', 'warning')
+        if wants_html:
+            flash('Page not found.', 'warning')
         return redirect(url_for('index'))
     return redirect(url_for('login'))
 
@@ -84,7 +92,9 @@ def not_found(e):
 @app.errorhandler(500)
 def server_error(e):
     logging.error(f'500 error: {e}', exc_info=True)
-    flash('Server error. Please try again or contact Corporate L&D.', 'danger')
+    wants_html = 'text/html' in request.accept_mimetypes.values()
+    if wants_html:
+        flash('Server error. Please try again or contact Corporate L&D.', 'danger')
     return redirect(request.referrer or url_for('index'))
 
 
