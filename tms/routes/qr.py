@@ -672,6 +672,7 @@ def _register(app):
                                    error=None, lang=lang)
 
         emp_code = request.form.get('emp_code', '').strip().upper() or None
+        ip = request.remote_addr or ''
         if emp_code:
             if qr['plant_id'] == CENTRAL_PLANT_ID:
                 ok = (
@@ -688,6 +689,14 @@ def _register(app):
             if not ok:
                 return render_template('qr_feedback.html', qr=qr, token=token, lang=lang,
                                        error=f'Employee code "{emp_code}" not found.')
+        else:
+            # Anonymous: deduplicate by IP so same device can't spam
+            already = db.execute(
+                'SELECT 1 FROM feedback_response WHERE plant_id=? AND session_code=? AND emp_code IS NULL AND ip_address=?',
+                (qr['plant_id'], qr['session_code'], ip)
+            ).fetchone()
+            if already:
+                return redirect(url_for('qr_thanks', token=token, msg='feedback_ok'), 303)
 
         def _r(name):
             try:

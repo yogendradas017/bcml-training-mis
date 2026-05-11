@@ -5,6 +5,7 @@ from flask import redirect, url_for, session, flash, send_file, render_template,
 from tms.constants import PLANT_MAP, MONTHS_FY
 from tms.db import get_db
 from tms.decorators import login_required
+from tms.helpers import _fy_label
 
 import openpyxl
 from openpyxl.cell import WriteOnlyCell
@@ -45,7 +46,7 @@ def _register(app):
             return redirect(url_for('export_excel', plant_id=plant_id))
 
         db    = get_db()
-        fy    = '2026-27'
+        fy    = _fy_label()
         wb    = openpyxl.Workbook(write_only=True)
         pname = plant['name'].upper()
 

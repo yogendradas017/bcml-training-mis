@@ -220,22 +220,59 @@ def _register(app):
             flash('Conducted sessions cannot be edited.', 'danger')
             return redirect(url_for('central_calendar'))
         f = request.form
-        dur = float(f.get('duration_hrs') or 0)
+        try:
+            dur = float(f.get('duration_hrs') or 0)
+        except (ValueError, TypeError):
+            dur = 0
         if dur <= 0:
             flash('Duration must be greater than 0 hours.', 'danger')
             return redirect(url_for('central_calendar'))
+
+        # Canonicalise programme name
+        prog_name_raw = f.get('programme_name', '').strip()
+        prog_name = _canonical_prog(prog_name_raw, CENTRAL_PLANT_ID, db, strict=True)
+        if prog_name is None:
+            flash(f'Programme "{prog_name_raw}" not found in Central Programme Master.', 'danger')
+            return redirect(url_for('central_calendar'))
+
+        # FY date guard
+        fy_start, fy_end = _current_fy()
+        for fld, lbl in [('plan_start', 'Plan Start'), ('plan_end', 'Plan End')]:
+            val = f.get(fld, '')
+            if val and not _in_current_fy(val):
+                flash(f'{lbl} date must be within the current FY ({fy_start} to {fy_end}).', 'danger')
+                return redirect(url_for('central_calendar'))
+
+        new_status = f.get('status', 'To Be Planned')
+        if new_status not in STATUSES:
+            new_status = 'To Be Planned'
+
+        # QR + feedback guard for marking Conducted (same rule as SPOC calendar)
+        if new_status == 'Conducted' and session.get('role') != 'admin':
+            sc = db.execute('SELECT session_code FROM calendar WHERE id=?', (cal_id,)).fetchone()
+            sc = sc['session_code'] if sc else None
+            has_qr = sc and db.execute(
+                'SELECT 1 FROM qr_session WHERE plant_id=? AND session_code=?',
+                (CENTRAL_PLANT_ID, sc)).fetchone()
+            has_feedback = sc and db.execute(
+                'SELECT 1 FROM feedback_response WHERE plant_id=? AND session_code=?',
+                (CENTRAL_PLANT_ID, sc)).fetchone()
+            if not has_qr or not has_feedback:
+                flash("Can't mark Conducted. Process: Generate QR code → Mark Attendance → Collect Feedback. Contact Corporate L&D for assistance.", 'danger')
+                return redirect(url_for('central_calendar'))
+
         db.execute('''UPDATE calendar SET
             programme_name=?, prog_type=?, planned_month=?,
             plan_start=?, plan_end=?, time_from=?, time_to=?,
             duration_hrs=?, level=?, mode=?, target_audience=?,
             planned_pax=?, trainer_vendor=?, status=?
             WHERE id=? AND plant_id=?''',
-            (f.get('programme_name', ''), f.get('prog_type', ''),
+            (prog_name, f.get('prog_type', ''),
              f.get('planned_month', ''), f.get('plan_start', ''), f.get('plan_end', ''),
              f.get('time_from', ''), f.get('time_to', ''), dur,
              f.get('level', ''), f.get('mode', ''), f.get('target_audience', ''),
              int(f.get('planned_pax') or 0), f.get('trainer_vendor', ''),
-             f.get('status', 'To Be Planned'),
+             new_status,
              cal_id, CENTRAL_PLANT_ID))
         db.commit()
         log_action('RECORD_EDIT', f"central_cal:{cal_id}")

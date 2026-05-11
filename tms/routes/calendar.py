@@ -95,7 +95,10 @@ def _register(app):
         form_audience = f.get('target_audience', '')
         audience      = tni_audience if tni_audience else form_audience
 
-        dur = float(f.get('duration_hrs') or 0)
+        try:
+            dur = float(f.get('duration_hrs') or 0)
+        except (ValueError, TypeError):
+            dur = 0
         if dur <= 0:
             flash('Duration must be greater than 0 hours.', 'danger')
             return redirect(url_for('training_calendar'))
@@ -116,9 +119,10 @@ def _register(app):
              prog_name, prog_type,
              f.get('planned_month',''), f.get('plan_start',''), f.get('plan_end',''),
              f.get('time_from',''), f.get('time_to',''),
-             float(f.get('duration_hrs') or 0),
+             dur,
              f.get('level',''), f.get('mode',''), audience,
-             int(f.get('planned_pax') or 0), f.get('trainer_vendor',''),
+             int(f.get('planned_pax') or 0) if str(f.get('planned_pax') or '0').isdigit() else 0,
+             f.get('trainer_vendor',''),
              'To Be Planned'))
         db.commit()
         log_action('RECORD_ADD', f"cal:{session_code}")
@@ -181,7 +185,10 @@ def _register(app):
         form_audience_edit = f.get('target_audience', '')
         edit_audience     = tni_audience_edit if tni_audience_edit else form_audience_edit
 
-        dur = float(f.get('duration_hrs') or 0)
+        try:
+            dur = float(f.get('duration_hrs') or 0)
+        except (ValueError, TypeError):
+            dur = 0
         if dur <= 0:
             flash('Duration must be greater than 0 hours.', 'danger')
             return redirect(url_for('training_calendar'))
@@ -203,9 +210,10 @@ def _register(app):
              f.get('planned_month',''),
              f.get('plan_start',''), f.get('plan_end',''),
              f.get('time_from',''), f.get('time_to',''),
-             float(f.get('duration_hrs') or 0), f.get('level',''),
+             dur, f.get('level',''),
              f.get('mode',''), edit_audience,
-             int(f.get('planned_pax') or 0), f.get('trainer_vendor',''),
+             int(f.get('planned_pax') or 0) if str(f.get('planned_pax') or '0').isdigit() else 0,
+             f.get('trainer_vendor',''),
              f.get('status','To Be Planned'),
              cal_id, plant_id))
         db.commit()

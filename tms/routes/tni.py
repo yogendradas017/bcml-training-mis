@@ -592,13 +592,21 @@ def _register(app):
             archived_count = db.execute(
                 'SELECT COUNT(*) FROM tni_archive WHERE archive_token=?', (confirm_token,)
             ).fetchone()[0]
+            # Save New Requirement programmes before wiping TNI-sourced master entries
+            new_req_progs = db.execute(
+                "SELECT name, prog_type, mode FROM programme_master WHERE plant_id=? AND source='New Requirement'",
+                (plant_id,)).fetchall()
             db.execute('DELETE FROM tni WHERE plant_id=? AND fy_year=?', (plant_id, fy))
-            db.execute('DELETE FROM programme_master WHERE plant_id=?', (plant_id,))
+            db.execute("DELETE FROM programme_master WHERE plant_id=? AND source='TNI Requirement'", (plant_id,))
             for r in rows:
                 db.execute(
                     'INSERT INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,fy_year) VALUES(?,?,?,?,?,?,?)',
                     (plant_id, r['emp_code'], r['programme_name'], r['prog_type'], r['mode'], r['hours'], fy))
             _sync_master_from_tni(plant_id, db)
+            # Restore New Requirement programmes that survived
+            for nr in new_req_progs:
+                db.execute('INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, mode, source) VALUES(?,?,?,?,?)',
+                           (plant_id, nr['name'], nr['prog_type'], nr['mode'], 'New Requirement'))
             db.commit()
             try: os.remove(tmp_path)
             except Exception: pass
@@ -817,7 +825,13 @@ def _register(app):
         _sync_master_from_tni(plant_id, db)
         db.commit()
         try: os.remove(path)
-        except: pass
+        except OSError: pass
+        # Also clean up any other stale analyze files to prevent disk accumulation
+        try:
+            from tms.helpers import _cleanup_stale_analyze_files
+            _cleanup_stale_analyze_files()
+        except Exception:
+            pass
 
         if err_rows or dup_rows:
             buf = _error_excel_for_tni(err_rows, dup_rows=dup_rows, plant_id=plant_id, db=db)

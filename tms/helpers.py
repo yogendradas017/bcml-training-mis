@@ -422,6 +422,7 @@ def _calc_totals(rows, db=None, plant_id=None):
 
 
 def _calc_compliance(plant_id, db):
+    fy_start, fy_end = _current_fy()
     bc = db.execute(
         "SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='Blue Collared'",
         (plant_id,)).fetchone()[0]
@@ -430,10 +431,14 @@ def _calc_compliance(plant_id, db):
         (plant_id,)).fetchone()[0]
     bc_act = db.execute('''SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t
         JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-        WHERE t.plant_id=? AND e.collar='Blue Collared' ''', (plant_id,)).fetchone()[0]
+        WHERE t.plant_id=? AND e.collar='Blue Collared'
+          AND t.start_date BETWEEN ? AND ?''',
+        (plant_id, fy_start, fy_end)).fetchone()[0]
     wc_act = db.execute('''SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t
         JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-        WHERE t.plant_id=? AND e.collar='White Collared' ''', (plant_id,)).fetchone()[0]
+        WHERE t.plant_id=? AND e.collar='White Collared'
+          AND t.start_date BETWEEN ? AND ?''',
+        (plant_id, fy_start, fy_end)).fetchone()[0]
     bc_mandate = bc * 12
     wc_mandate = wc * 24
     return {

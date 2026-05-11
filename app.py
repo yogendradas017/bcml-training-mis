@@ -131,6 +131,11 @@ requests.         _register(app)
 # Rate-limit login: 20 attempts/minute per IP
 limiter.limit('20 per minute')(app.view_functions['login'])
 
+# Rate-limit public QR endpoints: 10 POST/min per IP (prevents spam/flooding)
+for _vf in ('qr_attend', 'qr_feedback'):
+    if _vf in app.view_functions:
+        limiter.limit('10 per minute')(app.view_functions[_vf])
+
 # CSRF-exempt public QR submission routes (no session on phone scan)
 for _vf in ('qr_attend', 'qr_feedback'):
     if _vf in app.view_functions:

@@ -12,3 +12,15 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+
+# Dev / local only — never commit
+cookies.txt
+*.log
+app_monolith.py
+master_programmes_draft.py
+generate_*.py
+uat_test.py
+login_page.html
+login_result.html
+test_template.xlsx
+data/tmp_uploads/

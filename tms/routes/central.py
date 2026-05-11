@@ -18,9 +18,9 @@ def _register(app):
             pid = p['id']
             bc  = db.execute("SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='Blue Collared'", (pid,)).fetchone()[0]
             wc  = db.execute("SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='White Collared'", (pid,)).fetchone()[0]
-            # Plant's own calendar sessions
-            own_sessions  = db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=?", (pid,)).fetchone()[0]
-            own_conducted = db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted'", (pid,)).fetchone()[0]
+            # Plant's own calendar sessions — FY-scoped
+            own_sessions  = db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=? AND plan_start BETWEEN ? AND ?", (pid, fy_start, fy_end)).fetchone()[0]
+            own_conducted = db.execute("SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted' AND plan_start BETWEEN ? AND ?", (pid, fy_start, fy_end)).fetchone()[0]
             # Distinct central-hosted sessions attended by this plant's employees — FY-scoped
             central_attended = db.execute(
                 "SELECT COUNT(DISTINCT session_code) FROM emp_training "
