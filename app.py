@@ -6,6 +6,7 @@ from flask import Flask, g, flash, redirect, request, url_for, render_template, 
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_compress import Compress
 
 from tms.constants import BASE_DIR
 from tms.db import get_db, init_db
@@ -20,8 +21,9 @@ app.secret_key = os.environ.get('SECRET_KEY', 'bcml-tms-2627-xK9pQ')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
 
-csrf    = CSRFProtect(app)
-limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri='memory://')
+csrf     = CSRFProtect(app)
+limiter  = Limiter(get_remote_address, app=app, default_limits=[], storage_uri='memory://')
+Compress(app)
 
 # Session: stays alive 8 hours; survives browser close
 app.config['SESSION_PERMANENT']          = True
