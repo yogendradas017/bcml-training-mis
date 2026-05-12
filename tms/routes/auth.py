@@ -1,8 +1,10 @@
+import os
+import shutil
 from datetime import date, datetime, timedelta
-from flask import render_template, request, redirect, url_for, session, flash
+from flask import render_template, request, redirect, url_for, session, flash, send_file
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from tms.constants import PLANT_MAP
+from tms.constants import PLANT_MAP, DB_PATH
 from tms.db import get_db
 from tms.decorators import spoc_required, login_required, admin_required
 from tms.helpers import _current_fy
@@ -197,6 +199,57 @@ def _register(app):
         log_action('RECORD_ADD', f'tni_restore:{plant_name}:{fy_year}:{restored}rows')
         flash(f'Restored {restored} TNI rows for {plant_name} ({fy_year}). Programme master rebuilt.', 'success')
         return redirect(url_for('admin_tni_archives'))
+
+    @app.route('/admin/backup/download')
+    @admin_required
+    def admin_backup_download():
+        if not os.path.exists(DB_PATH):
+            flash('Database file not found.', 'danger')
+            return redirect(url_for('admin_users'))
+        stamp = datetime.now().strftime('%Y-%m-%d_%H%M')
+        download_name = f'training_{stamp}.db'
+        log_action('RECORD_ADD', f'backup_download:{download_name}')
+        return send_file(DB_PATH, as_attachment=True, download_name=download_name)
+
+    @app.route('/admin/backup/restore', methods=['GET', 'POST'])
+    @admin_required
+    def admin_backup_restore():
+        if request.method == 'POST':
+            f = request.files.get('backup_file')
+            if not f or not f.filename:
+                flash('No file selected.', 'danger')
+                return redirect(url_for('admin_backup_restore'))
+            if not f.filename.endswith('.db'):
+                flash('Invalid file type. Upload a .db file.', 'danger')
+                return redirect(url_for('admin_backup_restore'))
+            header = f.read(16)
+            if not header.startswith(b'SQLite format 3'):
+                flash('File is not a valid SQLite database.', 'danger')
+                return redirect(url_for('admin_backup_restore'))
+            f.seek(0)
+            # Save current DB as emergency backup before overwriting
+            stamp = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+            pre_backup = DB_PATH + f'.pre_restore_{stamp}'
+            if os.path.exists(DB_PATH):
+                shutil.copy2(DB_PATH, pre_backup)
+            # Close all DB connections from g
+            from flask import g
+            db = g.pop('db', None)
+            if db:
+                db.close()
+            # Write uploaded file atomically
+            tmp = DB_PATH + '.restore_tmp'
+            f.save(tmp)
+            os.replace(tmp, DB_PATH)
+            # Remove WAL/SHM leftovers from old DB
+            for ext in ('.db-wal', '.db-shm'):
+                leftover = DB_PATH.replace('.db', ext) if DB_PATH.endswith('.db') else DB_PATH + ext
+                if os.path.exists(leftover):
+                    os.remove(leftover)
+            log_action('RECORD_ADD', f'backup_restore:{f.filename}')
+            flash('Database restored successfully. All data is back.', 'success')
+            return redirect(url_for('central_dashboard'))
+        return render_template('admin_backup_restore.html')
 
     @app.route('/change-password', methods=['GET', 'POST'])
     @login_required
