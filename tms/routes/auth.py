@@ -363,6 +363,10 @@ def _register(app):
             new_pw  = request.form.get('new_password', '').strip()
             confirm = request.form.get('confirm_password', '').strip()
             user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
+            if not user:
+                session.clear()
+                flash('Session expired. Please log in again.', 'danger')
+                return redirect(url_for('login'))
             if not check_password_hash(user['password'], current):
                 flash('Current password is incorrect.', 'danger')
                 return redirect(url_for('change_password'))
