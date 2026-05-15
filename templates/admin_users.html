@@ -69,16 +69,15 @@
               {% endif %}
             </td>
             <td style="white-space:nowrap;">
-              {% if u.username != session.username %}
               <form method="POST" action="{{ url_for('admin_reset_password', user_id=u.id) }}"
                     style="display:inline;"
-                    onsubmit="return confirm('Reset password for {{ u.username }} to default?\nThey will be forced to create a new password on next login.')">
+                    onsubmit="return confirm('{% if u.username == session.username %}Reset YOUR OWN password to default (bcml@1234)?\nYou will be forced to set a new password immediately.{% else %}Reset password for {{ u.username }} to default?\nThey will be forced to create a new password on next login.{% endif %}')">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn-action btn-action-danger" style="font-size:11.5px;">
                   <i class="bi bi-arrow-counterclockwise"></i> Reset PW
                 </button>
               </form>
-              {% else %}
+              {% if u.username == session.username %}
               <a href="{{ url_for('change_password') }}" class="btn-action btn-action-success" style="font-size:11.5px;">
                 <i class="bi bi-key-fill"></i> Change Mine
               </a>

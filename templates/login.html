@@ -905,8 +905,12 @@ table.st tbody tr.hi td{color:rgba(255,255,255,.82);}
         <label for="u">Username</label>
       </div>
       <div class="gf">
-        <input type="password" name="password" id="p" placeholder=" " autocomplete="current-password" required>
+        <input type="password" name="password" id="p" placeholder=" " autocomplete="current-password" required style="padding-right:44px;">
         <label for="p">Password</label>
+        <button type="button" onclick="togglePw('p',this)" tabindex="-1"
+                style="position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:3;background:none;border:none;cursor:pointer;color:rgba(255,255,255,.55);padding:4px;font-size:17px;line-height:1;">
+          <i class="bi bi-eye"></i>
+        </button>
       </div>
       <button class="gbtn" type="submit">Sign In</button>
       <div style="text-align:center;margin-top:32px;padding-top:18px;border-top:1px solid rgba(255,255,255,.07);">
@@ -1091,6 +1095,21 @@ if (qrcEl) {
       qrcEl.style.transition = 'transform .2s';
     }
   }, 3200);
+}
+
+// ── Password show/hide toggle ──
+function togglePw(id, btn) {
+  var inp = document.getElementById(id);
+  var icon = btn.querySelector('i');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.className = 'bi bi-eye-slash';
+    btn.style.color = 'rgba(255,255,255,.9)';
+  } else {
+    inp.type = 'password';
+    icon.className = 'bi bi-eye';
+    btn.style.color = 'rgba(255,255,255,.3)';
+  }
 }
 
 // ── Section mockup hover tilt ──
