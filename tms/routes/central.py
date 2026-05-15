@@ -82,6 +82,9 @@ def _register(app):
             plant_q = []
             for p in plant_summaries:
                 pid  = p['id']
+                planned_p = db.execute(
+                    "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND plan_start>=? AND plan_start<=?",
+                    [pid, q_start, q_end]).fetchone()[0]
                 own_sc_p = db.execute(
                     "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted'"
                     " AND plan_start>=? AND plan_start<=?",
@@ -95,9 +98,28 @@ def _register(app):
                 mh_p = db.execute(
                     "SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND start_date>=? AND start_date<=?",
                     [pid, q_start, q_end]).fetchone()[0]
-                plant_q.append({'name': p['name'], 'unit_code': p['unit_code'], 'id': p['id'],
-                                'sessions': sc_p, 'manhours': round(mh_p, 1)})
-            quarterly.append({'quarter': qname, 'sessions': sc, 'manhours': round(mh, 1), 'plants': plant_q})
+                bc_hrs_p = db.execute(
+                    "SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t "
+                    "JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id "
+                    "WHERE t.plant_id=? AND e.collar='Blue Collared' AND t.start_date>=? AND t.start_date<=?",
+                    [pid, q_start, q_end]).fetchone()[0]
+                wc_hrs_p = db.execute(
+                    "SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t "
+                    "JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id "
+                    "WHERE t.plant_id=? AND e.collar='White Collared' AND t.start_date>=? AND t.start_date<=?",
+                    [pid, q_start, q_end]).fetchone()[0]
+                plant_q.append({
+                    'name': p['name'], 'unit_code': p['unit_code'], 'id': p['id'],
+                    'planned': planned_p, 'sessions': sc_p,
+                    'manhours': round(mh_p, 1),
+                    'bc_hrs': round(bc_hrs_p, 1),
+                    'wc_hrs': round(wc_hrs_p, 1),
+                })
+            quarterly.append({
+                'quarter': qname, 'sessions': sc, 'manhours': round(mh, 1),
+                'q_start': q_start, 'q_end': q_end,
+                'plants': plant_q,
+            })
 
         return render_template('central.html', plants=plant_summaries, grand=grand, quarterly=quarterly)
 
