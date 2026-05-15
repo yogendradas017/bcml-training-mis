@@ -228,30 +228,103 @@
 
 <!-- ── Quarterly Review ───────────────────────────────────────────────── -->
 <div class="card mb-4">
-  <div class="ch-dark"><i class="bi bi-bar-chart-steps"></i> Quarterly Review — FY 2026-27</div>
+  <div class="ch-dark"><i class="bi bi-bar-chart-steps"></i> Quarterly Review — FY 2026-27
+    <span style="font-size:11px;font-weight:400;color:rgba(255,255,255,.55);margin-left:8px;">Click any quarter to drill down</span>
+  </div>
 
-  <!-- Quarter KPI strip -->
+  <!-- Quarter cards — clickable toggles -->
   <div class="row g-0" style="border-bottom:2px solid var(--c-border);">
     {% for q in quarterly %}
     {% set ci = loop.index0 %}
-    <div class="col-6 col-md-3" style="padding:20px 24px;{% if not loop.last %}border-right:1px solid var(--c-border);{% endif %}border-top:3px solid {{ Q_COLORS[ci] }};">
-      <div style="font-size:10px;font-weight:800;letter-spacing:1px;color:{{ Q_COLORS[ci] }};text-transform:uppercase;margin-bottom:10px;">{{ q.quarter }}</div>
-      <div class="d-flex gap-4 align-items-end">
-        <div>
-          <div style="font-size:28px;font-weight:800;color:{{ Q_COLORS[ci] }};line-height:1;letter-spacing:-1px;">{{ q.sessions }}</div>
-          <div style="font-size:10.5px;color:var(--c-muted);margin-top:3px;font-weight:600;">Sessions</div>
+    <div class="col-6 col-md-3"
+         style="{% if not loop.last %}border-right:1px solid var(--c-border);{% endif %}border-top:3px solid {{ Q_COLORS[ci] }};">
+      <div class="q-card-btn" data-target="qd{{ ci }}"
+           style="padding:20px 22px;cursor:pointer;user-select:none;transition:background .15s;"
+           onmouseover="this.style.background='{{ Q_BG[ci] }}'" onmouseout="if(!this.classList.contains('q-active'))this.style.background=''">
+        <div class="d-flex justify-content-between align-items-start">
+          <div style="font-size:10px;font-weight:800;letter-spacing:1px;color:{{ Q_COLORS[ci] }};text-transform:uppercase;">{{ q.quarter }}</div>
+          <i class="bi bi-chevron-down q-chevron" style="font-size:11px;color:{{ Q_COLORS[ci] }};transition:transform .2s;"></i>
         </div>
-        <div style="width:1px;height:32px;background:var(--c-border);"></div>
-        <div>
-          <div style="font-size:28px;font-weight:800;color:var(--c-text);line-height:1;letter-spacing:-1px;">{{ q.manhours }}</div>
-          <div style="font-size:10.5px;color:var(--c-muted);margin-top:3px;font-weight:600;">Man-Hours</div>
+        <div class="d-flex gap-4 align-items-end mt-2">
+          <div>
+            <div style="font-size:26px;font-weight:800;color:{{ Q_COLORS[ci] }};line-height:1;letter-spacing:-1px;">{{ q.sessions }}</div>
+            <div style="font-size:10.5px;color:var(--c-muted);margin-top:3px;font-weight:600;">Sessions</div>
+          </div>
+          <div style="width:1px;height:30px;background:var(--c-border);"></div>
+          <div>
+            <div style="font-size:26px;font-weight:800;color:var(--c-text);line-height:1;letter-spacing:-1px;">{{ q.manhours }}</div>
+            <div style="font-size:10.5px;color:var(--c-muted);margin-top:3px;font-weight:600;">Man-Hours</div>
+          </div>
         </div>
       </div>
     </div>
     {% endfor %}
   </div>
 
-  <!-- Per-plant quarterly breakdown -->
+  <!-- Drill-down panels — one per quarter -->
+  {% for q in quarterly %}
+  {% set ci = loop.index0 %}
+  <div id="qd{{ ci }}" style="display:none;border-bottom:2px solid {{ Q_COLORS[ci] }};background:{{ Q_BG[ci] }};">
+    <div style="padding:16px 20px 10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <div style="font-size:13px;font-weight:800;color:{{ Q_COLORS[ci] }};">
+        <i class="bi bi-bar-chart-fill me-2"></i>{{ q.quarter }} — Plant Breakdown
+      </div>
+      <a href="{{ url_for('central_quarterly_export', start=q.q_start, end=q.q_end, label=q.quarter) }}"
+         style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:6px 14px;background:#059669;color:#fff;border-radius:7px;text-decoration:none;">
+        <i class="bi bi-file-earmark-excel-fill"></i> Download {{ q.quarter }} Report
+      </a>
+    </div>
+    <div class="table-responsive" style="padding:0 8px 16px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+        <thead>
+          <tr style="background:{{ Q_COLORS[ci] }};">
+            <th style="padding:8px 14px;color:#fff;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Plant</th>
+            <th style="padding:8px 12px;color:#fff;font-size:10.5px;font-weight:700;text-align:right;">Planned</th>
+            <th style="padding:8px 12px;color:#fff;font-size:10.5px;font-weight:700;text-align:right;">Conducted</th>
+            <th style="padding:8px 12px;color:#fff;font-size:10.5px;font-weight:700;text-align:right;">Man-Hrs</th>
+            <th style="padding:8px 16px;color:#fff;font-size:10.5px;font-weight:700;text-align:right;">BC Man-Hrs</th>
+            <th style="padding:8px 16px;color:#fff;font-size:10.5px;font-weight:700;text-align:right;">WC Man-Hrs</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set ns = namespace(tot_pl=0, tot_sc=0, tot_mh=0, tot_bc=0, tot_wc=0) %}
+          {% for pq in q.plants %}
+          {% set ns.tot_pl = ns.tot_pl + pq.planned %}
+          {% set ns.tot_sc = ns.tot_sc + pq.sessions %}
+          {% set ns.tot_mh = ns.tot_mh + pq.manhours %}
+          {% set ns.tot_bc = ns.tot_bc + pq.bc_hrs %}
+          {% set ns.tot_wc = ns.tot_wc + pq.wc_hrs %}
+          <tr style="background:#fff;border-bottom:1px solid {{ Q_BORD[ci] }};"
+              onmouseover="this.style.background='{{ Q_BG[ci] }}'" onmouseout="this.style.background='#fff'">
+            <td style="padding:9px 14px;">
+              <span style="font-weight:700;color:var(--c-text);">{{ pq.name }}</span>
+              <span class="badge-unit ms-2" style="font-size:10px;">{{ pq.unit_code }}</span>
+            </td>
+            <td style="padding:9px 12px;text-align:right;color:var(--c-muted);">{{ pq.planned }}</td>
+            <td style="padding:9px 12px;text-align:right;font-weight:{% if pq.sessions > 0 %}700{% else %}400{% endif %};color:{% if pq.sessions > 0 %}{{ Q_COLORS[ci] }}{% else %}#d1d5db{% endif %};">{{ pq.sessions }}</td>
+            <td style="padding:9px 12px;text-align:right;font-weight:{% if pq.manhours > 0 %}700{% else %}400{% endif %};color:{% if pq.manhours > 0 %}var(--c-text){% else %}#d1d5db{% endif %};">{{ pq.manhours }}</td>
+            <td style="padding:9px 16px;text-align:right;color:{% if pq.bc_hrs > 0 %}#1e40af{% else %}#d1d5db{% endif %};">{{ pq.bc_hrs }}</td>
+            <td style="padding:9px 16px;text-align:right;color:{% if pq.wc_hrs > 0 %}#15803d{% else %}#d1d5db{% endif %};">{{ pq.wc_hrs }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td style="padding:9px 14px;background:#1a3a5c !important;color:#fff;font-weight:800;font-size:12px;">TOTAL</td>
+            <td style="padding:9px 12px;background:#1a3a5c !important;color:#fff;font-weight:800;text-align:right;">{{ ns.tot_pl }}</td>
+            <td style="padding:9px 12px;background:#1a3a5c !important;color:#fff;font-weight:800;text-align:right;">{{ ns.tot_sc }}</td>
+            <td style="padding:9px 12px;background:#1a3a5c !important;color:#fbbf24;font-weight:800;text-align:right;">{{ ns.tot_mh|round(1) }}</td>
+            <td style="padding:9px 16px;background:#1a3a5c !important;color:#93c5fd;font-weight:800;text-align:right;">{{ ns.tot_bc|round(1) }}</td>
+            <td style="padding:9px 16px;background:#1a3a5c !important;color:#86efac;font-weight:800;text-align:right;">{{ ns.tot_wc|round(1) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- Cross-quarter comparison table -->
+  <div style="padding:14px 20px 8px;font-size:11px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.5px;">All Quarters Comparison</div>
   <div class="table-responsive">
     <table class="table mb-0" style="font-size:12.5px;border-collapse:collapse;" id="quarterlyTable">
       <thead>
@@ -284,9 +357,7 @@
           <td style="text-align:right;padding:10px 14px;border-left:3px solid {{ Q_COLORS[ci] }};border-bottom:1px solid var(--c-border);">
             <span style="font-weight:{% if pq.sessions > 0 %}700{% else %}400{% endif %};color:{% if pq.sessions > 0 %}{{ Q_COLORS[ci] }}{% else %}#d1d5db{% endif %};">{{ pq.sessions }}</span>
           </td>
-          <td style="text-align:right;padding:10px 14px;border-bottom:1px solid var(--c-border);color:{% if pq.manhours > 0 %}var(--c-text){% else %}#d1d5db{% endif %};">
-            {{ pq.manhours }}
-          </td>
+          <td style="text-align:right;padding:10px 14px;border-bottom:1px solid var(--c-border);color:{% if pq.manhours > 0 %}var(--c-text){% else %}#d1d5db{% endif %};">{{ pq.manhours }}</td>
           {% endfor %}
         </tr>
         {% endfor %}
@@ -304,5 +375,36 @@
     </table>
   </div>
 </div>
+
+{% block scripts %}
+<script>
+(function(){
+  var btns = document.querySelectorAll('.q-card-btn');
+  btns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var tid = this.getAttribute('data-target');
+      var panel = document.getElementById(tid);
+      var isOpen = panel.style.display !== 'none';
+      // close all
+      btns.forEach(function(b){
+        b.style.background = '';
+        b.classList.remove('q-active');
+        b.querySelector('.q-chevron').style.transform = '';
+      });
+      document.querySelectorAll('[id^="qd"]').forEach(function(p){ p.style.display='none'; });
+      // open clicked
+      if(!isOpen){
+        panel.style.display = 'block';
+        this.classList.add('q-active');
+        var ci = tid.replace('qd','');
+        var bgs = {{ Q_BG|tojson }};
+        this.style.background = bgs[ci];
+        this.querySelector('.q-chevron').style.transform = 'rotate(180deg)';
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}
 
 {% endblock %}

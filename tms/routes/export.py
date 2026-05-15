@@ -495,3 +495,138 @@ def _register(app):
         filename = f'BCML_Consolidated_Training_MIS_{fy.replace("-","")}{suffix}.xlsx'
         return send_file(output, download_name=filename, as_attachment=True,
                          mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    # ── Quarterly drill-down export ───────────────────────────────────────
+
+    @app.route('/central/quarterly/export')
+    @central_required
+    def central_quarterly_export():
+        q_start  = request.args.get('start', '')
+        q_end    = request.args.get('end', '')
+        q_label  = request.args.get('label', 'Quarter')
+        if not q_start or not q_end:
+            flash('Invalid quarter range.', 'danger')
+            return redirect(url_for('central_dashboard'))
+
+        db  = get_db()
+        fy  = _fy_label()
+        wb  = openpyxl.Workbook(write_only=True)
+
+        H_FONT  = Font(bold=True, color='FFFFFF', size=10)
+        H_FILL  = PatternFill('solid', fgColor='1F4E79')
+        H_ALIGN = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        T_FONT  = Font(bold=True, size=11)
+
+        def hc(ws, val):
+            c = WriteOnlyCell(ws, value=val)
+            c.font = H_FONT; c.fill = H_FILL; c.alignment = H_ALIGN
+            return c
+
+        def tc(ws, val):
+            c = WriteOnlyCell(ws, value=val)
+            c.font = T_FONT
+            return c
+
+        # ── Sheet 1: Plant Summary ────────────────────────────────────────────
+        ws = wb.create_sheet('Plant_Summary')
+        ws.append([tc(ws, 'BALRAMPUR CHINI MILLS LIMITED')])
+        ws.append([tc(ws, f'{q_label} — PLANT-WISE TRAINING SUMMARY | FY {fy}')])
+        ws.append([])
+        ws.append([hc(ws, h) for h in [
+            'Plant', 'Unit Code', 'BC Headcount', 'WC Headcount', 'Total Emp',
+            'Sessions Conducted', 'Total Man-hrs', 'BC Man-hrs', 'WC Man-hrs']])
+        for p in PLANTS:
+            pid = p['id']
+            bc = db.execute(
+                "SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='Blue Collared'",
+                (pid,)).fetchone()[0]
+            wc = db.execute(
+                "SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='White Collared'",
+                (pid,)).fetchone()[0]
+            conducted = db.execute(
+                "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted'"
+                " AND plan_start BETWEEN ? AND ?", (pid, q_start, q_end)).fetchone()[0]
+            mh = db.execute(
+                "SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND start_date BETWEEN ? AND ?",
+                (pid, q_start, q_end)).fetchone()[0]
+            bc_hrs = db.execute(
+                "SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t "
+                "JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id "
+                "WHERE t.plant_id=? AND e.collar='Blue Collared' AND t.start_date BETWEEN ? AND ?",
+                (pid, q_start, q_end)).fetchone()[0]
+            wc_hrs = db.execute(
+                "SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t "
+                "JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id "
+                "WHERE t.plant_id=? AND e.collar='White Collared' AND t.start_date BETWEEN ? AND ?",
+                (pid, q_start, q_end)).fetchone()[0]
+            ws.append([p['name'], p['unit_code'], bc, wc, bc + wc,
+                       conducted, round(mh, 1), round(bc_hrs, 1), round(wc_hrs, 1)])
+
+        # ── Sheet 2: 2A Attendance ────────────────────────────────────────────
+        ws2 = wb.create_sheet('2A_Attendance')
+        ws2.append([tc(ws2, 'BALRAMPUR CHINI MILLS LIMITED')])
+        ws2.append([tc(ws2, f'{q_label} — EMPLOYEE TRAINING RECORDS | FY {fy}')])
+        ws2.append([])
+        ws2.append([hc(ws2, h) for h in [
+            'Sr.', 'Plant', 'Unit', 'Emp Code', 'Name', 'Designation',
+            'Grade', 'Collar', 'Dept', 'Section',
+            'Session Code', 'Start Date', 'End Date', 'Hrs',
+            'Programme Name', 'Type', 'Mode', 'Source', 'Venue', 'Month']])
+        r = 1
+        for t in db.execute('''
+                SELECT t.*, e.name AS emp_name, e.designation, e.grade, e.collar,
+                       e.department, e.section
+                FROM emp_training t
+                LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+                WHERE t.start_date BETWEEN ? AND ?
+                ORDER BY t.plant_id, t.start_date''', (q_start, q_end)):
+            p = PLANT_MAP.get(t['plant_id'], {})
+            src = 'New Requirement' if t['host_plant_id'] == 99 else (t['cal_new'] or '')
+            ws2.append([r, p.get('name',''), p.get('unit_code',''),
+                        t['emp_code'], t['emp_name'] or '', t['designation'] or '',
+                        t['grade'] or '', t['collar'] or '',
+                        t['department'] or '', t['section'] or '',
+                        t['session_code'] or '', t['start_date'] or '', t['end_date'] or '',
+                        t['hrs'], t['programme_name'], t['prog_type'] or '',
+                        t['mode'] or '', src, t['venue'] or '', t['month'] or ''])
+            r += 1
+
+        # ── Sheet 3: 2C Programme Details ─────────────────────────────────────
+        ws3 = wb.create_sheet('2C_Programme_Details')
+        ws3.append([tc(ws3, 'BALRAMPUR CHINI MILLS LIMITED')])
+        ws3.append([tc(ws3, f'{q_label} — PROGRAMME DETAILS | FY {fy}')])
+        ws3.append([])
+        ws3.append([hc(ws3, h) for h in [
+            'Sr.', 'Plant', 'Unit', 'Session Code', 'Programme Name',
+            'Type', 'Level', 'Cal/New', 'Mode', 'Start Date', 'End Date',
+            'Audience', 'Hours Actual', 'Faculty Name', 'Int/Ext',
+            'Cost (Rs.)', 'Participants', 'Man-Hours']])
+        pax_map = {(r2[0], r2[1]): r2[2] for r2 in db.execute(
+            'SELECT plant_id, session_code, COUNT(*) FROM emp_training '
+            'WHERE start_date BETWEEN ? AND ? GROUP BY plant_id, session_code',
+            (q_start, q_end))}
+        hrs_map = {(r2[0], r2[1]): r2[2] for r2 in db.execute(
+            'SELECT plant_id, session_code, COALESCE(SUM(hrs),0) FROM emp_training '
+            'WHERE start_date BETWEEN ? AND ? GROUP BY plant_id, session_code',
+            (q_start, q_end))}
+        r = 1
+        for pd in db.execute(
+                'SELECT p.* FROM programme_details p WHERE p.start_date BETWEEN ? AND ? ORDER BY p.plant_id, p.id',
+                (q_start, q_end)):
+            p = PLANT_MAP.get(pd['plant_id'], {})
+            ws3.append([r, p.get('name',''), p.get('unit_code',''),
+                        pd['session_code'], pd['programme_name'], pd['prog_type'] or '',
+                        pd['level'] or '', pd['cal_new'] or '', pd['mode'] or '',
+                        pd['start_date'] or '', pd['end_date'] or '', pd['audience'] or '',
+                        pd['hours_actual'], pd['faculty_name'] or '', pd['int_ext'] or '',
+                        pd['cost'],
+                        pax_map.get((pd['plant_id'], pd['session_code']), 0),
+                        round(hrs_map.get((pd['plant_id'], pd['session_code']), 0), 1)])
+            r += 1
+
+        slug    = q_label.replace(' ','_').replace('(','').replace(')','').replace('–','-')
+        output  = io.BytesIO()
+        wb.save(output); output.seek(0)
+        filename = f'BCML_{slug}_Training_Report_{fy.replace("-","")}.xlsx'
+        return send_file(output, download_name=filename, as_attachment=True,
+                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
