@@ -2,8 +2,12 @@
 {% block page_title %}Central Dashboard — All Plants{% endblock %}
 {% block content %}
 
-<!-- Grand Totals -->
 {% set grand_sess_pct = (grand.conducted / grand.sessions * 100)|round(0)|int if grand.sessions else 0 %}
+{% set Q_COLORS = ['#2563eb','#0891b2','#d97706','#7c3aed'] %}
+{% set Q_BG    = ['#eff6ff','#ecfeff','#fffbeb','#f5f3ff'] %}
+{% set Q_BORD  = ['#bfdbfe','#a5f3fc','#fde68a','#ddd6fe'] %}
+
+<!-- ── Grand KPI Cards ─────────────────────────────────────────────────── -->
 <div class="row g-3 mb-4 stagger">
   <div class="col-6 col-md-3 fade-up">
     <div class="sc sc-violet">
@@ -55,22 +59,25 @@
   </div>
 </div>
 
+<!-- ── Admin Quick Access ─────────────────────────────────────────────── -->
 {% if session.role == 'admin' %}
-<!-- Admin Quick Plant Access -->
-<div class="admin-panel">
+<div class="admin-panel mb-4">
   <div class="ch"><i class="bi bi-shield-lock"></i> Admin — Enter Any Plant as SPOC</div>
   <div class="p-3">
     <div class="row g-2">
       {% for p in plants %}
       {% set overall = ((p.bc_pct + p.wc_pct) / 2)|round(1) %}
-      {% set pct_class = 'pct-good' if overall >= 75 else ('pct-mid' if overall >= 40 else 'pct-low') %}
+      {% set col = '#059669' if overall >= 75 else ('#d97706' if overall >= 40 else '#dc2626') %}
       <div class="col-6 col-md-4 col-lg-2">
-        <a href="{{ url_for('admin_select_plant', plant_id=p.id) }}" class="plant-chip">
+        <a href="{{ url_for('admin_select_plant', plant_id=p.id) }}" class="plant-chip" style="text-decoration:none;">
           <div class="plant-chip-top">
             <span class="plant-chip-code">{{ p.unit_code }}</span>
-            <span class="{{ pct_class }}" style="font-size:11px;">{{ overall }}%</span>
+            <span style="font-size:11px;font-weight:700;color:{{ col }};">{{ overall }}%</span>
           </div>
           <div class="plant-chip-name">{{ p.name }}</div>
+          <div style="height:3px;background:#e5e7eb;border-radius:2px;margin-top:6px;overflow:hidden;">
+            <div style="height:3px;width:{{ [overall,100]|min }}%;background:{{ col }};border-radius:2px;transition:width .6s;"></div>
+          </div>
         </a>
       </div>
       {% endfor %}
@@ -79,50 +86,71 @@
 </div>
 {% endif %}
 
-<!-- Plant-wise Table -->
+<!-- ── Plant-wise Summary Table ───────────────────────────────────────── -->
 <div class="card mb-4">
   <div class="ch-dark"><i class="bi bi-building"></i> Plant-wise Training Summary — FY 2026-27</div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0" style="font-size:12px;white-space:nowrap;">
+      <table class="table table-hover mb-0" style="font-size:12.5px;white-space:nowrap;">
         <thead>
-          <tr>
-            <th>#</th>
-            <th>Plant</th>
-            <th>Code</th>
-            <th>Emp</th>
-            <th>BC</th>
-            <th>WC</th>
-            <th>Sessions</th>
-            <th>Conducted</th>
-            <th>Man-Hrs</th>
-            <th>BC%</th>
-            <th>WC%</th>
-            <th>Actions</th>
+          <tr style="background:#f1f5f9;">
+            <th style="padding:10px 12px;font-size:10.5px;color:var(--c-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">#</th>
+            <th style="padding:10px 12px;font-size:10.5px;color:var(--c-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Plant</th>
+            <th style="padding:10px 12px;font-size:10.5px;color:var(--c-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Emp</th>
+            <th style="padding:10px 12px;font-size:10.5px;color:var(--c-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">BC</th>
+            <th style="padding:10px 12px;font-size:10.5px;color:var(--c-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">WC</th>
+            <th style="padding:10px 12px;font-size:10.5px;color:var(--c-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Planned</th>
+            <th style="padding:10px 12px;font-size:10.5px;color:var(--c-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Conducted</th>
+            <th style="padding:10px 12px;font-size:10.5px;color:var(--c-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Man-Hrs</th>
+            <th style="padding:10px 16px;font-size:10.5px;color:var(--c-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">BC Compliance</th>
+            <th style="padding:10px 16px;font-size:10.5px;color:var(--c-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">WC Compliance</th>
+            <th style="padding:10px 12px;font-size:10.5px;color:var(--c-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for p in plants %}
-          {% set bc_class = 'pct-good' if p.bc_pct >= 75 else ('pct-mid' if p.bc_pct >= 40 else 'pct-low') %}
-          {% set wc_class = 'pct-good' if p.wc_pct >= 75 else ('pct-mid' if p.wc_pct >= 40 else 'pct-low') %}
+          {% set bc_col = '#059669' if p.bc_pct >= 75 else ('#d97706' if p.bc_pct >= 40 else '#dc2626') %}
+          {% set wc_col = '#059669' if p.wc_pct >= 75 else ('#d97706' if p.wc_pct >= 40 else '#dc2626') %}
           <tr>
-            <td class="text-muted">{{ loop.index }}</td>
-            <td><strong style="font-size:12px;">{{ p.name }}</strong></td>
-            <td><span class="badge-unit">{{ p.unit_code }}</span></td>
-            <td><strong>{{ p.total_emp }}</strong></td>
-            <td><span class="badge badge-bc">{{ p.blue_collar }}</span></td>
-            <td><span class="badge badge-wc">{{ p.white_collar }}</span></td>
-            <td>{{ p.sessions }}</td>
-            <td>
-              <span class="badge badge-conducted">{{ p.conducted }}</span>
-              {% if p.sessions > 0 %}<small class="text-muted"> {{ "%.0f"|format(p.conducted/p.sessions*100) }}%</small>{% endif %}
+            <td style="padding:12px;color:var(--c-muted);font-size:11.5px;">{{ loop.index }}</td>
+            <td style="padding:12px;">
+              <div style="font-weight:700;font-size:13px;color:var(--c-text);">{{ p.name }}</div>
+              <span class="badge-unit" style="font-size:10px;">{{ p.unit_code }}</span>
             </td>
-            <td><strong>{{ p.manhours }}</strong></td>
-            <td><span class="{{ bc_class }}">{{ p.bc_pct }}%</span></td>
-            <td><span class="{{ wc_class }}">{{ p.wc_pct }}%</span></td>
-            <td>
+            <td style="padding:12px;font-weight:700;font-size:13px;">{{ p.total_emp }}</td>
+            <td style="padding:12px;">
+              <span style="background:#dbeafe;color:#1e40af;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px;">{{ p.blue_collar }}</span>
+            </td>
+            <td style="padding:12px;">
+              <span style="background:#dcfce7;color:#15803d;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px;">{{ p.white_collar }}</span>
+            </td>
+            <td style="padding:12px;font-size:13px;">{{ p.sessions }}</td>
+            <td style="padding:12px;">
+              <span style="font-weight:700;font-size:13px;">{{ p.conducted }}</span>
+              {% if p.sessions > 0 %}
+              <span style="font-size:10.5px;color:var(--c-muted);margin-left:4px;">{{ "%.0f"|format(p.conducted/p.sessions*100) }}%</span>
+              {% endif %}
+            </td>
+            <td style="padding:12px;font-weight:700;font-size:13px;">{{ p.manhours }}</td>
+            <td style="padding:12px 16px;min-width:130px;">
+              <div class="d-flex align-items-center gap-2">
+                <div style="flex:1;height:6px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                  <div style="height:6px;width:{{ [p.bc_pct,100]|min }}%;background:{{ bc_col }};border-radius:4px;"></div>
+                </div>
+                <span style="font-size:11.5px;font-weight:700;color:{{ bc_col }};min-width:36px;text-align:right;">{{ p.bc_pct }}%</span>
+              </div>
+            </td>
+            <td style="padding:12px 16px;min-width:130px;">
+              <div class="d-flex align-items-center gap-2">
+                <div style="flex:1;height:6px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                  <div style="height:6px;width:{{ [p.wc_pct,100]|min }}%;background:{{ wc_col }};border-radius:4px;"></div>
+                </div>
+                <span style="font-size:11.5px;font-weight:700;color:{{ wc_col }};min-width:36px;text-align:right;">{{ p.wc_pct }}%</span>
+              </div>
+            </td>
+            <td style="padding:12px;">
               <div class="d-flex gap-1">
-                <a href="{{ url_for('central_plant_view', plant_id=p.id) }}" class="btn-icon" title="View"><i class="bi bi-eye"></i></a>
+                <a href="{{ url_for('central_plant_view', plant_id=p.id) }}" class="btn-icon" title="View Details"><i class="bi bi-eye"></i></a>
                 {% if session.role == 'admin' %}
                 <a href="{{ url_for('admin_select_plant', plant_id=p.id) }}" class="btn-icon bi-enter" title="Enter as SPOC"><i class="bi bi-box-arrow-in-right"></i></a>
                 {% endif %}
@@ -134,14 +162,14 @@
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3"><strong>GRAND TOTAL</strong></td>
-            <td><strong>{{ grand.total_emp }}</strong></td>
-            <td><strong>{{ plants|sum(attribute='blue_collar') }}</strong></td>
-            <td><strong>{{ plants|sum(attribute='white_collar') }}</strong></td>
-            <td><strong>{{ grand.sessions }}</strong></td>
-            <td><strong>{{ grand.conducted }}</strong></td>
-            <td><strong>{{ grand.manhours }}</strong></td>
-            <td colspan="3"></td>
+            <td colspan="2" style="padding:11px 12px;background:#1a3a5c;color:#fff;font-weight:800;font-size:12px;letter-spacing:.5px;">GRAND TOTAL</td>
+            <td style="padding:11px 12px;background:#1a3a5c;color:#fff;font-weight:800;">{{ grand.total_emp }}</td>
+            <td style="padding:11px 12px;background:#1a3a5c;color:#93c5fd;font-weight:800;">{{ plants|sum(attribute='blue_collar') }}</td>
+            <td style="padding:11px 12px;background:#1a3a5c;color:#86efac;font-weight:800;">{{ plants|sum(attribute='white_collar') }}</td>
+            <td style="padding:11px 12px;background:#1a3a5c;color:#fff;font-weight:800;">{{ grand.sessions }}</td>
+            <td style="padding:11px 12px;background:#1a3a5c;color:#fff;font-weight:800;">{{ grand.conducted }}</td>
+            <td style="padding:11px 12px;background:#1a3a5c;color:#fbbf24;font-weight:800;">{{ grand.manhours }}</td>
+            <td colspan="3" style="padding:11px 12px;background:#1a3a5c;"></td>
           </tr>
         </tfoot>
       </table>
@@ -149,23 +177,47 @@
   </div>
 </div>
 
-<!-- Compliance Heat Map -->
-<div class="section-hd mb-3">Plant Compliance Overview</div>
+<!-- ── Compliance Overview Cards ─────────────────────────────────────── -->
+<div style="font-size:13px;font-weight:800;color:var(--c-text);letter-spacing:-.2px;margin-bottom:12px;">
+  <i class="bi bi-shield-check me-2" style="color:var(--c-primary);"></i>Plant Compliance Overview
+</div>
 <div class="row g-3 mb-4">
   {% for p in plants %}
   {% set overall = ((p.bc_pct + p.wc_pct) / 2)|round(1) %}
-  {% set pct_class = 'pct-good' if overall >= 75 else ('pct-mid' if overall >= 40 else 'pct-low') %}
+  {% set ov_col  = '#059669' if overall >= 75 else ('#d97706' if overall >= 40 else '#dc2626') %}
+  {% set bc_col  = '#059669' if p.bc_pct >= 75 else ('#d97706' if p.bc_pct >= 40 else '#dc2626') %}
+  {% set wc_col  = '#059669' if p.wc_pct >= 75 else ('#d97706' if p.wc_pct >= 40 else '#dc2626') %}
   <div class="col-6 col-md-3 col-lg-2">
-    <div class="comp-card">
-      <div class="comp-plant">{{ p.name }}</div>
-      <div class="comp-code">{{ p.unit_code }}</div>
-      <div class="comp-pct {{ pct_class }}">{{ overall }}%</div>
-      <div class="comp-lbl">Overall Compliance</div>
-      <div class="d-flex gap-1 mt-3">
+    <div style="background:#fff;border:1px solid var(--c-border);border-radius:var(--radius);padding:14px 14px 12px;height:100%;display:flex;flex-direction:column;border-top:3px solid {{ ov_col }};">
+      <div style="font-weight:800;font-size:13px;color:var(--c-text);margin-bottom:1px;">{{ p.name }}</div>
+      <div style="font-size:10px;font-weight:700;color:var(--c-muted);letter-spacing:.5px;margin-bottom:10px;">{{ p.unit_code }}</div>
+      <div style="font-size:28px;font-weight:800;color:{{ ov_col }};line-height:1;letter-spacing:-1px;margin-bottom:2px;">{{ overall }}%</div>
+      <div style="font-size:10.5px;color:var(--c-muted);margin-bottom:10px;">Overall Compliance</div>
+      <div style="margin-bottom:6px;">
+        <div class="d-flex justify-content-between mb-1">
+          <span style="font-size:10px;font-weight:700;color:#1e40af;">BC</span>
+          <span style="font-size:10px;font-weight:700;color:{{ bc_col }};">{{ p.bc_pct }}%</span>
+        </div>
+        <div style="height:4px;background:#f1f5f9;border-radius:3px;overflow:hidden;">
+          <div style="height:4px;width:{{ [p.bc_pct,100]|min }}%;background:{{ bc_col }};border-radius:3px;"></div>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div class="d-flex justify-content-between mb-1">
+          <span style="font-size:10px;font-weight:700;color:#15803d;">WC</span>
+          <span style="font-size:10px;font-weight:700;color:{{ wc_col }};">{{ p.wc_pct }}%</span>
+        </div>
+        <div style="height:4px;background:#f1f5f9;border-radius:3px;overflow:hidden;">
+          <div style="height:4px;width:{{ [p.wc_pct,100]|min }}%;background:{{ wc_col }};border-radius:3px;"></div>
+        </div>
+      </div>
+      <div class="d-flex gap-1 mt-auto">
         <a href="{{ url_for('central_plant_view', plant_id=p.id) }}"
-           class="btn btn-outline-primary btn-sm flex-grow-1" style="font-size:11px;">Details</a>
+           style="flex:1;text-align:center;font-size:11px;font-weight:600;padding:5px 8px;border:1px solid var(--c-primary);color:var(--c-primary);border-radius:6px;text-decoration:none;">
+          <i class="bi bi-eye me-1"></i>Details
+        </a>
         <a href="{{ url_for('export_excel', plant_id=p.id) }}"
-           class="btn-icon bi-success" title="Export Excel">
+           class="btn-icon bi-success" title="Export Excel" style="flex-shrink:0;">
           <i class="bi bi-file-earmark-excel"></i>
         </a>
       </div>
@@ -174,14 +226,11 @@
   {% endfor %}
 </div>
 
-<!-- Quarterly Review -->
-{% set Q_COLORS = ['#2563eb','#0891b2','#d97706','#7c3aed'] %}
-{% set Q_BG    = ['#eff6ff','#ecfeff','#fffbeb','#f5f3ff'] %}
-{% set Q_BORD  = ['#bfdbfe','#a5f3fc','#fde68a','#ddd6fe'] %}
+<!-- ── Quarterly Review ───────────────────────────────────────────────── -->
 <div class="card mb-4">
   <div class="ch-dark"><i class="bi bi-bar-chart-steps"></i> Quarterly Review — FY 2026-27</div>
 
-  <!-- Quarter summary cards -->
+  <!-- Quarter KPI strip -->
   <div class="row g-0" style="border-bottom:2px solid var(--c-border);">
     {% for q in quarterly %}
     {% set ci = loop.index0 %}
@@ -190,52 +239,52 @@
       <div class="d-flex gap-4 align-items-end">
         <div>
           <div style="font-size:28px;font-weight:800;color:{{ Q_COLORS[ci] }};line-height:1;letter-spacing:-1px;">{{ q.sessions }}</div>
-          <div style="font-size:10.5px;color:var(--c-muted);margin-top:2px;font-weight:600;">Sessions</div>
+          <div style="font-size:10.5px;color:var(--c-muted);margin-top:3px;font-weight:600;">Sessions</div>
         </div>
         <div style="width:1px;height:32px;background:var(--c-border);"></div>
         <div>
           <div style="font-size:28px;font-weight:800;color:var(--c-text);line-height:1;letter-spacing:-1px;">{{ q.manhours }}</div>
-          <div style="font-size:10.5px;color:var(--c-muted);margin-top:2px;font-weight:600;">Man-Hours</div>
+          <div style="font-size:10.5px;color:var(--c-muted);margin-top:3px;font-weight:600;">Man-Hours</div>
         </div>
       </div>
     </div>
     {% endfor %}
   </div>
 
-  <!-- Per-plant breakdown table -->
+  <!-- Per-plant quarterly breakdown -->
   <div class="table-responsive">
-    <table class="table mb-0" style="font-size:12.5px;border-collapse:separate;border-spacing:0;" id="quarterlyTable">
+    <table class="table mb-0" style="font-size:12.5px;border-collapse:collapse;" id="quarterlyTable">
       <thead>
-        <tr style="background:#f8fafc;">
-          <th rowspan="2" style="vertical-align:middle;padding:10px 16px;border-bottom:2px solid var(--c-border);min-width:160px;font-size:11px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.5px;">Plant</th>
+        <tr>
+          <th rowspan="2" style="vertical-align:middle;padding:10px 16px;border-bottom:2px solid var(--c-border);min-width:160px;background:#f8fafc;font-size:10.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.5px;">Plant</th>
           {% for q in quarterly %}
           {% set ci = loop.index0 %}
-          <th colspan="2" style="text-align:center;padding:8px 12px;background:{{ Q_BG[ci] }};border-left:3px solid {{ Q_COLORS[ci] }};border-bottom:1px solid {{ Q_BORD[ci] }};font-size:10px;font-weight:800;color:{{ Q_COLORS[ci] }};letter-spacing:.8px;text-transform:uppercase;">{{ q.quarter }}</th>
+          <th colspan="2" style="text-align:center;padding:9px 12px;background:{{ Q_BG[ci] }};border-left:3px solid {{ Q_COLORS[ci] }};border-bottom:1px solid {{ Q_BORD[ci] }};font-size:10px;font-weight:800;color:{{ Q_COLORS[ci] }};letter-spacing:.8px;text-transform:uppercase;">{{ q.quarter }}</th>
           {% endfor %}
         </tr>
-        <tr style="background:#f8fafc;">
+        <tr>
           {% for q in quarterly %}
           {% set ci = loop.index0 %}
-          <th style="text-align:right;padding:6px 14px;font-size:10.5px;font-weight:700;color:var(--c-muted);border-left:3px solid {{ Q_COLORS[ci] }};border-bottom:2px solid var(--c-border);background:{{ Q_BG[ci] }};">Sessions</th>
-          <th style="text-align:right;padding:6px 14px;font-size:10.5px;font-weight:700;color:var(--c-muted);border-bottom:2px solid var(--c-border);background:{{ Q_BG[ci] }};">Man-Hrs</th>
+          <th style="text-align:right;padding:7px 14px;font-size:10.5px;font-weight:700;color:var(--c-muted);border-left:3px solid {{ Q_COLORS[ci] }};border-bottom:2px solid var(--c-border);background:{{ Q_BG[ci] }};">Sessions</th>
+          <th style="text-align:right;padding:7px 14px;font-size:10.5px;font-weight:700;color:var(--c-muted);border-bottom:2px solid var(--c-border);background:{{ Q_BG[ci] }};">Man-Hrs</th>
           {% endfor %}
         </tr>
       </thead>
       <tbody>
         {% for i in range(plants|length) %}
         {% set p = plants[i] %}
-        <tr style="border-bottom:1px solid var(--c-border);" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-          <td style="padding:10px 16px;vertical-align:middle;">
+        <tr onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+          <td style="padding:10px 16px;border-bottom:1px solid var(--c-border);">
             <span style="font-weight:700;font-size:13px;color:var(--c-text);">{{ p.name }}</span>
             <span class="badge-unit ms-2" style="font-size:10px;">{{ p.unit_code }}</span>
           </td>
           {% for q in quarterly %}
           {% set ci = loop.index0 %}
           {% set pq = q.plants[i] %}
-          <td style="text-align:right;padding:10px 14px;border-left:3px solid {{ Q_COLORS[ci] }};vertical-align:middle;">
-            <span style="font-weight:{% if pq.sessions > 0 %}700{% else %}400{% endif %};color:{% if pq.sessions > 0 %}{{ Q_COLORS[ci] }}{% else %}var(--c-muted){% endif %};">{{ pq.sessions }}</span>
+          <td style="text-align:right;padding:10px 14px;border-left:3px solid {{ Q_COLORS[ci] }};border-bottom:1px solid var(--c-border);">
+            <span style="font-weight:{% if pq.sessions > 0 %}700{% else %}400{% endif %};color:{% if pq.sessions > 0 %}{{ Q_COLORS[ci] }}{% else %}#d1d5db{% endif %};">{{ pq.sessions }}</span>
           </td>
-          <td style="text-align:right;padding:10px 14px;vertical-align:middle;color:{% if pq.manhours > 0 %}var(--c-text){% else %}var(--c-muted){% endif %};">
+          <td style="text-align:right;padding:10px 14px;border-bottom:1px solid var(--c-border);color:{% if pq.manhours > 0 %}var(--c-text){% else %}#d1d5db{% endif %};">
             {{ pq.manhours }}
           </td>
           {% endfor %}
@@ -243,16 +292,17 @@
         {% endfor %}
       </tbody>
       <tfoot>
-        <tr style="background:#1a3a5c;">
-          <td style="padding:11px 16px;font-weight:800;font-size:12px;color:#fff;letter-spacing:.5px;">TOTAL</td>
+        <tr>
+          <td style="padding:12px 16px;background:#1a3a5c !important;color:#fff;font-weight:800;font-size:12px;letter-spacing:.5px;">TOTAL</td>
           {% for q in quarterly %}
           {% set ci = loop.index0 %}
-          <td style="text-align:right;padding:11px 14px;font-weight:800;color:#fff;border-left:3px solid {{ Q_COLORS[ci] }};">{{ q.sessions }}</td>
-          <td style="text-align:right;padding:11px 14px;font-weight:800;color:#fff;">{{ q.manhours }}</td>
+          <td style="text-align:right;padding:12px 14px;background:#1a3a5c !important;color:#fff;font-weight:800;border-left:3px solid {{ Q_COLORS[ci] }};">{{ q.sessions }}</td>
+          <td style="text-align:right;padding:12px 14px;background:#1a3a5c !important;color:#fbbf24;font-weight:800;">{{ q.manhours }}</td>
           {% endfor %}
         </tr>
       </tfoot>
     </table>
   </div>
 </div>
+
 {% endblock %}
