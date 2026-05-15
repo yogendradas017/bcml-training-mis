@@ -1,8 +1,12 @@
+import io
 import os
 import shutil
 from datetime import date, datetime, timedelta
 from flask import render_template, request, redirect, url_for, session, flash, send_file
 from werkzeug.security import check_password_hash, generate_password_hash
+import pyotp
+import qrcode
+import base64
 
 from tms.constants import PLANT_MAP, DB_PATH
 from tms.db import get_db
@@ -49,6 +53,14 @@ def _register(app):
             if user and check_password_hash(user['password'], password):
                 db.execute('UPDATE users SET failed_attempts=0, locked_until=NULL WHERE id=?', (user['id'],))
                 db.commit()
+                # If 2FA enabled → hold in pending state, redirect to TOTP verify
+                if user['totp_enabled'] and user['totp_secret']:
+                    session.clear()
+                    session['2fa_uid']  = user['id']
+                    session['2fa_next'] = 'change_password' if user['must_change_password'] else (
+                        'central_dashboard' if user['role'] in ('central', 'admin') else 'spoc_dashboard'
+                    )
+                    return redirect(url_for('login_2fa'))
                 session.clear()
                 session['user_id']  = user['id']
                 session['username'] = user['username']
@@ -83,6 +95,41 @@ def _register(app):
                     flash('Invalid username or password.', 'danger')
                 log_action('LOGIN_FAIL', f'username:{username}', username=username)
         return render_template('login.html')
+
+    @app.route('/login/2fa', methods=['GET', 'POST'])
+    def login_2fa():
+        uid = session.get('2fa_uid')
+        if not uid:
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            code = request.form.get('totp_code', '').strip().replace(' ', '')
+            db = get_db()
+            user = db.execute('SELECT * FROM users WHERE id=?', (uid,)).fetchone()
+            if not user or not user['totp_secret']:
+                session.clear()
+                flash('Session error. Please log in again.', 'danger')
+                return redirect(url_for('login'))
+            totp = pyotp.TOTP(user['totp_secret'])
+            if totp.verify(code, valid_window=1):
+                next_ep = session.pop('2fa_next', 'spoc_dashboard')
+                session.clear()
+                session['user_id']  = user['id']
+                session['username'] = user['username']
+                session['role']     = user['role']
+                session['plant_id'] = user['plant_id']
+                if user['plant_id'] and user['plant_id'] in PLANT_MAP:
+                    session['plant_name'] = PLANT_MAP[user['plant_id']]['name']
+                    session['unit_code']  = PLANT_MAP[user['plant_id']]['unit_code']
+                log_action('LOGIN_OK', f"2fa:role:{user['role']}", user_id=user['id'],
+                           username=user['username'], plant_id=user['plant_id'])
+                if user['must_change_password']:
+                    flash('Please set a new password before continuing.', 'warning')
+                    return redirect(url_for('change_password'))
+                return redirect(url_for(next_ep))
+            else:
+                log_action('LOGIN_FAIL', f'2fa_wrong_code:{user["username"]}', username=user['username'])
+                flash('Invalid or expired code. Try again.', 'danger')
+        return render_template('login_2fa.html')
 
     @app.route('/logout')
     def logout():
@@ -128,6 +175,61 @@ def _register(app):
         ).fetchall()]
         return render_template('admin_audit_log.html', logs=logs, actions=actions,
                                q=q, sel_action=action)
+
+    @app.route('/admin/2fa/setup/<int:user_id>')
+    @admin_required
+    def admin_2fa_setup(user_id):
+        db = get_db()
+        user = db.execute('SELECT * FROM users WHERE id=?', (user_id,)).fetchone()
+        if not user:
+            flash('User not found.', 'danger')
+            return redirect(url_for('admin_users'))
+        secret = user['totp_secret'] or pyotp.random_base32()
+        if not user['totp_secret']:
+            db.execute('UPDATE users SET totp_secret=? WHERE id=?', (secret, user_id))
+            db.commit()
+        uri = pyotp.TOTP(secret).provisioning_uri(
+            name=user['username'],
+            issuer_name='BCML TMS'
+        )
+        img = qrcode.make(uri)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+        return render_template('admin_2fa_setup.html', user=user, secret=secret, qr_b64=qr_b64)
+
+    @app.route('/admin/2fa/enable/<int:user_id>', methods=['POST'])
+    @admin_required
+    def admin_2fa_enable(user_id):
+        code = request.form.get('totp_code', '').strip()
+        db = get_db()
+        user = db.execute('SELECT * FROM users WHERE id=?', (user_id,)).fetchone()
+        if not user or not user['totp_secret']:
+            flash('Setup 2FA first.', 'danger')
+            return redirect(url_for('admin_users'))
+        if pyotp.TOTP(user['totp_secret']).verify(code, valid_window=1):
+            db.execute('UPDATE users SET totp_enabled=1 WHERE id=?', (user_id,))
+            db.commit()
+            log_action('RECORD_EDIT', f'2fa_enabled:user:{user["username"]}')
+            flash(f"2FA enabled for '{user['username']}'.", 'success')
+        else:
+            flash('Invalid code — scan QR again and retry.', 'danger')
+            return redirect(url_for('admin_2fa_setup', user_id=user_id))
+        return redirect(url_for('admin_users'))
+
+    @app.route('/admin/2fa/disable/<int:user_id>', methods=['POST'])
+    @admin_required
+    def admin_2fa_disable(user_id):
+        db = get_db()
+        user = db.execute('SELECT username FROM users WHERE id=?', (user_id,)).fetchone()
+        if not user:
+            flash('User not found.', 'danger')
+            return redirect(url_for('admin_users'))
+        db.execute('UPDATE users SET totp_enabled=0, totp_secret=NULL WHERE id=?', (user_id,))
+        db.commit()
+        log_action('RECORD_EDIT', f'2fa_disabled:user:{user["username"]}')
+        flash(f"2FA disabled for '{user['username']}'.", 'warning')
+        return redirect(url_for('admin_users'))
 
     @app.route('/admin/plant/<int:plant_id>')
     @admin_required

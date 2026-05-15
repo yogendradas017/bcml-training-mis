@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BCML Training MIS — Two-Factor Authentication</title>
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link href="{{ url_for('static', filename='vendor/inter.css') }}" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,'Helvetica Neue',sans-serif;background:#0a0a0f;min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff;}
+.card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:40px 36px;width:100%;max-width:400px;text-align:center;}
+.logo{width:56px;height:56px;margin:0 auto 20px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.logo img{width:46px;}
+h1{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-.3px;}
+.sub{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:28px;line-height:1.5;}
+.otp-wrap{display:flex;gap:8px;justify-content:center;margin-bottom:20px;}
+.otp-wrap input{width:44px;height:52px;text-align:center;font-size:22px;font-weight:700;border:1.5px solid rgba(255,255,255,.15);border-radius:10px;background:rgba(255,255,255,.06);color:#fff;outline:none;transition:border-color .2s;}
+.otp-wrap input:focus{border-color:#2e6da4;}
+.btn-primary{width:100%;padding:13px;background:#2e6da4;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s;}
+.btn-primary:hover{background:#1e5a8e;}
+.alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#fca5a5;text-align:left;}
+.back{display:block;margin-top:16px;font-size:12px;color:rgba(255,255,255,.35);text-decoration:none;}
+.back:hover{color:rgba(255,255,255,.6);}
+.hint{font-size:12px;color:rgba(255,255,255,.35);margin-bottom:20px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><img src="{{ url_for('static', filename='bcml_logo.png') }}" alt="BCML"></div>
+  <h1>Two-Factor Authentication</h1>
+  <p class="sub">Open Google Authenticator and enter the 6-digit code for <strong>BCML TMS</strong>.</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="alert">{{ msg }}</div>
+  {% endfor %}
+  {% endwith %}
+
+  <form method="POST" id="totpForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="otp-wrap">
+      <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autofocus>
+      <input type="text" inputmode="numeric" maxlength="1" class="otp-digit">
+      <input type="text" inputmode="numeric" maxlength="1" class="otp-digit">
+      <input type="text" inputmode="numeric" maxlength="1" class="otp-digit">
+      <input type="text" inputmode="numeric" maxlength="1" class="otp-digit">
+      <input type="text" inputmode="numeric" maxlength="1" class="otp-digit">
+    </div>
+    <input type="hidden" name="totp_code" id="totpCode">
+    <p class="hint">Code refreshes every 30 seconds.</p>
+    <button type="submit" class="btn-primary">Verify</button>
+  </form>
+  <a href="{{ url_for('login') }}" class="back">← Back to login</a>
+</div>
+
+<script>
+(function(){
+  const digits = Array.from(document.querySelectorAll('.otp-digit'));
+  const hidden = document.getElementById('totpCode');
+  const form   = document.getElementById('totpForm');
+
+  digits.forEach(function(el, i){
+    el.addEventListener('input', function(){
+      el.value = el.value.replace(/\D/g, '').slice(-1);
+      if (el.value && i < digits.length - 1) digits[i+1].focus();
+      hidden.value = digits.map(function(d){ return d.value; }).join('');
+      if (hidden.value.length === 6) form.submit();
+    });
+    el.addEventListener('keydown', function(e){
+      if (e.key === 'Backspace' && !el.value && i > 0) digits[i-1].focus();
+    });
+    el.addEventListener('paste', function(e){
+      e.preventDefault();
+      var text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
+      text.split('').forEach(function(ch, j){ if (digits[j]) digits[j].value = ch; });
+      hidden.value = text;
+      if (text.length === 6) form.submit();
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -375,6 +375,19 @@ def _migrate_audit_lockout(db):
         logging.warning(f'_migrate_audit_lockout failed: {e}')
 
 
+def _migrate_totp(db):
+    import logging
+    try:
+        cols = {r[1] for r in db.execute("PRAGMA table_info(users)")}
+        if 'totp_secret' not in cols:
+            db.execute("ALTER TABLE users ADD COLUMN totp_secret TEXT")
+        if 'totp_enabled' not in cols:
+            db.execute("ALTER TABLE users ADD COLUMN totp_enabled INTEGER DEFAULT 0")
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_totp failed: {e}')
+
+
 def _migrate_spoc_requests(db):
     import logging
     try:
@@ -422,6 +435,7 @@ def init_db():
     _migrate_corp_members(db)
     _migrate_central_user_plant(db)
     _migrate_audit_lockout(db)
+    _migrate_totp(db)
     _migrate_spoc_requests(db)
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
