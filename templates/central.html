@@ -175,72 +175,84 @@
 </div>
 
 <!-- Quarterly Review -->
+{% set Q_COLORS = ['#2563eb','#0891b2','#d97706','#7c3aed'] %}
+{% set Q_BG    = ['#eff6ff','#ecfeff','#fffbeb','#f5f3ff'] %}
+{% set Q_BORD  = ['#bfdbfe','#a5f3fc','#fde68a','#ddd6fe'] %}
 <div class="card mb-4">
   <div class="ch-dark"><i class="bi bi-bar-chart-steps"></i> Quarterly Review — FY 2026-27</div>
-  <div class="card-body p-0">
-    <!-- Quarter Summary -->
-    <div class="row g-0" style="border-bottom:1px solid var(--c-border);">
-      {% for q in quarterly %}
-      <div class="col-6 col-md-3" style="{% if not loop.last %}border-right:1px solid var(--c-border);{% endif %}padding:18px 20px;">
-        <div class="section-hd mb-2" style="margin-bottom:8px!important;">{{ q.quarter }}</div>
-        <div class="d-flex gap-3">
-          <div>
-            <div style="font-size:22px;font-weight:800;color:var(--c-primary);line-height:1;">{{ q.sessions }}</div>
-            <div style="font-size:11px;color:var(--c-muted);">Sessions</div>
-          </div>
-          <div>
-            <div style="font-size:22px;font-weight:800;color:var(--c-primary2);line-height:1;">{{ q.manhours }}</div>
-            <div style="font-size:11px;color:var(--c-muted);">Man-Hours</div>
-          </div>
+
+  <!-- Quarter summary cards -->
+  <div class="row g-0" style="border-bottom:2px solid var(--c-border);">
+    {% for q in quarterly %}
+    {% set ci = loop.index0 %}
+    <div class="col-6 col-md-3" style="padding:20px 24px;{% if not loop.last %}border-right:1px solid var(--c-border);{% endif %}border-top:3px solid {{ Q_COLORS[ci] }};">
+      <div style="font-size:10px;font-weight:800;letter-spacing:1px;color:{{ Q_COLORS[ci] }};text-transform:uppercase;margin-bottom:10px;">{{ q.quarter }}</div>
+      <div class="d-flex gap-4 align-items-end">
+        <div>
+          <div style="font-size:28px;font-weight:800;color:{{ Q_COLORS[ci] }};line-height:1;letter-spacing:-1px;">{{ q.sessions }}</div>
+          <div style="font-size:10.5px;color:var(--c-muted);margin-top:2px;font-weight:600;">Sessions</div>
+        </div>
+        <div style="width:1px;height:32px;background:var(--c-border);"></div>
+        <div>
+          <div style="font-size:28px;font-weight:800;color:var(--c-text);line-height:1;letter-spacing:-1px;">{{ q.manhours }}</div>
+          <div style="font-size:10.5px;color:var(--c-muted);margin-top:2px;font-weight:600;">Man-Hours</div>
         </div>
       </div>
-      {% endfor %}
     </div>
-    <!-- Per-plant quarterly breakdown -->
-    <div class="table-responsive">
-      <table class="table table-hover mb-0" style="font-size:12.5px;" id="quarterlyTable">
-        <thead>
-          <tr>
-            <th>Plant</th>
-            {% for q in quarterly %}
-            <th colspan="2" style="text-align:center;">{{ q.quarter }}</th>
-            {% endfor %}
-          </tr>
-          <tr>
-            <th style="font-size:11px;">Unit</th>
-            {% for q in quarterly %}
-            <th style="font-size:11px;">Sessions</th>
-            <th style="font-size:11px;">Man-Hrs</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for i in range(plants|length) %}
-          {% set p = plants[i] %}
-          <tr>
-            <td>
-              <strong>{{ p.name }}</strong>
-              <span class="badge-unit ms-1">{{ p.unit_code }}</span>
-            </td>
-            {% for q in quarterly %}
-            {% set pq = q.plants[i] %}
-            <td><span class="badge badge-bc">{{ pq.sessions }}</span></td>
-            <td><span class="badge badge-wc">{{ pq.manhours }}</span></td>
-            {% endfor %}
-          </tr>
+    {% endfor %}
+  </div>
+
+  <!-- Per-plant breakdown table -->
+  <div class="table-responsive">
+    <table class="table mb-0" style="font-size:12.5px;border-collapse:separate;border-spacing:0;" id="quarterlyTable">
+      <thead>
+        <tr style="background:#f8fafc;">
+          <th rowspan="2" style="vertical-align:middle;padding:10px 16px;border-bottom:2px solid var(--c-border);min-width:160px;font-size:11px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.5px;">Plant</th>
+          {% for q in quarterly %}
+          {% set ci = loop.index0 %}
+          <th colspan="2" style="text-align:center;padding:8px 12px;background:{{ Q_BG[ci] }};border-left:3px solid {{ Q_COLORS[ci] }};border-bottom:1px solid {{ Q_BORD[ci] }};font-size:10px;font-weight:800;color:{{ Q_COLORS[ci] }};letter-spacing:.8px;text-transform:uppercase;">{{ q.quarter }}</th>
           {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td><strong>TOTAL</strong></td>
-            {% for q in quarterly %}
-            <td><strong>{{ q.sessions }}</strong></td>
-            <td><strong>{{ q.manhours }}</strong></td>
-            {% endfor %}
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+        </tr>
+        <tr style="background:#f8fafc;">
+          {% for q in quarterly %}
+          {% set ci = loop.index0 %}
+          <th style="text-align:right;padding:6px 14px;font-size:10.5px;font-weight:700;color:var(--c-muted);border-left:3px solid {{ Q_COLORS[ci] }};border-bottom:2px solid var(--c-border);background:{{ Q_BG[ci] }};">Sessions</th>
+          <th style="text-align:right;padding:6px 14px;font-size:10.5px;font-weight:700;color:var(--c-muted);border-bottom:2px solid var(--c-border);background:{{ Q_BG[ci] }};">Man-Hrs</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in range(plants|length) %}
+        {% set p = plants[i] %}
+        <tr style="border-bottom:1px solid var(--c-border);" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+          <td style="padding:10px 16px;vertical-align:middle;">
+            <span style="font-weight:700;font-size:13px;color:var(--c-text);">{{ p.name }}</span>
+            <span class="badge-unit ms-2" style="font-size:10px;">{{ p.unit_code }}</span>
+          </td>
+          {% for q in quarterly %}
+          {% set ci = loop.index0 %}
+          {% set pq = q.plants[i] %}
+          <td style="text-align:right;padding:10px 14px;border-left:3px solid {{ Q_COLORS[ci] }};vertical-align:middle;">
+            <span style="font-weight:{% if pq.sessions > 0 %}700{% else %}400{% endif %};color:{% if pq.sessions > 0 %}{{ Q_COLORS[ci] }}{% else %}var(--c-muted){% endif %};">{{ pq.sessions }}</span>
+          </td>
+          <td style="text-align:right;padding:10px 14px;vertical-align:middle;color:{% if pq.manhours > 0 %}var(--c-text){% else %}var(--c-muted){% endif %};">
+            {{ pq.manhours }}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background:#1a3a5c;">
+          <td style="padding:11px 16px;font-weight:800;font-size:12px;color:#fff;letter-spacing:.5px;">TOTAL</td>
+          {% for q in quarterly %}
+          {% set ci = loop.index0 %}
+          <td style="text-align:right;padding:11px 14px;font-weight:800;color:#fff;border-left:3px solid {{ Q_COLORS[ci] }};">{{ q.sessions }}</td>
+          <td style="text-align:right;padding:11px 14px;font-weight:800;color:#fff;">{{ q.manhours }}</td>
+          {% endfor %}
+        </tr>
+      </tfoot>
+    </table>
   </div>
 </div>
 {% endblock %}
