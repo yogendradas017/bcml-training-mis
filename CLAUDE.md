@@ -112,6 +112,32 @@ Three roles enforced via decorators (`@spoc_required`, `@central_required`, `@ad
 ### TMS-Wide Consistency Rule
 **When changing any field, label, enum value, or source — check and fix it across ALL templates and ALL routes, not just the touched file.** This applies to: source dropdowns, audience values, prog_type enums, collar values.
 
+## Code Quality — Mandatory Pre-Commit Checks
+
+This project is deployed directly to production (Render). Every bug requires a redeploy and costs user time. Zero-defect standard required.
+
+**Before every commit, verify:**
+
+1. **SQL queries include every column the template uses.** If a template references `u.totp_enabled`, the SELECT must include `u.totp_enabled`. Read both the route query AND the template before writing either.
+
+2. **Run `python -c "import app; print('OK')"` locally.** Catches import errors, syntax errors, missing modules before push.
+
+3. **New routes: verify all `url_for()` names match exactly.** A wrong endpoint name silently breaks at runtime, not at startup.
+
+4. **New DB columns: add BOTH to `schema.sql` (for fresh deploys) AND `_migrate_*` function in `db.py` (for existing DBs).** Missing either causes failures on one of the two paths.
+
+5. **Environment-specific behaviour: test on Render, not just locally.** Timezone (`datetime('now','localtime')` = UTC on Render = IST locally), file paths, CDN vs local assets — all differ. Any feature involving time, files, or external resources must be verified on Render after deploy.
+
+6. **Template variables: every variable passed from route must exist in template, and every template variable must be passed from route.** Trace both directions before committing.
+
+7. **GSAP and other JS libraries loaded inline (not deferred).** Login page uses inline `<script>` blocks that call `gsap.*` synchronously — `defer` breaks them. Never add `defer` to GSAP script tags in `login.html`.
+
+**Pattern for new features:**
+- Read existing similar route + template as reference first
+- Write route → mentally trace every template variable back to the SELECT
+- Write template → mentally trace every `{{ var }}` back to route context
+- Run import check → commit
+
 ### Training Cycle
 
 `Employees → TNI Upload → Programme Master (sync) → Calendar → 2C (Conducted) → 2A (Attendance) → Monthly Summary → Export`
