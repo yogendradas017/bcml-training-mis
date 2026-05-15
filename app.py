@@ -22,7 +22,8 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
 
 csrf     = CSRFProtect(app)
-limiter  = Limiter(get_remote_address, app=app, default_limits=[], storage_uri='memory://')
+limiter  = Limiter(get_remote_address, app=app, default_limits=[], storage_uri='memory://',
+                   swallow_errors=True)
 Compress(app)
 
 # Session: stays alive 8 hours; survives browser close
@@ -106,7 +107,11 @@ def server_error(e):
     wants_html = 'text/html' in request.accept_mimetypes.values()
     if wants_html:
         flash('Server error. Please try again or contact Corporate L&D.', 'danger')
-    return redirect(request.referrer or url_for('index'))
+    referrer = request.referrer or ''
+    # Avoid redirect loop: don't go back to the URL that just crashed
+    if referrer and request.path and request.path not in referrer:
+        return redirect(referrer), 302
+    return redirect(url_for('index')), 302
 
 
 @app.route('/health')
