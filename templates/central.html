@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% block page_title %}Central Dashboard — All Plants{% endblock %}
-{% block content %}
 
 {% set grand_sess_pct = (grand.conducted / grand.sessions * 100)|round(0)|int if grand.sessions else 0 %}
 {% set Q_COLORS = ['#2563eb','#0891b2','#d97706','#7c3aed'] %}
 {% set Q_BG    = ['#eff6ff','#ecfeff','#fffbeb','#f5f3ff'] %}
 {% set Q_BORD  = ['#bfdbfe','#a5f3fc','#fde68a','#ddd6fe'] %}
+
+{% block content %}
 
 <!-- ── Grand KPI Cards ─────────────────────────────────────────────────── -->
 <div class="row g-3 mb-4 stagger">
