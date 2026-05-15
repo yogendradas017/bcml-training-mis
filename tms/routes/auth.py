@@ -436,3 +436,23 @@ def _register(app):
             ' GROUP BY prog_type ORDER BY cnt DESC',
             (plant_id, fy)).fetchall()
         return render_template('dashboard.html', stats=stats, tni_by_type=tni_by_type)
+
+    @app.route('/admin/seed-demo', methods=['GET', 'POST'])
+    @admin_required
+    def admin_seed_demo():
+        if request.method == 'POST':
+            import seed_synthetic as _s
+            db = get_db()
+            db.execute("PRAGMA foreign_keys = OFF")
+            db.execute("PRAGMA journal_mode = WAL")
+            db.execute("DELETE FROM emp_training")
+            db.execute("DELETE FROM programme_details")
+            db.execute("DELETE FROM calendar")
+            db.execute("DELETE FROM tni WHERE plant_id != 1")
+            db.execute("DELETE FROM programme_master WHERE plant_id != 1")
+            db.commit()
+            cal, et, pd_ = _s.seed(db)
+            log_action('BULK_UPLOAD', f'seed_demo cal={cal} et={et} pd={pd_}')
+            flash(f'Demo data seeded — {cal} sessions, {et} attendance rows, {pd_} programme details.', 'success')
+            return redirect(url_for('central_dashboard'))
+        return render_template('admin_seed_demo.html')
