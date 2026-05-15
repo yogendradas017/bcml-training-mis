@@ -376,28 +376,28 @@
   </div>
 </div>
 
+{% endblock %}
+
 {% block scripts %}
 <script>
 (function(){
   var btns = document.querySelectorAll('.q-card-btn');
+  var bgs = {{ Q_BG|tojson }};
   btns.forEach(function(btn){
     btn.addEventListener('click', function(){
       var tid = this.getAttribute('data-target');
       var panel = document.getElementById(tid);
       var isOpen = panel.style.display !== 'none';
-      // close all
       btns.forEach(function(b){
         b.style.background = '';
         b.classList.remove('q-active');
         b.querySelector('.q-chevron').style.transform = '';
       });
       document.querySelectorAll('[id^="qd"]').forEach(function(p){ p.style.display='none'; });
-      // open clicked
       if(!isOpen){
         panel.style.display = 'block';
         this.classList.add('q-active');
-        var ci = tid.replace('qd','');
-        var bgs = {{ Q_BG|tojson }};
+        var ci = parseInt(tid.replace('qd',''));
         this.style.background = bgs[ci];
         this.querySelector('.q-chevron').style.transform = 'rotate(180deg)';
       }
@@ -405,6 +405,4 @@
   });
 })();
 </script>
-{% endblock %}
-
 {% endblock %}
