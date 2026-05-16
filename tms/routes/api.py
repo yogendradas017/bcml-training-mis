@@ -197,6 +197,13 @@ def _register(app):
         ''', (pid,)).fetchall()
         sess_map = {r['mo']: r['n'] for r in sess_raw}
 
+        plan_raw = db.execute('''
+            SELECT strftime('%m', plan_start) as mo, COUNT(*) as n
+            FROM calendar WHERE plant_id=? AND plan_start IS NOT NULL AND plan_start!=''
+            GROUP BY mo
+        ''', (pid,)).fetchall()
+        plan_map = {r['mo']: r['n'] for r in plan_raw}
+
         FY = [('04','April'),('05','May'),('06','June'),('07','July'),
               ('08','August'),('09','September'),('10','October'),('11','November'),
               ('12','December'),('01','January'),('02','February'),('03','March')]
@@ -206,7 +213,8 @@ def _register(app):
             d = mo_map.get(mo_num, {'seats': 0, 'hrs': 0.0})
             monthly.append({'month': mo_name, 'mo': mo_num,
                             'seats': d['seats'], 'hrs': d['hrs'],
-                            'sessions': sess_map.get(mo_num, 0)})
+                            'sessions': sess_map.get(mo_num, 0),
+                            'planned': plan_map.get(mo_num, 0)})
 
         comp = _calc_compliance(pid, db)
         cur_mo = datetime.datetime.now().strftime('%m')

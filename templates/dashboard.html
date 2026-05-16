@@ -43,7 +43,7 @@
 
   <!-- Sessions -->
   <div class="col-12 col-sm-6 col-lg-4">
-    <div class="kpi-card" style="--kpi-color:#2e6da4;--kpi-bg:#ebf4ff;">
+    <div class="kpi-card" id="sess-kpi-card" onclick="toggleSessDrill()" style="--kpi-color:#2e6da4;--kpi-bg:#ebf4ff;cursor:pointer;user-select:none;">
       <div class="kpi-accent"></div>
       <div class="kpi-body">
         <div class="kpi-header">
@@ -53,7 +53,10 @@
             </div>
             <div class="kpi-lbl">Sessions Conducted / Planned</div>
           </div>
-          <div class="kpi-icon-wrap"><i class="bi bi-calendar3"></i></div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="kpi-icon-wrap"><i class="bi bi-calendar3"></i></div>
+            <i class="bi bi-chevron-down" id="sess-drill-chevron" style="font-size:12px;color:#9ca3af;transition:transform .2s;"></i>
+          </div>
         </div>
         <div class="kpi-prog-wrap">
           <div class="kpi-prog-fill" id="kpi-sess-fill" style="width:0%"></div>
@@ -63,6 +66,13 @@
           <span class="kpi-foot-lbl">&middot; <strong>{{ stats.tni_count }}</strong> TNI entries on record</span>
           {% if stats.central_sessions %}<span class="kpi-foot-lbl">&middot; <strong>{{ stats.central_sessions }}</strong> central session{{ 's' if stats.central_sessions != 1 }} (Corp L&amp;D)</span>{% endif %}
         </div>
+      </div>
+    </div>
+    <!-- Month-by-month drill-down -->
+    <div id="sess-drill-panel" style="display:none;background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:8px 14px 10px;margin-top:-8px;box-shadow:0 4px 12px rgba(0,0,0,.06);">
+      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;padding:4px 0 6px;border-bottom:1px solid #f3f4f6;margin-bottom:4px;">Month-by-Month</div>
+      <div id="sess-drill-body" style="font-size:12px;">
+        <span style="color:#9ca3af;">Loading…</span>
       </div>
     </div>
   </div>
@@ -391,6 +401,13 @@
 
 {% block scripts %}
 <script>
+function toggleSessDrill() {
+  var panel   = document.getElementById('sess-drill-panel');
+  var chevron = document.getElementById('sess-drill-chevron');
+  var open    = panel.style.display !== 'none';
+  panel.style.display   = open ? 'none' : 'block';
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+}
 function toggleTniDrill(card) {
   var panel = card.nextElementSibling;
   var icon  = card.querySelector('.tni-chevron');
@@ -560,6 +577,25 @@ function toggleTniDrill(card) {
       var curIdx = 0;
       MONTHLY.forEach(function (m, i) { if (m.mo === _curMo) curIdx = i; });
       selectBar(curIdx);
+
+      // Pre-build session drill-down rows (hidden until user clicks)
+      var drill = document.getElementById('sess-drill-body');
+      if (drill) {
+        var rows = '';
+        MONTHLY.forEach(function (m) {
+          if (m.planned === 0 && m.sessions === 0) return;
+          var pct = m.planned ? Math.round(m.sessions / m.planned * 100) : 0;
+          var barW = Math.min(pct, 100);
+          rows += '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f9fafb;">'
+            + '<span style="width:68px;color:#374151;font-size:11.5px;flex-shrink:0;">' + m.month.substring(0,3) + '</span>'
+            + '<div style="flex:1;background:#e5e7eb;border-radius:3px;height:5px;overflow:hidden;">'
+            + '<div style="width:' + barW + '%;background:#2e6da4;height:100%;border-radius:3px;transition:width .4s;"></div></div>'
+            + '<span style="width:52px;text-align:right;font-size:11.5px;color:#374151;flex-shrink:0;font-weight:600;">' + m.sessions + ' / ' + m.planned + '</span>'
+            + '<span style="width:36px;text-align:right;font-size:11px;color:#6b7280;flex-shrink:0;">' + pct + '%</span>'
+            + '</div>';
+        });
+        drill.innerHTML = rows || '<span style="color:#9ca3af;font-size:12px;">No session data.</span>';
+      }
     })
     .catch(function () {
       var area = document.getElementById('chart-area');
