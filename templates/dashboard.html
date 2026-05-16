@@ -215,16 +215,31 @@
       {% for row in tni_by_type %}
       {%- set clr = colors[loop.index0 % colors|length] -%}
       {%- set pct = (row.cnt / total * 100)|round(1) -%}
+      {%- set progs = tni_drill.get(row.prog_type, []) -%}
       <div class="col-12 col-sm-6 col-lg-4">
-        <div style="background:#f9fafb;border-radius:10px;padding:10px 14px;border-left:4px solid {{ clr }};">
+        <div class="tni-type-card" onclick="toggleTniDrill(this)" style="background:#f9fafb;border-radius:10px;padding:10px 14px;border-left:4px solid {{ clr }};cursor:pointer;user-select:none;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <span style="font-size:12px;font-weight:600;color:#111827;">{{ row.prog_type }}</span>
-            <span style="font-size:15px;font-weight:800;color:{{ clr }};">{{ row.cnt }}</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:15px;font-weight:800;color:{{ clr }};">{{ row.cnt }}</span>
+              <i class="bi bi-chevron-down tni-chevron" style="font-size:11px;color:#9ca3af;transition:transform .2s;"></i>
+            </div>
           </div>
           <div style="background:#e5e7eb;border-radius:4px;height:5px;overflow:hidden;">
             <div style="width:{{ pct }}%;background:{{ clr }};height:100%;border-radius:4px;transition:width .4s;"></div>
           </div>
-          <div style="font-size:10.5px;color:#6b7280;margin-top:4px;">{{ pct }}% of total TNI</div>
+          <div style="font-size:10.5px;color:#6b7280;margin-top:4px;">{{ pct }}% of total TNI &nbsp;·&nbsp; {{ progs|length }} programme{{ 's' if progs|length != 1 }}</div>
+        </div>
+        <div class="tni-drill-panel" style="display:none;background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:4px 14px 8px;margin-top:-4px;max-height:220px;overflow-y:auto;">
+          <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;padding:6px 0 4px;border-bottom:1px solid #f3f4f6;margin-bottom:2px;">TNI — {{ row.prog_type }}</div>
+          {% for prog_name, emp_cnt in progs %}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #f9fafb;font-size:11.5px;">
+            <span style="color:#374151;flex:1;padding-right:8px;">{{ prog_name }}</span>
+            <span style="font-weight:700;color:{{ clr }};white-space:nowrap;">{{ emp_cnt }} nominated</span>
+          </div>
+          {% else %}
+          <div style="font-size:11.5px;color:#9ca3af;padding:8px 0;">No data</div>
+          {% endfor %}
         </div>
       </div>
       {% endfor %}
@@ -375,6 +390,19 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+function toggleTniDrill(card) {
+  var panel = card.nextElementSibling;
+  var icon  = card.querySelector('.tni-chevron');
+  var open  = panel.style.display !== 'none';
+  document.querySelectorAll('.tni-drill-panel').forEach(function(p){ p.style.display='none'; });
+  document.querySelectorAll('.tni-chevron').forEach(function(i){ i.style.transform=''; });
+  if (!open) {
+    panel.style.display = 'block';
+    icon.style.transform = 'rotate(180deg)';
+  }
+}
+</script>
 <script>
 (function () {
   var CUR_METRIC  = 'seats';

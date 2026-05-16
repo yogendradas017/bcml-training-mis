@@ -435,7 +435,15 @@ def _register(app):
             ' FROM tni WHERE plant_id=? AND fy_year=? AND prog_type IS NOT NULL AND prog_type!=""'
             ' GROUP BY prog_type ORDER BY cnt DESC',
             (plant_id, fy)).fetchall()
-        return render_template('dashboard.html', stats=stats, tni_by_type=tni_by_type)
+        _drill = db.execute(
+            'SELECT prog_type, programme_name, COUNT(DISTINCT emp_code) as emp_cnt'
+            ' FROM tni WHERE plant_id=? AND fy_year=? AND prog_type IS NOT NULL AND prog_type!=""'
+            ' GROUP BY prog_type, programme_name ORDER BY prog_type, emp_cnt DESC',
+            (plant_id, fy)).fetchall()
+        tni_drill = {}
+        for r in _drill:
+            tni_drill.setdefault(r['prog_type'], []).append((r['programme_name'], r['emp_cnt']))
+        return render_template('dashboard.html', stats=stats, tni_by_type=tni_by_type, tni_drill=tni_drill)
 
     @app.route('/admin/seed-demo', methods=['GET', 'POST'])
     @admin_required
