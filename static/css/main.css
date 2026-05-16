@@ -1042,8 +1042,8 @@ th:has(.cb-all), td:has(.cb-row) { width: 36px; text-align: center; }
 .gauge-svg circle { fill: none; stroke-width: 9; stroke-linecap: round; }
 .gauge-track { stroke: #edf2f7; }
 .gauge-fill-bc { stroke: #2e6da4; }
-.gauge-fill-wc { stroke: #059669; }
-.gauge-fill-ov { stroke: #7c3aed; }
+.gauge-fill-wc { stroke: #2e6da4; }
+.gauge-fill-ov { stroke: #2e6da4; }
 .gauge-lbl { font-size: 11px; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: .4px; }
 .gauge-sub { font-size: 10px; color: var(--c-muted); }
 .gauge-abs { font-size: 10px; font-weight: 700; color: var(--c-primary); }
