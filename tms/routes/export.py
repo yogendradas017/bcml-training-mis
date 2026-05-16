@@ -276,34 +276,24 @@ def _register(app):
                 'Total Man-hours', 'BC Man-hours', 'WC Man-hours',
                 'BC Mandate (hrs)', 'WC Mandate (hrs)',
                 'BC Compliance %', 'WC Compliance %']])
+            # batch: 7 queries total instead of 70
+            _bc_h   = {r[0]:r[1] for r in db.execute("SELECT plant_id,COUNT(*) FROM employees WHERE is_active=1 AND collar='Blue Collared' GROUP BY plant_id")}
+            _wc_h   = {r[0]:r[1] for r in db.execute("SELECT plant_id,COUNT(*) FROM employees WHERE is_active=1 AND collar='White Collared' GROUP BY plant_id")}
+            _pln    = {r[0]:r[1] for r in db.execute("SELECT plant_id,COUNT(*) FROM calendar WHERE plan_start BETWEEN ? AND ? GROUP BY plant_id", (fy_start, fy_end))}
+            _cond   = {r[0]:r[1] for r in db.execute("SELECT plant_id,COUNT(*) FROM calendar WHERE status='Conducted' AND plan_start BETWEEN ? AND ? GROUP BY plant_id", (fy_start, fy_end))}
+            _mh     = {r[0]:r[1] for r in db.execute("SELECT plant_id,COALESCE(SUM(hrs),0) FROM emp_training WHERE start_date BETWEEN ? AND ? GROUP BY plant_id", (fy_start, fy_end))}
+            _bc_hrs = {r[0]:r[1] for r in db.execute("SELECT t.plant_id,COALESCE(SUM(t.hrs),0) FROM emp_training t JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id WHERE e.collar='Blue Collared' AND t.start_date BETWEEN ? AND ? GROUP BY t.plant_id", (fy_start, fy_end))}
+            _wc_hrs = {r[0]:r[1] for r in db.execute("SELECT t.plant_id,COALESCE(SUM(t.hrs),0) FROM emp_training t JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id WHERE e.collar='White Collared' AND t.start_date BETWEEN ? AND ? GROUP BY t.plant_id", (fy_start, fy_end))}
             tot_bc = tot_wc = tot_mh = tot_planned = tot_conducted = 0
             for p in PLANTS:
-                pid = p['id']
-                bc = db.execute(
-                    "SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='Blue Collared'",
-                    (pid,)).fetchone()[0]
-                wc = db.execute(
-                    "SELECT COUNT(*) FROM employees WHERE plant_id=? AND is_active=1 AND collar='White Collared'",
-                    (pid,)).fetchone()[0]
-                planned = db.execute(
-                    "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND plan_start BETWEEN ? AND ?",
-                    (pid, fy_start, fy_end)).fetchone()[0]
-                conducted = db.execute(
-                    "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted' AND plan_start BETWEEN ? AND ?",
-                    (pid, fy_start, fy_end)).fetchone()[0]
-                mh = db.execute(
-                    "SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND start_date BETWEEN ? AND ?",
-                    (pid, fy_start, fy_end)).fetchone()[0]
-                bc_hrs = db.execute(
-                    "SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t "
-                    "JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id "
-                    "WHERE t.plant_id=? AND e.collar='Blue Collared' AND t.start_date BETWEEN ? AND ?",
-                    (pid, fy_start, fy_end)).fetchone()[0]
-                wc_hrs = db.execute(
-                    "SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t "
-                    "JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id "
-                    "WHERE t.plant_id=? AND e.collar='White Collared' AND t.start_date BETWEEN ? AND ?",
-                    (pid, fy_start, fy_end)).fetchone()[0]
+                pid      = p['id']
+                bc       = _bc_h.get(pid, 0)
+                wc       = _wc_h.get(pid, 0)
+                planned  = _pln.get(pid, 0)
+                conducted= _cond.get(pid, 0)
+                mh       = _mh.get(pid, 0)
+                bc_hrs   = _bc_hrs.get(pid, 0)
+                wc_hrs   = _wc_hrs.get(pid, 0)
                 bc_mandate = bc * 12
                 wc_mandate = wc * 24
                 bc_pct = round(bc_hrs / bc_mandate * 100, 1) if bc_mandate else 0
@@ -358,7 +348,8 @@ def _register(app):
                 'Planned Hrs', 'Completed?', 'Source']])
             done_set = set(
                 (r[0], r[1], r[2]) for r in db.execute(
-                    'SELECT emp_code, programme_name, plant_id FROM emp_training'))
+                    'SELECT emp_code, programme_name, plant_id FROM emp_training WHERE start_date BETWEEN ? AND ?',
+                    (fy_start, fy_end)))
             where = []; params = []
             if month_f:
                 where.append('t.target_month=?'); params.append(month_f)
@@ -395,9 +386,11 @@ def _register(app):
                 'Duration(Hrs)', 'Level', 'Mode', 'Target Audience',
                 'Planned Pax', 'Trainer/Vendor', 'STATUS', 'Actual Date', 'Actual Pax']])
             act_pax_map = {(r[0], r[1]): r[2] for r in db.execute(
-                'SELECT plant_id, session_code, COUNT(*) FROM emp_training GROUP BY plant_id, session_code')}
+                'SELECT plant_id, session_code, COUNT(*) FROM emp_training WHERE start_date BETWEEN ? AND ? GROUP BY plant_id, session_code',
+                (fy_start, fy_end))}
             pd_date_map = {(r[0], r[1]): r[2] for r in db.execute(
-                'SELECT plant_id, session_code, start_date FROM programme_details')}
+                'SELECT plant_id, session_code, start_date FROM programme_details WHERE start_date BETWEEN ? AND ?',
+                (fy_start, fy_end))}
             where = ['plan_start BETWEEN ? AND ?']; params = [fy_start, fy_end]
             if month_f: where.append('planned_month=?'); params.append(month_f)
             r = 1
@@ -463,9 +456,11 @@ def _register(app):
                 'Cost (Rs.)', 'Venue', 'Course FB', 'Faculty FB',
                 'Trainer FB-Pax', 'Trainer FB-Fac', 'Participants', 'Man-Hours']])
             pax_map = {(r[0], r[1]): r[2] for r in db.execute(
-                'SELECT plant_id, session_code, COUNT(*) FROM emp_training GROUP BY plant_id, session_code')}
+                'SELECT plant_id, session_code, COUNT(*) FROM emp_training WHERE start_date BETWEEN ? AND ? GROUP BY plant_id, session_code',
+                (fy_start, fy_end))}
             hrs_map = {(r[0], r[1]): r[2] for r in db.execute(
-                'SELECT plant_id, session_code, COALESCE(SUM(hrs),0) FROM emp_training GROUP BY plant_id, session_code')}
+                'SELECT plant_id, session_code, COALESCE(SUM(hrs),0) FROM emp_training WHERE start_date BETWEEN ? AND ? GROUP BY plant_id, session_code',
+                (fy_start, fy_end))}
             where = []; params = []
             if month_f:
                 where.append(
