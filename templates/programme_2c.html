@@ -169,7 +169,7 @@
               {% elif rec.cal_source == 'TNI Driven' %}<span class="badge bg-success" style="font-size:11px;">TNI</span>
               {% else %}<span class="text-muted" style="font-size:11px;">—</span>{% endif %}
             </td>
-            <td>{{ rec.start_date or '—' }}</td>
+            <td>{{ rec.start_date | fmt_date }}</td>
             <td>{{ rec.hours_actual }}</td>
             <td>{{ rec.faculty_name or '—' }}</td>
             <td>
@@ -225,7 +225,7 @@
             <td><strong>{{ rec.programme_name or '—' }}</strong></td>
             <td><span class="badge-unit" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
             <td><span class="badge bg-warning text-dark" style="font-size:11px;">New Req</span></td>
-            <td>{{ rec.start_date or '—' }}</td>
+            <td>{{ rec.start_date | fmt_date }}</td>
             <td>{{ rec.hours_actual }}</td>
             <td>{{ rec.faculty_name or '—' }}</td>
             <td>

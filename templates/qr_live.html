@@ -47,7 +47,7 @@
     <div class="card text-center h-100" style="border-top:4px solid #f59e0b;">
       <div class="card-body py-3">
         <div style="font-size:14px;font-weight:600;color:#d97706;padding-top:6px;" id="lastScan">
-          {% if attendees %}{{ attendees[0].created_at[:16] if attendees[0].created_at else '—' }}{% else %}—{% endif %}
+          {% if attendees %}{{ attendees[0].created_at | fmt_dt }}{% else %}—{% endif %}
         </div>
         <div style="font-size:12px;color:#6b7280;">Last Scan</div>
       </div>
@@ -176,7 +176,7 @@
           {% if is_central %}<td style="padding:6px 14px;"><span class="badge-unit">{{ a.unit_code or '—' }}</span></td>{% endif %}
           <td style="padding:6px 14px;">{{ a.designation or '—' }}</td>
           <td style="padding:6px 14px;">{{ a.department or '—' }}</td>
-          <td style="padding:6px 14px;color:#6b7280;">{{ a.created_at[:16] if a.created_at else '—' }}</td>
+          <td style="padding:6px 14px;color:#6b7280;">{{ a.created_at | fmt_dt }}</td>
         </tr>
         {% else %}
         <tr id="emptyRow"><td colspan="{{ 7 if is_central else 6 }}" class="text-center text-muted py-4">No scans yet. Waiting…</td></tr>

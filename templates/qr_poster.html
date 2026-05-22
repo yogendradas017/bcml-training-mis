@@ -57,7 +57,7 @@
 
     {% if qr.plan_start %}
     <div class="meta-row"><strong>Date:</strong>
-      {{ qr.plan_start }}{% if qr.plan_end and qr.plan_end != qr.plan_start %} – {{ qr.plan_end }}{% endif %}
+      {{ qr.plan_start | fmt_date }}{% if qr.plan_end and qr.plan_end != qr.plan_start %} – {{ qr.plan_end | fmt_date }}{% endif %}
     </div>
     {% endif %}
     {% if qr.time_from %}

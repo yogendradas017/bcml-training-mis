@@ -327,7 +327,7 @@
             </td>
             <td><span class="badge-unit" style="font-size:10px;">{{ s.prog_type or '—' }}</span></td>
             <td>{{ s.planned_month or '—' }}</td>
-            <td>{{ s.plan_start or '—' }}</td>
+            <td>{{ s.plan_start | fmt_date }}</td>
             <td>{{ s.duration_hrs }}</td>
             <td>{{ s.mode or '—' }}</td>
             <td>{{ s.target_audience or '—' }}</td>

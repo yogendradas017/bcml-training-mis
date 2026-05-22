@@ -73,6 +73,22 @@ def fmt_date(value):
         return s
 
 
+@app.template_filter('fmt_dt')
+def fmt_dt(value):
+    """Display datetime (YYYY-MM-DD HH:MM:SS or ISO) as DD-MM-YYYY HH:MM."""
+    if not value:
+        return '—'
+    from datetime import datetime as _dt
+    s = str(value).strip().replace('T', ' ')[:16]
+    try:
+        return _dt.strptime(s, '%Y-%m-%d %H:%M').strftime('%d-%m-%Y %H:%M')
+    except ValueError:
+        try:
+            return _dt.strptime(s[:10], '%Y-%m-%d').strftime('%d-%m-%Y')
+        except ValueError:
+            return s
+
+
 @app.errorhandler(CSRFError)
 def csrf_error(e):
     flash('Session expired or form was stale — please try again.', 'warning')

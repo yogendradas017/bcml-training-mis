@@ -39,7 +39,7 @@
           <td style="padding:6px 14px;font-weight:500;max-width:200px;">{{ s.programme_name }}</td>
           <td style="padding:6px 14px;">{{ s.prog_type or '—' }}</td>
           <td style="padding:6px 14px;white-space:nowrap;">
-            {{ s.plan_start or '—' }}{% if s.plan_end and s.plan_end != s.plan_start %} – {{ s.plan_end }}{% endif %}
+            {{ s.plan_start | fmt_date }}{% if s.plan_end and s.plan_end != s.plan_start %} – {{ s.plan_end | fmt_date }}{% endif %}
           </td>
           <td style="padding:6px 14px;">{{ s.duration_hrs or '—' }}</td>
           <td style="padding:6px 14px;">{{ s.planned_pax or '—' }}</td>

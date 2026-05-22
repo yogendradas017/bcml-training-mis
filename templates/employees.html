@@ -25,7 +25,7 @@
           <td class="text-muted">{{ loop.index }}</td>
           <td><span class="emp-code">{{ emp.emp_code }}</span></td>
           <td><strong>{{ emp.name }}</strong></td>
-          <td><span class="badge bg-warning text-dark">{{ emp.exit_date or '—' }}</span></td>
+          <td><span class="badge bg-warning text-dark">{{ emp.exit_date | fmt_date }}</span></td>
           <td style="color:#6b7280;">{{ emp.exit_reason or '—' }}</td>
           <td>
             <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}"
@@ -236,7 +236,7 @@
               <span class="badge badge-active">Active</span>
               {% else %}
               <span class="badge badge-exited">Exited</span>
-              {% if emp.exit_date %}<br><small class="text-muted" style="font-size:11px;">{{ emp.exit_date }}</small>{% endif %}
+              {% if emp.exit_date %}<br><small class="text-muted" style="font-size:11px;">{{ emp.exit_date | fmt_date }}</small>{% endif %}
               {% endif %}
             </td>
             <td>

@@ -250,7 +250,7 @@
             {{ r[q] or '—' }}
           </td>
           {% endfor %}
-          <td style="padding:5px 10px;color:#6b7280;">{{ r.submitted_at[:16] if r.submitted_at else '—' }}</td>
+          <td style="padding:5px 10px;color:#6b7280;">{{ r.submitted_at | fmt_dt }}</td>
         </tr>
         {% endfor %}
       </tbody>

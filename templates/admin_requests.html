@@ -29,7 +29,7 @@
         {% for r in pending %}
         <tr>
           <td>{{ r.id }}</td>
-          <td style="font-size:12px;white-space:nowrap;">{{ r.ts[:16] }}</td>
+          <td style="font-size:12px;white-space:nowrap;">{{ r.ts | fmt_dt }}</td>
           <td style="font-size:12px;">{{ r.plant_name or r.plant_id }}</td>
           <td style="font-size:12px;">{{ r.requested_by }}</td>
           <td style="font-size:12px;">
@@ -79,7 +79,7 @@
         {% for r in resolved %}
         <tr>
           <td>{{ r.id }}</td>
-          <td style="font-size:12px;white-space:nowrap;">{{ r.ts[:16] }}</td>
+          <td style="font-size:12px;white-space:nowrap;">{{ r.ts | fmt_dt }}</td>
           <td style="font-size:12px;">{{ r.plant_name or r.plant_id }}</td>
           <td style="font-size:12px;">{{ r.requested_by }}</td>
           <td style="font-size:12px;">

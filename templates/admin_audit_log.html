@@ -40,7 +40,7 @@
     <tbody>
       {% for log in logs %}
       <tr>
-        <td class="text-nowrap text-secondary">{{ log.ts }}</td>
+        <td class="text-nowrap text-secondary">{{ log.ts | fmt_dt }}</td>
         <td>{{ log.username or '—' }}</td>
         <td>{{ log.plant_id or '—' }}</td>
         <td>

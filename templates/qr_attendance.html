@@ -28,7 +28,7 @@
       <div style="font-size:11px;opacity:.7;margin-bottom:2px;">Session</div>
       <div class="fw-bold">{{ qr.programme_name }}</div>
       <div style="font-size:11px;margin-top:4px;opacity:.8;">
-        {{ qr.plan_start or '' }}{% if qr.plan_end and qr.plan_end != qr.plan_start %} – {{ qr.plan_end }}{% endif %}
+        {{ qr.plan_start | fmt_date }}{% if qr.plan_end and qr.plan_end != qr.plan_start %} – {{ qr.plan_end | fmt_date }}{% endif %}
         {% if qr.venue %} &nbsp;·&nbsp; {{ qr.venue }}{% endif %}
       </div>
     </div>

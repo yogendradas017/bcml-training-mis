@@ -26,7 +26,7 @@
       <span class="badge bg-secondary ms-2" style="font-size:10px;">{{ session_code }}</span>
     </span>
     <span>
-      {{ s.get('plan_start','') }}{% if s.get('plan_end') and s.get('plan_end') != s.get('plan_start') %} – {{ s.get('plan_end') }}{% endif %}
+      {{ s.get('plan_start','') | fmt_date }}{% if s.get('plan_end') and s.get('plan_end') != s.get('plan_start') %} – {{ s.get('plan_end') | fmt_date }}{% endif %}
       &nbsp;·&nbsp; <strong>{{ rows|length }}</strong> attended
     </span>
   </div>
