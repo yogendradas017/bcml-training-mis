@@ -34,7 +34,11 @@
           </div>
         </div>
         <div style="font-size:12px;color:#6b7280;margin-bottom:16px;background:#f8fafc;border-radius:8px;padding:10px 14px;">
-          <strong>What gets auto-fixed:</strong> spelling of programme names · type/mode abbreviations · month formats (Apr→April) · capitalisation
+          <strong>What gets auto-fixed:</strong> spelling of programme names · type/mode abbreviations · month formats (Apr→April) · capitalisation · whitespace, curly quotes, fullwidth unicode · trailing notes/durations · word order (HR/EHS ↔ EHS/HR) · acronyms (EHS, SOP, OJT, IT)
+        </div>
+        <div style="font-size:12px;color:#0c4a6e;margin-bottom:14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;">
+          <i class="bi bi-shield-check me-1"></i>
+          <strong>Garbage detector:</strong> placeholder values (NA, ?, TBD) blocked · phonetic typo catch (Saftey→Safety) · suggestions surfaced for near-matches below 65% so you can pick from master instead of creating duplicates.
         </div>
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#1d4ed8;">
           <i class="bi bi-info-circle me-1"></i>
@@ -186,7 +190,20 @@
           <td><span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;"><i class="bi bi-magic"></i> Fixed</span></td>
           <td style="font-weight:600;">{{ r.emp_code }}</td>
           <td style="color:#6b7280;">{{ r.emp_name }}</td>
-          <td>{{ r.programme_name }}</td>
+          <td>
+            {{ r.programme_name }}
+            {% if r.prog_suggestions and r.prog_suggestions|length > 0 %}
+            <div style="margin-top:4px;">
+              <select form="tni-confirm-form" name="fix_prog_{{ r.row_num }}"
+                      style="font-size:11px;padding:2px 6px;border:1px solid #fbbf24;border-radius:4px;background:#fffdf5;max-width:280px;">
+                <option value="" selected>↳ Use cleaned name (new programme)</option>
+                {% for sname, sscore, smethod in r.prog_suggestions %}
+                <option value="{{ sname }}">→ {{ sname }} ({{ (sscore*100)|round|int }}% · {{ smethod }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+          </td>
           <td>{{ r.prog_type or '—' }}</td>
           <td>{{ r.mode or '—' }}</td>
           <td>{{ r.planned_hours }}</td>
@@ -200,6 +217,11 @@
               <span style="color:#9ca3af;font-size:10px;"> ({{ fix.how }})</span>
             </div>
             {% endfor %}
+            {% if r.prog_garbage_class %}
+            <div style="font-size:10px;color:#92400e;margin-top:2px;">
+              <i class="bi bi-tag-fill"></i> Hygiene: {{ r.prog_garbage_class }}
+            </div>
+            {% endif %}
           </td>
         </tr>
 
@@ -219,6 +241,11 @@
               <i class="bi bi-exclamation-circle me-1"></i>{{ issue }}
             </div>
             {% endfor %}
+            {% if r.prog_garbage_class %}
+            <div style="font-size:10px;color:#dc2626;margin-top:2px;">
+              <i class="bi bi-tag-fill"></i> Hygiene: {{ r.prog_garbage_class }}
+            </div>
+            {% endif %}
           </td>
         </tr>
         {% endif %}

@@ -1000,7 +1000,16 @@ _MASTER_VOCAB = _build_master_vocab()
 
 def _smart_analyze_rows(df, plant_id, db):
     from difflib import get_close_matches as gcm
+    from tms.data_hygiene import (
+        analyze_programme_name as _hy_prog,
+        analyze_prog_type as _hy_type,
+        analyze_mode as _hy_mode,
+        suggest_top_n as _hy_suggest,
+        normalise as _hy_normalise,
+        validate as _hy_validate,
+    )
     _prog_cache = {}
+    _sugg_cache = {}
 
     _active_master       = [r[0] for r in db.execute(
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,))]
@@ -1014,6 +1023,17 @@ def _smart_analyze_rows(df, plant_id, db):
         result = _active_master[_active_master_lower.index(m[0])] if m else None
         _prog_cache[raw_lower] = result
         return result
+
+    def _suggestions_for(raw_text):
+        """Top-5 master candidates for a raw programme string. Cached per row."""
+        if not raw_text or not _has_master:
+            return []
+        key = raw_text.lower()
+        if key in _sugg_cache:
+            return _sugg_cache[key]
+        sugg = _hy_suggest(raw_text, _active_master, n=5, min_score=0.50)
+        _sugg_cache[key] = sugg
+        return sugg
 
     emp_rows  = db.execute(
         'SELECT emp_code, name FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)).fetchall()
@@ -1074,49 +1094,93 @@ def _smart_analyze_rows(df, plant_id, db):
         emp_name = emp_map.get(clean_emp, '')
 
         clean_prog = raw_prog
+        prog_suggestions = []
+        prog_garbage_class = None
         if not raw_prog:
             issues.append('Programme Name is missing')
             status = 'error'
         else:
-            word_fixed = _apply_word_fixes(raw_prog.strip())
-            raw_lower  = word_fixed.lower()
-            best = _match_master(raw_lower)
-            if best is not None:
-                if best.lower() != raw_prog.strip().lower():
-                    fixes.append({'field':'Programme Name','original':raw_prog,'fixed':best,'how':'Matched to master list'})
-                    if status == 'ok': status = 'fixed'
-                clean_prog = best
+            # Layer 1+2: normalise + validate via data_hygiene
+            normalised = _hy_normalise(raw_prog)
+            is_valid, reject_reason = _hy_validate(normalised)
+            if not is_valid:
+                issues.append(f'Programme Name invalid: {reject_reason} ("{raw_prog}")')
+                status = 'error'
+                prog_garbage_class = reject_reason
+                clean_prog = ''
             else:
-                # No fuzzy match against master (similarity < 0.65) → treat as a
-                # genuinely new programme. _sync_master_from_tni() at the end of
-                # tni_analyze_confirm will INSERT OR IGNORE it into programme_master,
-                # so no manual "Accept as new" click is needed. Typos with ≥ 0.65
-                # similarity are still caught and auto-corrected by the branch above.
-                titled = _smart_title(word_fixed)
-                if titled != raw_prog:
-                    fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'Spelling/case normalised — added as new programme'})
-                    if status == 'ok': status = 'fixed'
-                else:
-                    if _has_master:
-                        fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'New programme — will be added to Programme Master on import'})
+                word_fixed = _apply_word_fixes(normalised)
+                raw_lower  = word_fixed.lower()
+                best = _match_master(raw_lower)
+                if best is not None:
+                    if best.lower() != raw_prog.strip().lower():
+                        fixes.append({'field':'Programme Name','original':raw_prog,'fixed':best,'how':'Matched to master list'})
                         if status == 'ok': status = 'fixed'
-                clean_prog = titled
+                    clean_prog = best
+                else:
+                    # No 0.65-cutoff match → treat as genuinely new programme.
+                    # Surface top-5 suggestions so SPOC can override if it's a typo
+                    # below the cutoff (the silent-orphan gap).
+                    titled = _smart_title(word_fixed)
+                    if titled != raw_prog:
+                        fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'Spelling/case normalised — added as new programme'})
+                        if status == 'ok': status = 'fixed'
+                    else:
+                        if _has_master:
+                            fixes.append({'field':'Programme Name','original':raw_prog,'fixed':titled,'how':'New programme — will be added to Programme Master on import'})
+                            if status == 'ok': status = 'fixed'
+                    clean_prog = titled
 
-        clean_type, type_changed = _fuzzy_fix(raw_type, PROG_TYPES) if raw_type else ('', False)
-        if raw_type and clean_type not in PROG_TYPES:
-            issues.append(f'Unknown programme type: "{raw_type}" — could not auto-fix')
-            if status == 'ok': status = 'error'
-        elif raw_type and type_changed:
-            fixes.append({'field':'Type of Programme','original':raw_type,'fixed':clean_type,'how':'Auto-matched to standard value'})
-            if status == 'ok': status = 'fixed'
+                # Always compute suggestions for non-exact matches so the SPOC
+                # has the option to pick a master entry instead of accepting "new".
+                if best is None or best.lower() != raw_prog.strip().lower():
+                    prog_suggestions = _suggestions_for(normalised)
 
-        clean_mode, mode_changed = _fuzzy_fix(raw_mode, MODES) if raw_mode else ('', False)
-        if raw_mode and clean_mode not in MODES:
-            issues.append(f'Unknown mode: "{raw_mode}" — could not auto-fix')
-            if status == 'ok': status = 'error'
-        elif raw_mode and mode_changed:
-            fixes.append({'field':'Mode','original':raw_mode,'fixed':clean_mode,'how':'Auto-matched to standard value'})
-            if status == 'ok': status = 'fixed'
+        # Prog type — hygiene engine first (handles abbr + dot-stripping),
+        # legacy _fuzzy_fix as fallback for substring matches.
+        clean_type = ''
+        if raw_type:
+            hy_match, hy_conf, hy_method = _hy_type(raw_type, PROG_TYPES)
+            if hy_match and hy_conf >= 0.85:
+                clean_type = hy_match
+                if hy_match.lower() != raw_type.strip().lower():
+                    fixes.append({'field':'Type of Programme','original':raw_type,'fixed':hy_match,
+                                  'how':f'Hygiene engine ({hy_method})'})
+                    if status == 'ok': status = 'fixed'
+            else:
+                fuzzy_match, type_changed = _fuzzy_fix(raw_type, PROG_TYPES)
+                if fuzzy_match in PROG_TYPES:
+                    clean_type = fuzzy_match
+                    if type_changed:
+                        fixes.append({'field':'Type of Programme','original':raw_type,'fixed':fuzzy_match,
+                                      'how':'Auto-matched to standard value'})
+                        if status == 'ok': status = 'fixed'
+                else:
+                    issues.append(f'Unknown programme type: "{raw_type}" — could not auto-fix')
+                    if status == 'ok': status = 'error'
+
+        # Mode — same approach. Note: hygiene ABBR_MAP maps 'Offline' → 'Classroom'
+        # which is the canonical fix for the existing data drift.
+        clean_mode = ''
+        if raw_mode:
+            hy_match, hy_conf, hy_method = _hy_mode(raw_mode, MODES)
+            if hy_match and hy_conf >= 0.85:
+                clean_mode = hy_match
+                if hy_match.lower() != raw_mode.strip().lower():
+                    fixes.append({'field':'Mode','original':raw_mode,'fixed':hy_match,
+                                  'how':f'Hygiene engine ({hy_method})'})
+                    if status == 'ok': status = 'fixed'
+            else:
+                fuzzy_match, mode_changed = _fuzzy_fix(raw_mode, MODES)
+                if fuzzy_match in MODES:
+                    clean_mode = fuzzy_match
+                    if mode_changed:
+                        fixes.append({'field':'Mode','original':raw_mode,'fixed':fuzzy_match,
+                                      'how':'Auto-matched to standard value'})
+                        if status == 'ok': status = 'fixed'
+                else:
+                    issues.append(f'Unknown mode: "{raw_mode}" — could not auto-fix')
+                    if status == 'ok': status = 'error'
 
         hours = _safe_float(raw_hrs) or 0.0
 
@@ -1131,6 +1195,11 @@ def _smart_analyze_rows(df, plant_id, db):
             'prog_type':      clean_type or raw_type,
             'mode':           clean_mode or raw_mode,
             'planned_hours':  hours,
+            # Data Hygiene additions — non-breaking. UI may render these to
+            # let SPOC override fuzzy-below-cutoff orphans.
+            'prog_suggestions':  prog_suggestions,
+            'prog_garbage_class': prog_garbage_class,
+            'raw_prog':           raw_prog,
         })
     return results
 
