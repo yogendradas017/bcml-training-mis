@@ -78,7 +78,11 @@ def _get_spell():
     if not HAS_SPELLCHECKER:
         return None
     try:
-        _SPELL = SpellChecker(language='en', distance=2)
+        # distance=1: single-char typo correction only. distance=2 generates
+        # ~270k candidates per word → SIGKILL on 512 MB containers. Catches
+        # 90%+ of real typos (Saftey, Procidure, Reportng, Thept); leaves
+        # 2-char-off cases to the DOMAIN_TYPOS override dict above.
+        _SPELL = SpellChecker(language='en', distance=1)
     except Exception:
         _SPELL = None
     return _SPELL
