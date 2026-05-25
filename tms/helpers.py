@@ -1007,9 +1007,18 @@ def _smart_analyze_rows(df, plant_id, db):
         suggest_top_n as _hy_suggest,
         normalise as _hy_normalise,
         validate as _hy_validate,
+        spellcheck_text as _hy_spellcheck,
     )
     _prog_cache = {}
     _sugg_cache = {}
+
+    # Build allowlist from existing programme_master vocab so spellchecker
+    # never "corrects" canonical domain words back to wrong English neighbours.
+    _spell_allowlist = set()
+    for _name in [r[0] for r in db.execute(
+            'SELECT name FROM programme_master WHERE plant_id=?', (plant_id,))]:
+        for _w in re.findall(r'[A-Za-z]{2,}', _name or ''):
+            _spell_allowlist.add(_w.lower())
 
     _active_master       = [r[0] for r in db.execute(
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,))]
@@ -1110,6 +1119,15 @@ def _smart_analyze_rows(df, plant_id, db):
                 clean_prog = ''
             else:
                 word_fixed = _apply_word_fixes(normalised)
+                # English-dictionary spell-check (domain-aware). Auto-fix any
+                # misspelt word; abbreviations / acronyms / domain words skipped.
+                spell_fixed, spell_corr = _hy_spellcheck(word_fixed, extra_allowlist=_spell_allowlist)
+                if spell_corr:
+                    for _orig, _new in spell_corr:
+                        fixes.append({'field':'Programme Name','original':_orig,'fixed':_new,
+                                      'how':'Spelling corrected (English dictionary)'})
+                    word_fixed = spell_fixed
+                    if status == 'ok': status = 'fixed'
                 raw_lower  = word_fixed.lower()
                 best = _match_master(raw_lower)
                 if best is not None:

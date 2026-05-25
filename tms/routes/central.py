@@ -153,6 +153,85 @@ def _register(app):
 
         return render_template('central.html', plants=plant_summaries, grand=grand, quarterly=quarterly)
 
+    @app.route('/central/duplicates', methods=['GET', 'POST'])
+    @central_required
+    def central_duplicates():
+        """Programme master duplicate scanner + bulk merger.
+
+        GET: scan all plants (or selected) and render clusters for review.
+        POST: apply selected merges with cascade rename across tni/calendar/
+              programme_details/emp_training.
+        """
+        from tms.master_dedup import find_duplicates, merge_cluster
+        from tms.audit import log_action
+        db = get_db()
+
+        if request.method == 'POST':
+            plant_id = int(request.form.get('plant_id') or 0)
+            merged_clusters = 0
+            total_counts = {'tni': 0, 'calendar': 0, 'programme_details': 0, 'emp_training': 0,
+                            'winner_renamed': 0, 'losers_deleted': 0}
+            for key in request.form:
+                if not key.startswith('winner_'):
+                    continue
+                idx = key[len('winner_'):]
+                winner_id = int(request.form.get(f'winner_{idx}') or 0)
+                losers_raw = request.form.get(f'losers_{idx}', '').strip()
+                canonical  = request.form.get(f'canonical_{idx}', '').strip()
+                cluster_pid = int(request.form.get(f'plant_{idx}') or plant_id or 0)
+                if not winner_id or not losers_raw or not canonical or not cluster_pid:
+                    continue
+                loser_ids = [int(x) for x in losers_raw.split(',') if x.strip().isdigit()]
+                if not loser_ids:
+                    continue
+                counts = merge_cluster(cluster_pid, winner_id, loser_ids, canonical, db,
+                                       audit_log_fn=log_action)
+                merged_clusters += 1
+                for k, v in counts.items():
+                    total_counts[k] = total_counts.get(k, 0) + v
+            db.commit()
+            if merged_clusters:
+                flash(
+                    f'Merged {merged_clusters} cluster(s). '
+                    f'Cascaded: TNI {total_counts["tni"]}, Calendar {total_counts["calendar"]}, '
+                    f'2C {total_counts["programme_details"]}, 2A {total_counts["emp_training"]}. '
+                    f'Deleted {total_counts["losers_deleted"]} duplicate master rows.',
+                    'success')
+            else:
+                flash('No merges selected.', 'warning')
+            return redirect(url_for('central_duplicates'))
+
+        plant_filter = request.args.get('plant_id', '').strip()
+        try:
+            plant_filter_id = int(plant_filter) if plant_filter else None
+        except ValueError:
+            plant_filter_id = None
+        try:
+            threshold = float(request.args.get('threshold', '0.85'))
+            threshold = max(0.70, min(0.99, threshold))
+        except (ValueError, TypeError):
+            threshold = 0.85
+
+        plant_clusters = []
+        plants_to_scan = [plant_filter_id] if plant_filter_id else [
+            p['id'] for p in PLANTS if p['id'] != 99]
+        for pid in plants_to_scan:
+            if pid not in PLANT_MAP:
+                continue
+            dupes = find_duplicates(pid, db, threshold=threshold)
+            if dupes:
+                plant_clusters.append({
+                    'plant_id':   pid,
+                    'plant_name': PLANT_MAP[pid]['name'],
+                    'clusters':   dupes,
+                })
+
+        return render_template('central_duplicates.html',
+                               plant_clusters=plant_clusters,
+                               threshold=threshold,
+                               plants=[p for p in PLANTS if p['id'] != 99],
+                               plant_filter=plant_filter_id)
+
     @app.route('/central/plant/<int:plant_id>')
     @central_required
     def central_plant_view(plant_id):

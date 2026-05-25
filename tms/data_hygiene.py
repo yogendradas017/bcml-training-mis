@@ -56,6 +56,166 @@ try:
 except ImportError:
     HAS_UNIDECODE = False
 
+try:
+    from spellchecker import SpellChecker
+    HAS_SPELLCHECKER = True
+    _SPELL = SpellChecker(language='en', distance=2)
+except ImportError:
+    HAS_SPELLCHECKER = False
+    _SPELL = None
+
+
+# ── Domain vocabulary (allowlist — never spell-corrected) ────────────────────
+#
+# These are sugar-industry / BCML-specific words the English dictionary doesn't
+# recognise. Add to this list when spell-check starts "correcting" valid
+# domain terms to wrong English words.
+# ── Domain typos (override spellchecker — manual canonical fix) ──────────────
+#
+# Words where spellchecker's nearest English neighbour is WRONG for our
+# domain. Example: 'takels' → English dict prefers 'takes' (distance 1) but
+# in lifting-tool context the intent is 'tackles' (distance 2). Add such
+# overrides here; they win before spellchecker runs.
+DOMAIN_TYPOS = {
+    'takels':    'tackles',
+    'tackels':   'tackles',
+    'thept':     'theft',
+    'saftey':    'safety',
+    'safty':     'safety',
+    'procidure': 'procedure',
+    'proceedure': 'procedure',
+    'trainning': 'training',
+    'mantenance': 'maintenance',
+    'maintainance': 'maintenance',
+    'maitenance': 'maintenance',
+    'hyigene':   'hygiene',
+    'hygeine':   'hygiene',
+    'awarness':  'awareness',
+    'awreness':  'awareness',
+    'handeling': 'handling',
+    'reportng':  'reporting',
+    'electrcial': 'electrical',
+    'eletrical': 'electrical',
+    'chemcial':  'chemical',
+    'enviroment': 'environment',
+    'knowlege':  'knowledge',
+    'monitorng': 'monitoring',
+    'monitering': 'monitoring',
+    'equpiment': 'equipment',
+    'equipement': 'equipment',
+    'complience': 'compliance',
+    'managment': 'management',
+    'mangement': 'management',
+    'operartion': 'operation',
+    'operetion': 'operation',
+    'opertion':  'operation',
+    'techqnique': 'technique',
+    'tecnique':  'technique',
+    'technqiue': 'technique',
+    'grainding': 'grinding',
+    'grindig':   'grinding',
+    'buidling':  'building',
+    'confind':   'confined',
+    'condfined': 'confined',
+    'chocking':  'choking',
+    'chocing':   'choking',
+}
+
+
+DOMAIN_WORDS = {
+    # Sugar industry
+    'bagasse', 'bagacillo', 'cane', 'sugarcane', 'molasses', 'sucrose',
+    'fructose', 'glucose', 'juice', 'melt', 'massecuite', 'pol', 'brix',
+    'imbibition', 'milling', 'crusher', 'shredder', 'fibrizer', 'kicker',
+    'mudson', 'clarifier', 'evaporator', 'pan', 'centrifugal', 'centrifugals',
+    'curing', 'sulphitation', 'phosphatation', 'carbonation', 'cogen',
+    'cogeneration', 'distillery', 'ethanol', 'rectified', 'spirits',
+    # Plant / process
+    'boiler', 'turbine', 'condenser', 'cooler', 'hopper', 'conveyor',
+    'pneumatic', 'hydraulic', 'lubricant', 'lubrication', 'gearbox',
+    'valve', 'flange', 'gasket', 'bearing', 'stator', 'rotor',
+    # EHS / chem
+    'ehs', 'ppe', 'msds', 'hazop', 'lopa', 'lockout', 'tagout', 'loto',
+    'osha', 'iso', 'haccp', 'gmp', 'kaizen', 'jidoka', 'poka', 'yoke',
+    'genba', 'gemba', 'andon', 'kanban',
+    # IT
+    'plc', 'scada', 'hmi', 'dcs', 'sap', 'erp', 'crm', 'lms', 'mis',
+    'cctv', 'firewall', 'vpn', 'lan', 'wan',
+    # Common abbreviations seen in BCML programmes
+    'tackles', 'rigging', 'derrick', 'gantry', 'jib', 'sling',
+    'pre', 'post', 'sub', 'multi', 'cross', 'inter', 'intra',
+    'tni', 'sop', 'kpi', 'kra', 'roi',
+}
+
+
+# ── Spell-check entry point ──────────────────────────────────────────────────
+
+def spellcheck_text(text, extra_allowlist=None):
+    """Correct misspelled words via English dictionary, skipping domain terms.
+
+    Returns (corrected_text, list_of_corrections).
+    list_of_corrections = [(original_word, corrected_word), ...]
+
+    Skips:
+      - tokens in DOMAIN_WORDS or extra_allowlist (lowercased)
+      - tokens in known acronyms (all-caps len >= 2)
+      - tokens with digits
+      - short tokens (< 4 chars)
+      - tokens unchanged by the spellchecker
+    """
+    if not HAS_SPELLCHECKER or not text:
+        return text, []
+    allow = set(DOMAIN_WORDS)
+    if extra_allowlist:
+        allow |= set(w.lower() for w in extra_allowlist)
+
+    # Tokenise by whitespace + punctuation; keep separators so we can
+    # rebuild the string with identical spacing.
+    tokens = re.findall(r'\w+|\W+', text, flags=re.UNICODE)
+    out = []
+    corrections = []
+    for tok in tokens:
+        if not tok.isalpha():
+            out.append(tok)
+            continue
+        tl = tok.lower()
+        # DOMAIN_TYPOS — manual override beats spellchecker
+        if tl in DOMAIN_TYPOS:
+            fixed = DOMAIN_TYPOS[tl]
+            corrected = (fixed.capitalize() if tok[0].isupper()
+                         else fixed.upper() if tok.isupper() else fixed)
+            out.append(corrected)
+            corrections.append((tok, corrected))
+            continue
+        # Skip short, acronyms, digits-mixed, domain
+        if len(tok) < 4 or tl in allow or tok.isupper():
+            out.append(tok)
+            continue
+        # Skip if already a known English word
+        if tl in _SPELL.word_frequency.dictionary:
+            out.append(tok)
+            continue
+        # Try correction
+        correction = _SPELL.correction(tl)
+        if not correction or correction == tl:
+            out.append(tok)
+            continue
+        # Only apply if edit distance ≤ 2 (configured) AND correction is
+        # markedly more common than original (avoid swapping rare-for-rare).
+        if _SPELL.word_frequency[correction] < 1:
+            out.append(tok)
+            continue
+        # Preserve original casing as best we can
+        if tok[0].isupper():
+            corrected = correction.capitalize()
+        elif tok.isupper():
+            corrected = correction.upper()
+        else:
+            corrected = correction
+        out.append(corrected)
+        corrections.append((tok, corrected))
+    return ''.join(out), corrections
+
 
 # ── Layer 1 — Normaliser ──────────────────────────────────────────────────────
 

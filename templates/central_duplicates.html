@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block page_title %}Programme Master — Duplicate Cleanup{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center mb-3 gap-3 flex-wrap">
+  <div>
+    <h5 class="mb-0" style="font-weight:700;color:#1e3a5f;">
+      <i class="bi bi-files me-1"></i> Programme Master — Duplicate Cleanup
+    </h5>
+    <div style="font-size:12px;color:#6b7280;margin-top:2px;">
+      Near-identical programme names detected via similarity {{ (threshold*100)|round|int }}%.
+      Pick a winner per cluster, set canonical name, click <strong>Merge Selected</strong>.
+      Cascade rename runs across TNI, Calendar, 2C and 2A.
+    </div>
+  </div>
+  <div class="ms-auto d-flex gap-2 align-items-center">
+    <form method="GET" class="d-flex gap-2 align-items-center">
+      <select name="plant_id" class="form-select form-select-sm" style="font-size:12px;">
+        <option value="">All plants</option>
+        {% for p in plants %}
+        <option value="{{ p.id }}" {% if plant_filter == p.id %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="number" name="threshold" step="0.01" min="0.70" max="0.99"
+             value="{{ threshold }}" class="form-control form-control-sm"
+             style="width:80px;font-size:12px;" title="Similarity threshold 0.70–0.99">
+      <button type="submit" class="btn btn-sm btn-primary">Re-scan</button>
+    </form>
+  </div>
+</div>
+
+{% if not plant_clusters %}
+<div class="alert alert-success" style="font-size:14px;">
+  <i class="bi bi-check-circle-fill me-1"></i>
+  <strong>No duplicate clusters found.</strong> Programme master is clean for the selected scope.
+</div>
+{% else %}
+
+<div class="alert alert-warning" style="font-size:13px;">
+  <i class="bi bi-exclamation-triangle-fill me-1"></i>
+  <strong>{{ plant_clusters | sum(attribute='clusters') | length }} duplicate cluster(s)</strong>
+  across {{ plant_clusters | length }} plant(s). Review carefully —
+  <strong>merge is irreversible</strong> (cascade rename applies immediately).
+</div>
+
+{% for pc in plant_clusters %}
+<div class="card mb-3" style="border-left:4px solid #2e6da4;">
+  <div class="card-header" style="background:#f8fafc;font-size:13px;font-weight:700;color:#1e3a5f;">
+    <i class="bi bi-building me-1"></i> {{ pc.plant_name }} — {{ pc.clusters | length }} cluster(s)
+  </div>
+  <div class="card-body" style="padding:14px;">
+    <form method="POST" action="{{ url_for('central_duplicates') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="plant_id" value="{{ pc.plant_id }}">
+
+      {% for cluster in pc.clusters %}
+      {% set cidx = loop.index0 %}
+      {% set winner = cluster[0] %}
+      <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:14px;background:#fafafa;">
+        <input type="hidden" name="plant_{{ cidx }}" value="{{ pc.plant_id }}">
+
+        <div style="font-size:11px;color:#6b7280;margin-bottom:6px;">
+          Cluster {{ loop.index }} · {{ cluster | length }} rows ·
+          total usage <strong>{{ cluster | sum(attribute='usage_count') }}</strong>
+        </div>
+
+        <table class="table table-sm mb-2" style="font-size:12px;">
+          <thead style="background:#1e3a5f;color:#fff;">
+            <tr>
+              <th style="width:60px;">Winner</th>
+              <th style="width:60px;">Merge</th>
+              <th>Programme Name</th>
+              <th style="width:60px;text-align:right;">TNI</th>
+              <th style="width:60px;text-align:right;">Cal</th>
+              <th style="width:60px;text-align:right;">2C</th>
+              <th style="width:60px;text-align:right;">2A</th>
+              <th style="width:80px;text-align:right;">Total use</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for it in cluster %}
+            <tr {% if loop.first %}style="background:#ecfdf5;"{% endif %}>
+              <td>
+                <input type="radio" name="winner_{{ cidx }}" value="{{ it.id }}"
+                       data-name="{{ it.name }}" data-cidx="{{ cidx }}"
+                       class="winner-radio"
+                       {% if loop.first %}checked{% endif %}>
+              </td>
+              <td>
+                {% if not loop.first %}
+                <input type="checkbox" class="loser-cb" data-cidx="{{ cidx }}" data-id="{{ it.id }}"
+                       checked>
+                {% else %}
+                <span style="font-size:10px;color:#10b981;">(canonical)</span>
+                {% endif %}
+              </td>
+              <td>
+                {{ it.name }}
+                <span style="color:#9ca3af;font-size:10px;">#{{ it.id }}</span>
+              </td>
+              <td style="text-align:right;">{{ it.tni_count }}</td>
+              <td style="text-align:right;">{{ it.cal_count }}</td>
+              <td style="text-align:right;">{{ it.pd_count }}</td>
+              <td style="text-align:right;">{{ it.et_count }}</td>
+              <td style="text-align:right;font-weight:600;">{{ it.usage_count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="d-flex gap-2 align-items-center" style="font-size:12px;">
+          <label class="mb-0">Canonical name:</label>
+          <input type="text" name="canonical_{{ cidx }}" value="{{ winner.name }}"
+                 class="form-control form-control-sm canonical-input"
+                 data-cidx="{{ cidx }}" style="flex:1;font-size:12px;">
+          <input type="hidden" name="losers_{{ cidx }}" value=""
+                 class="losers-hidden" data-cidx="{{ cidx }}">
+          <span style="color:#9ca3af;font-size:11px;">↳ edit if neither winner is exactly right</span>
+        </div>
+      </div>
+      {% endfor %}
+
+      <button type="submit" class="btn btn-warning fw-bold"
+              onclick="return confirm('Apply merges for {{ pc.plant_name }}? This rewrites TNI/Calendar/2C/2A names and deletes loser master rows. Cannot be undone.');">
+        <i class="bi bi-merge me-1"></i> Merge Selected for {{ pc.plant_name }}
+      </button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+
+<script>
+// Keep losers_<cidx> hidden field in sync with checkbox + winner selection
+function refreshLosers(cidx) {
+    const losers = [];
+    const winnerEl = document.querySelector(`input.winner-radio[data-cidx="${cidx}"]:checked`);
+    const winnerId = winnerEl ? winnerEl.value : null;
+    document.querySelectorAll(`input.loser-cb[data-cidx="${cidx}"]`).forEach(cb => {
+        if (cb.checked && cb.dataset.id !== winnerId) losers.push(cb.dataset.id);
+    });
+    // Also include all rows not selected as winner that are checked in their row (top row has no cb)
+    const hidden = document.querySelector(`input.losers-hidden[data-cidx="${cidx}"]`);
+    if (hidden) hidden.value = losers.join(',');
+}
+function refreshCanonicalDefault(cidx) {
+    const winnerEl = document.querySelector(`input.winner-radio[data-cidx="${cidx}"]:checked`);
+    const canonical = document.querySelector(`input.canonical-input[data-cidx="${cidx}"]`);
+    if (winnerEl && canonical) canonical.value = winnerEl.dataset.name;
+}
+document.querySelectorAll('input.winner-radio').forEach(r => r.addEventListener('change', e => {
+    const cidx = e.target.dataset.cidx;
+    refreshCanonicalDefault(cidx);
+    refreshLosers(cidx);
+}));
+document.querySelectorAll('input.loser-cb').forEach(cb => cb.addEventListener('change', e => {
+    refreshLosers(e.target.dataset.cidx);
+}));
+// Initial sync
+document.querySelectorAll('input.winner-radio[checked], input.winner-radio:checked').forEach(r => {
+    refreshLosers(r.dataset.cidx);
+});
+</script>
+
+{% endif %}
+
+{% endblock %}
