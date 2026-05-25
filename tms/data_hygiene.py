@@ -59,10 +59,29 @@ except ImportError:
 try:
     from spellchecker import SpellChecker
     HAS_SPELLCHECKER = True
-    _SPELL = SpellChecker(language='en', distance=2)
 except ImportError:
     HAS_SPELLCHECKER = False
-    _SPELL = None
+
+# Lazy init — SpellChecker() loads a 466k-word JSON dict which can take
+# 300-800 ms cold and may fail on constrained containers. Defer to first
+# call and degrade silently if init throws.
+_SPELL = None
+_SPELL_INIT_TRIED = False
+
+
+def _get_spell():
+    """Return SpellChecker instance or None if unavailable."""
+    global _SPELL, _SPELL_INIT_TRIED
+    if _SPELL is not None or _SPELL_INIT_TRIED:
+        return _SPELL
+    _SPELL_INIT_TRIED = True
+    if not HAS_SPELLCHECKER:
+        return None
+    try:
+        _SPELL = SpellChecker(language='en', distance=2)
+    except Exception:
+        _SPELL = None
+    return _SPELL
 
 
 # ── Domain vocabulary (allowlist — never spell-corrected) ────────────────────
@@ -163,7 +182,10 @@ def spellcheck_text(text, extra_allowlist=None):
       - short tokens (< 4 chars)
       - tokens unchanged by the spellchecker
     """
-    if not HAS_SPELLCHECKER or not text:
+    if not text:
+        return text, []
+    sp = _get_spell()
+    if sp is None:
         return text, []
     allow = set(DOMAIN_WORDS)
     if extra_allowlist:
@@ -192,17 +214,25 @@ def spellcheck_text(text, extra_allowlist=None):
             out.append(tok)
             continue
         # Skip if already a known English word
-        if tl in _SPELL.word_frequency.dictionary:
+        if tl in sp.word_frequency.dictionary:
             out.append(tok)
             continue
         # Try correction
-        correction = _SPELL.correction(tl)
+        try:
+            correction = sp.correction(tl)
+        except Exception:
+            out.append(tok)
+            continue
         if not correction or correction == tl:
             out.append(tok)
             continue
         # Only apply if edit distance ≤ 2 (configured) AND correction is
         # markedly more common than original (avoid swapping rare-for-rare).
-        if _SPELL.word_frequency[correction] < 1:
+        try:
+            if sp.word_frequency[correction] < 1:
+                out.append(tok)
+                continue
+        except Exception:
             out.append(tok)
             continue
         # Preserve original casing as best we can
