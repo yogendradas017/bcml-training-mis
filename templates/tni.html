@@ -469,6 +469,14 @@ const TNI = {
     if (!confirm(`Delete ${count} TNI entries? This cannot be undone.`)) return;
     const form = document.createElement('form');
     form.method = 'POST'; form.action = this.bulkUrl;
+    // CSRF token — pulled from an existing form on the page (Flask-WTF).
+    // Without this, POST gets 400 + redirect-loop ("Redirecting..." page).
+    const csrfInput = document.querySelector('input[name="csrf_token"]');
+    if (csrfInput && csrfInput.value) {
+      const c = document.createElement('input');
+      c.type = 'hidden'; c.name = 'csrf_token'; c.value = csrfInput.value;
+      form.appendChild(c);
+    }
     if (this.selectAll) {
       // pass current filter params + select_all flag
       const add = (n,v) => { const i=document.createElement('input');i.type='hidden';i.name=n;i.value=v;form.appendChild(i); };
