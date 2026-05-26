@@ -507,6 +507,14 @@ const BulkSelect = {
       if (!confirm(`Delete ${checked.length} selected record(s)? This cannot be undone.`)) return;
       const form = document.createElement('form');
       form.method = 'POST'; form.action = this._actionUrl;
+      // CSRF token — Flask-WTF rejects POST otherwise (returns 400 + redirect
+      // loop showing as "Redirecting..." page in browser).
+      const csrfInput = document.querySelector('input[name="csrf_token"]');
+      if (csrfInput && csrfInput.value) {
+        const c = document.createElement('input');
+        c.type = 'hidden'; c.name = 'csrf_token'; c.value = csrfInput.value;
+        form.appendChild(c);
+      }
       checked.forEach(cb => {
         const inp = document.createElement('input');
         inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = cb.value;
