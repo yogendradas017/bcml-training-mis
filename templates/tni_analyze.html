@@ -161,15 +161,10 @@
 </div>
 {% endif %}
 
-<style>
-  /* Belt-and-braces — older browsers ignore `hidden` on <tr>; force it. */
-  tr.an-row[hidden] { display: none !important; }
-</style>
-<!-- Table — only fixed / warning / error rows rendered -->
-{% set review_rows = rows | rejectattr('status','equalto','ok') | list %}
+<!-- Virtual table — rows rendered client-side, only visible page in DOM -->
 <div class="card mb-3">
   <div class="card-body p-0">
-    {% if not review_rows %}
+    {% if not review_data %}
     <div style="padding:32px;text-align:center;color:#10b981;">
       <i class="bi bi-check-circle-fill" style="font-size:36px;display:block;margin-bottom:10px;"></i>
       <strong>All rows are clean — nothing to review.</strong>
@@ -197,89 +192,8 @@
             <th>What Changed / Issue</th>
           </tr>
         </thead>
-        <tbody>
-        {% for r in review_rows %}
-
-        {% if r.status == 'ok' %}
-        <tr class="an-row an-ok" hidden style="background:#f0fdf4;">
-          <td style="color:#9ca3af;font-size:11px;">{{ r.row_num }}</td>
-          <td><span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 10px;border-radius:99px;"><i class="bi bi-check2"></i> OK</span></td>
-          <td style="font-weight:600;">{{ r.emp_code }}</td>
-          <td style="color:#6b7280;">{{ r.emp_name }}</td>
-          <td>{{ r.programme_name }}</td>
-          <td>{{ r.prog_type or '—' }}</td>
-          <td>{{ r.mode or '—' }}</td>
-          <td>{{ r.planned_hours }}</td>
-          <td style="color:#10b981;font-size:11px;">No changes needed</td>
-        </tr>
-
-        {% elif r.status == 'fixed' %}
-        <tr class="an-row an-fixed" hidden style="background:#fffbeb;">
-          <td style="color:#9ca3af;font-size:11px;">{{ r.row_num }}</td>
-          <td><span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;"><i class="bi bi-magic"></i> Fixed</span></td>
-          <td style="font-weight:600;">{{ r.emp_code }}</td>
-          <td style="color:#6b7280;">{{ r.emp_name }}</td>
-          <td>
-            {{ r.programme_name }}
-            {% if r.prog_suggestions and r.prog_suggestions|length > 0 %}
-            <div style="margin-top:4px;">
-              <select form="tni-confirm-form" name="fix_prog_{{ r.row_num }}"
-                      style="font-size:11px;padding:2px 6px;border:1px solid #fbbf24;border-radius:4px;background:#fffdf5;max-width:280px;">
-                <option value="" selected>↳ Use cleaned name (new programme)</option>
-                {% for sname, sscore, smethod in r.prog_suggestions %}
-                <option value="{{ sname }}">→ {{ sname }} ({{ (sscore*100)|round|int }}% · {{ smethod }})</option>
-                {% endfor %}
-              </select>
-            </div>
-            {% endif %}
-          </td>
-          <td>{{ r.prog_type or '—' }}</td>
-          <td>{{ r.mode or '—' }}</td>
-          <td>{{ r.planned_hours }}</td>
-          <td style="min-width:220px;">
-            {% for fix in r.fixes %}
-            <div style="font-size:11px;margin-bottom:2px;">
-              <span style="color:#92400e;font-weight:600;">{{ fix.field }}:</span>
-              <del style="color:#d1d5db;">{{ fix.original }}</del>
-              <i class="bi bi-arrow-right" style="color:#d97706;font-size:10px;margin:0 2px;"></i>
-              <span style="color:#065f46;font-weight:600;">{{ fix.fixed }}</span>
-              <span style="color:#9ca3af;font-size:10px;"> ({{ fix.how }})</span>
-            </div>
-            {% endfor %}
-            {% if r.prog_garbage_class %}
-            <div style="font-size:10px;color:#92400e;margin-top:2px;">
-              <i class="bi bi-tag-fill"></i> Hygiene: {{ r.prog_garbage_class }}
-            </div>
-            {% endif %}
-          </td>
-        </tr>
-
-        {% else %}
-        <tr class="an-row an-error" hidden style="background:#fff1f2;">
-          <td style="color:#9ca3af;font-size:11px;">{{ r.row_num }}</td>
-          <td><span style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;"><i class="bi bi-x-circle"></i> Error</span></td>
-          <td style="color:#dc2626;font-weight:600;">{{ r.emp_code or '—' }}</td>
-          <td style="color:#dc2626;">{{ r.emp_name or '—' }}</td>
-          <td>{{ r.programme_name or '—' }}</td>
-          <td>{{ r.prog_type or '—' }}</td>
-          <td>{{ r.mode or '—' }}</td>
-          <td>{{ r.planned_hours }}</td>
-          <td style="min-width:220px;">
-            {% for issue in r.issues %}
-            <div style="font-size:11px;color:#dc2626;margin-bottom:2px;">
-              <i class="bi bi-exclamation-circle me-1"></i>{{ issue }}
-            </div>
-            {% endfor %}
-            {% if r.prog_garbage_class %}
-            <div style="font-size:10px;color:#dc2626;margin-top:2px;">
-              <i class="bi bi-tag-fill"></i> Hygiene: {{ r.prog_garbage_class }}
-            </div>
-            {% endif %}
-          </td>
-        </tr>
-        {% endif %}
-
-        {% endfor %}
+        <tbody id="an-tbody">
+          <tr><td colspan="9" style="text-align:center;padding:20px;color:#6b7280;">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -293,6 +207,9 @@
         <button type="button" class="btn btn-outline-secondary" id="an-next">Next &raquo;</button>
       </div>
     </div>
+
+    <!-- Data payload (compact JSON, parsed once) -->
+    <script type="application/json" id="an-data">{{ review_data | tojson }}</script>
     {% endif %}
   </div>
 </div>
@@ -362,26 +279,82 @@
 {% if step == 'review' %}
 <script>
 (function(){
-  const table = document.getElementById('an-table');
-  if (!table) return;
-  const rows = Array.from(table.tBodies[0].rows);
+  const dataNode = document.getElementById('an-data');
+  if (!dataNode) return;
+  const ALL = JSON.parse(dataNode.textContent || '[]');
+  const tbody = document.getElementById('an-tbody');
   const PAGE_SIZE = 100;
   let page = 1;
   let statusFilter = 'all';
   let textFilter = '';
+  const corrections = {};  // row_num -> chosen name
 
-  // Cache lowercase text per row once for fast filtering
-  rows.forEach(r => {
-    r.__text = (r.textContent || '').toLowerCase();
-    r.__status = r.classList.contains('an-error') ? 'error'
-               : r.classList.contains('an-fixed') ? 'fixed'
-               : 'ok';
+  // Pre-compute lowercase searchable text per row (once)
+  ALL.forEach(r => {
+    r.__txt = [r.ec, r.en, r.pn, r.pt, r.m, (r.is||[]).join(' '),
+               (r.fx||[]).map(f => f.field+' '+f.original+' '+f.fixed).join(' '),
+               r.gc].join(' ').toLowerCase();
   });
 
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function renderRow(r) {
+    if (r.s === 'fixed') {
+      let progCell = esc(r.pn);
+      if (r.sg && r.sg.length) {
+        let opts = '<option value="">↳ Use cleaned name (new programme)</option>';
+        r.sg.forEach(s => {
+          const nm = s[0], sc = s[1], mt = s[2];
+          const sel = corrections[r.n] === nm ? ' selected' : '';
+          opts += `<option value="${esc(nm)}"${sel}>→ ${esc(nm)} (${Math.round(sc*100)}% · ${esc(mt)})</option>`;
+        });
+        progCell += `<div style="margin-top:4px;"><select data-fix-row="${r.n}" style="font-size:11px;padding:2px 6px;border:1px solid #fbbf24;border-radius:4px;background:#fffdf5;max-width:280px;">${opts}</select></div>`;
+      }
+      let fixCell = '';
+      (r.fx||[]).forEach(f => {
+        fixCell += `<div style="font-size:11px;margin-bottom:2px;"><span style="color:#92400e;font-weight:600;">${esc(f.field)}:</span> <del style="color:#d1d5db;">${esc(f.original)}</del> <i class="bi bi-arrow-right" style="color:#d97706;font-size:10px;margin:0 2px;"></i> <span style="color:#065f46;font-weight:600;">${esc(f.fixed)}</span> <span style="color:#9ca3af;font-size:10px;"> (${esc(f.how)})</span></div>`;
+      });
+      if (r.gc) fixCell += `<div style="font-size:10px;color:#92400e;margin-top:2px;"><i class="bi bi-tag-fill"></i> Hygiene: ${esc(r.gc)}</div>`;
+      return `<tr style="background:#fffbeb;">
+        <td style="color:#9ca3af;font-size:11px;">${r.n}</td>
+        <td><span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;"><i class="bi bi-magic"></i> Fixed</span></td>
+        <td style="font-weight:600;">${esc(r.ec)}</td>
+        <td style="color:#6b7280;">${esc(r.en)}</td>
+        <td>${progCell}</td>
+        <td>${esc(r.pt) || '—'}</td>
+        <td>${esc(r.m) || '—'}</td>
+        <td>${esc(r.h)}</td>
+        <td style="min-width:220px;">${fixCell}</td>
+      </tr>`;
+    } else {
+      // error
+      let issueCell = '';
+      (r.is||[]).forEach(i => {
+        issueCell += `<div style="font-size:11px;color:#dc2626;margin-bottom:2px;"><i class="bi bi-exclamation-circle me-1"></i>${esc(i)}</div>`;
+      });
+      if (r.gc) issueCell += `<div style="font-size:10px;color:#dc2626;margin-top:2px;"><i class="bi bi-tag-fill"></i> Hygiene: ${esc(r.gc)}</div>`;
+      return `<tr style="background:#fff1f2;">
+        <td style="color:#9ca3af;font-size:11px;">${r.n}</td>
+        <td><span style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;"><i class="bi bi-x-circle"></i> Error</span></td>
+        <td style="color:#dc2626;font-weight:600;">${esc(r.ec) || '—'}</td>
+        <td style="color:#dc2626;">${esc(r.en) || '—'}</td>
+        <td>${esc(r.pn) || '—'}</td>
+        <td>${esc(r.pt) || '—'}</td>
+        <td>${esc(r.m) || '—'}</td>
+        <td>${esc(r.h)}</td>
+        <td style="min-width:220px;">${issueCell}</td>
+      </tr>`;
+    }
+  }
+
   function filtered() {
-    return rows.filter(r => {
-      if (statusFilter !== 'all' && r.__status !== statusFilter) return false;
-      if (textFilter && r.__text.indexOf(textFilter) === -1) return false;
+    return ALL.filter(r => {
+      if (statusFilter !== 'all' && r.s !== statusFilter) return false;
+      if (textFilter && r.__txt.indexOf(textFilter) === -1) return false;
       return true;
     });
   }
@@ -392,19 +365,44 @@
     const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     if (page > pages) page = pages;
     const start = (page - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    const visibleSet = new Set(list.slice(start, end));
-    rows.forEach(r => {
-      if (visibleSet.has(r)) r.removeAttribute('hidden');
-      else r.setAttribute('hidden', '');
-    });
+    const end = Math.min(start + PAGE_SIZE, total);
+    const slice = list.slice(start, end);
+    tbody.innerHTML = slice.map(renderRow).join('') ||
+      '<tr><td colspan="9" style="text-align:center;padding:20px;color:#6b7280;">No matches</td></tr>';
     document.getElementById('an-count').textContent =
-      total === rows.length ? `${total} rows` : `${total} of ${rows.length} rows`;
+      total === ALL.length ? `${total} rows` : `${total} of ${ALL.length} rows`;
     document.getElementById('an-page-label').textContent = `Page ${page} of ${pages}`;
     document.getElementById('an-page-info').textContent =
-      total === 0 ? 'No matches' : `Showing ${start + 1}–${Math.min(end, total)} of ${total}`;
+      total === 0 ? 'No matches' : `Showing ${start + 1}–${end} of ${total}`;
     document.getElementById('an-prev').disabled = (page <= 1);
     document.getElementById('an-next').disabled = (page >= pages);
+  }
+
+  // Track corrections (select changes) — survive pagination
+  tbody.addEventListener('change', e => {
+    const t = e.target;
+    if (t.tagName === 'SELECT' && t.dataset.fixRow) {
+      const n = t.dataset.fixRow;
+      if (t.value) corrections[n] = t.value;
+      else delete corrections[n];
+    }
+  });
+
+  // On confirm submit: inject hidden inputs for corrections
+  const confirmForm = document.getElementById('tni-confirm-form');
+  if (confirmForm) {
+    confirmForm.addEventListener('submit', () => {
+      // Clear any prior injected inputs (in case of double-submit)
+      confirmForm.querySelectorAll('input[data-injected="1"]').forEach(el => el.remove());
+      Object.keys(corrections).forEach(n => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'fix_prog_' + n;
+        inp.value = corrections[n];
+        inp.dataset.injected = '1';
+        confirmForm.appendChild(inp);
+      });
+    });
   }
 
   let filterTimer;

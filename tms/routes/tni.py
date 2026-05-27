@@ -745,8 +745,31 @@ def _register(app):
             upload_progs_lower = set(
                 str(r['programme_name']).lower() for r in rows
                 if r['status'] in ('ok', 'fixed') and r.get('programme_name'))
+
+            # Compact review data for client-side virtual rendering.
+            # Shipping inline-styled HTML for 5000+ rows freezes the browser;
+            # JSON is ~10× smaller and JS only renders visible page.
+            review_data = []
+            for r in rows:
+                if r['status'] == 'ok':
+                    continue
+                review_data.append({
+                    'n':  r['row_num'],
+                    's':  r['status'],
+                    'ec': r.get('emp_code') or '',
+                    'en': r.get('emp_name') or '',
+                    'pn': r.get('programme_name') or '',
+                    'pt': r.get('prog_type') or '',
+                    'm':  r.get('mode') or '',
+                    'h':  r.get('planned_hours') or 0,
+                    'sg': r.get('prog_suggestions') or [],
+                    'fx': r.get('fixes') or [],
+                    'is': r.get('issues') or [],
+                    'gc': r.get('prog_garbage_class') or '',
+                })
+
             return render_template('tni_analyze.html', step='review',
-                                   rows=rows, aid=aid,
+                                   review_data=review_data, aid=aid,
                                    ok_count=ok_count, fixed_count=fixed_count,
                                    err_count=err_count,
                                    master_progs=master_progs,
