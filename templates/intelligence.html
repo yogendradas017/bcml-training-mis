@@ -57,7 +57,7 @@
 <div class="row g-3 mb-4">
   {% for sm in session_modes %}
   {% set color = '#2e6da4' if sm.mode == 'Classroom' else '#10b981' if sm.mode == 'OJT' else '#3b82f6' if sm.mode == 'Online' else '#f59e0b' if sm.mode == 'SOP' else '#9ca3af' %}
-  <div class="col">
+  <div class="col-6 col-sm-4 col-md-3 col-lg">
     <div style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:16px 18px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">{{ sm.mode }}</div>
       <div style="display:flex;align-items:baseline;gap:4px;">
@@ -71,7 +71,7 @@
     </div>
   </div>
   {% endfor %}
-  <div class="col">
+  <div class="col-6 col-sm-4 col-md-3 col-lg">
     <div style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:16px 18px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Total Sessions</div>
       <div style="font-size:26px;font-weight:800;color:#111827;line-height:1;">{{ total_sessions }}</div>
@@ -83,13 +83,13 @@
 
 {# ── Programme table ── #}
 <div class="card">
-  <div class="card-header ch-dark d-flex justify-content-between align-items-center">
+  <div class="card-header ch-dark d-flex flex-wrap justify-content-between align-items-center gap-2">
     <span><i class="bi bi-bar-chart-fill"></i> Programme Demand vs Delivery — FY {{ fy }}</span>
-    <div class="d-flex gap-2" style="font-size:11px;">
-      <span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-weight:600;">On Track ≥80%</span>
-      <span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-weight:600;">In Progress 30–79%</span>
-      <span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:20px;font-weight:600;">⚠ Big Ticket &lt;30%</span>
-      <span style="background:#f3f4f6;color:#6b7280;padding:3px 10px;border-radius:20px;font-weight:600;">Small Group &lt;30 pax</span>
+    <div class="d-flex flex-wrap gap-2" style="font-size:11px;">
+      <span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">On Track ≥80%</span>
+      <span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">In Progress 30–79%</span>
+      <span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">⚠ Big Ticket &lt;30%</span>
+      <span style="background:#f3f4f6;color:#6b7280;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">Small Group &lt;30 pax</span>
     </div>
   </div>
   <div class="card-body pb-2 pt-3">
@@ -106,21 +106,56 @@
   </div>
   <div class="card-body p-0">
     {% if programmes %}
+    <style>
+      .intel-row{
+        display:grid;
+        grid-template-columns: 36px minmax(180px,1.6fr) 80px minmax(140px,2fr) 90px 90px 110px;
+        align-items:center;
+        gap:12px;
+        padding:12px 0;
+        border-bottom:1px solid #f1f5f9;
+      }
+      .intel-row > div{ min-width:0; }
+      .intel-row .ir-name{ font-size:13px;font-weight:600;color:#111827;white-space:normal;word-break:break-word; }
+      .intel-row .ir-sub{ font-size:11px;color:#9ca3af;margin-top:1px; }
+      .intel-row .ir-num{ font-size:12px;color:#6b7280; }
+      .intel-row .ir-right{ text-align:right; }
+      .intel-row .ir-label{ font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;display:none;margin-bottom:2px; }
+      @media (max-width: 991.98px){
+        .intel-row{
+          grid-template-columns: 32px 1fr 1fr;
+          grid-template-areas:
+            "idx name name"
+            "idx bar  bar"
+            "idx need cov"
+            "idx left status";
+          row-gap:6px;
+        }
+        .intel-row .ir-idx{ grid-area: idx; align-self:start; padding-top:4px; }
+        .intel-row .ir-namecell{ grid-area: name; }
+        .intel-row .ir-bar{ grid-area: bar; }
+        .intel-row .ir-need{ grid-area: need; text-align:left; }
+        .intel-row .ir-cov{ grid-area: cov; text-align:right; }
+        .intel-row .ir-left{ grid-area: left; text-align:left; }
+        .intel-row .ir-status{ grid-area: status; text-align:right; }
+        .intel-row .ir-label{ display:block; }
+      }
+    </style>
     <div style="padding:0 20px;">
       {% for p in programmes %}
-      <div class="intel-row" data-name="{{ p.name|lower }}" data-status="{{ p.status }}"
-           style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;">
-        <div style="width:36px;flex-shrink:0;text-align:center;font-size:11px;font-weight:700;color:#9ca3af;">
+      <div class="intel-row" data-name="{{ p.name|lower }}" data-status="{{ p.status }}">
+        <div class="ir-idx" style="text-align:center;font-size:11px;font-weight:700;color:#9ca3af;">
           {{ loop.index }}
         </div>
-        <div style="width:220px;min-width:160px;">
-          <div style="font-size:13px;font-weight:600;color:#111827;">{{ p.name }}</div>
-          <div style="font-size:11px;color:#9ca3af;margin-top:1px;">{{ p.planned }} session{{ 's' if p.planned != 1 }} planned this FY</div>
+        <div class="ir-namecell">
+          <div class="ir-name">{{ p.name }}</div>
+          <div class="ir-sub">{{ p.planned }} session{{ 's' if p.planned != 1 }} planned this FY</div>
         </div>
-        <div style="width:80px;font-size:12px;color:#6b7280;flex-shrink:0;">
+        <div class="ir-need ir-num">
+          <div class="ir-label">Need</div>
           <strong style="color:#111827;">{{ p.demand }}</strong> need
         </div>
-        <div style="flex:1;min-width:120px;">
+        <div class="ir-bar">
           <div style="background:#f1f5f9;border-radius:99px;height:10px;overflow:hidden;">
             {% if p.pct >= 80 %}
               <div style="width:{{ p.pct }}%;height:100%;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);"></div>
@@ -132,25 +167,27 @@
           </div>
           <div style="font-size:10px;color:#9ca3af;margin-top:2px;">{{ p.pct }}% covered</div>
         </div>
-        <div style="width:90px;font-size:12px;color:#6b7280;flex-shrink:0;text-align:right;">
+        <div class="ir-cov ir-num ir-right">
+          <div class="ir-label">Covered</div>
           {{ p.covered }} covered
         </div>
-        <div style="width:90px;font-size:12px;flex-shrink:0;text-align:right;">
+        <div class="ir-left ir-num ir-right" style="font-size:12px;">
+          <div class="ir-label">Remaining</div>
           {% if p.uncovered > 0 %}
           <span style="color:#ef4444;font-weight:600;">{{ p.uncovered }} left</span>
           {% else %}
           <span style="color:#10b981;font-weight:600;">✓ Done</span>
           {% endif %}
         </div>
-        <div style="width:100px;flex-shrink:0;text-align:right;">
+        <div class="ir-status ir-right">
           {% if p.status == 'On Track' %}
-            <span style="background:#d1fae5;color:#065f46;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">On Track</span>
+            <span style="background:#d1fae5;color:#065f46;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">On Track</span>
           {% elif p.status == 'In Progress' %}
-            <span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">In Progress</span>
+            <span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">In Progress</span>
           {% elif p.status == 'Big Ticket' %}
-            <span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">⚠ Big Ticket</span>
+            <span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">⚠ Big Ticket</span>
           {% else %}
-            <span style="background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">Small Group</span>
+            <span style="background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">Small Group</span>
           {% endif %}
         </div>
       </div>
