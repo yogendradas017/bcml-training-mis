@@ -762,7 +762,6 @@ def _register(app):
                     'pt': r.get('prog_type') or '',
                     'm':  r.get('mode') or '',
                     'h':  r.get('planned_hours') or 0,
-                    'sg': r.get('prog_suggestions') or [],
                     'fx': r.get('fixes') or [],
                     'is': r.get('issues') or [],
                     'gc': r.get('prog_garbage_class') or '',
