@@ -15,6 +15,37 @@ from tms.helpers import _current_fy
 from tms.audit import log_action
 
 
+# Top-10k worst passwords subset — block obvious bad picks
+_WEAK_PASSWORDS = {
+    'password', 'password1', 'password123', 'qwerty', 'qwerty123', '12345678',
+    'abc123', 'iloveyou', 'admin', 'admin123', 'letmein', 'welcome',
+    'monkey', 'dragon', 'sunshine', 'football', 'baseball',
+    'bcml@1234', 'bcml1234', 'bcml@123', 'admin@bcml', 'changeme', 'password@1',
+}
+
+
+def _validate_password_strength(pw, username=''):
+    """Return error string if password is weak, else None.
+    Policy: 10+ chars, mixed case, digit, special, not a weak pick, not = username."""
+    if not pw or len(pw) < 10:
+        return 'Password must be at least 10 characters long.'
+    if len(pw) > 128:
+        return 'Password is too long (max 128 characters).'
+    if not any(c.isupper() for c in pw):
+        return 'Password must contain at least one uppercase letter (A–Z).'
+    if not any(c.islower() for c in pw):
+        return 'Password must contain at least one lowercase letter (a–z).'
+    if not any(c.isdigit() for c in pw):
+        return 'Password must contain at least one digit (0–9).'
+    if not any(not c.isalnum() for c in pw):
+        return 'Password must contain at least one special character (e.g. @ # $ ! % &).'
+    if pw.lower() in _WEAK_PASSWORDS:
+        return 'This password is too common. Pick something unique.'
+    if username and username.lower() in pw.lower():
+        return 'Password must not contain your username.'
+    return None
+
+
 def _register(app):
 
     @app.route('/')
@@ -62,10 +93,11 @@ def _register(app):
                     )
                     return redirect(url_for('login_2fa'))
                 session.clear()
-                session['user_id']  = user['id']
-                session['username'] = user['username']
-                session['role']     = user['role']
-                session['plant_id'] = user['plant_id']
+                session['user_id']      = user['id']
+                session['username']     = user['username']
+                session['role']         = user['role']
+                session['plant_id']     = user['plant_id']
+                session['totp_enabled'] = bool(user['totp_enabled'])
                 if user['plant_id']:
                     session['plant_name'] = PLANT_MAP[user['plant_id']]['name']
                     session['unit_code']  = PLANT_MAP[user['plant_id']]['unit_code']
@@ -113,10 +145,11 @@ def _register(app):
             if totp.verify(code, valid_window=1):
                 next_ep = session.pop('2fa_next', 'spoc_dashboard')
                 session.clear()
-                session['user_id']  = user['id']
-                session['username'] = user['username']
-                session['role']     = user['role']
-                session['plant_id'] = user['plant_id']
+                session['user_id']      = user['id']
+                session['username']     = user['username']
+                session['role']         = user['role']
+                session['plant_id']     = user['plant_id']
+                session['totp_enabled'] = True
                 if user['plant_id'] and user['plant_id'] in PLANT_MAP:
                     session['plant_name'] = PLANT_MAP[user['plant_id']]['name']
                     session['unit_code']  = PLANT_MAP[user['plant_id']]['unit_code']
@@ -176,6 +209,44 @@ def _register(app):
         ).fetchall()]
         return render_template('admin_audit_log.html', logs=logs, actions=actions,
                                q=q, sel_action=action)
+
+    @app.route('/2fa/setup', methods=['GET', 'POST'])
+    @login_required
+    def self_2fa_setup():
+        """Self-service 2FA enrollment for the logged-in user.
+        Mandatory for central/admin (enforced by decorators).
+        """
+        db = get_db()
+        uid = session['user_id']
+        user = db.execute('SELECT * FROM users WHERE id=?', (uid,)).fetchone()
+        if not user:
+            session.clear()
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            code = request.form.get('totp_code', '').strip().replace(' ', '')
+            if not user['totp_secret']:
+                flash('Setup error — reload page and try again.', 'danger')
+                return redirect(url_for('self_2fa_setup'))
+            if pyotp.TOTP(user['totp_secret']).verify(code, valid_window=1):
+                db.execute('UPDATE users SET totp_enabled=1 WHERE id=?', (uid,))
+                db.commit()
+                session['totp_enabled'] = True
+                log_action('RECORD_EDIT', '2fa_self_enabled')
+                flash('Two-factor authentication enabled successfully.', 'success')
+                role = session.get('role')
+                return redirect(url_for('central_dashboard') if role in ('central', 'admin') else url_for('spoc_dashboard'))
+            flash('Invalid code — scan QR again and retry.', 'danger')
+        secret = user['totp_secret'] or pyotp.random_base32()
+        if not user['totp_secret']:
+            db.execute('UPDATE users SET totp_secret=? WHERE id=?', (secret, uid))
+            db.commit()
+        uri = pyotp.TOTP(secret).provisioning_uri(name=user['username'], issuer_name='BCML TMS')
+        img = qrcode.make(uri)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+        return render_template('admin_2fa_setup.html', user=user, secret=secret, qr_b64=qr_b64,
+                               self_service=True)
 
     @app.route('/admin/2fa/setup/<int:user_id>')
     @admin_required
@@ -370,14 +441,16 @@ def _register(app):
             if not check_password_hash(user['password'], current):
                 flash('Current password is incorrect.', 'danger')
                 return redirect(url_for('change_password'))
-            if len(new_pw) < 8:
-                flash('New password must be at least 8 characters.', 'danger')
-                return redirect(url_for('change_password'))
-            if not any(c.isdigit() for c in new_pw):
-                flash('New password must contain at least one number.', 'danger')
+            policy_err = _validate_password_strength(new_pw, user['username'])
+            if policy_err:
+                flash(policy_err, 'danger')
                 return redirect(url_for('change_password'))
             if new_pw != confirm:
                 flash('Passwords do not match.', 'danger')
+                return redirect(url_for('change_password'))
+            # Block re-using current password
+            if check_password_hash(user['password'], new_pw):
+                flash('New password must be different from your current password.', 'danger')
                 return redirect(url_for('change_password'))
             db.execute('UPDATE users SET password=?, must_change_password=0 WHERE id=?',
                        (generate_password_hash(new_pw), session['user_id']))

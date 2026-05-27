@@ -375,6 +375,46 @@ def _migrate_audit_lockout(db):
         logging.warning(f'_migrate_audit_lockout failed: {e}')
 
 
+def _migrate_force_default_password_change(db):
+    """For any user whose stored hash still matches the default seed password,
+    set must_change_password=1 so they cannot use the app until they rotate.
+    Idempotent — runs every startup but is a no-op once the user has rotated."""
+    import logging
+    try:
+        from werkzeug.security import check_password_hash
+        rows = db.execute(
+            "SELECT id, username, password, role, must_change_password FROM users"
+        ).fetchall()
+        for r in rows:
+            if r['must_change_password']:
+                continue
+            try:
+                default = 'admin@bcml' if r['username'] == 'admin' else 'bcml@1234'
+                if check_password_hash(r['password'], default):
+                    db.execute('UPDATE users SET must_change_password=1 WHERE id=?', (r['id'],))
+            except Exception:
+                continue
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_force_default_password_change failed: {e}')
+
+
+def _migrate_audit_hash_chain(db):
+    """Tamper-evident audit log: add prev_hash + row_hash columns.
+    Hash chain ensures any backdated/deleted/altered row is detectable by
+    re-computing hashes from genesis row."""
+    import logging
+    try:
+        cols = {r[1] for r in db.execute("PRAGMA table_info(audit_log)")}
+        if 'prev_hash' not in cols:
+            db.execute("ALTER TABLE audit_log ADD COLUMN prev_hash TEXT")
+        if 'row_hash' not in cols:
+            db.execute("ALTER TABLE audit_log ADD COLUMN row_hash TEXT")
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_audit_hash_chain failed: {e}')
+
+
 def _migrate_totp(db):
     import logging
     try:
@@ -386,6 +426,65 @@ def _migrate_totp(db):
         db.commit()
     except Exception as e:
         logging.warning(f'_migrate_totp failed: {e}')
+
+
+def _migrate_anomaly_flags(db):
+    """Add anomaly_flags column to emp_training and programme_details."""
+    import logging
+    try:
+        et_cols = {r[1] for r in db.execute("PRAGMA table_info(emp_training)")}
+        if 'anomaly_flags' not in et_cols:
+            db.execute("ALTER TABLE emp_training ADD COLUMN anomaly_flags TEXT")
+        pd_cols = {r[1] for r in db.execute("PRAGMA table_info(programme_details)")}
+        if 'anomaly_flags' not in pd_cols:
+            db.execute("ALTER TABLE programme_details ADD COLUMN anomaly_flags TEXT")
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_anomaly_flags failed: {e}')
+
+
+def _migrate_calendar_verification(db):
+    """Add verification audit columns to calendar table."""
+    import logging
+    try:
+        cols = {r[1] for r in db.execute("PRAGMA table_info(calendar)")}
+        adds = [
+            ('conducted_at', 'TEXT'),
+            ('conducted_by', 'INTEGER'),
+            ('verified_at',  'TEXT'),
+            ('verified_by',  'INTEGER'),
+            ('actual_pax',   'INTEGER DEFAULT 0'),
+            ('actual_hrs',   'REAL DEFAULT 0'),
+        ]
+        for name, typ in adds:
+            if name not in cols:
+                db.execute(f"ALTER TABLE calendar ADD COLUMN {name} {typ}")
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_calendar_verification failed: {e}')
+
+
+def _migrate_verification_log(db):
+    """Create verification_log table for audit chain of session lifecycle."""
+    import logging
+    try:
+        db.executescript('''
+            CREATE TABLE IF NOT EXISTS verification_log (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_code TEXT    NOT NULL,
+                plant_id     INTEGER NOT NULL,
+                stage        TEXT    NOT NULL,
+                actor        TEXT,
+                actor_id     INTEGER,
+                ts           TEXT    DEFAULT (datetime('now','localtime')),
+                detail       TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_vlog_session ON verification_log(session_code, plant_id);
+            CREATE INDEX IF NOT EXISTS idx_vlog_stage   ON verification_log(stage);
+        ''')
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_verification_log failed: {e}')
 
 
 def _migrate_spoc_requests(db):
@@ -435,8 +534,13 @@ def init_db():
     _migrate_corp_members(db)
     _migrate_central_user_plant(db)
     _migrate_audit_lockout(db)
+    _migrate_audit_hash_chain(db)
     _migrate_totp(db)
+    _migrate_force_default_password_change(db)
     _migrate_spoc_requests(db)
+    _migrate_calendar_verification(db)
+    _migrate_verification_log(db)
+    _migrate_anomaly_flags(db)
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
                    (p['id'], p['name'], p['unit_code']))

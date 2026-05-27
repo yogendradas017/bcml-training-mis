@@ -17,7 +17,22 @@ logging.basicConfig(
 )
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'bcml-tms-2627-xK9pQ')
+
+# SECRET_KEY: required on production. Refuse to start without it on Render.
+_secret = os.environ.get('SECRET_KEY')
+_on_render = bool(os.environ.get('RENDER'))
+if not _secret:
+    if _on_render:
+        raise RuntimeError(
+            'SECRET_KEY environment variable is required in production. '
+            'Set a random 32+ character value in Render dashboard → Environment.'
+        )
+    # Local dev fallback — explicitly random per process, not a fixed string.
+    import secrets as _secrets
+    _secret = _secrets.token_urlsafe(48)
+    logging.warning('Using ephemeral SECRET_KEY for local dev. Set SECRET_KEY env var for stable sessions.')
+app.secret_key = _secret
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
 
@@ -26,12 +41,11 @@ limiter  = Limiter(get_remote_address, app=app, default_limits=[], storage_uri='
                    swallow_errors=True)
 Compress(app)
 
-# Session: stays alive 8 hours; survives browser close
+# Session: 2 hours of inactivity then re-login
 app.config['SESSION_PERMANENT']          = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
 
 # Security: only send session cookie over HTTPS in production
-_on_render = bool(os.environ.get('RENDER'))
 app.config['SESSION_COOKIE_SECURE']   = _on_render
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -44,13 +58,51 @@ except Exception:
 app.config['STATIC_VER'] = _sv
 
 
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+    "style-src  'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+    "img-src    'self' data: blob: https:; "
+    "font-src   'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+    "connect-src 'self'; "
+    "frame-ancestors 'self'; "
+    "base-uri 'self'; "
+    "form-action 'self'"
+)
+
+
 @app.after_request
 def add_security_headers(response):
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
-    response.headers.setdefault('X-XSS-Protection', '1; mode=block')
     response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault('Permissions-Policy', 'geolocation=(self), camera=(), microphone=(), payment=()')
+    response.headers.setdefault('Content-Security-Policy', _CSP)
+    if _on_render:
+        response.headers.setdefault('Strict-Transport-Security',
+                                    'max-age=31536000; includeSubDomains')
     return response
+
+
+def _safe_redirect(target, fallback_endpoint='index'):
+    """Block open-redirect: only follow same-host URLs from request.referrer/next.
+
+    Allows relative paths or URLs whose host matches request.host. Anything else
+    falls back to a known endpoint.
+    """
+    from urllib.parse import urlparse
+    if not target:
+        return redirect(url_for(fallback_endpoint))
+    try:
+        p = urlparse(target)
+        # Relative path → safe
+        if not p.netloc and not p.scheme:
+            return redirect(target)
+        if p.netloc == request.host:
+            return redirect(target)
+    except Exception:
+        pass
+    return redirect(url_for(fallback_endpoint))
 
 
 @app.teardown_appcontext
@@ -58,6 +110,36 @@ def close_db(e=None):
     db = g.pop('db', None)
     if db:
         db.close()
+
+
+@app.context_processor
+def inject_pending_verify_count():
+    """Make pending verification + anomaly counts visible to base.html sidebar."""
+    role = session.get('role')
+    if role not in ('central', 'admin', 'spoc'):
+        return {}
+    try:
+        db = get_db()
+        if role in ('central', 'admin'):
+            verify_cnt = db.execute(
+                "SELECT COUNT(*) FROM calendar WHERE status='Awaiting Verification'"
+            ).fetchone()[0]
+            anom_cnt = db.execute(
+                "SELECT (SELECT COUNT(*) FROM emp_training WHERE anomaly_flags IS NOT NULL AND anomaly_flags != '') + "
+                "       (SELECT COUNT(*) FROM programme_details WHERE anomaly_flags IS NOT NULL AND anomaly_flags != '')"
+            ).fetchone()[0]
+        else:
+            pid = session.get('plant_id')
+            verify_cnt = db.execute(
+                "SELECT COUNT(*) FROM calendar WHERE status='Awaiting Verification' AND plant_id=?",
+                (pid,)).fetchone()[0]
+            anom_cnt = db.execute(
+                "SELECT (SELECT COUNT(*) FROM emp_training WHERE plant_id=? AND anomaly_flags IS NOT NULL AND anomaly_flags != '') + "
+                "       (SELECT COUNT(*) FROM programme_details WHERE plant_id=? AND anomaly_flags IS NOT NULL AND anomaly_flags != '')",
+                (pid, pid)).fetchone()[0]
+        return {'pending_verify_count': verify_cnt, 'anomaly_count': anom_cnt}
+    except Exception:
+        return {'pending_verify_count': 0, 'anomaly_count': 0}
 
 
 @app.template_filter('fmt_date')
@@ -92,13 +174,13 @@ def fmt_dt(value):
 @app.errorhandler(CSRFError)
 def csrf_error(e):
     flash('Session expired or form was stale — please try again.', 'warning')
-    return redirect(request.referrer or url_for('login')), 400
+    return _safe_redirect(request.referrer, 'login'), 400
 
 
 @app.errorhandler(413)
 def upload_too_large(e):
     flash('File too large. Maximum upload size is 16 MB.', 'danger')
-    return redirect(request.referrer or url_for('index'))
+    return _safe_redirect(request.referrer, 'index')
 
 
 @app.route('/favicon.ico')
@@ -126,7 +208,7 @@ def server_error(e):
     referrer = request.referrer or ''
     # Avoid redirect loop: don't go back to the URL that just crashed
     if referrer and request.path and request.path not in referrer:
-        return redirect(referrer), 302
+        return _safe_redirect(referrer, 'index'), 302
     return redirect(url_for('index')), 302
 
 
@@ -137,13 +219,15 @@ def health():
         db = get_db()
         db.execute('SELECT 1')
         return {'status': 'ok'}, 200
-    except Exception as e:
-        return {'status': 'error', 'detail': str(e)}, 500
+    except Exception:
+        # Do not leak exception detail to public endpoint
+        return {'status': 'error'}, 500
 
 
 # Register all routes (deferred imports — app is defined above)
 from tms.routes import (auth, employees, tni, programme, calendar, training,
-                        summary, central, export, api, qr, central_training, reports, requests)
+                        summary, central, export, api, qr, central_training, reports, requests,
+                        verify, anomalies)
 
 auth.             _register(app)
 employees.        _register(app)
@@ -159,9 +243,18 @@ qr.               _register(app)
 central_training. _register(app)
 reports.          _register(app)
 requests.         _register(app)
+verify.           _register(app)
+anomalies.        _register(app)
 
-# Rate-limit login: 20 attempts/minute per IP
+# Rate-limit login: 20/min per IP AND 5/min per username (botnet bypass mitigation)
+def _login_user_key():
+    return (request.form.get('username') or '').strip().lower() or get_remote_address()
+
 limiter.limit('20 per minute')(app.view_functions['login'])
+limiter.limit('5 per minute', key_func=_login_user_key,
+              error_message='Too many login attempts for this account. Wait 1 minute.')(
+    app.view_functions['login'])
+limiter.limit('10 per minute')(app.view_functions['login_2fa'])
 
 # Rate-limit public QR endpoints: 10 POST/min per IP (prevents spam/flooding)
 for _vf in ('qr_attend', 'qr_feedback'):

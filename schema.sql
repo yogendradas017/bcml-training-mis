@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS emp_training (
     venue TEXT,
     month TEXT,
     host_plant_id INTEGER,
+    anomaly_flags TEXT,
     created_at TEXT DEFAULT (date('now'))
 );
 
@@ -119,6 +120,7 @@ CREATE TABLE IF NOT EXISTS programme_details (
     faculty_feedback REAL,
     trainer_fb_participants REAL,
     trainer_fb_facilities REAL,
+    anomaly_flags TEXT,
     created_at TEXT DEFAULT (date('now'))
 );
 
@@ -219,7 +221,9 @@ CREATE TABLE IF NOT EXISTS audit_log (
     plant_id    INTEGER,
     action      TEXT    NOT NULL,
     detail      TEXT,
-    ip_address  TEXT
+    ip_address  TEXT,
+    prev_hash   TEXT,
+    row_hash    TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_audit_ts   ON audit_log(ts);
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(username);
@@ -239,3 +243,16 @@ CREATE TABLE IF NOT EXISTS spoc_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_spoc_req_plant  ON spoc_requests(plant_id, status);
 CREATE INDEX IF NOT EXISTS idx_spoc_req_status ON spoc_requests(status);
+
+CREATE TABLE IF NOT EXISTS verification_log (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_code TEXT    NOT NULL,
+    plant_id     INTEGER NOT NULL,
+    stage        TEXT    NOT NULL,
+    actor        TEXT,
+    actor_id     INTEGER,
+    ts           TEXT    DEFAULT (datetime('now','localtime')),
+    detail       TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_vlog_session ON verification_log(session_code, plant_id);
+CREATE INDEX IF NOT EXISTS idx_vlog_stage   ON verification_log(stage);

@@ -7,7 +7,11 @@
     <h5 class="mb-0">Enable Two-Factor Authentication</h5>
     <small class="text-muted">User: <strong>{{ user.username }}</strong></small>
   </div>
+  {% if self_service %}
+  <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-right"></i> Log out</a>
+  {% else %}
   <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  {% endif %}
 </div>
 
 <div class="row g-3 justify-content-center">
@@ -28,7 +32,7 @@
       <div class="ch-dark"><i class="bi bi-123"></i> Step 2 — Verify Code</div>
       <div class="card-body">
         <p class="text-muted mb-3" style="font-size:13px;">After scanning, the user sees a 6-digit code in Authenticator. Enter it below to confirm setup works.</p>
-        <form method="POST" action="{{ url_for('admin_2fa_enable', user_id=user.id) }}">
+        <form method="POST" action="{{ url_for('self_2fa_setup') if self_service else url_for('admin_2fa_enable', user_id=user.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label class="form-label fw-semibold" style="font-size:13px;">6-Digit Code from Authenticator</label>
