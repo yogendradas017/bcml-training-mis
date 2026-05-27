@@ -1363,3 +1363,40 @@ th:has(.cb-all), td:has(.cb-row) { width: 36px; text-align: center; }
   background-size: 200% 100%; animation: csb-shimmer 1.5s infinite;
 }
 @keyframes csb-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ══════════════════════════════════════════════════════════════
+   GLOBAL RESPONSIVE GUARDS — applies to every page
+   Prevents the "row wraps to ragged column" bug seen on narrow viewports.
+══════════════════════════════════════════════════════════════ */
+
+/* Card headers using d-flex: wrap chips/badges instead of overflowing */
+.card-header.d-flex { flex-wrap: wrap; gap: .5rem; row-gap: .5rem; }
+.card-header .d-flex { flex-wrap: wrap; }
+
+/* Tables: as a last-resort, allow card-body itself to scroll horizontally
+   if a bare table inside it overflows. Wrapping the table in .table-responsive
+   remains the recommended pattern; this prevents off-canvas overflow on phones. */
+@media (max-width: 767.98px) {
+  .card-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+/* Status pills / badges should never break mid-word */
+.badge, .pill, .chip { white-space: nowrap; }
+
+/* Generic mobile improvements */
+@media (max-width: 575.98px) {
+  /* Page padding tighter on phones so tables/cards get more width */
+  .main-content { padding-left: 8px !important; padding-right: 8px !important; }
+  /* Stack toolbar rows that mix search + filter + buttons */
+  .toolbar-row, .ch-tools { flex-wrap: wrap !important; gap: .5rem !important; }
+  /* Card headers slightly tighter */
+  .card-header { padding: .65rem .75rem; }
+  /* KPI numbers don't overflow on phones */
+  .sc-val { font-size: 28px !important; }
+}
+
+/* Forms in cards: full-width inputs on phones */
+@media (max-width: 575.98px) {
+  .form-inline-mobile-stack { flex-direction: column !important; align-items: stretch !important; }
+  .form-inline-mobile-stack > * { width: 100% !important; max-width: 100% !important; }
+}

@@ -64,6 +64,7 @@
           total usage <strong>{{ cluster | sum(attribute='usage_count') }}</strong>
         </div>
 
+        <div class="table-responsive">
         <table class="table table-sm mb-2" style="font-size:12px;">
           <thead style="background:#1e3a5f;color:#fff;">
             <tr>
@@ -107,8 +108,9 @@
             {% endfor %}
           </tbody>
         </table>
+        </div>
 
-        <div class="d-flex gap-2 align-items-center" style="font-size:12px;">
+        <div class="d-flex gap-2 align-items-center flex-wrap" style="font-size:12px;">
           <label class="mb-0">Canonical name:</label>
           <input type="text" name="canonical_{{ cidx }}" value="{{ winner.name }}"
                  class="form-control form-control-sm canonical-input"
