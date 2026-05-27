@@ -57,6 +57,38 @@
       <button class="btn btn-sm btn-outline-secondary" style="font-size:12px;" type="button" data-bs-toggle="collapse" data-bs-target="#bulkUploadSection">
         <i class="bi bi-upload"></i> Bulk Upload
       </button>
+      <button class="btn btn-sm btn-outline-primary" style="font-size:12px;" type="button" data-bs-toggle="collapse" data-bs-target="#bulkUpdateSection">
+        <i class="bi bi-pencil-square"></i> Bulk Update
+      </button>
+    </div>
+  </div>
+
+  <!-- Bulk Update Panel (partial column updates by Emp Code) -->
+  <div class="collapse" id="bulkUpdateSection">
+    <div class="card-body border-bottom" style="background:#eff6ff;">
+      <form method="POST" action="{{ url_for('emp_bulk_update') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="d-flex align-items-end gap-3 flex-wrap">
+          <a href="{{ url_for('emp_bulk_update_template') }}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-file-earmark-arrow-down"></i> Download Update Template
+          </a>
+          <div>
+            <label class="form-label fw-semibold mb-1" style="font-size:13px;">
+              <i class="bi bi-file-earmark-excel text-primary"></i> Upload Excel (.xlsx)
+            </label>
+            <input type="file" name="bulk_update_file" class="form-control form-control-sm" accept=".xlsx" required style="width:280px;">
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm px-4">
+            <i class="bi bi-cloud-upload"></i> Apply Updates
+          </button>
+        </div>
+        <div style="font-size:12px;color:#475569;margin-top:8px;line-height:1.6;">
+          <i class="bi bi-info-circle text-primary"></i>
+          <strong>Partial update:</strong> Emp Code is the matching key. For every other column, fill the new value to update it &mdash; or leave blank to keep the existing value.
+          Example: to update designation for 10 promoted employees, fill their Emp Code + new Designation only; leave all other cells blank.
+          You can also delete columns you don't need from the template before uploading.
+        </div>
+      </form>
     </div>
   </div>
 

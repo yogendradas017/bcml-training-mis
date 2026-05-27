@@ -372,3 +372,257 @@ def _register(app):
             flash('No data rows found in the file.', 'warning')
 
         return redirect(url_for('employees'))
+
+    # ---- Partial Bulk Update (any subset of columns) ----------------------
+    # User downloads template with Emp Code + all updatable columns. They fill
+    # only the columns they want to change (e.g. just Designation for promotions)
+    # and leave the rest blank. Blank cell = keep existing value.
+
+    UPDATABLE_COLS = {
+        # excel header (lower) -> (db_col, validator_key or None)
+        'emp code':                ('emp_code', None),       # key column (required)
+        'full name':               ('name', None),
+        'designation':             ('designation', None),
+        'grade':                   ('grade', 'grade'),
+        'collar':                  ('collar', 'collar'),
+        'department':              ('department', None),
+        'section':                 ('section', None),
+        'category':                ('category', 'category'),
+        'gender':                  ('gender', 'gender'),
+        'physically handicapped':  ('physically_handicapped', 'ph'),
+        'remarks':                 ('remarks', None),
+    }
+
+    @app.route('/employees/bulk-update-template')
+    @spoc_required
+    def emp_bulk_update_template():
+        if not _XLSX:
+            flash('openpyxl not installed.', 'danger')
+            return redirect(url_for('employees'))
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Updates'
+
+        headers = ['Emp Code *', 'Full Name', 'Designation', 'Grade', 'Collar',
+                   'Department', 'Section', 'Category', 'Gender',
+                   'Physically Handicapped', 'Remarks']
+        hdr_fill = PatternFill('solid', fgColor='1A3A5C')
+        hdr_font = Font(color='FFFFFF', bold=True)
+        for ci, h in enumerate(headers, 1):
+            c = ws.cell(row=1, column=ci, value=h)
+            c.fill = hdr_fill
+            c.font = hdr_font
+            c.alignment = Alignment(horizontal='center')
+
+        ref = wb.create_sheet('Reference')
+        ref_data = {
+            'Grade': GRADES,
+            'Collar': COLLARS,
+            'Gender': GENDERS,
+            'Physically Handicapped': PH_OPTIONS,
+            'Category': CATEGORIES,
+        }
+        ref_col_letter = {}
+        col = 1
+        for header, vals in ref_data.items():
+            letter = get_column_letter(col)
+            ref_col_letter[header] = letter
+            ref.cell(row=1, column=col, value=header).font = Font(bold=True)
+            for ri, v in enumerate(vals, 2):
+                ref.cell(row=ri, column=col, value=v)
+            col += 1
+
+        dv_specs = [
+            ('Grade', 4, len(GRADES)),
+            ('Collar', 5, len(COLLARS)),
+            ('Category', 8, len(CATEGORIES)),
+            ('Gender', 9, len(GENDERS)),
+            ('Physically Handicapped', 10, len(PH_OPTIONS)),
+        ]
+        for label, col_idx, n_items in dv_specs:
+            letter = ref_col_letter[label]
+            formula = f"=Reference!${letter}$2:${letter}${n_items + 1}"
+            # allow_blank=True — blank cell means "don't update this column"
+            dv = DataValidation(type='list', formula1=formula, allow_blank=True,
+                                showErrorMessage=True,
+                                errorTitle='Invalid value',
+                                error=f'Pick a value from the {label} dropdown, or leave blank to keep existing.')
+            target_letter = get_column_letter(col_idx)
+            dv.add(f'{target_letter}2:{target_letter}5001')
+            ws.add_data_validation(dv)
+
+        for col_idx, width in zip(range(1, len(headers) + 1),
+                                  [14, 30, 22, 26, 18, 22, 22, 26, 12, 26, 24]):
+            ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+        ws.freeze_panes = 'A2'
+        ws.auto_filter.ref = f'A1:{get_column_letter(len(headers))}1'
+
+        instr = ('Emp Code is REQUIRED. For every other column: fill the new value '
+                 'to update it, or leave BLANK to keep the existing value. '
+                 'Example — to update designation for 10 promoted employees, '
+                 'fill their Emp Code + new Designation only; leave all other cells blank.')
+        c = ws.cell(row=5003, column=1, value=instr)
+        c.font = Font(italic=True, color='6B7280', size=10)
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return send_file(buf, as_attachment=True,
+                         download_name='employee_bulk_update_template.xlsx',
+                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    @app.route('/employees/bulk-update', methods=['POST'])
+    @spoc_required
+    def emp_bulk_update():
+        if not _XLSX:
+            flash('openpyxl not installed.', 'danger')
+            return redirect(url_for('employees'))
+
+        plant_id = session['plant_id']
+        f = request.files.get('bulk_update_file')
+        if not f or not f.filename.endswith('.xlsx'):
+            flash('Please upload a valid .xlsx file.', 'danger')
+            return redirect(url_for('employees'))
+
+        db = get_db()
+        grades_upper = [g.upper() for g in GRADES]
+        cats_upper = [c.upper() for c in CATEGORIES]
+
+        try:
+            wb = openpyxl.load_workbook(f, read_only=True, data_only=True)
+            ws = wb.active
+        except Exception as e:
+            flash(f'Could not read file: {e}', 'danger')
+            return redirect(url_for('employees'))
+
+        # Read header row -> map to (db_col, validator_key)
+        header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), None)
+        if not header_row:
+            flash('File is empty.', 'danger')
+            return redirect(url_for('employees'))
+
+        col_idx_map = {}  # excel col idx (0-based) -> (db_col, validator)
+        emp_code_idx = None
+        unknown_headers = []
+        for idx, h in enumerate(header_row):
+            if h is None:
+                continue
+            key = str(h).strip().lower().rstrip('*').strip()
+            if key in UPDATABLE_COLS:
+                db_col, vk = UPDATABLE_COLS[key]
+                col_idx_map[idx] = (db_col, vk)
+                if db_col == 'emp_code':
+                    emp_code_idx = idx
+            else:
+                unknown_headers.append(str(h))
+
+        if emp_code_idx is None:
+            flash('Header "Emp Code" not found — required to match rows.', 'danger')
+            return redirect(url_for('employees'))
+
+        if unknown_headers:
+            flash(f'Ignored unknown column(s): {", ".join(unknown_headers)}', 'warning')
+
+        # Pre-load emp_code -> id for this plant
+        emp_lookup = {
+            r['emp_code']: r['id']
+            for r in db.execute(
+                'SELECT id, emp_code FROM employees WHERE plant_id=?', (plant_id,)).fetchall()
+        }
+
+        updated = 0
+        skipped = 0
+        errors = []
+        seen_codes = set()
+
+        for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if not any(row):
+                continue
+            emp_code = str(row[emp_code_idx]).strip() if row[emp_code_idx] else ''
+            if not emp_code:
+                errors.append(f'Row {i}: Emp Code blank — skipped')
+                continue
+            if emp_code in seen_codes:
+                errors.append(f'Row {i}: Emp Code {emp_code} duplicated in file — skipped')
+                continue
+            seen_codes.add(emp_code)
+
+            if emp_code not in emp_lookup:
+                skipped += 1
+                errors.append(f'Row {i}: Emp Code {emp_code} not found in this plant — skipped')
+                continue
+
+            updates = {}  # db_col -> value
+            row_errors = []
+
+            for idx, (db_col, vk) in col_idx_map.items():
+                if db_col == 'emp_code':
+                    continue
+                raw = row[idx] if idx < len(row) else None
+                if raw is None or str(raw).strip() == '':
+                    continue  # blank = skip
+                val = str(raw).strip()
+
+                if vk == 'grade':
+                    v = val.upper()
+                    if v not in grades_upper:
+                        row_errors.append(f"invalid grade '{val}'")
+                        continue
+                    updates[db_col] = v
+                elif vk == 'collar':
+                    v = normalise_collar(val)
+                    if v not in COLLARS:
+                        row_errors.append(f"invalid collar '{val}'")
+                        continue
+                    updates[db_col] = v
+                elif vk == 'category':
+                    v = val.upper()
+                    if v not in cats_upper:
+                        row_errors.append(f"invalid category '{val}'")
+                        continue
+                    updates[db_col] = v
+                elif vk == 'gender':
+                    if val not in GENDERS:
+                        row_errors.append(f"invalid gender '{val}'")
+                        continue
+                    updates[db_col] = val
+                elif vk == 'ph':
+                    if val not in PH_OPTIONS:
+                        row_errors.append(f"invalid PH '{val}'")
+                        continue
+                    updates[db_col] = val
+                else:
+                    # Free-text — uppercase dept/section to match existing convention
+                    if db_col in ('department', 'section'):
+                        updates[db_col] = val.upper()
+                    else:
+                        updates[db_col] = val
+
+            if row_errors:
+                errors.append(f'Row {i} ({emp_code}): {"; ".join(row_errors)}')
+                continue
+
+            if not updates:
+                skipped += 1
+                continue  # nothing to change
+
+            set_clause = ', '.join(f'{c}=?' for c in updates.keys())
+            params = list(updates.values()) + [emp_lookup[emp_code], plant_id]
+            db.execute(f'UPDATE employees SET {set_clause} WHERE id=? AND plant_id=?', params)
+            updated += 1
+            log_action('RECORD_EDIT', f"emp_bulk_update:{emp_code}:{','.join(updates.keys())}")
+
+        db.commit()
+
+        if updated:
+            flash(f'{updated} employee(s) updated successfully.', 'success')
+        if skipped:
+            flash(f'{skipped} row(s) skipped (no changes or emp not found).', 'warning')
+        if errors:
+            for e in errors:
+                flash(e, 'upload_error')
+        if not updated and not errors and not skipped:
+            flash('No data rows found in the file.', 'warning')
+
+        return redirect(url_for('employees'))
