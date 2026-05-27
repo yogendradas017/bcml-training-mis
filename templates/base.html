@@ -98,6 +98,21 @@
     <li><a href="{{ url_for('central_attendance') }}" class="{% if request.endpoint=='central_attendance' %}active{% endif %}">
       <i class="bi bi-person-check-fill"></i> Central Attendance
     </a></li>
+    <li><a href="{{ url_for('verify_sessions') }}" class="{% if request.endpoint in ('verify_sessions','verify_trail') %}active{% endif %}" style="color:#fbbf24;">
+      <i class="bi bi-patch-check-fill"></i> Verify Sessions
+      {% if pending_verify_count and pending_verify_count > 0 %}
+      <span style="background:#dc2626;color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ pending_verify_count }}</span>
+      {% endif %}
+    </a></li>
+    <li><a href="{{ url_for('anomalies_review') }}" class="{% if request.endpoint=='anomalies_review' %}active{% endif %}" style="color:#fbbf24;">
+      <i class="bi bi-exclamation-triangle-fill"></i> Anomalies Review
+      {% if anomaly_count and anomaly_count > 0 %}
+      <span style="background:#d97706;color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ anomaly_count }}</span>
+      {% endif %}
+    </a></li>
+    <li><a href="{{ url_for('central_tni_errors') }}" class="{% if request.endpoint=='central_tni_errors' %}active{% endif %}">
+      <i class="bi bi-clipboard-data"></i> SPOC Upload Errors
+    </a></li>
     <li><a href="{{ url_for('feedback_reports_index') }}" class="{% if request.endpoint=='feedback_reports_index' %}active{% endif %}">
       <i class="bi bi-chat-square-text-fill"></i> Feedback Reports
     </a></li>

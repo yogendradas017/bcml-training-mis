@@ -78,6 +78,8 @@ def _register(app):
                 'bc_pct': bc_pct, 'wc_pct': wc_pct,
             })
 
+        plant_summaries.sort(key=lambda p: (p['bc_pct'] + p['wc_pct']) / 2, reverse=True)
+
         grand_central = db.execute(
             "SELECT COUNT(DISTINCT session_code) FROM emp_training "
             "WHERE host_plant_id=99 AND session_code IS NOT NULL AND session_code!='' "
@@ -167,6 +169,12 @@ def _register(app):
         db = get_db()
 
         if request.method == 'POST':
+            # Form fields:
+            #   cluster_idx: 0,1,2,...
+            #   winner_<idx>: master id of canonical row
+            #   canonical_<idx>: free-text canonical name (defaults to winner's name)
+            #   losers_<idx>: comma-separated master ids to merge in
+            #   plant_<idx>: plant_id for this cluster
             plant_id = int(request.form.get('plant_id') or 0)
             merged_clusters = 0
             total_counts = {'tni': 0, 'calendar': 0, 'programme_details': 0, 'emp_training': 0,
@@ -201,6 +209,7 @@ def _register(app):
                 flash('No merges selected.', 'warning')
             return redirect(url_for('central_duplicates'))
 
+        # GET — scan
         plant_filter = request.args.get('plant_id', '').strip()
         try:
             plant_filter_id = int(plant_filter) if plant_filter else None
@@ -231,6 +240,97 @@ def _register(app):
                                threshold=threshold,
                                plants=[p for p in PLANTS if p['id'] != 99],
                                plant_filter=plant_filter_id)
+
+    @app.route('/central/tni-errors')
+    @central_required
+    def central_tni_errors():
+        db = get_db()
+        # Filters
+        plant_filter = request.args.get('plant', '').strip()
+        date_from    = request.args.get('from', '').strip()
+        date_to      = request.args.get('to', '').strip()
+        status_f     = request.args.get('status', '').strip()
+        try:
+            limit = min(int(request.args.get('limit', '500') or 500), 5000)
+        except ValueError:
+            limit = 500
+
+        where = ['1=1']
+        params = []
+        if plant_filter and plant_filter.isdigit():
+            where.append('plant_id=?')
+            params.append(int(plant_filter))
+        if date_from:
+            where.append('ts >= ?')
+            params.append(date_from + ' 00:00:00')
+        if date_to:
+            where.append('ts <= ?')
+            params.append(date_to + ' 23:59:59')
+        if status_f in ('error', 'duplicate'):
+            where.append('row_status=?')
+            params.append(status_f)
+
+        wsql = ' AND '.join(where)
+
+        # KPIs
+        total_errors = db.execute(
+            f'SELECT COUNT(*) FROM tni_upload_errors WHERE {wsql}', params).fetchone()[0]
+        plants_involved = db.execute(
+            f'SELECT COUNT(DISTINCT plant_id) FROM tni_upload_errors WHERE {wsql}', params).fetchone()[0]
+        users_involved = db.execute(
+            f'SELECT COUNT(DISTINCT username) FROM tni_upload_errors WHERE {wsql}', params).fetchone()[0]
+
+        # Per-plant breakdown
+        per_plant = db.execute(
+            f'''SELECT plant_id, COUNT(*) AS cnt,
+                       SUM(CASE WHEN row_status='error' THEN 1 ELSE 0 END) AS err_cnt,
+                       SUM(CASE WHEN row_status='duplicate' THEN 1 ELSE 0 END) AS dup_cnt
+                FROM tni_upload_errors WHERE {wsql}
+                GROUP BY plant_id ORDER BY cnt DESC''', params).fetchall()
+        per_plant = [{
+            'plant_id': r['plant_id'],
+            'plant_name': PLANT_MAP.get(r['plant_id'], {}).get('name', f'Plant {r["plant_id"]}'),
+            'cnt': r['cnt'], 'err_cnt': r['err_cnt'] or 0, 'dup_cnt': r['dup_cnt'] or 0,
+        } for r in per_plant]
+
+        # Top error patterns (group by first 80 chars of issues)
+        top_issues = db.execute(
+            f'''SELECT SUBSTR(issues,1,80) AS issue_key, COUNT(*) AS cnt
+                FROM tni_upload_errors WHERE {wsql} AND issues IS NOT NULL AND issues!=''
+                GROUP BY issue_key ORDER BY cnt DESC LIMIT 15''', params).fetchall()
+
+        # Top users by error count
+        per_user = db.execute(
+            f'''SELECT username, plant_id, COUNT(*) AS cnt
+                FROM tni_upload_errors WHERE {wsql}
+                GROUP BY username, plant_id ORDER BY cnt DESC LIMIT 20''', params).fetchall()
+        per_user = [{
+            'username': r['username'],
+            'plant_id': r['plant_id'],
+            'plant_name': PLANT_MAP.get(r['plant_id'], {}).get('name', '—'),
+            'cnt': r['cnt'],
+        } for r in per_user]
+
+        # Recent rows
+        rows = db.execute(
+            f'''SELECT * FROM tni_upload_errors WHERE {wsql}
+                ORDER BY ts DESC LIMIT ?''', params + [limit]).fetchall()
+        rows = [{
+            **dict(r),
+            'plant_name': PLANT_MAP.get(r['plant_id'], {}).get('name', '—'),
+        } for r in rows]
+
+        return render_template('central_tni_errors.html',
+                               total_errors=total_errors,
+                               plants_involved=plants_involved,
+                               users_involved=users_involved,
+                               per_plant=per_plant,
+                               top_issues=top_issues,
+                               per_user=per_user,
+                               rows=rows,
+                               plants=[p for p in PLANTS if p['id'] != 99],
+                               filters={'plant': plant_filter, 'from': date_from,
+                                        'to': date_to, 'status': status_f, 'limit': limit})
 
     @app.route('/central/plant/<int:plant_id>')
     @central_required

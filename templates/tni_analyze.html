@@ -171,8 +171,21 @@
       <strong>All rows are clean — nothing to review.</strong>
     </div>
     {% else %}
+    <!-- Filter + page controls -->
+    <div class="d-flex align-items-center gap-2 flex-wrap" style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e5e9f2;">
+      <div class="input-group input-group-sm" style="max-width:340px;">
+        <span class="input-group-text" style="background:#fff;font-size:12px;"><i class="bi bi-search"></i></span>
+        <input type="text" id="an-filter" class="form-control" placeholder="Filter by emp code / name / programme / issue..." style="font-size:12px;">
+      </div>
+      <div class="btn-group btn-group-sm" role="group" aria-label="status filter">
+        <button type="button" class="btn btn-outline-secondary active" data-status-filter="all" style="font-size:11px;">All</button>
+        <button type="button" class="btn btn-outline-warning" data-status-filter="fixed" style="font-size:11px;">Fixed</button>
+        <button type="button" class="btn btn-outline-danger" data-status-filter="error" style="font-size:11px;">Errors</button>
+      </div>
+      <span id="an-count" style="font-size:11px;color:#6b7280;margin-left:auto;"></span>
+    </div>
     <div class="table-responsive" style="max-height:62vh;overflow-y:auto;">
-      <table class="table table-sm mb-0" style="font-size:12px;">
+      <table class="table table-sm mb-0" style="font-size:12px;" id="an-table">
         <thead style="position:sticky;top:0;z-index:10;background:#1e3a5f;color:#fff;">
           <tr>
             <th>#</th><th>Status</th><th>Emp Code</th><th>Name</th>
@@ -266,6 +279,16 @@
         </tbody>
       </table>
     </div>
+    <!-- Pager -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2"
+         style="padding:10px 14px;background:#f8fafc;border-top:1px solid #e5e9f2;font-size:12px;">
+      <span id="an-page-info" style="color:#6b7280;"></span>
+      <div class="btn-group btn-group-sm" role="group">
+        <button type="button" class="btn btn-outline-secondary" id="an-prev">&laquo; Prev</button>
+        <button type="button" class="btn btn-outline-secondary disabled" id="an-page-label" style="font-weight:600;min-width:120px;">Page 1</button>
+        <button type="button" class="btn btn-outline-secondary" id="an-next">Next &raquo;</button>
+      </div>
+    </div>
     {% endif %}
   </div>
 </div>
@@ -331,4 +354,79 @@
 {% endif %}
 {% endblock %}
 
-{% block scripts %}{% endblock %}
+{% block scripts %}
+{% if step == 'review' %}
+<script>
+(function(){
+  const table = document.getElementById('an-table');
+  if (!table) return;
+  const rows = Array.from(table.tBodies[0].rows);
+  const PAGE_SIZE = 100;
+  let page = 1;
+  let statusFilter = 'all';
+  let textFilter = '';
+
+  // Cache lowercase text per row once for fast filtering
+  rows.forEach(r => {
+    r.__text = (r.textContent || '').toLowerCase();
+    r.__status = r.classList.contains('an-error') ? 'error'
+               : r.classList.contains('an-fixed') ? 'fixed'
+               : 'ok';
+  });
+
+  function filtered() {
+    return rows.filter(r => {
+      if (statusFilter !== 'all' && r.__status !== statusFilter) return false;
+      if (textFilter && r.__text.indexOf(textFilter) === -1) return false;
+      return true;
+    });
+  }
+
+  function render() {
+    const list = filtered();
+    const total = list.length;
+    const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (page > pages) page = pages;
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const visibleSet = new Set(list.slice(start, end));
+    rows.forEach(r => {
+      r.style.display = visibleSet.has(r) ? '' : 'none';
+    });
+    document.getElementById('an-count').textContent =
+      total === rows.length ? `${total} rows` : `${total} of ${rows.length} rows`;
+    document.getElementById('an-page-label').textContent = `Page ${page} of ${pages}`;
+    document.getElementById('an-page-info').textContent =
+      total === 0 ? 'No matches' : `Showing ${start + 1}–${Math.min(end, total)} of ${total}`;
+    document.getElementById('an-prev').disabled = (page <= 1);
+    document.getElementById('an-next').disabled = (page >= pages);
+  }
+
+  let filterTimer;
+  document.getElementById('an-filter').addEventListener('input', e => {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(() => {
+      textFilter = e.target.value.trim().toLowerCase();
+      page = 1;
+      render();
+    }, 200);
+  });
+
+  document.querySelectorAll('[data-status-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-status-filter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      statusFilter = btn.dataset.statusFilter;
+      page = 1;
+      render();
+    });
+  });
+
+  document.getElementById('an-prev').addEventListener('click', () => { if (page > 1) { page--; render(); } });
+  document.getElementById('an-next').addEventListener('click', () => { page++; render(); });
+
+  render();
+})();
+</script>
+{% endif %}
+{% endblock %}

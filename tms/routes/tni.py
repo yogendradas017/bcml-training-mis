@@ -215,6 +215,7 @@ def _register(app):
         db.execute('INSERT OR IGNORE INTO programme_master(plant_id,name) VALUES(?,?)',
                    (plant_id, row['programme_name']))
         db.commit()
+        log_action('RECORD_EDIT', f"tni_source:{tni_id}:{source}")
         return jsonify({'ok': True})
 
     @app.route('/tni/<int:tni_id>/delete', methods=['POST'])
@@ -289,6 +290,7 @@ def _register(app):
         if request.args.get('quick') == '1':
             result = _cleanse_programme_names(db, plant_id=plant_id)
             r = result.get(plant_id, {'fixed': 0, 'merged': 0})
+            log_action('BULK_UPDATE', f"tni_cleanse:fixed={r['fixed']}_merged={r['merged']}")
             flash(f'Data cleanse complete: {r["fixed"]} programme name(s) corrected, '
                   f'{r["merged"]} duplicate(s) merged.', 'success')
             return redirect(url_for('tni'))
@@ -296,6 +298,7 @@ def _register(app):
         if request.method == 'POST':
             result = _cleanse_programme_names(db, plant_id=plant_id)
             r = result.get(plant_id, {'fixed': 0, 'merged': 0})
+            log_action('BULK_UPDATE', f"tni_cleanse:fixed={r['fixed']}_merged={r['merged']}")
             flash(f'Data cleanse complete: {r["fixed"]} programme name(s) corrected, '
                   f'{r["merged"]} duplicate(s) merged.', 'success')
             return redirect(url_for('tni'))
@@ -372,6 +375,7 @@ def _register(app):
             db.execute(f'DELETE FROM tni WHERE id IN ({ph}) AND plant_id=?', remove + [plant_id])
             deleted += len(remove)
         db.commit()
+        log_action('BULK_DELETE', f"tni_dups:{deleted}")
         flash(f'{deleted} duplicate TNI entries removed.', 'success')
         return redirect(url_for('tni'))
 
@@ -673,6 +677,7 @@ def _register(app):
             return redirect(url_for('tni_msforms'))
         if errors:
             return _error_excel_response(errors, inserted, 'MSForms_Import_Errors.xlsx')
+        log_action('BULK_UPLOAD', f"tni_msforms:{inserted}")
         flash(f'Microsoft Forms import complete: {inserted} TNI entries added.', 'success')
         return redirect(url_for('tni'))
 
@@ -832,6 +837,40 @@ def _register(app):
             _cleanup_stale_analyze_files()
         except Exception:
             pass
+
+        log_action('BULK_UPLOAD', f"tni_analyze:new={inserted}_updated={updated}")
+
+        # Persist error + duplicate rows for Central R&D / training analysis
+        try:
+            uname = session.get('username', 'unknown')
+            for er in err_rows:
+                db.execute('''INSERT INTO tni_upload_errors(
+                    plant_id, username, aid, row_status, row_num,
+                    emp_code, emp_name, programme_name, prog_type, mode,
+                    planned_hours, issues, garbage_class)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    (plant_id, uname, aid, 'error', er.get('row_num'),
+                     er.get('emp_code') or '', er.get('emp_name') or '',
+                     er.get('programme_name') or '', er.get('prog_type') or '',
+                     er.get('mode') or '', er.get('planned_hours') or 0,
+                     ' | '.join(er.get('issues') or []),
+                     er.get('prog_garbage_class') or ''))
+            for dr in dup_rows:
+                db.execute('''INSERT INTO tni_upload_errors(
+                    plant_id, username, aid, row_status, row_num,
+                    emp_code, emp_name, programme_name, prog_type, mode,
+                    planned_hours, issues, garbage_class)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    (plant_id, uname, aid, 'duplicate', dr.get('row_num'),
+                     dr.get('emp_code') or '', dr.get('emp_name') or '',
+                     dr.get('programme_name') or '', dr.get('prog_type') or '',
+                     dr.get('mode') or '', dr.get('planned_hours') or 0,
+                     dr.get('dup_type') or 'duplicate',
+                     dr.get('prog_garbage_class') or ''))
+            db.commit()
+        except Exception as _e:
+            import logging as _l
+            _l.warning(f'tni_upload_errors persist failed: {_e}')
 
         if err_rows or dup_rows:
             buf = _error_excel_for_tni(err_rows, dup_rows=dup_rows, plant_id=plant_id, db=db)

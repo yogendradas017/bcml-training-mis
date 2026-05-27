@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block page_title %}SPOC Upload Errors — R&D{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0"><i class="bi bi-clipboard-data text-primary"></i> SPOC TNI Upload Errors</h5>
+    <small class="text-muted">Errors + duplicates captured at the analyze step — for training & process R&D.</small>
+  </div>
+  <a href="{{ url_for('central_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Back to Central
+  </a>
+</div>
+
+<!-- KPIs -->
+<div class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #dc2626;">
+      <div class="card-body py-3">
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Total Errors</div>
+        <div style="font-size:28px;font-weight:800;color:#dc2626;">{{ total_errors }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #2563eb;">
+      <div class="card-body py-3">
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Plants Involved</div>
+        <div style="font-size:28px;font-weight:800;color:#2563eb;">{{ plants_involved }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #d97706;">
+      <div class="card-body py-3">
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">SPOCs Involved</div>
+        <div style="font-size:28px;font-weight:800;color:#d97706;">{{ users_involved }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #059669;">
+      <div class="card-body py-3">
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Rows Shown</div>
+        <div style="font-size:28px;font-weight:800;color:#059669;">{{ rows|length }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <form method="GET" action="{{ url_for('central_tni_errors') }}" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Plant</label>
+        <select name="plant" class="form-select form-select-sm">
+          <option value="">All plants</option>
+          {% for p in plants %}
+          <option value="{{ p.id }}" {% if filters.plant == p.id|string %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">From</label>
+        <input type="date" name="from" value="{{ filters.from }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">To</label>
+        <input type="date" name="to" value="{{ filters.to }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Both</option>
+          <option value="error" {% if filters.status=='error' %}selected{% endif %}>Errors only</option>
+          <option value="duplicate" {% if filters.status=='duplicate' %}selected{% endif %}>Duplicates only</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Limit rows</label>
+        <select name="limit" class="form-select form-select-sm">
+          {% for n in [100, 500, 1000, 5000] %}
+          <option value="{{ n }}" {% if filters.limit == n %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-1">
+        <button type="submit" class="btn btn-primary btn-sm w-100">
+          <i class="bi bi-funnel"></i> Apply
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Per-plant -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="ch-dark"><i class="bi bi-building"></i> Errors by Plant</div>
+      <div class="card-body p-0">
+        {% if not per_plant %}
+        <div class="text-center text-muted py-4" style="font-size:13px;">No data</div>
+        {% else %}
+        <table class="table table-sm mb-0" style="font-size:12.5px;">
+          <thead style="background:#f8fafc;">
+            <tr><th>Plant</th><th class="text-end">Errors</th><th class="text-end">Dupes</th><th class="text-end">Total</th></tr>
+          </thead>
+          <tbody>
+          {% for p in per_plant %}
+          <tr>
+            <td>{{ p.plant_name }}</td>
+            <td class="text-end"><span class="badge bg-danger">{{ p.err_cnt }}</span></td>
+            <td class="text-end"><span class="badge bg-warning text-dark">{{ p.dup_cnt }}</span></td>
+            <td class="text-end fw-bold">{{ p.cnt }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Top issues -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="ch-dark"><i class="bi bi-bug"></i> Most Frequent Issues</div>
+      <div class="card-body p-0">
+        {% if not top_issues %}
+        <div class="text-center text-muted py-4" style="font-size:13px;">No data</div>
+        {% else %}
+        <table class="table table-sm mb-0" style="font-size:12px;">
+          <thead style="background:#f8fafc;">
+            <tr><th>Issue pattern</th><th class="text-end" style="width:60px;">Count</th></tr>
+          </thead>
+          <tbody>
+          {% for i in top_issues %}
+          <tr><td style="color:#dc2626;">{{ i.issue_key }}</td><td class="text-end fw-bold">{{ i.cnt }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+      <div class="card-footer text-muted" style="font-size:11px;">
+        Use these patterns to design SPOC training content.
+      </div>
+    </div>
+  </div>
+
+  <!-- Top users -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="ch-dark"><i class="bi bi-person-exclamation"></i> SPOCs by Error Count</div>
+      <div class="card-body p-0">
+        {% if not per_user %}
+        <div class="text-center text-muted py-4" style="font-size:13px;">No data</div>
+        {% else %}
+        <table class="table table-sm mb-0" style="font-size:12.5px;">
+          <thead style="background:#f8fafc;">
+            <tr><th>User</th><th>Plant</th><th class="text-end">Count</th></tr>
+          </thead>
+          <tbody>
+          {% for u in per_user %}
+          <tr>
+            <td>{{ u.username }}</td>
+            <td style="color:#6b7280;font-size:11px;">{{ u.plant_name }}</td>
+            <td class="text-end fw-bold">{{ u.cnt }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+      <div class="card-footer text-muted" style="font-size:11px;">
+        Identify SPOCs needing focused refresher training.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail rows -->
+<div class="card mt-3">
+  <div class="ch-dark"><i class="bi bi-list-ul"></i> Recent Error Rows (latest {{ filters.limit }})</div>
+  <div class="card-body p-0">
+    {% if not rows %}
+    <div class="text-center text-muted py-4" style="font-size:13px;">No rows match the filter.</div>
+    {% else %}
+    <div class="table-responsive" style="max-height:60vh;overflow-y:auto;">
+      <table class="table table-sm mb-0" style="font-size:12px;">
+        <thead style="position:sticky;top:0;z-index:5;background:#1e3a5f;color:#fff;">
+          <tr>
+            <th>When</th><th>Plant</th><th>SPOC</th><th>Status</th>
+            <th>Emp Code</th><th>Name</th><th>Programme</th><th>Type</th>
+            <th>Hrs</th><th>Issue</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+        <tr>
+          <td style="white-space:nowrap;color:#6b7280;">{{ r.ts }}</td>
+          <td>{{ r.plant_name }}</td>
+          <td>{{ r.username }}</td>
+          <td>
+            {% if r.row_status == 'error' %}
+            <span class="badge bg-danger">Error</span>
+            {% else %}
+            <span class="badge bg-warning text-dark">Dup</span>
+            {% endif %}
+          </td>
+          <td>{{ r.emp_code or '—' }}</td>
+          <td style="color:#475569;">{{ r.emp_name or '—' }}</td>
+          <td>{{ r.programme_name or '—' }}</td>
+          <td>{{ r.prog_type or '—' }}</td>
+          <td>{{ r.planned_hours or 0 }}</td>
+          <td style="color:#dc2626;max-width:300px;">{{ r.issues or '—' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
