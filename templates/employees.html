@@ -98,12 +98,12 @@
           <input type="text" name="name" class="form-control" required placeholder="Employee full name">
         </div>
         <div class="col-md-5">
-          <label class="form-label">Designation</label>
-          <input type="text" name="designation" class="form-control" placeholder="e.g. Officer - HR">
+          <label class="form-label">Designation <span class="required-star">*</span></label>
+          <input type="text" name="designation" class="form-control" required placeholder="e.g. Officer - HR">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Grade</label>
-          <select name="grade" class="form-select">
+          <label class="form-label">Grade <span class="required-star">*</span></label>
+          <select name="grade" class="form-select" required>
             <option value="">-- Select --</option>
             {% for g in grades %}<option>{{ g }}</option>{% endfor %}
           </select>
@@ -116,36 +116,37 @@
           </select>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Department</label>
-          <select name="department" id="deptTomSelect">
+          <label class="form-label">Department <span class="required-star">*</span></label>
+          <select name="department" id="deptTomSelect" required>
             <option value=""></option>
             {% for d in departments %}<option>{{ d }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Section</label>
-          <select name="section" id="sectTomSelect">
+          <label class="form-label">Section <span class="required-star">*</span></label>
+          <select name="section" id="sectTomSelect" required>
             <option value=""></option>
             {% for s in sections %}<option>{{ s }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Category</label>
-          <select name="category" class="form-select">
+          <label class="form-label">Category <span class="required-star">*</span></label>
+          <select name="category" class="form-select" required>
             <option value="">-- Select --</option>
             {% for cat in categories %}<option>{{ cat }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Gender</label>
-          <select name="gender" class="form-select">
+          <label class="form-label">Gender <span class="required-star">*</span></label>
+          <select name="gender" class="form-select" required>
             <option value="">-- Select --</option>
             {% for g in genders %}<option>{{ g }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Physically Handicapped</label>
-          <select name="physically_handicapped" class="form-select">
+          <label class="form-label">Physically Handicapped <span class="required-star">*</span></label>
+          <select name="physically_handicapped" class="form-select" required>
+            <option value="">-- Select --</option>
             {% for p in ph_options %}<option>{{ p }}</option>{% endfor %}
           </select>
         </div>

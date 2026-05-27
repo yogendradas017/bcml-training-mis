@@ -13,6 +13,8 @@ from tms.audit import log_action
 try:
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.worksheet.datavalidation import DataValidation
+    from openpyxl.utils import get_column_letter
     _XLSX = True
 except ImportError:
     _XLSX = False
@@ -35,20 +37,37 @@ def _plant_sections(db, plant_id):
 
 
 def _validate_emp_fields(f, departments, sections):
-    """Return list of error strings. Empty list = all good."""
+    """Return list of error strings. Empty list = all good.
+    All fields mandatory except Remarks."""
     errs = []
-    grade = (f.get('grade') or '').strip().upper()
-    collar = normalise_collar(f.get('collar', ''))
-    dept = (f.get('department') or '').strip().upper()
-    sect = (f.get('section') or '').strip().upper()
-    gender = (f.get('gender') or '').strip()
-    ph = (f.get('physically_handicapped') or '').strip()
+    emp_code = (f.get('emp_code') or '').strip()
+    name     = (f.get('name') or '').strip()
+    desig    = (f.get('designation') or '').strip()
+    grade    = (f.get('grade') or '').strip().upper()
+    collar   = normalise_collar(f.get('collar', ''))
+    dept     = (f.get('department') or '').strip().upper()
+    sect     = (f.get('section') or '').strip().upper()
+    cat      = (f.get('category') or '').strip().upper()
+    gender   = (f.get('gender') or '').strip()
+    ph       = (f.get('physically_handicapped') or '').strip()
+
+    if not emp_code: errs.append('Employee Code is required.')
+    if not name:     errs.append('Full Name is required.')
+    if not desig:    errs.append('Designation is required.')
+    if not grade:    errs.append('Grade is required.')
+    if not collar:   errs.append('Collar Type is required.')
+    if not dept:     errs.append('Department is required.')
+    if not sect:     errs.append('Section is required.')
+    if not cat:      errs.append('Category is required.')
+    if not gender:   errs.append('Gender is required.')
+    if not ph:       errs.append('Physically Handicapped is required.')
 
     if grade and grade not in GRADES:
         errs.append(f"Invalid grade '{f.get('grade')}'. Must be one of the predefined grades.")
     if collar and collar not in COLLARS:
         errs.append(f"Invalid collar '{f.get('collar')}'. Must be Blue Collared or White Collared.")
-    # Dept/section: not strictly enforced — new values are allowed (e.g. new wings added)
+    if cat and cat not in [c.upper() for c in CATEGORIES]:
+        errs.append(f"Invalid category '{f.get('category')}'.")
     if gender and gender not in GENDERS:
         errs.append(f"Invalid gender '{gender}'. Must be Male, Female, or Others.")
     if ph and ph not in PH_OPTIONS:
@@ -156,8 +175,10 @@ def _register(app):
         ws = wb.active
         ws.title = 'Employees'
 
-        headers = ['Emp Code *', 'Full Name *', 'Designation', 'Grade', 'Collar *',
-                   'Department', 'Section', 'Category', 'Gender', 'Physically Handicapped', 'Remarks']
+        # All fields mandatory. Remarks kept optional (free-text note).
+        headers = ['Emp Code *', 'Full Name *', 'Designation *', 'Grade *', 'Collar *',
+                   'Department *', 'Section *', 'Category *', 'Gender *',
+                   'Physically Handicapped *', 'Remarks']
         hdr_fill = PatternFill('solid', fgColor='1A3A5C')
         hdr_font = Font(color='FFFFFF', bold=True)
         for ci, h in enumerate(headers, 1):
@@ -166,7 +187,7 @@ def _register(app):
             c.font = hdr_font
             c.alignment = Alignment(horizontal='center')
 
-        # Reference sheet with allowed values
+        # Reference sheet with allowed values (used as dropdown source)
         ref = wb.create_sheet('Reference')
         ref_data = {
             'Grade': GRADES,
@@ -175,15 +196,53 @@ def _register(app):
             'Physically Handicapped': PH_OPTIONS,
             'Category': CATEGORIES,
         }
+        ref_col_letter = {}  # remember which column each list lives in
         col = 1
         for header, vals in ref_data.items():
+            letter = get_column_letter(col)
+            ref_col_letter[header] = letter
             ref.cell(row=1, column=col, value=header).font = Font(bold=True)
             for ri, v in enumerate(vals, 2):
                 ref.cell(row=ri, column=col, value=v)
             col += 1
 
-        for col_idx, width in zip(range(1, len(headers) + 1), [14, 30, 20, 22, 16, 20, 22, 22, 10, 20, 20]):
-            ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
+        # Excel dropdown validations — apply to first 5000 rows of each column
+        # Column index per header (1-based): Grade=4, Collar=5, Category=8,
+        # Gender=9, Physically Handicapped=10
+        dv_specs = [
+            ('Grade', 4, len(GRADES)),
+            ('Collar', 5, len(COLLARS)),
+            ('Category', 8, len(CATEGORIES)),
+            ('Gender', 9, len(GENDERS)),
+            ('Physically Handicapped', 10, len(PH_OPTIONS)),
+        ]
+        for label, col_idx, n_items in dv_specs:
+            letter = ref_col_letter[label]
+            # Reference!<letter>2:<letter><n_items+1>  (skip header row in Reference sheet)
+            formula = f"=Reference!${letter}$2:${letter}${n_items + 1}"
+            dv = DataValidation(type='list', formula1=formula, allow_blank=False,
+                                showErrorMessage=True,
+                                errorTitle='Invalid value',
+                                error=f'Pick a value from the {label} dropdown.')
+            target_letter = get_column_letter(col_idx)
+            dv.add(f'{target_letter}2:{target_letter}5001')
+            ws.add_data_validation(dv)
+
+        for col_idx, width in zip(range(1, len(headers) + 1),
+                                  [14, 30, 22, 26, 18, 22, 22, 26, 12, 26, 24]):
+            ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+        # Freeze header row + autofilter
+        ws.freeze_panes = 'A2'
+        ws.auto_filter.ref = f'A1:{get_column_letter(len(headers))}1'
+
+        # Brief instructions row beneath header — italic, light grey
+        instr = ('Fill ONE row per employee. All starred (*) fields are mandatory. '
+                 'Use the dropdowns for Grade, Collar, Category, Gender, '
+                 'Physically Handicapped — typed-in values that do not match the '
+                 'allowed list will be rejected at upload.')
+        c = ws.cell(row=5003, column=1, value=instr)
+        c.font = Font(italic=True, color='6B7280', size=10)
 
         buf = io.BytesIO()
         wb.save(buf)
@@ -244,10 +303,17 @@ def _register(app):
 
             row_errors = []
 
-            if not emp_code:
-                row_errors.append('Emp Code is required')
-            if not name:
-                row_errors.append('Full Name is required')
+            # All fields mandatory except Remarks
+            if not emp_code:    row_errors.append('Emp Code is required')
+            if not name:        row_errors.append('Full Name is required')
+            if not desig:       row_errors.append('Designation is required')
+            if not grade_raw:   row_errors.append('Grade is required')
+            if not collar_raw:  row_errors.append('Collar is required')
+            if not dept_raw:    row_errors.append('Department is required')
+            if not sect_raw:    row_errors.append('Section is required')
+            if not cat_raw:     row_errors.append('Category is required')
+            if not gender_raw:  row_errors.append('Gender is required')
+            if not ph_raw:      row_errors.append('Physically Handicapped is required')
 
             grade  = grade_raw.upper()
             collar = normalise_collar(collar_raw)
@@ -257,13 +323,14 @@ def _register(app):
             gender = gender_raw
             ph     = ph_raw if ph_raw in PH_OPTIONS else ''
 
-            if not collar_raw:
-                row_errors.append('Collar is required')
-            elif collar not in COLLARS:
+            if collar_raw and collar not in COLLARS:
                 row_errors.append(f"Invalid collar '{collar_raw}' (must be Blue Collared / White Collared)")
 
             if grade_raw and grade not in grades_upper:
                 row_errors.append(f"Invalid grade '{grade_raw}'")
+
+            if cat_raw and cat not in [c.upper() for c in CATEGORIES]:
+                row_errors.append(f"Invalid category '{cat_raw}'")
 
             if gender_raw and gender not in GENDERS:
                 row_errors.append(f"Invalid gender '{gender_raw}' (must be Male / Female / Others)")
