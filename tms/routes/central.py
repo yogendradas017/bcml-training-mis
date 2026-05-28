@@ -134,68 +134,7 @@ def _register(app):
             'conducted': sum(p['own_conducted'] for p in plant_summaries) + grand_central,
         }
 
-        # ── Quarterly — 6 batched queries per quarter (was 50 per quarter) ──
-        fy_yr = fy_start[:4]
-        Q_RANGES = [
-            ('Q1 (Apr–Jun)', f'{fy_yr}-04-01',         f'{fy_yr}-06-30'),
-            ('Q2 (Jul–Sep)', f'{fy_yr}-07-01',         f'{fy_yr}-09-30'),
-            ('Q3 (Oct–Dec)', f'{fy_yr}-10-01',         f'{fy_yr}-12-31'),
-            ('Q4 (Jan–Mar)', f'{int(fy_yr)+1}-01-01',  f'{int(fy_yr)+1}-03-31'),
-        ]
-        quarterly = []
-        for qname, q_start, q_end in Q_RANGES:
-            sc = db.execute(
-                "SELECT COUNT(*) FROM calendar WHERE status='Conducted' "
-                "AND plan_start>=? AND plan_start<=?", (q_start, q_end)).fetchone()[0]
-            mh = db.execute(
-                "SELECT COALESCE(SUM(hrs),0) FROM emp_training "
-                "WHERE start_date>=? AND start_date<=?", (q_start, q_end)).fetchone()[0]
-            q_planned = _by_plant(db.execute(
-                "SELECT plant_id, COUNT(*) AS cnt FROM calendar "
-                "WHERE plan_start>=? AND plan_start<=? GROUP BY plant_id",
-                (q_start, q_end)).fetchall())
-            q_own_sc = _by_plant(db.execute(
-                "SELECT plant_id, COUNT(*) AS cnt FROM calendar "
-                "WHERE status='Conducted' AND plan_start>=? AND plan_start<=? GROUP BY plant_id",
-                (q_start, q_end)).fetchall())
-            q_cen_sc = _by_plant(db.execute(
-                "SELECT plant_id, COUNT(DISTINCT session_code) AS cnt FROM emp_training "
-                "WHERE host_plant_id=99 AND session_code IS NOT NULL AND session_code!='' "
-                "AND start_date>=? AND start_date<=? GROUP BY plant_id",
-                (q_start, q_end)).fetchall())
-            q_mh = _by_plant(db.execute(
-                "SELECT plant_id, COALESCE(SUM(hrs),0) AS cnt FROM emp_training "
-                "WHERE start_date>=? AND start_date<=? GROUP BY plant_id",
-                (q_start, q_end)).fetchall())
-            q_bc = _by_plant(db.execute(
-                "SELECT t.plant_id, COALESCE(SUM(t.hrs),0) AS cnt "
-                "FROM emp_training t JOIN employees e "
-                "  ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id "
-                "WHERE e.collar='Blue Collared' AND t.start_date>=? AND t.start_date<=? "
-                "GROUP BY t.plant_id", (q_start, q_end)).fetchall())
-            q_wc = _by_plant(db.execute(
-                "SELECT t.plant_id, COALESCE(SUM(t.hrs),0) AS cnt "
-                "FROM emp_training t JOIN employees e "
-                "  ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id "
-                "WHERE e.collar='White Collared' AND t.start_date>=? AND t.start_date<=? "
-                "GROUP BY t.plant_id", (q_start, q_end)).fetchall())
-
-            plant_q = [{
-                'name': p['name'], 'unit_code': p['unit_code'], 'id': p['id'],
-                'planned':  q_planned.get(p['id'], 0),
-                'sessions': q_own_sc.get(p['id'], 0) + q_cen_sc.get(p['id'], 0),
-                'manhours': round(q_mh.get(p['id'], 0), 1),
-                'bc_hrs':   round(q_bc.get(p['id'], 0), 1),
-                'wc_hrs':   round(q_wc.get(p['id'], 0), 1),
-            } for p in plant_summaries]
-
-            quarterly.append({
-                'quarter': qname, 'sessions': sc, 'manhours': round(mh, 1),
-                'q_start': q_start, 'q_end': q_end,
-                'plants': plant_q,
-            })
-
-        return render_template('central.html', plants=plant_summaries, grand=grand, quarterly=quarterly)
+        return render_template('central.html', plants=plant_summaries, grand=grand)
 
     @app.route('/central/duplicates', methods=['GET', 'POST'])
     @central_required
