@@ -4,70 +4,34 @@
 
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
   <div>
-    <h5 class="mb-0"><i class="bi bi-clipboard-data text-primary"></i> SPOC TNI Upload Errors</h5>
-    <small class="text-muted">Errors + duplicates captured at the analyze step — for training & process R&D.</small>
+    <h5 class="mb-0"><i class="bi bi-clipboard-data text-primary"></i> SPOC Upload Errors — Unit Benchmarking</h5>
+    <small class="text-muted">{{ fy_label }} &middot; Month-on-Month comparison across all units &middot; Drives SPOC training priorities</small>
   </div>
   <a href="{{ url_for('central_dashboard') }}" class="btn btn-sm btn-outline-secondary">
     <i class="bi bi-arrow-left"></i> Back to Central
   </a>
 </div>
 
-<!-- KPIs -->
-<div class="row g-2 mb-3">
-  <div class="col-6 col-md-3">
-    <div class="card text-center" style="border-left:4px solid #dc2626;">
-      <div class="card-body py-3">
-        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Total Errors</div>
-        <div style="font-size:28px;font-weight:800;color:#dc2626;">{{ total_errors }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center" style="border-left:4px solid #2563eb;">
-      <div class="card-body py-3">
-        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Plants Involved</div>
-        <div style="font-size:28px;font-weight:800;color:#2563eb;">{{ plants_involved }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center" style="border-left:4px solid #d97706;">
-      <div class="card-body py-3">
-        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">SPOCs Involved</div>
-        <div style="font-size:28px;font-weight:800;color:#d97706;">{{ users_involved }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center" style="border-left:4px solid #059669;">
-      <div class="card-body py-3">
-        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Rows Shown</div>
-        <div style="font-size:28px;font-weight:800;color:#059669;">{{ rows|length }}</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Filters -->
+<!-- ─── Filters ─── -->
 <div class="card mb-3">
-  <div class="card-body py-3">
+  <div class="card-body py-2">
     <form method="GET" action="{{ url_for('central_tni_errors') }}" class="row g-2 align-items-end">
-      <div class="col-md-3">
-        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Plant</label>
-        <select name="plant" class="form-select form-select-sm">
-          <option value="">All plants</option>
-          {% for p in plants %}
-          <option value="{{ p.id }}" {% if filters.plant == p.id|string %}selected{% endif %}>{{ p.name }}</option>
+      <div class="col-md-2">
+        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Financial Year</label>
+        <select name="fy" class="form-select form-select-sm">
+          {% for f in fy_options %}
+          <option value="{{ f.value }}" {% if filters.fy == f.value %}selected{% endif %}>{{ f.label }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-2">
-        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">From</label>
-        <input type="date" name="from" value="{{ filters.from }}" class="form-control form-control-sm">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">To</label>
-        <input type="date" name="to" value="{{ filters.to }}" class="form-control form-control-sm">
+      <div class="col-md-3">
+        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Unit</label>
+        <select name="plant" class="form-select form-select-sm">
+          <option value="">All units</option>
+          {% for p in active_plants %}
+          <option value="{{ p.id }}" {% if filters.plant == p.id|string %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-md-2">
         <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Status</label>
@@ -77,151 +41,306 @@
           <option value="duplicate" {% if filters.status=='duplicate' %}selected{% endif %}>Duplicates only</option>
         </select>
       </div>
-      <div class="col-md-2">
-        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Limit rows</label>
-        <select name="limit" class="form-select form-select-sm">
-          {% for n in [100, 500, 1000, 5000] %}
-          <option value="{{ n }}" {% if filters.limit == n %}selected{% endif %}>{{ n }}</option>
+      <div class="col-md-3">
+        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Category</label>
+        <select name="cat" class="form-select form-select-sm">
+          <option value="">All categories</option>
+          {% for cid, lbl, _d in error_categories %}
+          <option value="{{ cid }}" {% if filters.cat == cid %}selected{% endif %}>{{ lbl }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-1">
+      <div class="col-md-2">
         <button type="submit" class="btn btn-primary btn-sm w-100">
-          <i class="bi bi-funnel"></i> Apply
+          <i class="bi bi-funnel"></i> Apply Filters
         </button>
       </div>
     </form>
   </div>
 </div>
 
-<div class="row g-3">
-  <!-- Per-plant -->
-  <div class="col-lg-4">
-    <div class="card h-100">
-      <div class="ch-dark"><i class="bi bi-building"></i> Errors by Plant</div>
-      <div class="card-body p-0">
-        {% if not per_plant %}
-        <div class="text-center text-muted py-4" style="font-size:13px;">No data</div>
-        {% else %}
-        <table class="table table-sm mb-0" style="font-size:12.5px;">
-          <thead style="background:#f8fafc;">
-            <tr><th>Plant</th><th class="text-end">Errors</th><th class="text-end">Dupes</th><th class="text-end">Total</th></tr>
-          </thead>
-          <tbody>
-          {% for p in per_plant %}
-          <tr>
-            <td>{{ p.plant_name }}</td>
-            <td class="text-end"><span class="badge bg-danger">{{ p.err_cnt }}</span></td>
-            <td class="text-end"><span class="badge bg-warning text-dark">{{ p.dup_cnt }}</span></td>
-            <td class="text-end fw-bold">{{ p.cnt }}</td>
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-        {% endif %}
+<!-- ─── KPI strip ─── -->
+<div class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #dc2626;">
+      <div class="card-body py-3">
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Total Errors ({{ fy_label }})</div>
+        <div style="font-size:30px;font-weight:800;color:#dc2626;">{{ total_errors }}</div>
       </div>
     </div>
   </div>
-
-  <!-- Top issues -->
-  <div class="col-lg-4">
-    <div class="card h-100">
-      <div class="ch-dark"><i class="bi bi-bug"></i> Most Frequent Issues</div>
-      <div class="card-body p-0">
-        {% if not top_issues %}
-        <div class="text-center text-muted py-4" style="font-size:13px;">No data</div>
-        {% else %}
-        <table class="table table-sm mb-0" style="font-size:12px;">
-          <thead style="background:#f8fafc;">
-            <tr><th>Issue pattern</th><th class="text-end" style="width:60px;">Count</th></tr>
-          </thead>
-          <tbody>
-          {% for i in top_issues %}
-          <tr><td style="color:#dc2626;">{{ i.issue_key }}</td><td class="text-end fw-bold">{{ i.cnt }}</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-        {% endif %}
-      </div>
-      <div class="card-footer text-muted" style="font-size:11px;">
-        Use these patterns to design SPOC training content.
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #059669;">
+      <div class="card-body py-3">
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Best Unit</div>
+        <div style="font-size:18px;font-weight:800;color:#059669;margin-top:4px;">{{ best_unit.name }}</div>
+        <div style="font-size:11px;color:#6b7280;">{{ best_unit.cnt }} error{{ 's' if best_unit.cnt != 1 }}</div>
       </div>
     </div>
   </div>
-
-  <!-- Top users -->
-  <div class="col-lg-4">
-    <div class="card h-100">
-      <div class="ch-dark"><i class="bi bi-person-exclamation"></i> SPOCs by Error Count</div>
-      <div class="card-body p-0">
-        {% if not per_user %}
-        <div class="text-center text-muted py-4" style="font-size:13px;">No data</div>
-        {% else %}
-        <table class="table table-sm mb-0" style="font-size:12.5px;">
-          <thead style="background:#f8fafc;">
-            <tr><th>User</th><th>Plant</th><th class="text-end">Count</th></tr>
-          </thead>
-          <tbody>
-          {% for u in per_user %}
-          <tr>
-            <td>{{ u.username }}</td>
-            <td style="color:#6b7280;font-size:11px;">{{ u.plant_name }}</td>
-            <td class="text-end fw-bold">{{ u.cnt }}</td>
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-        {% endif %}
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #d97706;">
+      <div class="card-body py-3">
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Needs Training</div>
+        <div style="font-size:18px;font-weight:800;color:#d97706;margin-top:4px;">{{ worst_unit.name }}</div>
+        <div style="font-size:11px;color:#6b7280;">{{ worst_unit.cnt }} error{{ 's' if worst_unit.cnt != 1 }}</div>
       </div>
-      <div class="card-footer text-muted" style="font-size:11px;">
-        Identify SPOCs needing focused refresher training.
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #2563eb;">
+      <div class="card-body py-3">
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">{{ this_month_label }} vs Avg</div>
+        <div style="font-size:24px;font-weight:800;margin-top:4px;
+          color:{% if trend_dir=='up' %}#dc2626{% elif trend_dir=='down' %}#059669{% else %}#6b7280{% endif %};">
+          {% if trend_dir == 'up' %}↑ {{ trend_pct }}%
+          {% elif trend_dir == 'down' %}↓ {{ trend_pct }}%
+          {% else %}— flat
+          {% endif %}
+        </div>
+        <div style="font-size:11px;color:#6b7280;">{{ this_month_cnt }} this month · {{ fy_avg }} avg</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Detail rows -->
-<div class="card mt-3">
-  <div class="ch-dark"><i class="bi bi-list-ul"></i> Recent Error Rows (latest {{ filters.limit }})</div>
+<!-- ─── Auto Insights ─── -->
+<div class="card mb-3" style="border-left:4px solid #6366f1;background:#eef2ff;">
+  <div class="card-body py-3">
+    <div style="font-size:12px;font-weight:700;color:#4338ca;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">
+      <i class="bi bi-lightbulb-fill"></i> Insights for Next Training Cycle
+    </div>
+    {% for i in insights %}
+    <div style="font-size:13px;color:#1e293b;margin-bottom:4px;line-height:1.5;">&middot; {{ i|safe }}</div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if total_errors == 0 %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-emoji-smile" style="font-size:48px;color:#10b981;"></i>
+    <h6 class="mt-3 mb-1">No errors recorded in {{ fy_label }}</h6>
+    <p class="text-muted mb-0" style="font-size:13px;">Either no uploads happened yet, or every upload was clean — both good news.</p>
+  </div>
+</div>
+{% else %}
+
+<!-- ─── Section 1: Month × Unit Heatmap ─── -->
+<div class="card mb-3">
+  <div class="ch-dark"><i class="bi bi-grid-3x3"></i> Month × Unit Heatmap — Errors per Month per Unit</div>
   <div class="card-body p-0">
-    {% if not rows %}
-    <div class="text-center text-muted py-4" style="font-size:13px;">No rows match the filter.</div>
-    {% else %}
-    <div class="table-responsive" style="max-height:60vh;overflow-y:auto;">
+    <div class="table-responsive">
       <table class="table table-sm mb-0" style="font-size:12px;">
-        <thead style="position:sticky;top:0;z-index:5;background:#1e3a5f;color:#fff;">
+        <thead style="background:#1e3a5f;color:#fff;">
           <tr>
-            <th>When</th><th>Plant</th><th>SPOC</th><th>Status</th>
-            <th>Emp Code</th><th>Name</th><th>Programme</th><th>Type</th>
-            <th>Hrs</th><th>Issue</th>
+            <th style="white-space:nowrap;">Month</th>
+            {% for p in active_plants %}
+            <th class="text-center" style="white-space:nowrap;font-size:11px;">{{ p.name }}</th>
+            {% endfor %}
+            <th class="text-center" style="background:#374151;">Total</th>
           </tr>
         </thead>
         <tbody>
-        {% for r in rows %}
-        <tr>
-          <td style="white-space:nowrap;color:#6b7280;">{{ r.ts }}</td>
-          <td>{{ r.plant_name }}</td>
-          <td>{{ r.username }}</td>
-          <td>
-            {% if r.row_status == 'error' %}
-            <span class="badge bg-danger">Error</span>
-            {% else %}
-            <span class="badge bg-warning text-dark">Dup</span>
-            {% endif %}
-          </td>
-          <td>{{ r.emp_code or '—' }}</td>
-          <td style="color:#475569;">{{ r.emp_name or '—' }}</td>
-          <td>{{ r.programme_name or '—' }}</td>
-          <td>{{ r.prog_type or '—' }}</td>
-          <td>{{ r.planned_hours or 0 }}</td>
-          <td style="color:#dc2626;max-width:300px;">{{ r.issues or '—' }}</td>
-        </tr>
-        {% endfor %}
+          {% for m in months_fy %}
+          {% set month_total = month_unit_matrix[m].values()|sum %}
+          <tr>
+            <td style="font-weight:600;white-space:nowrap;">{{ m }}</td>
+            {% for p in active_plants %}
+              {% set v = month_unit_matrix[m][p.id] %}
+              {% if v == 0 %}
+                <td class="text-center" style="color:#d1d5db;">—</td>
+              {% elif fleet_cell_avg > 0 and v >= fleet_cell_avg * 1.5 %}
+                <td class="text-center fw-bold" style="background:#fee2e2;color:#dc2626;">{{ v }}</td>
+              {% elif fleet_cell_avg > 0 and v >= fleet_cell_avg * 0.8 %}
+                <td class="text-center fw-bold" style="background:#fef3c7;color:#92400e;">{{ v }}</td>
+              {% else %}
+                <td class="text-center" style="background:#d1fae5;color:#065f46;">{{ v }}</td>
+              {% endif %}
+            {% endfor %}
+            <td class="text-center fw-bold" style="background:#f3f4f6;">{{ month_total }}</td>
+          </tr>
+          {% endfor %}
+          <tr style="background:#1e3a5f;color:#fff;">
+            <th>Total</th>
+            {% for p in active_plants %}
+            <th class="text-center">{{ per_plant_total[p.id] }}</th>
+            {% endfor %}
+            <th class="text-center" style="background:#0f172a;">{{ total_errors }}</th>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer text-muted" style="font-size:11px;">
+    <span style="background:#d1fae5;padding:1px 8px;border-radius:4px;color:#065f46;">Green = below avg</span>
+    &nbsp;
+    <span style="background:#fef3c7;padding:1px 8px;border-radius:4px;color:#92400e;">Amber = around avg</span>
+    &nbsp;
+    <span style="background:#fee2e2;padding:1px 8px;border-radius:4px;color:#dc2626;">Red = above avg (training target)</span>
+    &nbsp;&middot;&nbsp; Fleet avg per cell: <strong>{{ "%.1f"|format(fleet_cell_avg) }}</strong>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- ─── Section 2: Category × Month chart ─── -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="ch-dark"><i class="bi bi-bar-chart-fill"></i> Error Categories Over Time</div>
+      <div class="card-body">
+        <canvas id="catChart" style="max-height:340px;"></canvas>
+      </div>
+      <div class="card-footer text-muted" style="font-size:11px;">
+        Identify WHICH error category spikes in WHICH month — drives focused training topic per cycle.
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Section 3: Error Category Summary ─── -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="ch-dark"><i class="bi bi-tags-fill"></i> Error Categories — Fleet-wide</div>
+      <div class="card-body p-0">
+        {% if not category_summary %}
+        <div class="text-center text-muted py-4" style="font-size:13px;">No categorised errors</div>
+        {% else %}
+        <table class="table table-sm mb-0" style="font-size:12.5px;">
+          <thead style="background:#f8fafc;">
+            <tr><th>Category</th><th class="text-end">Count</th><th class="text-end">%</th></tr>
+          </thead>
+          <tbody>
+            {% for c in category_summary %}
+            <tr>
+              <td>
+                <div style="font-weight:600;">{{ c.label }}</div>
+                <div style="font-size:11px;color:#6b7280;">{{ c.desc }}</div>
+              </td>
+              <td class="text-end fw-bold">{{ c.cnt }}</td>
+              <td class="text-end">
+                <span style="background:#eef2ff;color:#4338ca;padding:2px 8px;border-radius:99px;font-weight:600;font-size:11px;">{{ c.pct }}%</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Section 4: Unit Comparison Table ─── -->
+<div class="card mt-3">
+  <div class="ch-dark"><i class="bi bi-trophy-fill"></i> Unit Comparison — Sorted by Training Priority</div>
+  <div class="card-body p-0">
+    {% if not unit_comparison %}
+    <div class="text-center text-muted py-4" style="font-size:13px;">No errors recorded for any unit yet</div>
+    {% else %}
+    <div class="table-responsive">
+      <table class="table table-sm mb-0" style="font-size:12.5px;">
+        <thead style="background:#f8fafc;">
+          <tr>
+            <th style="width:40px;">Rank</th>
+            <th>Unit</th>
+            <th class="text-end">Total Errors</th>
+            <th>Top Error Category</th>
+            <th>SPOC</th>
+            <th class="text-center">3-Month Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in unit_comparison %}
+          <tr>
+            <td>
+              {% if loop.index == 1 %}
+              <span style="background:#fee2e2;color:#dc2626;font-weight:800;padding:2px 8px;border-radius:6px;font-size:11px;">#1</span>
+              {% elif loop.index <= 3 %}
+              <span style="background:#fef3c7;color:#92400e;font-weight:700;padding:2px 8px;border-radius:6px;font-size:11px;">#{{ loop.index }}</span>
+              {% else %}
+              <span style="color:#9ca3af;font-size:11px;">#{{ loop.index }}</span>
+              {% endif %}
+            </td>
+            <td style="font-weight:600;">{{ u.plant_name }}</td>
+            <td class="text-end fw-bold">{{ u.total }}</td>
+            <td>
+              <div>{{ u.top_cat }}</div>
+              <div style="font-size:11px;color:#6b7280;">{{ u.top_cat_pct }}% of unit's errors</div>
+            </td>
+            <td>{{ u.top_user }}</td>
+            <td class="text-center">
+              {% if u.trend == 'up' %}
+              <span style="color:#dc2626;font-weight:700;" title="Errors increasing">↑ Worsening</span>
+              {% elif u.trend == 'down' %}
+              <span style="color:#059669;font-weight:700;" title="Errors decreasing">↓ Improving</span>
+              {% elif u.trend == 'new' %}
+              <span style="color:#d97706;font-weight:700;" title="Errors started this period">● New</span>
+              {% else %}
+              <span style="color:#6b7280;">— Flat</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
     {% endif %}
   </div>
+  <div class="card-footer text-muted" style="font-size:11px;">
+    Sorted by total errors (worst first). Focus training resources on top-ranked units.
+  </div>
 </div>
 
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{% if total_errors > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  const months = {{ months_fy | tojson }};
+  const catData = {{ month_cat_matrix | tojson }};
+  const catList = {{ error_categories | tojson }};
+  const palette = {
+    'emp_not_found': '#dc2626',
+    'emp_missing':   '#f59e0b',
+    'prog_missing':  '#ef4444',
+    'prog_garbage':  '#7c3aed',
+    'type_invalid':  '#0891b2',
+    'mode_invalid':  '#0d9488',
+    'duplicate':     '#d97706',
+    'other':         '#6b7280',
+  };
+  const datasets = catList
+    .filter(c => months.some(m => (catData[m][c[0]] || 0) > 0))
+    .map(c => ({
+      label: c[1],
+      data: months.map(m => catData[m][c[0]] || 0),
+      backgroundColor: palette[c[0]] || '#9ca3af',
+      borderColor: '#fff',
+      borderWidth: 1,
+    }));
+
+  const ctx = document.getElementById('catChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: { labels: months, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 } } },
+        tooltip: { mode: 'index', intersect: false },
+      },
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 10 } } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0, font: { size: 10 } } },
+      },
+    },
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

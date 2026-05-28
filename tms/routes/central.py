@@ -1,9 +1,49 @@
 from flask import render_template, request, redirect, url_for, session, flash
 
+from datetime import date as _date
+
 from tms.constants import PLANTS, PLANT_MAP, MONTHS_FY
 from tms.db import get_db
 from tms.decorators import central_required
 from tms.helpers import _calc_summary, _calc_totals, _calc_compliance, _current_fy
+
+
+# --- SPOC error categorisation ---------------------------------------------
+# Group raw issue strings by root cause so the UI shows actionable categories,
+# not one row per emp_code-not-found incident.
+ERROR_CATEGORIES = [
+    ('emp_not_found', 'Employee Not Found in Plant',
+     'SPOC pulling from stale emp master or wrong plant'),
+    ('emp_missing',   'Employee Code Missing',
+     'Required field blank in upload'),
+    ('prog_missing',  'Programme Name Missing',
+     'Required field blank in upload'),
+    ('prog_garbage',  'Invalid / Junk Programme Name',
+     'Placeholder text (NA, TBD, ?) or special-char garbage'),
+    ('type_invalid',  'Invalid Programme Type',
+     'Value not in dropdown (Behavioural/Cane/EHS/HR/IT/Technical/Commercial)'),
+    ('mode_invalid',  'Invalid Mode',
+     'Value not in dropdown (Classroom/OJT/SOP/Online)'),
+    ('duplicate',     'Duplicate Within File',
+     'Same employee+programme appears twice in same upload'),
+    ('other',         'Other / Uncategorised',
+     'Did not match any known pattern — review manually'),
+]
+ERROR_CAT_LABELS = {c[0]: c[1] for c in ERROR_CATEGORIES}
+ERROR_CAT_DESC   = {c[0]: c[2] for c in ERROR_CATEGORIES}
+
+def _categorize_error(issues_text, row_status):
+    """Map an error row to one of ERROR_CATEGORIES based on issues text + status."""
+    if row_status == 'duplicate':
+        return 'duplicate'
+    t = (issues_text or '').lower()
+    if 'not found in this plant' in t: return 'emp_not_found'
+    if 'employee code is missing' in t: return 'emp_missing'
+    if 'programme name is missing' in t: return 'prog_missing'
+    if 'programme name invalid' in t:   return 'prog_garbage'
+    if 'unknown programme type' in t:   return 'type_invalid'
+    if 'unknown mode' in t:             return 'mode_invalid'
+    return 'other'
 
 
 def _by_plant(rows, key='plant_id', val='cnt'):
@@ -245,92 +285,231 @@ def _register(app):
     @central_required
     def central_tni_errors():
         db = get_db()
-        # Filters
-        plant_filter = request.args.get('plant', '').strip()
-        date_from    = request.args.get('from', '').strip()
-        date_to      = request.args.get('to', '').strip()
-        status_f     = request.args.get('status', '').strip()
-        try:
-            limit = min(int(request.args.get('limit', '500') or 500), 5000)
-        except ValueError:
-            limit = 500
 
-        where = ['1=1']
-        params = []
-        if plant_filter and plant_filter.isdigit():
-            where.append('plant_id=?')
-            params.append(int(plant_filter))
-        if date_from:
-            where.append('ts >= ?')
-            params.append(date_from + ' 00:00:00')
-        if date_to:
-            where.append('ts <= ?')
-            params.append(date_to + ' 23:59:59')
-        if status_f in ('error', 'duplicate'):
-            where.append('row_status=?')
-            params.append(status_f)
+        # ─── Filters: FY-driven by default, with optional unit / status / category ───
+        fy_start, fy_end = _current_fy()
+        fy_year_str = fy_start[:4]              # e.g. "2026"
+        fy_label    = f'FY {fy_year_str[2:]}-{int(fy_year_str[2:])+1}'  # "FY 26-27"
 
+        # Allow FY override via ?fy=2025 (means FY 25-26)
+        fy_param = request.args.get('fy', '').strip()
+        if fy_param.isdigit() and len(fy_param) == 4:
+            fy_start = f'{fy_param}-04-01'
+            fy_end   = f'{int(fy_param)+1}-03-31'
+            fy_label = f'FY {fy_param[2:]}-{int(fy_param[2:])+1}'
+
+        unit_filter   = request.args.get('plant', '').strip()
+        status_filter = request.args.get('status', '').strip()
+        cat_filter    = request.args.get('cat', '').strip()
+
+        where  = ['date(ts) BETWEEN ? AND ?']
+        params = [fy_start, fy_end]
+        if unit_filter.isdigit():
+            where.append('plant_id=?'); params.append(int(unit_filter))
+        if status_filter in ('error', 'duplicate'):
+            where.append('row_status=?'); params.append(status_filter)
         wsql = ' AND '.join(where)
 
-        # KPIs
-        total_errors = db.execute(
-            f'SELECT COUNT(*) FROM tni_upload_errors WHERE {wsql}', params).fetchone()[0]
-        plants_involved = db.execute(
-            f'SELECT COUNT(DISTINCT plant_id) FROM tni_upload_errors WHERE {wsql}', params).fetchone()[0]
-        users_involved = db.execute(
-            f'SELECT COUNT(DISTINCT username) FROM tni_upload_errors WHERE {wsql}', params).fetchone()[0]
+        # ─── Pull all rows for the FY in one query, do aggregation in Python ───
+        # SQLite has no PIVOT — Python pivot is cleaner than nested CASE WHENs.
+        all_rows = db.execute(
+            f'SELECT ts, plant_id, username, row_status, issues FROM tni_upload_errors WHERE {wsql}',
+            params
+        ).fetchall()
 
-        # Per-plant breakdown
-        per_plant = db.execute(
-            f'''SELECT plant_id, COUNT(*) AS cnt,
-                       SUM(CASE WHEN row_status='error' THEN 1 ELSE 0 END) AS err_cnt,
-                       SUM(CASE WHEN row_status='duplicate' THEN 1 ELSE 0 END) AS dup_cnt
-                FROM tni_upload_errors WHERE {wsql}
-                GROUP BY plant_id ORDER BY cnt DESC''', params).fetchall()
-        per_plant = [{
-            'plant_id': r['plant_id'],
-            'plant_name': PLANT_MAP.get(r['plant_id'], {}).get('name', f'Plant {r["plant_id"]}'),
-            'cnt': r['cnt'], 'err_cnt': r['err_cnt'] or 0, 'dup_cnt': r['dup_cnt'] or 0,
-        } for r in per_plant]
+        # Build active plant list (10 units; skip Central pseudo-plant 99)
+        active_plants = [p for p in PLANTS if p['id'] != 99]
+        plant_ids     = [p['id'] for p in active_plants]
+        plant_name_by = {p['id']: p['name'] for p in active_plants}
 
-        # Top error patterns (group by first 80 chars of issues)
-        top_issues = db.execute(
-            f'''SELECT SUBSTR(issues,1,80) AS issue_key, COUNT(*) AS cnt
-                FROM tni_upload_errors WHERE {wsql} AND issues IS NOT NULL AND issues!=''
-                GROUP BY issue_key ORDER BY cnt DESC LIMIT 15''', params).fetchall()
+        # Pivot containers
+        month_unit_matrix = {m: {pid: 0 for pid in plant_ids} for m in MONTHS_FY}
+        month_cat_matrix  = {m: {c[0]: 0 for c in ERROR_CATEGORIES} for m in MONTHS_FY}
+        per_plant_total   = {pid: 0 for pid in plant_ids}
+        per_plant_cat     = {pid: {c[0]: 0 for c in ERROR_CATEGORIES} for pid in plant_ids}
+        per_plant_user    = {pid: {} for pid in plant_ids}  # pid -> {username: count}
+        cat_totals        = {c[0]: 0 for c in ERROR_CATEGORIES}
+        per_user          = {}  # (username, pid) -> count
 
-        # Top users by error count
-        per_user = db.execute(
-            f'''SELECT username, plant_id, COUNT(*) AS cnt
-                FROM tni_upload_errors WHERE {wsql}
-                GROUP BY username, plant_id ORDER BY cnt DESC LIMIT 20''', params).fetchall()
-        per_user = [{
-            'username': r['username'],
-            'plant_id': r['plant_id'],
-            'plant_name': PLANT_MAP.get(r['plant_id'], {}).get('name', '—'),
-            'cnt': r['cnt'],
-        } for r in per_user]
+        # FY month order — index 0 = April through index 11 = March
+        month_num_to_label = {
+            4: 'April', 5: 'May', 6: 'June', 7: 'July', 8: 'August', 9: 'September',
+            10: 'October', 11: 'November', 12: 'December',
+            1: 'January', 2: 'February', 3: 'March',
+        }
 
-        # Recent rows
-        rows = db.execute(
-            f'''SELECT * FROM tni_upload_errors WHERE {wsql}
-                ORDER BY ts DESC LIMIT ?''', params + [limit]).fetchall()
-        rows = [{
-            **dict(r),
-            'plant_name': PLANT_MAP.get(r['plant_id'], {}).get('name', '—'),
-        } for r in rows]
+        for r in all_rows:
+            ts = r['ts'] or ''
+            try:
+                mnum = int(ts[5:7])
+            except (ValueError, IndexError):
+                continue
+            mlabel = month_num_to_label.get(mnum)
+            if not mlabel or mlabel not in month_unit_matrix:
+                continue
+            pid = r['plant_id']
+            if pid not in per_plant_total:
+                continue
+            cat = _categorize_error(r['issues'], r['row_status'])
+            if cat_filter and cat != cat_filter:
+                continue
+            month_unit_matrix[mlabel][pid] += 1
+            month_cat_matrix[mlabel][cat]  += 1
+            per_plant_total[pid]           += 1
+            per_plant_cat[pid][cat]        += 1
+            cat_totals[cat]                += 1
+            uname = r['username'] or 'unknown'
+            per_plant_user[pid][uname] = per_plant_user[pid].get(uname, 0) + 1
+            key = (uname, pid)
+            per_user[key] = per_user.get(key, 0) + 1
 
-        return render_template('central_tni_errors.html',
-                               total_errors=total_errors,
-                               plants_involved=plants_involved,
-                               users_involved=users_involved,
-                               per_plant=per_plant,
-                               top_issues=top_issues,
-                               per_user=per_user,
-                               rows=rows,
-                               plants=[p for p in PLANTS if p['id'] != 99],
-                               filters={'plant': plant_filter, 'from': date_from,
-                                        'to': date_to, 'status': status_f, 'limit': limit})
+        total_errors = sum(per_plant_total.values())
+
+        # KPI: best / worst unit (only units with at least 1 error count; if none, blank)
+        units_with_errors = {pid: cnt for pid, cnt in per_plant_total.items() if cnt > 0}
+        if units_with_errors:
+            best_pid = min(units_with_errors, key=units_with_errors.get)
+            worst_pid = max(units_with_errors, key=units_with_errors.get)
+            best_unit  = {'name': plant_name_by[best_pid],  'cnt': units_with_errors[best_pid]}
+            worst_unit = {'name': plant_name_by[worst_pid], 'cnt': units_with_errors[worst_pid]}
+        else:
+            best_unit = worst_unit = {'name': '—', 'cnt': 0}
+
+        # KPI trend: this month vs avg of prior months in FY
+        today = _date.today()
+        this_month_label = month_num_to_label.get(today.month, MONTHS_FY[0])
+        this_month_cnt = sum(month_unit_matrix.get(this_month_label, {}).values())
+        prior_months = [m for m in MONTHS_FY if m != this_month_label]
+        prior_total  = sum(sum(month_unit_matrix[m].values()) for m in prior_months)
+        prior_with_data = sum(1 for m in prior_months if sum(month_unit_matrix[m].values()) > 0)
+        fy_avg = (prior_total / prior_with_data) if prior_with_data else 0
+        if fy_avg == 0:
+            trend_dir = 'flat'; trend_pct = 0
+        elif this_month_cnt > fy_avg * 1.1:
+            trend_dir = 'up'; trend_pct = int((this_month_cnt - fy_avg) / fy_avg * 100)
+        elif this_month_cnt < fy_avg * 0.9:
+            trend_dir = 'down'; trend_pct = int((fy_avg - this_month_cnt) / fy_avg * 100)
+        else:
+            trend_dir = 'flat'; trend_pct = 0
+
+        # Unit comparison table — sort worst-first so training priority obvious
+        # Fleet avg used for cell colouring on heatmap
+        nonzero_cell_totals = []
+        for m in MONTHS_FY:
+            for pid in plant_ids:
+                v = month_unit_matrix[m][pid]
+                if v > 0:
+                    nonzero_cell_totals.append(v)
+        fleet_cell_avg = (sum(nonzero_cell_totals) / len(nonzero_cell_totals)) if nonzero_cell_totals else 0
+
+        unit_comparison = []
+        for pid in plant_ids:
+            total = per_plant_total[pid]
+            if total == 0:
+                continue
+            cat_dist = per_plant_cat[pid]
+            top_cat_id, top_cat_cnt = max(cat_dist.items(), key=lambda x: x[1])
+            top_cat_pct = round((top_cat_cnt / total) * 100) if total else 0
+            users = per_plant_user[pid]
+            top_user = max(users.items(), key=lambda x: x[1])[0] if users else '—'
+            # Per-unit trend: last 3 months vs prior 3
+            month_idx_now = MONTHS_FY.index(this_month_label) if this_month_label in MONTHS_FY else 0
+            recent_months = MONTHS_FY[max(0, month_idx_now-2):month_idx_now+1]
+            prior3_months = MONTHS_FY[max(0, month_idx_now-5):max(0, month_idx_now-2)]
+            recent_sum = sum(month_unit_matrix[m][pid] for m in recent_months)
+            prior_sum  = sum(month_unit_matrix[m][pid] for m in prior3_months)
+            if prior_sum == 0:
+                trend = 'new' if recent_sum > 0 else 'flat'
+            elif recent_sum > prior_sum * 1.1:
+                trend = 'up'
+            elif recent_sum < prior_sum * 0.9:
+                trend = 'down'
+            else:
+                trend = 'flat'
+            unit_comparison.append({
+                'plant_id':   pid,
+                'plant_name': plant_name_by[pid],
+                'total':      total,
+                'top_cat':    ERROR_CAT_LABELS[top_cat_id],
+                'top_cat_id': top_cat_id,
+                'top_cat_pct': top_cat_pct,
+                'top_user':   top_user,
+                'trend':      trend,
+            })
+        unit_comparison.sort(key=lambda x: x['total'], reverse=True)
+
+        # Category totals as ordered list with labels + descriptions
+        category_summary = []
+        for cat_id, label, desc in ERROR_CATEGORIES:
+            cnt = cat_totals[cat_id]
+            if cnt == 0:
+                continue
+            category_summary.append({
+                'id': cat_id, 'label': label, 'desc': desc, 'cnt': cnt,
+                'pct': round((cnt / total_errors) * 100) if total_errors else 0,
+            })
+
+        # Auto-insight — rule-based, no AI
+        insights = []
+        if worst_unit['cnt'] > 0 and best_unit['cnt'] >= 0 and len(units_with_errors) > 1:
+            ratio = (worst_unit['cnt'] / max(1, best_unit['cnt']))
+            if ratio >= 2:
+                worst_row = next((u for u in unit_comparison if u['plant_name'] == worst_unit['name']), None)
+                if worst_row:
+                    insights.append(
+                        f"<strong>{worst_unit['name']}</strong> has {ratio:.1f}× more errors than "
+                        f"<strong>{best_unit['name']}</strong> this FY. "
+                        f"Top issue: <strong>{worst_row['top_cat']}</strong> ({worst_row['top_cat_pct']}% of errors). "
+                        f"Recommend: targeted training session for SPOC <strong>{worst_row['top_user']}</strong>."
+                    )
+        if category_summary and category_summary[0]['pct'] >= 50:
+            top_cat = category_summary[0]
+            insights.append(
+                f"<strong>{top_cat['label']}</strong> accounts for {top_cat['pct']}% of all errors fleet-wide. "
+                f"Root cause: {top_cat['desc'].lower()}. Add this to next SPOC refresher deck."
+            )
+        if trend_dir == 'up' and this_month_cnt > 0:
+            insights.append(
+                f"This month's error count ({this_month_cnt}) is <strong>{trend_pct}% above</strong> "
+                f"the FY monthly average ({fy_avg:.0f}). Investigate which unit drove the spike."
+            )
+        if not insights:
+            insights.append("No critical patterns detected. Error volume within normal range across units.")
+
+        # FY options for dropdown (current + last 2)
+        cur_yr = int(fy_year_str)
+        fy_options = []
+        for yr in range(cur_yr, cur_yr - 3, -1):
+            fy_options.append({
+                'value': str(yr),
+                'label': f'FY {str(yr)[2:]}-{int(str(yr)[2:])+1}',
+            })
+
+        return render_template(
+            'central_tni_errors.html',
+            fy_label=fy_label,
+            fy_options=fy_options,
+            total_errors=total_errors,
+            best_unit=best_unit,
+            worst_unit=worst_unit,
+            this_month_cnt=this_month_cnt,
+            fy_avg=round(fy_avg, 1),
+            trend_dir=trend_dir,
+            trend_pct=trend_pct,
+            this_month_label=this_month_label,
+            months_fy=MONTHS_FY,
+            active_plants=active_plants,
+            month_unit_matrix=month_unit_matrix,
+            month_cat_matrix=month_cat_matrix,
+            fleet_cell_avg=fleet_cell_avg,
+            per_plant_total=per_plant_total,
+            unit_comparison=unit_comparison,
+            category_summary=category_summary,
+            error_categories=ERROR_CATEGORIES,
+            insights=insights,
+            filters={'fy': fy_param or fy_year_str, 'plant': unit_filter,
+                     'status': status_filter, 'cat': cat_filter},
+        )
 
     @app.route('/central/plant/<int:plant_id>')
     @central_required
