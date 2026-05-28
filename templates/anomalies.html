@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block page_title %}Anomalies Review{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-3">
+  <h4 class="mb-0 fw-semibold"><i class="bi bi-exclamation-triangle-fill me-2" style="color:#d97706;"></i>Anomalies Review</h4>
+  <span class="badge bg-warning text-dark">{{ rows_2a|length }} 2A flagged</span>
+  <span class="badge bg-warning text-dark">{{ rows_2c|length }} 2C flagged</span>
+</div>
+
+<div class="alert alert-info" style="font-size:12.5px;">
+  <i class="bi bi-info-circle me-1"></i> Records that passed save but failed integrity checks. Saved with anomaly flags for review. Investigate and decide: keep, edit, or delete.
+</div>
+
+<form method="GET" class="row g-2 mb-3">
+  <div class="col-auto">
+    <select name="plant" class="form-select form-select-sm">
+      <option value="">All Plants</option>
+      {% for p in plants %}
+      <option value="{{ p.id }}" {% if plant_filter == p.id|string %}selected{% endif %}>{{ p.name }} ({{ p.unit_code }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="flag" class="form-select form-select-sm">
+      <option value="">All Flag Types</option>
+      {% for fl in flag_options %}
+      <option value="{{ fl }}" {% if flag_filter == fl %}selected{% endif %}>{{ fl }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filter</button>
+    <a href="{{ url_for('anomalies_review') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+  </div>
+</form>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-2a" type="button">
+      2A Attendance <span class="badge bg-warning text-dark ms-1">{{ rows_2a|length }}</span>
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-2c" type="button">
+      2C Programme Details <span class="badge bg-warning text-dark ms-1">{{ rows_2c|length }}</span>
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+  <!-- 2A -->
+  <div class="tab-pane fade show active" id="tab-2a">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle" style="font-size:12px;">
+        <thead style="background:#1a3a5c;color:#fff;">
+          <tr>
+            <th style="padding:8px 10px;">Plant</th>
+            <th style="padding:8px 10px;">Emp Code</th>
+            <th style="padding:8px 10px;">Name</th>
+            <th style="padding:8px 10px;">Collar</th>
+            <th style="padding:8px 10px;">Session</th>
+            <th style="padding:8px 10px;">Programme</th>
+            <th style="padding:8px 10px;">Date</th>
+            <th style="padding:8px 10px;text-align:right;">Hrs</th>
+            <th style="padding:8px 10px;">Anomalies</th>
+            <th style="padding:8px 10px;">Recorded</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows_2a %}
+          <tr style="background:#fff7ed;">
+            <td style="padding:7px 10px;"><strong>{{ r.plant_name }}</strong> <span class="badge-unit" style="font-size:10px;">{{ r.unit_code }}</span></td>
+            <td style="padding:7px 10px;font-family:monospace;">{{ r.emp_code }}</td>
+            <td style="padding:7px 10px;font-weight:600;">{{ r.emp_name or '—' }}</td>
+            <td style="padding:7px 10px;">
+              {% if r.collar == 'Blue Collared' %}<span class="badge" style="background:#dbeafe;color:#1e40af;">BC</span>
+              {% elif r.collar == 'White Collared' %}<span class="badge" style="background:#dcfce7;color:#15803d;">WC</span>
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td style="padding:7px 10px;font-family:monospace;font-size:11px;">{{ r.session_code or '—' }}</td>
+            <td style="padding:7px 10px;max-width:200px;">{{ r.programme_name }}</td>
+            <td style="padding:7px 10px;">{{ r.start_date | fmt_date }}</td>
+            <td style="padding:7px 10px;text-align:right;font-weight:600;">{{ r.hrs }}</td>
+            <td style="padding:7px 10px;">
+              {% for fl in r.anomaly_flags.split(',') %}
+              <span style="background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size:9px;"></i> {{ fl.strip() }}
+              </span>
+              {% endfor %}
+            </td>
+            <td style="padding:7px 10px;color:#6b7280;font-size:11px;">{{ r.created_at | fmt_dt }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="10" class="text-center text-muted py-4">No 2A anomalies found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 2C -->
+  <div class="tab-pane fade" id="tab-2c">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle" style="font-size:12px;">
+        <thead style="background:#1a3a5c;color:#fff;">
+          <tr>
+            <th style="padding:8px 10px;">Plant</th>
+            <th style="padding:8px 10px;">Session</th>
+            <th style="padding:8px 10px;">Programme</th>
+            <th style="padding:8px 10px;">Date</th>
+            <th style="padding:8px 10px;text-align:right;">Pax</th>
+            <th style="padding:8px 10px;text-align:right;">2C Hrs</th>
+            <th style="padding:8px 10px;">Audience</th>
+            <th style="padding:8px 10px;">Faculty</th>
+            <th style="padding:8px 10px;">Anomalies</th>
+            <th style="padding:8px 10px;">Recorded</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows_2c %}
+          <tr style="background:#fff7ed;">
+            <td style="padding:7px 10px;"><strong>{{ r.plant_name }}</strong> <span class="badge-unit" style="font-size:10px;">{{ r.unit_code }}</span></td>
+            <td style="padding:7px 10px;font-family:monospace;font-size:11px;">{{ r.session_code }}</td>
+            <td style="padding:7px 10px;max-width:200px;">{{ r.programme_name }}</td>
+            <td style="padding:7px 10px;">{{ r.start_date | fmt_date }}</td>
+            <td style="padding:7px 10px;text-align:right;">{{ r.actual_pax or 0 }}<span style="color:#9ca3af;font-size:10px;">/{{ r.planned_pax or 0 }}</span></td>
+            <td style="padding:7px 10px;text-align:right;font-weight:600;">{{ r.hours_actual }}</td>
+            <td style="padding:7px 10px;">{{ r.target_audience or '—' }}</td>
+            <td style="padding:7px 10px;">{{ r.faculty_name or '—' }}</td>
+            <td style="padding:7px 10px;">
+              {% for fl in r.anomaly_flags.split(',') %}
+              <span style="background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size:9px;"></i> {{ fl.strip() }}
+              </span>
+              {% endfor %}
+            </td>
+            <td style="padding:7px 10px;color:#6b7280;font-size:11px;">{{ r.created_at | fmt_dt }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="10" class="text-center text-muted py-4">No 2C anomalies found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
