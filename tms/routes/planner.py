@@ -126,14 +126,15 @@ def _register(app):
         plant_id = session['plant_id']
         db = get_db()
         fy_start = _current_fy_year()
-        fy_label = f'{fy_start}-{str(fy_start + 1)[2:]}'
+        # Match the short FY format used elsewhere in TMS (TNI, calendar, etc.)
+        fy_label = f'{str(fy_start)[2:]}-{str(fy_start + 1)[2:]}'
 
         # Allow FY override via ?fy=2025 etc
         try:
             fy_param = int(request.args.get('fy', '') or 0)
             if fy_param > 2020:
                 fy_start = fy_param
-                fy_label = f'{fy_start}-{str(fy_start + 1)[2:]}'
+                fy_label = f'{str(fy_start)[2:]}-{str(fy_start + 1)[2:]}'
         except ValueError:
             pass
 
