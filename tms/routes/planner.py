@@ -167,14 +167,28 @@ def _register(app):
         all_progs = list(dict.fromkeys(
             [t['programme_name'] for t in tni] + list(matrix.keys())
         ))
+        # Pull canonical hours-per-session from TNI (most common value used per programme)
+        tni_hrs = {r[0]: r[1] for r in db.execute(
+            '''SELECT programme_name, planned_hours
+               FROM tni
+               WHERE plant_id=? AND fy_year=? AND planned_hours > 0
+               GROUP BY programme_name
+               ORDER BY COUNT(*) DESC''',
+            (plant_id, fy_label)
+        ).fetchall()}
+
         for pn in all_progs:
             row_map = matrix.get(pn, {})
             planned_sessions = sum(int(r.get('target_sessions') or 0) for r in row_map.values())
             planned_pax = sum(int(r.get('target_sessions') or 0) * int(r.get('pax_per_session') or 0)
                               for r in row_map.values())
             nominated = tni_by_prog.get(pn, 0)
+            over_planned = (nominated > 0 and planned_pax > nominated)
+            over_by_pct = round((planned_pax - nominated) / nominated * 100) if over_planned else 0
             if nominated == 0:
                 tag = 'new'      # New Requirement (not in TNI)
+            elif over_planned:
+                tag = 'over'     # Over-planned vs TNI demand
             elif planned_pax == 0:
                 tag = 'critical'
             elif planned_pax < nominated * 0.5:
@@ -188,12 +202,17 @@ def _register(app):
                 'nominated': nominated,
                 'planned_sessions': planned_sessions,
                 'planned_pax': planned_pax,
+                'over_planned': over_planned,
+                'over_by_pct': over_by_pct,
+                'standard_hrs': tni_hrs.get(pn, 4),
                 'tag': tag,
             })
 
-        # Sort: critical first, then under, then partial, then ontrack, then new
-        tag_order = {'critical': 0, 'under': 1, 'partial': 2, 'ontrack': 3, 'new': 4}
+        # Sort: over (urgent waste) first, then critical, under, partial, ontrack, new
+        tag_order = {'over': 0, 'critical': 1, 'under': 2, 'partial': 3, 'ontrack': 4, 'new': 5}
         prog_summary.sort(key=lambda x: (tag_order.get(x['tag'], 99), -x['nominated']))
+
+        over_planned_count = sum(1 for p in prog_summary if p['over_planned'])
 
         # Total KPIs
         total_sessions = sum(int(r.get('target_sessions') or 0) for r in plan_rows)
@@ -216,6 +235,18 @@ def _register(app):
 
         months_locked_count = sum(1 for k, v in month_locked.items() if v)
 
+        # JSON-friendly lookup for client-side validation in the drawer
+        prog_meta_js = {
+            p['programme_name']: {
+                'nominated': p['nominated'],
+                'planned_pax': p['planned_pax'],
+                'planned_sessions': p['planned_sessions'],
+                'standard_hrs': p['standard_hrs'],
+                'over_planned': p['over_planned'],
+                'tag': p['tag'],
+            } for p in prog_summary
+        }
+
         return render_template(
             'planner.html',
             fy_label=fy_label,
@@ -225,10 +256,12 @@ def _register(app):
             today_yyyymm=today_yyyymm,
             matrix=matrix,
             prog_summary=prog_summary,
+            prog_meta_js=prog_meta_js,
             total_sessions=total_sessions,
             total_pax=total_pax,
             total_hrs=int(total_hrs),
             coverage=coverage,
+            over_planned_count=over_planned_count,
             month_locked=month_locked,
             months_locked_count=months_locked_count,
             fy_year_options=[_current_fy_year(), _current_fy_year() - 1, _current_fy_year() + 1],
@@ -256,18 +289,71 @@ def _register(app):
         if not fy_year:
             return jsonify({'ok': False, 'error': 'fy_year required'}), 400
 
-        saved = 0; skipped_locked = 0; errors = []
+        # Pull current TNI demand + already-planned-other-months for cross-row validation
+        tni_by_prog = {
+            r['programme_name']: r['nominated']
+            for r in [
+                {'programme_name': x['programme_name'], 'nominated': x['nominated']}
+                for x in _tni_demand(db, plant_id, fy_year)
+            ]
+        }
+        existing_plan = {}
+        for r in db.execute(
+            'SELECT programme_name, plan_month, target_sessions, pax_per_session FROM planner_entries WHERE plant_id=? AND fy_year=?',
+            (plant_id, fy_year)
+        ).fetchall():
+            existing_plan.setdefault(r['programme_name'], {})[r['plan_month']] = {
+                'sessions': r['target_sessions'] or 0,
+                'pax':      r['pax_per_session'] or 0,
+            }
+
+        saved = 0; skipped_locked = 0; errors = []; warnings = []
         for r in rows:
             try:
                 prog   = (r.get('programme_name') or '').strip()
                 pmonth = (r.get('plan_month') or '').strip()
                 if not prog or not pmonth or len(pmonth) != 7:
                     continue
-                ts = int(r.get('target_sessions') or 0)
-                pps = int(r.get('pax_per_session') or 20)
-                hps = float(r.get('hours_per_session') or 4)
+                # Hard reject impossible values
+                ts_raw  = r.get('target_sessions')
+                pps_raw = r.get('pax_per_session')
+                hps_raw = r.get('hours_per_session')
+                try:
+                    ts  = int(ts_raw or 0)
+                    pps = int(pps_raw or 20)
+                    hps = float(hps_raw or 4)
+                except (ValueError, TypeError):
+                    errors.append(f'{prog}/{pmonth}: non-numeric input')
+                    continue
+                if ts < 0 or pps < 1 or hps <= 0:
+                    errors.append(f'{prog}/{pmonth}: negative or zero values not allowed')
+                    continue
+                if ts > 50:
+                    errors.append(f'{prog}/{pmonth}: max 50 sessions per cell (got {ts})')
+                    continue
+                if pps > 200:
+                    errors.append(f'{prog}/{pmonth}: max 200 pax/session (got {pps})')
+                    continue
+                if hps > 40:
+                    errors.append(f'{prog}/{pmonth}: max 40 hrs/session (got {hps})')
+                    continue
                 faculty = (r.get('faculty') or '').strip()[:120]
                 notes   = (r.get('notes') or '').strip()[:500]
+
+                # Soft validation: warn if total planned pax exceeds TNI nominated
+                nominated = tni_by_prog.get(prog, 0)
+                if nominated > 0:
+                    other_months_pax = sum(
+                        info['sessions'] * info['pax']
+                        for mk, info in existing_plan.get(prog, {}).items()
+                        if mk != pmonth
+                    )
+                    new_total = other_months_pax + (ts * pps)
+                    if new_total > nominated:
+                        warnings.append(
+                            f'{prog} ({pmonth}): planned {new_total} pax exceeds TNI nominated {nominated} '
+                            f'(over by {new_total - nominated})'
+                        )
 
                 # Block edits to locked months (unless caller has admin role)
                 if (_is_month_in_past_or_current(pmonth)
@@ -315,7 +401,9 @@ def _register(app):
         log_action('RECORD_EDIT', f'planner_save:{saved} rows')
         return jsonify({
             'ok': True, 'saved': saved,
-            'skipped_locked': skipped_locked, 'errors': errors,
+            'skipped_locked': skipped_locked,
+            'errors': errors,
+            'warnings': warnings,
         })
 
     @app.route('/planner/lock', methods=['POST'])

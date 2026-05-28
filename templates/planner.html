@@ -18,6 +18,23 @@
   .tag-partial  { background:#dbeafe; color:#1d4ed8; }
   .tag-ontrack  { background:#d1fae5; color:#065f46; }
   .tag-new      { background:#ede9fe; color:#6d28d9; }
+  .tag-over     { background:#7c2d12; color:#fff; }
+
+  .pln-cell.over { background:#fef2f2 !important; }
+  .pln-cell.over .num { color:#dc2626; }
+
+  .dwr-validate {
+    background:#f8fafc; border:1px solid #e5e7eb; border-radius:6px;
+    padding:8px 10px; font-size:11px; margin-bottom:10px;
+  }
+  .dwr-validate .row { display:flex; justify-content:space-between; margin-bottom:2px; }
+  .dwr-validate .ok    { color:#065f46; }
+  .dwr-validate .warn  { color:#dc2626; font-weight:600; }
+  .dwr-warning-banner {
+    background:#fef2f2; border:1px solid #fecaca; color:#dc2626;
+    padding:8px 12px; border-radius:6px; font-size:12px; margin-bottom:10px;
+    display:none;
+  }
 
   .pln-cell {
     width:54px; text-align:center; cursor:pointer; user-select:none;
@@ -112,14 +129,25 @@
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card text-center" style="border-left:4px solid #dc2626;">
+    <div class="card text-center" style="border-left:4px solid {% if over_planned_count > 0 %}#dc2626{% else %}#6b7280{% endif %};">
       <div class="card-body py-2">
-        <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Months Locked</div>
-        <div style="font-size:24px;font-weight:800;color:#dc2626;">{{ months_locked_count }}/12</div>
+        <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Over-Planned vs TNI</div>
+        <div style="font-size:24px;font-weight:800;color:{% if over_planned_count > 0 %}#dc2626{% else %}#9ca3af{% endif %};">{{ over_planned_count }}</div>
+        <div style="font-size:10px;color:#6b7280;">programme(s)</div>
       </div>
     </div>
   </div>
 </div>
+
+{% if over_planned_count > 0 %}
+<div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-3" style="font-size:13px;">
+  <i class="bi bi-exclamation-octagon-fill" style="font-size:18px;"></i>
+  <div>
+    <strong>{{ over_planned_count }} programme(s) over-planned vs TNI nominations.</strong>
+    Each cell shows a red highlight. Either reduce sessions/pax or add more TNI nominations first.
+  </div>
+</div>
+{% endif %}
 
 <!-- ── Coverage projection ─── -->
 <div class="card mb-3">
@@ -169,7 +197,9 @@
       {% for p in prog_summary %}
       <div class="pln-tni-row" data-prog="{{ p.programme_name }}">
         <div style="display:flex;align-items:center;gap:6px;">
-          {% if p.tag == 'critical' %}
+          {% if p.tag == 'over' %}
+          <span class="tag tag-over">OVER {{ p.over_by_pct }}%</span>
+          {% elif p.tag == 'critical' %}
           <span class="tag tag-critical">CRITICAL</span>
           {% elif p.tag == 'under' %}
           <span class="tag tag-under">UNDER</span>
@@ -228,18 +258,24 @@
             {% for p in prog_summary %}
             <tr data-prog="{{ p.programme_name }}">
               <td class="pln-prog-cell">
-                {% if p.tag == 'critical' %}<span class="tag tag-critical">!</span>
+                {% if p.tag == 'over' %}<span class="tag tag-over">⚠</span>
+                {% elif p.tag == 'critical' %}<span class="tag tag-critical">!</span>
                 {% elif p.tag == 'under' %}<span class="tag tag-under">↓</span>
                 {% elif p.tag == 'partial' %}<span class="tag tag-partial">~</span>
                 {% elif p.tag == 'ontrack' %}<span class="tag tag-ontrack">✓</span>
                 {% else %}<span class="tag tag-new">+</span>{% endif %}
                 {{ p.programme_name }}
+                {% if p.nominated > 0 %}
+                <span style="font-size:10px;color:#9ca3af;font-weight:400;">
+                  ({{ p.planned_pax }}/{{ p.nominated }})
+                </span>
+                {% endif %}
               </td>
               {% for mk in month_keys %}
               {% set row = matrix.get(p.programme_name, {}).get(mk) %}
               {% set sess = row.target_sessions if row else 0 %}
               {% set is_locked = month_locked[mk] %}
-              <td class="pln-cell {% if is_locked %}locked{% endif %}"
+              <td class="pln-cell {% if is_locked %}locked{% endif %} {% if p.over_planned and sess > 0 %}over{% endif %}"
                   data-prog="{{ p.programme_name }}"
                   data-month="{{ mk }}"
                   data-sessions="{{ sess }}"
@@ -277,6 +313,10 @@
         <div id="dwr-month" style="font-size:11px;color:#6b7280;">Month</div>
       </div>
       <button type="button" class="btn-close" id="dwr-close"></button>
+    </div>
+    <div id="dwr-warn-banner" class="dwr-warning-banner"></div>
+    <div class="dwr-validate" id="dwr-validate">
+      <!-- populated by JS -->
     </div>
     <div class="mb-2">
       <label class="form-label" style="font-size:12px;font-weight:600;">Sessions</label>
@@ -323,7 +363,8 @@
   const TODAY     = {{ today_yyyymm | tojson }};
   const BC_TOTAL  = {{ coverage.bc_total_emp }};
   const WC_TOTAL  = {{ coverage.wc_total_emp }};
-  const tagOf = (p) => p.dataset.tag;
+  // Per-programme metadata for live drawer validation
+  const PROG_META = {{ prog_meta_js | tojson }};
 
   // Drawer state
   const bd   = document.getElementById('pln-drawer-bd');
@@ -339,6 +380,64 @@
   // Track all dirty rows (rows that changed since last save)
   const dirty = new Map(); // key = `${prog}|${month}` -> row dict
 
+  // Live validation panel inside drawer — recalcs on input
+  function refreshDwrValidate() {
+    if (!activeCell) return;
+    const prog = activeCell.dataset.prog;
+    const meta = PROG_META[prog] || {nominated: 0, planned_pax: 0, standard_hrs: 4};
+    const tr = document.querySelector(`#pln-table tbody tr[data-prog="${CSS.escape(prog)}"]`);
+    let otherMonthsPax = 0;
+    if (tr) {
+      tr.querySelectorAll('.pln-cell').forEach(c => {
+        if (c === activeCell) return;
+        const s = parseInt(c.dataset.sessions || '0', 10);
+        const p = parseInt(c.dataset.pax || '20', 10);
+        otherMonthsPax += s * p;
+      });
+    }
+    const sess = parseInt(dwrSess.value || '0', 10) || 0;
+    const pax  = parseInt(dwrPax.value || '20', 10) || 20;
+    const hrs  = parseFloat(dwrHrs.value || '4') || 4;
+    const thisCellPax = sess * pax;
+    const totalPlannedPax = otherMonthsPax + thisCellPax;
+    const remaining = meta.nominated - totalPlannedPax;
+    const warns = [];
+    if (meta.nominated > 0 && totalPlannedPax > meta.nominated) {
+      warns.push(`Over-planned by ${totalPlannedPax - meta.nominated} pax vs TNI nominated ${meta.nominated}`);
+    }
+    if (Math.abs(hrs - meta.standard_hrs) > 0.01) {
+      warns.push(`Hours/session ${hrs} differs from TNI standard ${meta.standard_hrs}`);
+    }
+    if (sess > 10) {
+      warns.push(`${sess} sessions in one month is unusually high`);
+    }
+
+    const html = `
+      <div class="row"><span>TNI nominated:</span><span><strong>${meta.nominated}</strong> pax</span></div>
+      <div class="row"><span>Planned other months:</span><span>${otherMonthsPax} pax</span></div>
+      <div class="row"><span>This cell adds:</span><span>${thisCellPax} pax (${sess} × ${pax})</span></div>
+      <div class="row"><span>Total planned:</span>
+        <span class="${meta.nominated > 0 && totalPlannedPax > meta.nominated ? 'warn' : 'ok'}">
+          ${totalPlannedPax} pax
+        </span>
+      </div>
+      ${meta.nominated > 0 ? `
+        <div class="row"><span>Remaining demand:</span>
+          <span class="${remaining < 0 ? 'warn' : 'ok'}">${remaining} pax</span>
+        </div>
+      ` : ''}
+      <div class="row"><span>Hours total this cell:</span><span>${(sess * hrs).toFixed(1)} hrs</span></div>
+    `;
+    document.getElementById('dwr-validate').innerHTML = html;
+    const banner = document.getElementById('dwr-warn-banner');
+    if (warns.length) {
+      banner.style.display = 'block';
+      banner.innerHTML = '⚠ ' + warns.join('<br>⚠ ');
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
   function openDrawer(cell) {
     if (cell.dataset.locked === '1') {
       alert('This month is locked. Contact Central L&D for override.');
@@ -352,9 +451,15 @@
     dwrHrs.value  = cell.dataset.hrs || 4;
     dwrFac.value  = cell.dataset.faculty || '';
     dwrNote.value = cell.dataset.notes || '';
+    refreshDwrValidate();
     bd.classList.add('show');
     dwrSess.focus(); dwrSess.select();
   }
+
+  // Listen on input fields → live revalidation
+  ['dwr-sessions','dwr-pax','dwr-hrs'].forEach(id => {
+    document.getElementById(id).addEventListener('input', refreshDwrValidate);
+  });
 
   function closeDrawer() {
     bd.classList.remove('show');
@@ -368,6 +473,34 @@
     const hrs  = parseFloat(dwrHrs.value || '4') || 4;
     const fac  = dwrFac.value.trim();
     const notes = dwrNote.value.trim();
+    // Hard guardrails
+    if (sess < 0 || sess > 50) { alert('Sessions must be 0–50.'); return; }
+    if (pax < 1 || pax > 200)  { alert('Pax/session must be 1–200.'); return; }
+    if (hrs <= 0 || hrs > 40)  { alert('Hours/session must be 0–40.'); return; }
+    // Soft over-plan warning (requires explicit confirm)
+    const prog = activeCell.dataset.prog;
+    const meta = PROG_META[prog] || {nominated: 0};
+    if (meta.nominated > 0) {
+      const tr = document.querySelector(`#pln-table tbody tr[data-prog="${CSS.escape(prog)}"]`);
+      let otherPax = 0;
+      tr?.querySelectorAll('.pln-cell').forEach(c => {
+        if (c === activeCell) return;
+        otherPax += (parseInt(c.dataset.sessions || '0', 10)) * (parseInt(c.dataset.pax || '20', 10));
+      });
+      const newTotal = otherPax + (sess * pax);
+      if (newTotal > meta.nominated) {
+        const over = newTotal - meta.nominated;
+        if (!confirm(
+          `OVER-PLAN WARNING\n\n${prog}:\n` +
+          `  TNI nominated: ${meta.nominated} pax\n` +
+          `  Planned total: ${newTotal} pax\n` +
+          `  Over by: ${over} pax\n\n` +
+          `This means you're committing to train more people than were nominated. ` +
+          `Either reduce sessions/pax here OR add more TNI nominations first.\n\n` +
+          `Click OK only if this is intentional.`
+        )) return;
+      }
+    }
     activeCell.dataset.sessions = sess;
     activeCell.dataset.pax = pax;
     activeCell.dataset.hrs = hrs;
@@ -448,8 +581,13 @@
       if (j.ok) {
         let msg = `Saved ${j.saved} row(s)`;
         if (j.skipped_locked) msg += `, skipped ${j.skipped_locked} locked`;
-        if (j.errors?.length) msg += `, ${j.errors.length} errors`;
-        alert(msg + '. Reloading...');
+        if (j.errors?.length) {
+          msg += `\n\n${j.errors.length} REJECTED (impossible values):\n` + j.errors.join('\n');
+        }
+        if (j.warnings?.length) {
+          msg += `\n\n${j.warnings.length} WARNING(S) — saved but flagged:\n` + j.warnings.join('\n');
+        }
+        alert(msg + '\n\nReloading...');
         dirty.clear();
         window.location.reload();
       } else {
