@@ -697,14 +697,12 @@ def _register(app):
                 skip = int(request.form.get('skip_rows') or 0)
             except (ValueError, TypeError):
                 skip = 0
+            # Stream rows via openpyxl/csv instead of loading entire file via
+            # pandas — pandas DataFrame load was OOM-killing the gunicorn worker
+            # on 5000+ row uploads (Render Starter 512MB).
             try:
-                import pandas as _pd
-                raw   = f.read()
-                fname = f.filename.lower()
-                if fname.endswith('.csv'):
-                    df = _pd.read_csv(io.BytesIO(raw), dtype=str, skiprows=skip).fillna('')
-                else:
-                    df = _pd.read_excel(io.BytesIO(raw), dtype=str, skiprows=skip).fillna('')
+                from tms.helpers import _stream_input_rows
+                columns, row_iter = _stream_input_rows(f, skip_rows=skip)
             except Exception as e:
                 flash(f'Could not read file: {e}', 'danger')
                 return render_template('tni_analyze.html', step='upload')
@@ -712,14 +710,14 @@ def _register(app):
             plant_id = session['plant_id']
             db       = get_db()
             try:
-                rows = _smart_analyze_rows(df, plant_id, db)
+                rows = _smart_analyze_rows(row_iter, plant_id, db, columns=columns)
             except Exception as e:
                 _log.error('_smart_analyze_rows error:\n' + _tb.format_exc())
                 flash(f'Analysis error: {e}', 'danger')
                 return render_template('tni_analyze.html', step='upload')
 
             if not rows:
-                col_list = ', '.join(f'"{c}"' for c in df.columns.tolist()[:15])
+                col_list = ', '.join(f'"{c}"' for c in columns[:15])
                 flash(f'No data rows found. Columns detected: {col_list}. '
                       f'Try increasing "Skip top rows" if headers are not on row 1.', 'warning')
                 return render_template('tni_analyze.html', step='upload')

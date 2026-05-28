@@ -90,6 +90,19 @@ def _tni_is_locked():
     return date.today() > date.fromisoformat(fy_end)
 
 
+def _recompute_session_actuals(plant_id, session_code, db):
+    """Refresh calendar.actual_pax + actual_hrs from emp_training. Idempotent."""
+    if not session_code:
+        return
+    r = db.execute(
+        'SELECT COUNT(*) AS pax, COALESCE(SUM(hrs),0) AS hrs '
+        'FROM emp_training WHERE plant_id=? AND session_code=?',
+        (plant_id, session_code)).fetchone()
+    db.execute(
+        'UPDATE calendar SET actual_pax=?, actual_hrs=? WHERE session_code=? AND plant_id=?',
+        (r['pax'], r['hrs'], session_code, plant_id))
+
+
 def _date_to_month(date_str):
     if not date_str:
         return ''
@@ -998,7 +1011,61 @@ def _build_master_vocab():
 _MASTER_VOCAB = _build_master_vocab()
 
 
-def _smart_analyze_rows(df, plant_id, db):
+def _stream_input_rows(file_storage, skip_rows=0):
+    """Yield (columns_list, rows_iterator) from an uploaded .xlsx/.xls/.csv file.
+
+    Streams via openpyxl read-only mode (for xlsx) or csv module — keeps memory
+    flat regardless of file size. Replaces pandas DataFrame load that was OOM-
+    killing the worker on 5000+ row uploads (Render Starter 512MB cap).
+
+    Returns a tuple. The iterator yields dict-like row mappings keyed by header.
+    """
+    import io as _io
+    fname = (file_storage.filename or '').lower()
+    raw = file_storage.read()
+
+    if fname.endswith('.csv'):
+        import csv as _csv
+        text = raw.decode('utf-8-sig', errors='replace')
+        reader = _csv.reader(_io.StringIO(text))
+        all_rows = list(reader)
+        if skip_rows:
+            all_rows = all_rows[skip_rows:]
+        if not all_rows:
+            return [], iter([])
+        headers = [str(h or '').strip() for h in all_rows[0]]
+        def _csv_iter():
+            for row in all_rows[1:]:
+                yield {headers[i]: (row[i] if i < len(row) else '') for i in range(len(headers))}
+        return headers, _csv_iter()
+
+    # XLSX path — openpyxl streaming
+    import openpyxl
+    wb = openpyxl.load_workbook(_io.BytesIO(raw), read_only=True, data_only=True)
+    ws = wb.active
+    row_iter = ws.iter_rows(values_only=True)
+    # Skip top N rows
+    for _ in range(skip_rows):
+        try:
+            next(row_iter)
+        except StopIteration:
+            return [], iter([])
+    try:
+        header_row = next(row_iter)
+    except StopIteration:
+        return [], iter([])
+    headers = [str(h or '').strip() for h in header_row]
+    def _xlsx_iter():
+        try:
+            for row in row_iter:
+                yield {headers[i]: ('' if row[i] is None else str(row[i]))
+                       for i in range(min(len(headers), len(row)))}
+        finally:
+            wb.close()
+    return headers, _xlsx_iter()
+
+
+def _smart_analyze_rows(df, plant_id, db, columns=None):
     from difflib import get_close_matches as gcm
     from tms.data_hygiene import (
         analyze_programme_name as _hy_prog,
@@ -1009,9 +1076,6 @@ def _smart_analyze_rows(df, plant_id, db):
         validate as _hy_validate,
         spellcheck_text as _hy_spellcheck,
     )
-    _prog_cache = {}
-    _sugg_cache = {}
-
     # Build allowlist from existing programme_master vocab so spellchecker
     # never "corrects" canonical domain words back to wrong English neighbours.
     _spell_allowlist = set()
@@ -1019,6 +1083,8 @@ def _smart_analyze_rows(df, plant_id, db):
             'SELECT name FROM programme_master WHERE plant_id=?', (plant_id,))]:
         for _w in re.findall(r'[A-Za-z]{2,}', _name or ''):
             _spell_allowlist.add(_w.lower())
+    _prog_cache = {}
+    _sugg_cache = {}
 
     _active_master       = [r[0] for r in db.execute(
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,))]
@@ -1049,7 +1115,15 @@ def _smart_analyze_rows(df, plant_id, db):
     emp_map   = {r['emp_code']: r['name'] for r in emp_rows}
     emp_upper = {k.upper(): k for k in emp_map}
 
-    cols      = df.columns.tolist()
+    # Support both legacy pandas DataFrame and new streaming iterable-of-dicts.
+    # New caller passes `columns` explicitly + `df` is an iterator of dict rows.
+    _streaming = columns is not None
+    if _streaming:
+        cols = columns
+        row_iter = enumerate(df)  # df is iterator of dicts
+    else:
+        cols = df.columns.tolist()
+        row_iter = df.iterrows()  # pandas (index, Series) pairs
     col_emp   = _detect_col(cols, ['emp code','employee code','empcode','staff code','emp id','employee id','code'])
     col_prog  = _detect_col(cols, ['programme name','program name','training name','course name','training need','training'])
     col_type  = _detect_col(cols, ['type of programme','type','programme type','prog type','training type','category'])
@@ -1070,7 +1144,9 @@ def _smart_analyze_rows(df, plant_id, db):
         return '' if v.lower() in ('nan','none','0','') else v
 
     results = []
-    for i, row in df.iterrows():
+    for i, row in row_iter:
+        # In streaming mode `row` is already a dict; in pandas mode it's a Series
+        # — both support .get(col, default) so downstream code is unchanged.
         raw_emp  = gv(row, col_emp)
         raw_prog = gv(row, col_prog)
         raw_type = gv(row, col_type)
