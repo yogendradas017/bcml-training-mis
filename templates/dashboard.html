@@ -56,7 +56,7 @@
   </div>
 
   <!-- Sessions -->
-  <div class="col-12 col-sm-6 col-lg-4" style="position:relative;">
+  <div class="col-12 col-sm-6 col-lg-4">
     <div class="kpi-card" id="sess-kpi-card" onclick="toggleSessDrill()" style="--kpi-color:#2e6da4;--kpi-bg:#ebf4ff;cursor:pointer;user-select:none;">
       <div class="kpi-accent"></div>
       <div class="kpi-body">
@@ -80,13 +80,6 @@
           <span class="kpi-foot-lbl">&middot; <strong>{{ stats.tni_count }}</strong> TNI entries on record</span>
           {% if stats.central_sessions %}<span class="kpi-foot-lbl">&middot; <strong>{{ stats.central_sessions }}</strong> central session{{ 's' if stats.central_sessions != 1 }} (Corp L&amp;D)</span>{% endif %}
         </div>
-      </div>
-    </div>
-    <!-- Month-by-month drill-down (floats as dropdown to avoid breaking grid) -->
-    <div id="sess-drill-panel" style="display:none;position:absolute;top:calc(100% - 4px);left:12px;right:12px;z-index:9999;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px 14px 12px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:340px;overflow-y:auto;">
-      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;padding:4px 0 6px;border-bottom:1px solid #f3f4f6;margin-bottom:4px;">Month-by-Month</div>
-      <div id="sess-drill-body" style="font-size:12px;">
-        <span style="color:#9ca3af;">Loading…</span>
       </div>
     </div>
   </div>
@@ -120,6 +113,17 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Sessions Month-by-Month panel — full-width row, pushes layout below when shown -->
+<div id="sess-drill-panel" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 16px 14px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,.06);">
+  <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;padding:4px 0 6px;border-bottom:1px solid #f3f4f6;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+    <span><i class="bi bi-calendar3 me-1" style="color:#2e6da4;"></i> Sessions — Month-by-Month</span>
+    <button type="button" onclick="toggleSessDrill()" style="background:none;border:none;color:#9ca3af;font-size:14px;cursor:pointer;line-height:1;" title="Close">&times;</button>
+  </div>
+  <div id="sess-drill-body" style="font-size:12px;">
+    <span style="color:#9ca3af;">Loading…</span>
   </div>
 </div>
 
