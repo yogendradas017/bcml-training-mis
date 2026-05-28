@@ -257,40 +257,6 @@ CREATE TABLE IF NOT EXISTS verification_log (
 CREATE INDEX IF NOT EXISTS idx_vlog_session ON verification_log(session_code, plant_id);
 CREATE INDEX IF NOT EXISTS idx_vlog_stage   ON verification_log(stage);
 
-CREATE TABLE IF NOT EXISTS planner_entries (
-    id                INTEGER PRIMARY KEY AUTOINCREMENT,
-    plant_id          INTEGER NOT NULL,
-    fy_year           TEXT    NOT NULL,            -- '2026-27'
-    plan_month        TEXT    NOT NULL,            -- '2026-06' (YYYY-MM)
-    programme_name    TEXT    NOT NULL,
-    target_sessions   INTEGER NOT NULL DEFAULT 0,
-    pax_per_session   INTEGER NOT NULL DEFAULT 20,
-    hours_per_session REAL    NOT NULL DEFAULT 4,
-    faculty           TEXT,
-    audience          TEXT,                        -- BC / WC / Common (auto from TNI)
-    notes             TEXT,
-    status            TEXT    DEFAULT 'draft',     -- draft | locked
-    created_by        TEXT,
-    created_at        TEXT    DEFAULT (datetime('now','localtime')),
-    updated_at        TEXT    DEFAULT (datetime('now','localtime')),
-    locked_at         TEXT,
-    locked_by         TEXT,
-    UNIQUE(plant_id, plan_month, programme_name)
-);
-CREATE INDEX IF NOT EXISTS idx_planner_plant_month ON planner_entries(plant_id, plan_month);
-CREATE INDEX IF NOT EXISTS idx_planner_fy          ON planner_entries(plant_id, fy_year);
-
-CREATE TABLE IF NOT EXISTS planner_audit (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    ts          TEXT    DEFAULT (datetime('now','localtime')),
-    plant_id    INTEGER NOT NULL,
-    plan_month  TEXT,
-    actor       TEXT,
-    action      TEXT    NOT NULL,                  -- save_draft | lock_month | lock_fy | edit_locked | acknowledge_gap
-    detail      TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_planner_audit_plant ON planner_audit(plant_id, ts);
-
 CREATE TABLE IF NOT EXISTS tni_upload_errors (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     ts              TEXT    DEFAULT (datetime('now','localtime')),
