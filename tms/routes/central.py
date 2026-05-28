@@ -1,4 +1,6 @@
-from flask import render_template, request, redirect, url_for, session, flash
+import io as _io
+import os as _os
+from flask import render_template, request, redirect, url_for, session, flash, jsonify
 
 from datetime import date as _date
 
@@ -510,6 +512,204 @@ def _register(app):
             filters={'fy': fy_param or fy_year_str, 'plant': unit_filter,
                      'status': status_filter, 'cat': cat_filter},
         )
+
+    def _build_monthly_error_xlsx(month_start, month_end, db):
+        """Build a multi-sheet Excel of SPOC errors for the given month.
+
+        Sheets:
+          - Summary: KPIs + per-unit + per-category counts
+          - One sheet per plant that has errors that month
+        Returns BytesIO buffer + dict of summary stats.
+        """
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+
+        rows = db.execute(
+            '''SELECT ts, plant_id, username, row_status, row_num, emp_code, emp_name,
+                      programme_name, prog_type, mode, planned_hours, issues
+               FROM tni_upload_errors
+               WHERE date(ts) BETWEEN ? AND ?
+               ORDER BY plant_id, ts''',
+            (month_start, month_end)
+        ).fetchall()
+
+        per_plant = {}
+        per_cat   = {c[0]: 0 for c in ERROR_CATEGORIES}
+        total     = len(rows)
+        for r in rows:
+            pid = r['plant_id']
+            per_plant.setdefault(pid, []).append(r)
+            per_cat[_categorize_error(r['issues'], r['row_status'])] += 1
+
+        wb = openpyxl.Workbook()
+        hdr_fill = PatternFill('solid', fgColor='1A3A5C')
+        hdr_font = Font(color='FFFFFF', bold=True)
+
+        # ─── Summary sheet ───
+        s = wb.active
+        s.title = 'Summary'
+        s.append([f'BCML TMS — SPOC Upload Errors  ({month_start} to {month_end})'])
+        s['A1'].font = Font(bold=True, size=14, color='1A3A5C')
+        s.append([])
+        s.append(['Total errors', total])
+        s.append(['Units affected', len(per_plant)])
+        s.append(['SPOCs involved', len({r['username'] for r in rows if r['username']})])
+        s.append([])
+        s.append(['Per-Unit Breakdown'])
+        s['A7'].font = Font(bold=True, color='1A3A5C')
+        s.append(['Unit', 'Errors'])
+        for c in ('A', 'B'):
+            s[f'{c}8'].fill = hdr_fill; s[f'{c}8'].font = hdr_font
+        ranked = sorted(per_plant.items(), key=lambda x: len(x[1]), reverse=True)
+        for pid, prows in ranked:
+            s.append([PLANT_MAP.get(pid, {}).get('name', f'Plant {pid}'), len(prows)])
+        s.append([])
+        s.append(['Error Categories'])
+        s[f'A{s.max_row}'].font = Font(bold=True, color='1A3A5C')
+        s.append(['Category', 'Count', '%'])
+        for c in ('A', 'B', 'C'):
+            s[f'{c}{s.max_row}'].fill = hdr_fill; s[f'{c}{s.max_row}'].font = hdr_font
+        for cid, lbl, _d in ERROR_CATEGORIES:
+            if per_cat[cid] > 0:
+                pct = round((per_cat[cid] / total) * 100) if total else 0
+                s.append([lbl, per_cat[cid], f'{pct}%'])
+        s.column_dimensions['A'].width = 36
+        s.column_dimensions['B'].width = 12
+        s.column_dimensions['C'].width = 10
+
+        # ─── Per-plant sheets ───
+        headers = ['Timestamp', 'SPOC', 'Status', 'Row#', 'Emp Code', 'Emp Name',
+                   'Programme Name', 'Type', 'Mode', 'Planned Hrs', 'Category', 'Issue']
+        for pid, prows in ranked:
+            name = PLANT_MAP.get(pid, {}).get('name', f'Plant {pid}')
+            # Sheet names limited to 31 chars in xlsx
+            sheet_name = name[:31]
+            ws = wb.create_sheet(sheet_name)
+            for ci, h in enumerate(headers, 1):
+                c = ws.cell(row=1, column=ci, value=h)
+                c.fill = hdr_fill; c.font = hdr_font; c.alignment = Alignment(horizontal='center')
+            for r in prows:
+                cat = _categorize_error(r['issues'], r['row_status'])
+                ws.append([
+                    r['ts'], r['username'] or '—', r['row_status'], r['row_num'],
+                    r['emp_code'] or '—', r['emp_name'] or '—',
+                    r['programme_name'] or '—', r['prog_type'] or '—',
+                    r['mode'] or '—', r['planned_hours'] or 0,
+                    ERROR_CAT_LABELS.get(cat, cat),
+                    r['issues'] or '—',
+                ])
+            for ci, w in enumerate([20, 14, 10, 8, 14, 22, 32, 18, 14, 12, 28, 60], 1):
+                ws.column_dimensions[get_column_letter(ci)].width = w
+            ws.freeze_panes = 'A2'
+            ws.auto_filter.ref = f'A1:{get_column_letter(len(headers))}1'
+
+        buf = _io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return buf, {
+            'total': total,
+            'unit_count': len(per_plant),
+            'top_units': [(PLANT_MAP.get(p, {}).get('name', f'Plant {p}'), len(rows))
+                          for p, rows in ranked[:3]],
+            'top_cats': sorted(
+                [(ERROR_CAT_LABELS[c], n) for c, n in per_cat.items() if n > 0],
+                key=lambda x: x[1], reverse=True
+            )[:3],
+        }
+
+    @app.route('/cron/monthly-error-report')
+    def cron_monthly_error_report():
+        """Triggered by Render Cron Job on the 1st of each month at 03:30 UTC (09:00 IST).
+        Generates last month's SPOC error report and emails it. Auth: ?token=<CRON_SECRET>.
+        Optional ?month=YYYY-MM to backfill any prior month. Optional ?to=email override.
+        """
+        from tms.email_util import send_email
+        secret = _os.environ.get('CRON_SECRET', '').strip()
+        if not secret:
+            return jsonify({'ok': False, 'error': 'CRON_SECRET not configured'}), 500
+        if request.args.get('token', '') != secret:
+            return jsonify({'ok': False, 'error': 'invalid token'}), 403
+
+        # Determine reporting month — default = previous calendar month.
+        # IST is UTC+5:30 — for the 1st-of-month cron at 03:30 UTC the previous
+        # month is unambiguous regardless of timezone.
+        from datetime import date as _d, timedelta as _td
+        manual = request.args.get('month', '').strip()
+        if manual and len(manual) == 7 and manual[4] == '-':
+            try:
+                yr, mo = int(manual[:4]), int(manual[5:7])
+                if 1 <= mo <= 12:
+                    first = _d(yr, mo, 1)
+                else:
+                    raise ValueError
+            except ValueError:
+                return jsonify({'ok': False, 'error': 'month must be YYYY-MM'}), 400
+        else:
+            today = _d.today()
+            # First day of CURRENT month, then subtract one day to get last day of previous month
+            first_this = _d(today.year, today.month, 1)
+            last_prev  = first_this - _td(days=1)
+            first      = _d(last_prev.year, last_prev.month, 1)
+
+        # Compute month_end
+        if first.month == 12:
+            next_first = _d(first.year + 1, 1, 1)
+        else:
+            next_first = _d(first.year, first.month + 1, 1)
+        month_end = next_first - _td(days=1)
+        month_label = first.strftime('%B %Y')
+
+        db = get_db()
+        buf, summary = _build_monthly_error_xlsx(
+            first.isoformat(), month_end.isoformat(), db
+        )
+
+        recipient = (request.args.get('to') or
+                     _os.environ.get('REPORT_TO_EMAIL') or
+                     'yogendradas017@gmail.com').strip()
+
+        # Body
+        if summary['total'] == 0:
+            body_html = f'''
+            <p>Hi,</p>
+            <p>No SPOC upload errors recorded across any unit in <strong>{month_label}</strong>. Clean month.</p>
+            <p>— BCML TMS</p>
+            '''
+        else:
+            top_units = ''.join(f'<li><strong>{n}</strong>: {c} errors</li>' for n, c in summary['top_units'])
+            top_cats  = ''.join(f'<li><strong>{n}</strong>: {c}</li>' for n, c in summary['top_cats'])
+            body_html = f'''
+            <p>Hi,</p>
+            <p>Monthly SPOC upload error report for <strong>{month_label}</strong>:</p>
+            <ul style="font-size:14px;line-height:1.7;">
+              <li>Total errors: <strong>{summary['total']}</strong></li>
+              <li>Units affected: <strong>{summary['unit_count']}</strong></li>
+            </ul>
+            <p><strong>Top units needing attention:</strong></p>
+            <ol>{top_units}</ol>
+            <p><strong>Top error categories:</strong></p>
+            <ol>{top_cats}</ol>
+            <p>Full breakdown attached. Use it to plan next month's SPOC refresher training.</p>
+            <p>— BCML TMS</p>
+            '''
+
+        ok, detail = send_email(
+            to_addrs=recipient,
+            subject=f'BCML TMS — SPOC Upload Errors Report — {month_label}',
+            body_html=body_html,
+            attachments=[(
+                f'SPOC_Errors_{first.strftime("%Y-%m")}.xlsx',
+                buf.getvalue(),
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )],
+        )
+        status_code = 200 if ok else 500
+        return jsonify({
+            'ok': ok, 'detail': detail,
+            'month': month_label, 'total_errors': summary['total'],
+            'recipient': recipient,
+        }), status_code
 
     @app.route('/central/plant/<int:plant_id>')
     @central_required
