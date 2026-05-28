@@ -1,0 +1,530 @@
+{% extends "base.html" %}
+{% block page_title %}Yearly Training Planner — {{ fy_label }}{% endblock %}
+{% block content %}
+
+<style>
+  .pln-grid { font-size:12px; border-collapse:separate; border-spacing:0; }
+  .pln-grid th, .pln-grid td { padding:6px 8px; border-bottom:1px solid #e5e7eb; }
+  .pln-grid thead th {
+    background:#1e3a5f; color:#fff; position:sticky; top:0; z-index:5;
+    text-align:center; white-space:nowrap; font-size:11px;
+  }
+  .pln-prog-cell { text-align:left; min-width:200px; font-weight:600; background:#fff; position:sticky; left:0; z-index:4; border-right:2px solid #e5e7eb; }
+  .pln-prog-cell .tag {
+    display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:99px; margin-right:6px;
+  }
+  .tag-critical { background:#fee2e2; color:#dc2626; }
+  .tag-under    { background:#fef3c7; color:#92400e; }
+  .tag-partial  { background:#dbeafe; color:#1d4ed8; }
+  .tag-ontrack  { background:#d1fae5; color:#065f46; }
+  .tag-new      { background:#ede9fe; color:#6d28d9; }
+
+  .pln-cell {
+    width:54px; text-align:center; cursor:pointer; user-select:none;
+    background:#fafafa; transition:background .12s;
+    border-right:1px solid #f3f4f6;
+  }
+  .pln-cell:hover { background:#eff6ff; }
+  .pln-cell.locked { background:#f3f4f6 !important; cursor:not-allowed; color:#9ca3af; position:relative; }
+  .pln-cell.locked::after {
+    content:'🔒'; position:absolute; top:1px; right:2px; font-size:9px; opacity:.4;
+  }
+  .pln-cell .num { font-size:14px; font-weight:700; color:#1e3a5f; }
+  .pln-cell .em { color:#d1d5db; font-size:14px; }
+
+  .pln-tni-side {
+    background:#f8fafc; border-radius:10px; padding:12px;
+    max-height:62vh; overflow-y:auto; font-size:12px;
+  }
+  .pln-tni-row {
+    padding:6px 8px; border-radius:6px; cursor:pointer;
+    margin-bottom:3px; transition:background .12s;
+  }
+  .pln-tni-row:hover { background:#eef2ff; }
+  .pln-tni-row.active { background:#dbeafe; }
+
+  .pln-drawer-backdrop {
+    position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000;
+    display:none; align-items:center; justify-content:center;
+  }
+  .pln-drawer-backdrop.show { display:flex; }
+  .pln-drawer {
+    background:#fff; border-radius:12px; padding:20px 24px; width:420px; max-width:92vw;
+    box-shadow:0 12px 36px rgba(0,0,0,.25);
+  }
+
+  .pln-coverage-bar {
+    height:10px; background:#f3f4f6; border-radius:99px; overflow:hidden; margin:4px 0;
+  }
+  .pln-coverage-fill { height:100%; transition:width .4s; }
+</style>
+
+<!-- ── Header strip ─── -->
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0"><i class="bi bi-calendar3-week text-primary"></i> Yearly Training Planner</h5>
+    <small class="text-muted">{{ session.plant_name }} &middot; FY {{ fy_label }} &middot; Plan with commitment — every locked month is your committed baseline</small>
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <select id="pln-fy-switch" class="form-select form-select-sm" style="width:130px;font-size:12px;">
+      {% for y in fy_year_options %}
+      <option value="{{ y }}" {% if y == fy_start_year %}selected{% endif %}>FY {{ y }}-{{ (y+1)|string|truncate(4,True,'') if false else (y+1)%100 }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" class="btn btn-sm btn-outline-primary" id="pln-save-btn">
+      <i class="bi bi-save"></i> Save Draft
+    </button>
+    <form method="POST" action="{{ url_for('planner_lock') }}" style="display:inline;" id="pln-lock-fy-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="fy_year" value="{{ fy_label }}">
+      <input type="hidden" name="acknowledge_gap" id="pln-ack-input" value="0">
+      <button type="submit" class="btn btn-sm btn-danger" id="pln-lock-fy-btn">
+        <i class="bi bi-lock-fill"></i> Lock FY Plan
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ── KPI strip ─── -->
+<div class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #2563eb;">
+      <div class="card-body py-2">
+        <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Total Sessions</div>
+        <div style="font-size:24px;font-weight:800;color:#2563eb;" id="kpi-sessions">{{ total_sessions }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #7c3aed;">
+      <div class="card-body py-2">
+        <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Total Pax (Planned)</div>
+        <div style="font-size:24px;font-weight:800;color:#7c3aed;" id="kpi-pax">{{ total_pax }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #059669;">
+      <div class="card-body py-2">
+        <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Total Man-Hours</div>
+        <div style="font-size:24px;font-weight:800;color:#059669;" id="kpi-hrs">{{ total_hrs }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center" style="border-left:4px solid #dc2626;">
+      <div class="card-body py-2">
+        <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Months Locked</div>
+        <div style="font-size:24px;font-weight:800;color:#dc2626;">{{ months_locked_count }}/12</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Coverage projection ─── -->
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div style="font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:4px;">
+          <i class="bi bi-people-fill" style="color:#2563eb;"></i> Blue Collar Coverage Projection
+          <span class="float-end" id="bc-pct-lbl">{{ coverage.bc_pct }}%</span>
+        </div>
+        <div class="pln-coverage-bar">
+          <div class="pln-coverage-fill" id="bc-bar" style="width:{{ coverage.bc_pct }}%;background:#2563eb;"></div>
+        </div>
+        <div style="font-size:11px;color:#6b7280;" id="bc-pax-lbl">
+          {{ coverage.bc_pax }} of {{ coverage.bc_total_emp }} BC employees · planned
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div style="font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:4px;">
+          <i class="bi bi-person-badge-fill" style="color:#059669;"></i> White Collar Coverage Projection
+          <span class="float-end" id="wc-pct-lbl">{{ coverage.wc_pct }}%</span>
+        </div>
+        <div class="pln-coverage-bar">
+          <div class="pln-coverage-fill" id="wc-bar" style="width:{{ coverage.wc_pct }}%;background:#059669;"></div>
+        </div>
+        <div style="font-size:11px;color:#6b7280;" id="wc-pax-lbl">
+          {{ coverage.wc_pax }} of {{ coverage.wc_total_emp }} WC employees · planned
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- ── TNI Demand sidebar ── -->
+  <div class="col-lg-3">
+    <div class="ch-dark"><i class="bi bi-clipboard-data"></i> TNI Demand &amp; Planning Status</div>
+    <div class="pln-tni-side">
+      {% if not prog_summary %}
+      <div class="text-center text-muted py-4" style="font-size:12px;">
+        No TNI uploaded for {{ fy_label }} yet.
+      </div>
+      {% else %}
+      <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">
+        {{ prog_summary|length }} programmes. Sorted by planning priority.
+      </div>
+      {% for p in prog_summary %}
+      <div class="pln-tni-row" data-prog="{{ p.programme_name }}">
+        <div style="display:flex;align-items:center;gap:6px;">
+          {% if p.tag == 'critical' %}
+          <span class="tag tag-critical">CRITICAL</span>
+          {% elif p.tag == 'under' %}
+          <span class="tag tag-under">UNDER</span>
+          {% elif p.tag == 'partial' %}
+          <span class="tag tag-partial">PARTIAL</span>
+          {% elif p.tag == 'ontrack' %}
+          <span class="tag tag-ontrack">ON TRACK</span>
+          {% else %}
+          <span class="tag tag-new">NEW REQ</span>
+          {% endif %}
+          <span style="font-weight:600;font-size:12px;">{{ p.programme_name }}</span>
+        </div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;margin-left:2px;">
+          {% if p.nominated > 0 %}
+          {{ p.planned_pax }} / {{ p.nominated }} pax planned · {{ p.planned_sessions }} sessions
+          {% else %}
+          {{ p.planned_pax }} pax · {{ p.planned_sessions }} sessions (no TNI demand)
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+    <div class="mt-2">
+      <button type="button" class="btn btn-sm btn-outline-secondary w-100" id="pln-add-new-btn">
+        <i class="bi bi-plus-lg"></i> Add Programme (New Requirement)
+      </button>
+    </div>
+  </div>
+
+  <!-- ── FY Grid ── -->
+  <div class="col-lg-9">
+    <div class="ch-dark"><i class="bi bi-grid-3x3"></i> FY Plan Grid — Click any cell to edit</div>
+    <div class="card mb-3">
+      <div class="card-body p-0" style="overflow-x:auto;max-height:62vh;overflow-y:auto;">
+        {% if not prog_summary %}
+        <div class="text-center text-muted py-5" style="font-size:13px;">
+          Upload TNI first to begin planning, or click <strong>Add Programme</strong> to add a New Requirement.
+        </div>
+        {% else %}
+        <table class="pln-grid mb-0" id="pln-table">
+          <thead>
+            <tr>
+              <th class="pln-prog-cell" style="background:#1e3a5f;color:#fff;">Programme</th>
+              {% for lbl in month_labels %}
+              {% set mk = month_keys[loop.index0] %}
+              <th>{{ lbl[:3] }}<br>
+                <span style="font-size:9px;font-weight:400;opacity:.7;">{{ mk[5:] }}/{{ mk[2:4] }}</span>
+                {% if month_locked[mk] %}<br><i class="bi bi-lock-fill" style="font-size:10px;color:#fbbf24;"></i>{% endif %}
+              </th>
+              {% endfor %}
+              <th style="background:#374151;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in prog_summary %}
+            <tr data-prog="{{ p.programme_name }}">
+              <td class="pln-prog-cell">
+                {% if p.tag == 'critical' %}<span class="tag tag-critical">!</span>
+                {% elif p.tag == 'under' %}<span class="tag tag-under">↓</span>
+                {% elif p.tag == 'partial' %}<span class="tag tag-partial">~</span>
+                {% elif p.tag == 'ontrack' %}<span class="tag tag-ontrack">✓</span>
+                {% else %}<span class="tag tag-new">+</span>{% endif %}
+                {{ p.programme_name }}
+              </td>
+              {% for mk in month_keys %}
+              {% set row = matrix.get(p.programme_name, {}).get(mk) %}
+              {% set sess = row.target_sessions if row else 0 %}
+              {% set is_locked = month_locked[mk] %}
+              <td class="pln-cell {% if is_locked %}locked{% endif %}"
+                  data-prog="{{ p.programme_name }}"
+                  data-month="{{ mk }}"
+                  data-sessions="{{ sess }}"
+                  data-pax="{{ row.pax_per_session if row else 20 }}"
+                  data-hrs="{{ row.hours_per_session if row else 4 }}"
+                  data-faculty="{{ row.faculty if row else '' }}"
+                  data-notes="{{ row.notes if row else '' }}"
+                  data-locked="{{ '1' if is_locked else '0' }}">
+                {% if sess > 0 %}<span class="num">{{ sess }}</span>
+                {% else %}<span class="em">·</span>{% endif %}
+              </td>
+              {% endfor %}
+              <td style="text-align:center;font-weight:700;background:#f9fafb;">
+                <span class="row-total">{{ p.planned_sessions }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+    <div class="text-muted" style="font-size:11px;">
+      Cell colours: 🔒 = locked (past or committed month). Click any unlocked cell to set sessions + faculty + pax + hrs + notes.
+    </div>
+  </div>
+</div>
+
+<!-- ── Drawer (cell edit modal) ── -->
+<div class="pln-drawer-backdrop" id="pln-drawer-bd">
+  <div class="pln-drawer">
+    <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:12px;">
+      <div>
+        <div id="dwr-prog" style="font-size:15px;font-weight:700;color:#1e3a5f;">Programme</div>
+        <div id="dwr-month" style="font-size:11px;color:#6b7280;">Month</div>
+      </div>
+      <button type="button" class="btn-close" id="dwr-close"></button>
+    </div>
+    <div class="mb-2">
+      <label class="form-label" style="font-size:12px;font-weight:600;">Sessions</label>
+      <input type="number" class="form-control form-control-sm" id="dwr-sessions" min="0" max="50" value="0">
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-6">
+        <label class="form-label" style="font-size:12px;font-weight:600;">Pax / Session</label>
+        <input type="number" class="form-control form-control-sm" id="dwr-pax" min="1" max="200" value="20">
+      </div>
+      <div class="col-6">
+        <label class="form-label" style="font-size:12px;font-weight:600;">Hrs / Session</label>
+        <input type="number" step="0.5" class="form-control form-control-sm" id="dwr-hrs" min="0.5" max="40" value="4">
+      </div>
+    </div>
+    <div class="mb-2">
+      <label class="form-label" style="font-size:12px;font-weight:600;">Faculty (free text)</label>
+      <input type="text" class="form-control form-control-sm" id="dwr-faculty" maxlength="120" placeholder="e.g. Mr Rao (internal) / TÜV Rheinland (external)">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" style="font-size:12px;font-weight:600;">Notes</label>
+      <textarea class="form-control form-control-sm" id="dwr-notes" rows="2" maxlength="500" placeholder="Optional"></textarea>
+    </div>
+    <div class="d-flex gap-2 justify-content-between">
+      <button type="button" class="btn btn-sm btn-outline-danger" id="dwr-clear">
+        <i class="bi bi-trash"></i> Clear cell
+      </button>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="dwr-cancel">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="dwr-save">
+          <i class="bi bi-check-lg"></i> Apply
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  const FY_LABEL  = {{ fy_label | tojson }};
+  const TODAY     = {{ today_yyyymm | tojson }};
+  const BC_TOTAL  = {{ coverage.bc_total_emp }};
+  const WC_TOTAL  = {{ coverage.wc_total_emp }};
+  const tagOf = (p) => p.dataset.tag;
+
+  // Drawer state
+  const bd   = document.getElementById('pln-drawer-bd');
+  const dwrProg = document.getElementById('dwr-prog');
+  const dwrMonth = document.getElementById('dwr-month');
+  const dwrSess = document.getElementById('dwr-sessions');
+  const dwrPax  = document.getElementById('dwr-pax');
+  const dwrHrs  = document.getElementById('dwr-hrs');
+  const dwrFac  = document.getElementById('dwr-faculty');
+  const dwrNote = document.getElementById('dwr-notes');
+  let activeCell = null;
+
+  // Track all dirty rows (rows that changed since last save)
+  const dirty = new Map(); // key = `${prog}|${month}` -> row dict
+
+  function openDrawer(cell) {
+    if (cell.dataset.locked === '1') {
+      alert('This month is locked. Contact Central L&D for override.');
+      return;
+    }
+    activeCell = cell;
+    dwrProg.textContent  = cell.dataset.prog;
+    dwrMonth.textContent = cell.dataset.month;
+    dwrSess.value = cell.dataset.sessions || 0;
+    dwrPax.value  = cell.dataset.pax || 20;
+    dwrHrs.value  = cell.dataset.hrs || 4;
+    dwrFac.value  = cell.dataset.faculty || '';
+    dwrNote.value = cell.dataset.notes || '';
+    bd.classList.add('show');
+    dwrSess.focus(); dwrSess.select();
+  }
+
+  function closeDrawer() {
+    bd.classList.remove('show');
+    activeCell = null;
+  }
+
+  function applyDrawer() {
+    if (!activeCell) return;
+    const sess = parseInt(dwrSess.value || '0', 10) || 0;
+    const pax  = parseInt(dwrPax.value || '20', 10) || 20;
+    const hrs  = parseFloat(dwrHrs.value || '4') || 4;
+    const fac  = dwrFac.value.trim();
+    const notes = dwrNote.value.trim();
+    activeCell.dataset.sessions = sess;
+    activeCell.dataset.pax = pax;
+    activeCell.dataset.hrs = hrs;
+    activeCell.dataset.faculty = fac;
+    activeCell.dataset.notes = notes;
+    activeCell.innerHTML = sess > 0
+      ? `<span class="num">${sess}</span>`
+      : '<span class="em">·</span>';
+
+    const key = `${activeCell.dataset.prog}|${activeCell.dataset.month}`;
+    dirty.set(key, {
+      programme_name: activeCell.dataset.prog,
+      plan_month:     activeCell.dataset.month,
+      target_sessions: sess,
+      pax_per_session: pax,
+      hours_per_session: hrs,
+      faculty: fac,
+      notes: notes,
+    });
+
+    recomputeTotals();
+    closeDrawer();
+  }
+
+  function clearCell() {
+    if (!activeCell) return;
+    dwrSess.value = 0;
+    dwrFac.value = ''; dwrNote.value = '';
+    applyDrawer();
+  }
+
+  function recomputeTotals() {
+    let totalSess = 0, totalPax = 0, totalHrs = 0;
+    let bcPax = 0, wcPax = 0;
+    document.querySelectorAll('#pln-table tbody tr').forEach(tr => {
+      let rowSess = 0;
+      tr.querySelectorAll('.pln-cell').forEach(c => {
+        const s = parseInt(c.dataset.sessions || '0', 10);
+        const p = parseInt(c.dataset.pax || '20', 10);
+        const h = parseFloat(c.dataset.hrs || '4');
+        rowSess += s;
+        totalSess += s;
+        totalPax  += s * p;
+        totalHrs  += s * h;
+      });
+      tr.querySelector('.row-total').textContent = rowSess;
+    });
+    document.getElementById('kpi-sessions').textContent = totalSess;
+    document.getElementById('kpi-pax').textContent      = totalPax;
+    document.getElementById('kpi-hrs').textContent      = Math.round(totalHrs);
+    // Coverage projection — server provides exact audience mapping on save; here
+    // we use a quick proxy: count all planned pax under each collar via TNI tag.
+    // For accuracy, real numbers reload on Save.
+  }
+
+  // Wire cells
+  document.querySelectorAll('.pln-cell').forEach(c => {
+    c.addEventListener('click', () => openDrawer(c));
+  });
+  document.getElementById('dwr-close').addEventListener('click', closeDrawer);
+  document.getElementById('dwr-cancel').addEventListener('click', closeDrawer);
+  document.getElementById('dwr-save').addEventListener('click', applyDrawer);
+  document.getElementById('dwr-clear').addEventListener('click', clearCell);
+  bd.addEventListener('click', (e) => { if (e.target === bd) closeDrawer(); });
+
+  // Save Draft button — sends ALL dirty rows
+  document.getElementById('pln-save-btn').addEventListener('click', async () => {
+    if (dirty.size === 0) { alert('No changes to save.'); return; }
+    const payload = { fy_year: FY_LABEL, rows: Array.from(dirty.values()) };
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    try {
+      const r = await fetch('{{ url_for("planner_save") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify(payload),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        let msg = `Saved ${j.saved} row(s)`;
+        if (j.skipped_locked) msg += `, skipped ${j.skipped_locked} locked`;
+        if (j.errors?.length) msg += `, ${j.errors.length} errors`;
+        alert(msg + '. Reloading...');
+        dirty.clear();
+        window.location.reload();
+      } else {
+        alert('Save failed: ' + (j.error || 'unknown'));
+      }
+    } catch(e) {
+      alert('Network error: ' + e);
+    }
+  });
+
+  // Lock FY confirmation with acknowledgement of under-planning
+  document.getElementById('pln-lock-fy-btn').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (dirty.size > 0) {
+      if (!confirm(`You have ${dirty.size} unsaved change(s). Save them before locking?`)) return;
+      document.getElementById('pln-save-btn').click();
+      return;
+    }
+    // Detect critical/under tags
+    const issues = document.querySelectorAll('.tag-critical, .tag-under').length;
+    let ackMsg = 'Lock the full FY plan? Once locked, no changes without Central override.';
+    if (issues > 0) {
+      ackMsg = `WARNING: ${issues} programme(s) are CRITICAL or UNDER-planned.\n\n` +
+               `Are you sure you want to lock the FY plan with these gaps?\n\n` +
+               `Click OK to acknowledge under-planning and lock. Audit log will record this.`;
+      document.getElementById('pln-ack-input').value = '1';
+    }
+    if (confirm(ackMsg)) {
+      document.getElementById('pln-lock-fy-form').submit();
+    }
+  });
+
+  // Add New Requirement programme
+  document.getElementById('pln-add-new-btn').addEventListener('click', () => {
+    const name = prompt('New programme name (will be added as New Requirement, no TNI demand):');
+    if (!name || !name.trim()) return;
+    alert(`'${name.trim()}' will appear on save. Set sessions in any unlocked month cell to commit.`);
+    // Pre-create a stub row in dirty so on save it appears in matrix next reload
+    // User must then set a session count to actually persist.
+    // For simplicity reload after save; this is just a hint.
+    const fakeRow = {
+      programme_name: name.trim(),
+      plan_month: '{{ month_keys[0] if month_keys else "" }}',  // first non-locked month suggested
+      target_sessions: 0, pax_per_session: 20, hours_per_session: 4,
+      faculty: '', notes: ''
+    };
+    // Find first non-locked month and inject a temp row visually
+    const nonLockedMonthHeader = document.querySelectorAll('#pln-table thead th');
+    let firstFree = null;
+    {% for mk in month_keys %}
+    if (!firstFree && {{ 'true' if not month_locked[mk] else 'false' }}) firstFree = '{{ mk }}';
+    {% endfor %}
+    if (firstFree) {
+      fakeRow.plan_month = firstFree;
+      fakeRow.target_sessions = 1;
+      dirty.set(`${fakeRow.programme_name}|${firstFree}`, fakeRow);
+      alert('Stub added. Click "Save Draft" to commit, then edit individual months from the grid.');
+    }
+  });
+
+  // FY switcher
+  document.getElementById('pln-fy-switch').addEventListener('change', (e) => {
+    window.location.href = '{{ url_for("planner") }}?fy=' + e.target.value;
+  });
+
+  // TNI sidebar — highlight active programme row in grid on click
+  document.querySelectorAll('.pln-tni-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const prog = row.dataset.prog;
+      document.querySelectorAll('.pln-tni-row').forEach(r => r.classList.remove('active'));
+      row.classList.add('active');
+      const tr = document.querySelector(`#pln-table tbody tr[data-prog="${prog}"]`);
+      if (tr) tr.scrollIntoView({behavior:'smooth', block:'center'});
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -227,7 +227,7 @@ def health():
 # Register all routes (deferred imports — app is defined above)
 from tms.routes import (auth, employees, tni, programme, calendar, training,
                         summary, central, export, api, qr, central_training, reports, requests,
-                        verify, anomalies)
+                        verify, anomalies, planner)
 
 auth.             _register(app)
 employees.        _register(app)
@@ -245,6 +245,7 @@ reports.          _register(app)
 requests.         _register(app)
 verify.           _register(app)
 anomalies.        _register(app)
+planner.          _register(app)
 
 # Rate-limit login: 20/min per IP AND 5/min per username (botnet bypass mitigation)
 def _login_user_key():
