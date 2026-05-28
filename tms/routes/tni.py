@@ -894,13 +894,39 @@ def _register(app):
 
         if err_rows or dup_rows:
             buf = _error_excel_for_tni(err_rows, dup_rows=dup_rows, plant_id=plant_id, db=db)
+            # Persist to disk so user can land on /tni and grab the report from there.
+            err_path = os.path.join(BASE_DIR, 'data', f'tni_errors_{aid}.xlsx')
+            with open(err_path, 'wb') as _fp:
+                _fp.write(buf.getvalue())
             parts = []
             if err_rows:  parts.append(f'{len(err_rows)} errors')
-            if dup_rows:  parts.append(f'{len(dup_rows)} duplicates in file')
-            flash(f'{inserted} new + {updated} updated. {" & ".join(parts)} — downloading report.', 'warning')
-            return send_file(buf, as_attachment=True,
-                             download_name='TNI_Import_Issues.xlsx',
-                             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            if dup_rows:  parts.append(f'{len(dup_rows)} duplicates')
+            from markupsafe import Markup as _Markup
+            dl_url = url_for('tni_errors_download', aid=aid)
+            flash(
+                _Markup(
+                    f'Import complete — {inserted} new + {updated} updated. '
+                    f'{" & ".join(parts)} could not be imported. '
+                    f'<a href="{dl_url}" class="alert-link"><i class="bi bi-download"></i> Download issues report</a>'
+                ),
+                'warning'
+            )
+            return redirect(url_for('tni'))
 
-        flash(f'{inserted} new entries added, {updated} existing entries updated — all clean!', 'success')
+        flash(f'Import complete — {inserted} new entries added, {updated} existing entries updated. All clean!', 'success')
         return redirect(url_for('tni'))
+
+    @app.route('/tni/analyze/errors/<aid>')
+    @spoc_required
+    def tni_errors_download(aid):
+        # Plant-scoped + simple filename validation to prevent path traversal
+        if not aid or not aid.replace('-', '').isalnum():
+            flash('Invalid report token.', 'danger')
+            return redirect(url_for('tni'))
+        path = os.path.join(BASE_DIR, 'data', f'tni_errors_{aid}.xlsx')
+        if not os.path.exists(path):
+            flash('Report no longer available — re-upload to regenerate.', 'warning')
+            return redirect(url_for('tni'))
+        return send_file(path, as_attachment=True,
+                         download_name='TNI_Import_Issues.xlsx',
+                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
