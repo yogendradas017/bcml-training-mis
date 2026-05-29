@@ -4,7 +4,18 @@ from flask import render_template, request, redirect, url_for, session, flash
 
 from tms.db import get_db
 from tms.decorators import central_required
-from tms.audit import log_action
+from tms.audit import log_action, log_record_change
+
+
+# Tier 6: verification checklist items — all must be ticked before approve.
+# Adding/changing this list immediately tightens the gate everywhere.
+VERIFY_CHECKLIST_ITEMS = [
+    ('reviewed_attendance', 'Attendance (2A) reviewed — every attendee verified'),
+    ('reviewed_feedback',   'Feedback responses reviewed — coverage and scores plausible'),
+    ('reviewed_2c',         'Programme Details (2C) reviewed — faculty, duration, mode correct'),
+    ('reviewed_anomalies',  'Anomaly flags reviewed and resolved'),
+]
+VERIFY_NOTE_MIN_LEN = 20
 
 
 def _register(app):
@@ -36,7 +47,7 @@ def _register(app):
     @central_required
     def verify_approve(session_code, plant_id):
         db = get_db()
-        cal = db.execute('SELECT status FROM calendar WHERE session_code=? AND plant_id=?',
+        cal = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
                          (session_code, plant_id)).fetchone()
         if not cal:
             flash('Session not found.', 'danger')
@@ -44,20 +55,48 @@ def _register(app):
         if cal['status'] != 'Awaiting Verification':
             flash(f'Session is "{cal["status"]}" — cannot approve.', 'warning')
             return redirect(url_for('verify_sessions'))
+
+        # Tier 6: enforce verification checklist + mandatory note
+        missing_checks = [label for key, label in VERIFY_CHECKLIST_ITEMS
+                          if request.form.get(key) != '1']
+        note = request.form.get('note', '').strip()
+        if missing_checks:
+            flash(
+                'Cannot approve. Required checklist items not confirmed: ' +
+                ' · '.join(missing_checks),
+                'danger')
+            return redirect(url_for('verify_trail', session_code=session_code,
+                                     plant_id=plant_id))
+        if len(note) < VERIFY_NOTE_MIN_LEN:
+            flash(
+                f'Verification note must be at least {VERIFY_NOTE_MIN_LEN} characters '
+                f'(got {len(note)}). State what you reviewed and any caveats.',
+                'danger')
+            return redirect(url_for('verify_trail', session_code=session_code,
+                                     plant_id=plant_id))
+        note = note[:500]
+
         now_iso  = _dt.now().isoformat(timespec='seconds')
         user_id  = session.get('user_id')
         username = session.get('username', '')
-        note     = request.form.get('note', '').strip()[:500]
+        before_snap_dict = dict(cal)
         db.execute(
             "UPDATE calendar SET status='Conducted', verified_at=?, verified_by=? "
             "WHERE session_code=? AND plant_id=?",
             (now_iso, user_id, session_code, plant_id))
+        after_snap = db.execute(
+            'SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
+            (session_code, plant_id)).fetchone()
         db.execute(
             'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail) '
             'VALUES (?,?,?,?,?,?)',
-            (session_code, plant_id, 'verified', username, user_id, note or 'approved'))
+            (session_code, plant_id, 'verified', username, user_id,
+             f'approved; checklist=all; note: {note}'))
         db.commit()
-        log_action('VERIFY_APPROVE', f"session:{session_code}", plant_id=plant_id)
+        log_record_change('VERIFY_APPROVE', cal['id'], 'calendar',
+                          before=before_snap_dict,
+                          after=dict(after_snap) if after_snap else None,
+                          extra_detail=f'note:{note[:200]}')
         flash(f'Session {session_code} verified — now counted as Conducted.', 'success')
         return redirect(url_for('verify_sessions'))
 
@@ -118,4 +157,8 @@ def _register(app):
             'WHERE t.plant_id=? AND t.session_code=? '
             'ORDER BY t.created_at',
             (plant_id, session_code)).fetchall()
-        return render_template('verify_trail.html', trail=trail, cal=cal, attendees=attendees)
+        return render_template(
+            'verify_trail.html', trail=trail, cal=cal, attendees=attendees,
+            checklist_items=VERIFY_CHECKLIST_ITEMS,
+            verify_note_min_len=VERIFY_NOTE_MIN_LEN,
+        )

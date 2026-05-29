@@ -28,7 +28,33 @@ def _register(app):
         db = get_db()
         _sync_calendar_from_2c(plant_id, db)
 
-        sessions = db.execute('SELECT * FROM calendar WHERE plant_id=? ORDER BY id DESC', (plant_id,)).fetchall()
+        # Tier 5: auto-archive (Lapsed) sessions from prior FY that are still
+        # 'To Be Planned' or 'Awaiting Verification' — they will never be conducted.
+        # Idempotent — runs cheap UPDATE, no-op if nothing matches.
+        fy_start, _fy_end = _current_fy()
+        lapsed_rows = db.execute(
+            "UPDATE calendar SET status='Lapsed' "
+            "WHERE plant_id=? AND status IN ('To Be Planned','Awaiting Verification') "
+            "AND plan_start IS NOT NULL AND plan_start != '' AND plan_start < ?",
+            (plant_id, fy_start)
+        ).rowcount
+        if lapsed_rows:
+            db.commit()
+
+        # Default view: hide Lapsed unless explicitly requested (?include_lapsed=1)
+        show_lapsed = request.args.get('include_lapsed') == '1'
+        if show_lapsed:
+            sessions = db.execute(
+                'SELECT * FROM calendar WHERE plant_id=? ORDER BY plan_start ASC, id ASC',
+                (plant_id,)).fetchall()
+        else:
+            sessions = db.execute(
+                "SELECT * FROM calendar WHERE plant_id=? AND status != 'Lapsed' "
+                "ORDER BY plan_start ASC, id ASC",
+                (plant_id,)).fetchall()
+        lapsed_count = db.execute(
+            "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Lapsed'",
+            (plant_id,)).fetchone()[0]
         demand_map = {}
         for row in db.execute('SELECT programme_name, COUNT(DISTINCT emp_code) as cnt FROM tni WHERE plant_id=? GROUP BY programme_name', (plant_id,)):
             demand_map[row['programme_name']] = row['cnt']
@@ -74,7 +100,9 @@ def _register(app):
                                all_cal_programmes=all_cal_programmes, cov_rows=cov_rows,
                                prog_types=PROG_TYPES, modes=MODES, levels=LEVELS,
                                audiences=AUDIENCES, months=MONTHS_FY, statuses=STATUSES,
-                               qr_map=qr_map)
+                               qr_map=qr_map,
+                               lapsed_count=lapsed_count,
+                               show_lapsed=show_lapsed)
 
     @app.route('/calendar/add', methods=['POST'])
     @spoc_required
@@ -188,8 +216,22 @@ def _register(app):
             has_feedback = sc and db.execute(
                 'SELECT 1 FROM feedback_response WHERE plant_id=? AND session_code=?',
                 (plant_id, sc)).fetchone()
-            if not has_qr or not has_feedback:
-                flash("Can't mark Conducted. Process: Generate QR code → Mark Attendance → Collect Feedback. Contact Corporate L&D for assistance.", 'danger')
+            # Tier 5: Conducted-gate now also requires at least one attendance row.
+            # Previously a SPOC could mark Conducted with zero attendees.
+            attendee_count = 0
+            if sc:
+                attendee_count = db.execute(
+                    'SELECT COUNT(*) FROM emp_training WHERE plant_id=? AND session_code=?',
+                    (plant_id, sc)).fetchone()[0]
+            missing = []
+            if not has_qr: missing.append('QR code')
+            if attendee_count == 0: missing.append('attendance (no 2A rows)')
+            if not has_feedback: missing.append('feedback responses')
+            if missing:
+                flash(
+                    "Can't mark Conducted — missing: " + ', '.join(missing) +
+                    ". Process: Generate QR → Mark Attendance → Collect Feedback.",
+                    'danger')
                 return redirect(url_for('training_calendar'))
         row = {
             'programme_name': f.get('programme_name', ''),
@@ -245,6 +287,34 @@ def _register(app):
         log_record_change('RECORD_EDIT', cal_id, 'calendar',
                           before=before_snap_dict,
                           after=dict(after_snap) if after_snap else None)
+
+        # Tier 5: persist reschedule history when dates or Re-Scheduled status changes
+        if before_snap_dict and after_snap:
+            date_changed = (
+                before_snap_dict.get('plan_start') != after_snap['plan_start'] or
+                before_snap_dict.get('plan_end')   != after_snap['plan_end']
+            )
+            became_rescheduled = (
+                before_snap_dict.get('status') != 'Re-Scheduled' and
+                after_snap['status'] == 'Re-Scheduled'
+            )
+            if date_changed or became_rescheduled:
+                db.execute(
+                    'INSERT INTO calendar_reschedule_history '
+                    '(plant_id, cal_id, session_code, old_plan_start, old_plan_end, '
+                    ' new_plan_start, new_plan_end, old_status, new_status, actor, reason) '
+                    'VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                    (plant_id, cal_id,
+                     after_snap['session_code'],
+                     before_snap_dict.get('plan_start'),
+                     before_snap_dict.get('plan_end'),
+                     after_snap['plan_start'],
+                     after_snap['plan_end'],
+                     before_snap_dict.get('status'),
+                     after_snap['status'],
+                     session.get('username', 'unknown'),
+                     (f.get('reschedule_reason') or '').strip()[:500]))
+                db.commit()
         msg = 'Session updated.'
         if tni_audience_edit and form_audience_edit and form_audience_edit != tni_audience_edit:
             msg += f' Audience locked to "{tni_audience_edit}" from TNI.'

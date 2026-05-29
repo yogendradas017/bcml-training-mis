@@ -33,7 +33,7 @@ PROG_TYPES  = ['Behavioural/Leadership', 'Cane', 'Commercial', 'EHS/HR', 'IT', '
 MODES       = ['Classroom', 'OJT', 'SOP', 'Online']
 LEVELS      = ['General', 'Specialized']
 AUDIENCES   = ['Blue Collared', 'White Collared', 'Common']
-STATUSES    = ['To Be Planned', 'Conducted', 'Re-Scheduled', 'Cancelled']
+STATUSES    = ['To Be Planned', 'Awaiting Verification', 'Conducted', 'Re-Scheduled', 'Cancelled', 'Lapsed']
 INT_EXT     = ['Internal', 'External', 'Online']
 MONTHS_FY   = ['April','May','June','July','August','September',
                'October','November','December','January','February','March']

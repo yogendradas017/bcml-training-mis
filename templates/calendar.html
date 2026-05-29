@@ -64,9 +64,11 @@
 </div>
 
 <div class="card mb-4">
-  <div class="card-header ch-dark">
-    <i class="bi bi-calendar-plus"></i> Add Single Training Session
+  <div class="card-header ch-dark d-flex justify-content-between align-items-center" style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#addSessionPanel" aria-expanded="false" aria-controls="addSessionPanel">
+    <span><i class="bi bi-calendar-plus"></i> Add Single Training Session</span>
+    <i class="bi bi-chevron-down" style="font-size:13px;"></i>
   </div>
+  <div class="collapse" id="addSessionPanel">
   <div class="card-body">
     <form method="POST" action="{{ url_for('add_calendar') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -169,6 +171,7 @@
         </div>
       </div>
     </form>
+  </div>
   </div>
 </div>
 
@@ -295,6 +298,14 @@
         <option>White Collared</option>
         <option>Common</option>
       </select>
+      {% if lapsed_count and lapsed_count > 0 %}
+      <a class="btn btn-sm {% if show_lapsed %}btn-warning{% else %}btn-outline-warning{% endif %}"
+         href="{{ url_for('training_calendar', include_lapsed=(0 if show_lapsed else 1)) }}"
+         title="Toggle prior-FY auto-archived sessions">
+        <i class="bi bi-archive"></i>
+        {% if show_lapsed %}Hide{% else %}Show{% endif %} Lapsed ({{ lapsed_count }})
+      </a>
+      {% endif %}
     </div>
   </div>
   <div class="card-body p-0">
@@ -348,8 +359,23 @@
                 <i class="bi bi-lock-fill"></i>
               </button>
               {% else %}
-              <button class="btn btn-sm btn-outline-primary" title="Edit" style="padding:2px 6px;"
-                onclick="openEdit({{ s.id }},'{{ s.programme_name|replace("'","\\'") }}','{{ s.prog_type or '' }}','{{ s.source or 'TNI' }}','{{ s.planned_month or '' }}','{{ s.plan_start or '' }}','{{ s.plan_end or '' }}','{{ s.time_from or '' }}','{{ s.time_to or '' }}','{{ s.duration_hrs }}','{{ s.level or '' }}','{{ s.mode or '' }}','{{ s.target_audience or '' }}','{{ s.planned_pax }}','{{ s.trainer_vendor or '' }}','{{ s.status }}')">
+              <button class="btn btn-sm btn-outline-primary edit-cal-btn" title="Edit" style="padding:2px 6px;"
+                data-id="{{ s.id }}"
+                data-prog="{{ s.programme_name }}"
+                data-type="{{ s.prog_type or '' }}"
+                data-source="{{ s.source or 'TNI' }}"
+                data-month="{{ s.planned_month or '' }}"
+                data-start="{{ s.plan_start or '' }}"
+                data-end="{{ s.plan_end or '' }}"
+                data-tfrom="{{ s.time_from or '' }}"
+                data-tto="{{ s.time_to or '' }}"
+                data-hrs="{{ s.duration_hrs }}"
+                data-level="{{ s.level or '' }}"
+                data-mode="{{ s.mode or '' }}"
+                data-audience="{{ s.target_audience or '' }}"
+                data-pax="{{ s.planned_pax }}"
+                data-trainer="{{ s.trainer_vendor or '' }}"
+                data-status="{{ s.status }}">
                 <i class="bi bi-pencil"></i>
               </button>
               {% endif %}
@@ -616,6 +642,17 @@ function _unlockAddAudience() {
   if (paxEl) paxEl.value = 0;
 }
 BulkSelect.init('calTable', '{{ url_for("calendar_bulk_delete") }}');
+
+// Tier 7: replace 16-arg openEdit() with dataset-driven dispatcher so apostrophes
+// and quotes in programme names never break the JS.
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.edit-cal-btn');
+  if (!btn) return;
+  const d = btn.dataset;
+  openEdit(d.id, d.prog, d.type, d.source, d.month, d.start, d.end,
+           d.tfrom, d.tto, d.hrs, d.level, d.mode, d.audience, d.pax,
+           d.trainer, d.status);
+});
 
 function openEdit(id, prog, type, source, month, start, end, tfrom, tto, hrs, level, mode, audience, pax, trainer, status) {
   const f = document.getElementById('editForm');

@@ -259,6 +259,23 @@ CREATE TABLE IF NOT EXISTS verification_log (
 CREATE INDEX IF NOT EXISTS idx_vlog_session ON verification_log(session_code, plant_id);
 CREATE INDEX IF NOT EXISTS idx_vlog_stage   ON verification_log(stage);
 
+CREATE TABLE IF NOT EXISTS calendar_reschedule_history (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts              TEXT    DEFAULT (datetime('now','localtime')),
+    plant_id        INTEGER NOT NULL,
+    cal_id          INTEGER NOT NULL,
+    session_code    TEXT,
+    old_plan_start  TEXT,
+    old_plan_end    TEXT,
+    new_plan_start  TEXT,
+    new_plan_end    TEXT,
+    old_status      TEXT,
+    new_status      TEXT,
+    actor           TEXT,
+    reason          TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_resched_cal ON calendar_reschedule_history(plant_id, cal_id, ts);
+
 CREATE TABLE IF NOT EXISTS tni_upload_errors (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     ts              TEXT    DEFAULT (datetime('now','localtime')),
