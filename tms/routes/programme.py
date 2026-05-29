@@ -56,11 +56,13 @@ def _register(app):
                 db.execute('UPDATE programme_master SET prog_type=?, source=? WHERE id=?',
                            (prog_type or None, source, existing['id']))
                 db.commit()
+                log_action('RECORD_EDIT', f"pm:{name}")
                 flash(f'"{name}" updated.', 'success')
             else:
                 db.execute('INSERT INTO programme_master(plant_id,name,prog_type,source) VALUES(?,?,?,?)',
                            (plant_id, name, prog_type or None, source))
                 db.commit()
+                log_action('RECORD_ADD', f"pm:{name}:{source}")
                 flash(f'"{name}" added to master list as {source}.', 'success')
         except Exception as e:
             logging.error(f'programme_master_add error: {e}')
@@ -82,6 +84,7 @@ def _register(app):
             return redirect(url_for('programme_master'))
         db.execute('DELETE FROM programme_master WHERE id=? AND plant_id=?', (prog_id, plant_id))
         db.commit()
+        log_action('RECORD_DELETE', f"pm:{prog['name']}")
         flash(f'"{prog["name"]}" removed from master list.', 'warning')
         return redirect(url_for('programme_master'))
 
@@ -102,6 +105,7 @@ def _register(app):
         db.execute('UPDATE programme_master SET prog_type=? WHERE id=? AND plant_id=?',
                    (prog_type or None, prog_id, plant_id))
         db.commit()
+        log_action('RECORD_EDIT', f"pm_type:{prog_id}:{prog_type}")
         return jsonify({'ok': True, 'prog_type': prog_type})
 
     @app.route('/programme-master/<int:prog_id>/set-source', methods=['POST'])
@@ -120,6 +124,7 @@ def _register(app):
         db.execute('UPDATE programme_master SET source=? WHERE id=? AND plant_id=?',
                    (source, prog_id, plant_id))
         db.commit()
+        log_action('RECORD_EDIT', f"pm_source:{prog_id}:{source}")
         return jsonify({'ok': True, 'source': source})
 
     @app.route('/programme-master/bulk-delete', methods=['POST'])
@@ -149,6 +154,7 @@ def _register(app):
                 deleted += 1
         db.commit()
         if deleted:
+            log_action('BULK_DELETE', f"pm:{deleted}")
             flash(f'{deleted} programme(s) deleted.', 'warning')
         if blocked:
             flash(f'{len(blocked)} programme(s) could not be deleted (in use in TNI/Calendar/Training): {", ".join(blocked[:5])}', 'danger')
@@ -183,6 +189,7 @@ def _register(app):
             db.execute('INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, source) VALUES(?,?,?,?)',
                        (plant_id, name, prog_type, 'TNI Requirement'))
         db.commit()
+        log_action('BULK_UPDATE', f"pm_sync_tni:{len(tni_progs)}")
         flash(f'Programme Master synced from TNI — {len(tni_progs)} TNI programme(s) updated. New Requirement entries preserved.', 'success')
         return redirect(url_for('programme_master'))
 
@@ -230,6 +237,7 @@ def _register(app):
             except Exception:
                 skipped += 1
         db.commit()
+        log_action('BULK_UPLOAD', f"pm:{inserted}")
         flash(f'{inserted} programmes added. {skipped} already existed (skipped).', 'success' if inserted else 'warning')
         return redirect(url_for('programme_master'))
 
@@ -357,6 +365,27 @@ def _register(app):
             else:
                 flash(f'Session code "{session_code}" not found in calendar. Only planned sessions can be recorded in 2C.', 'danger')
             return redirect(url_for('programme_details'))
+
+        # GAP 1: block 2C entry if session is Cancelled/Re-Scheduled
+        if cal['status'] in ('Cancelled', 'Re-Scheduled'):
+            flash(f'Session {session_code} is {cal["status"]}. Cannot record 2C details.', 'danger')
+            return redirect(url_for('programme_details'))
+
+        # GAP 2 (time gate): 2C cannot be entered before plan_end
+        from datetime import date as _d
+        today_iso = _d.today().isoformat()
+        if cal['plan_end'] and today_iso < cal['plan_end']:
+            flash(f'Session not yet ended. 2C can be entered from {cal["plan_end"]} onwards.', 'danger')
+            return redirect(url_for('programme_details'))
+
+        # GAP 2 (Phase 4): minimum 1 attendance must exist before 2C save
+        attended = db.execute(
+            'SELECT COUNT(*) FROM emp_training WHERE plant_id=? AND session_code=?',
+            (plant_id, session_code)).fetchone()[0]
+        if attended < 1:
+            flash(f'No attendance records found for session {session_code}. Add at least 1 employee in 2A before saving 2C.', 'danger')
+            return redirect(url_for('programme_details'))
+
         prog_name = cal['programme_name']
         prog_type = cal['prog_type']
         level     = cal['level']
@@ -371,32 +400,126 @@ def _register(app):
         if hours <= 0:
             flash('Actual hours must be greater than 0.', 'danger')
             return redirect(url_for('programme_details'))
+
+        # Hours mismatch — 25% threshold standard
+        avg_2a = db.execute(
+            'SELECT AVG(hrs) FROM emp_training WHERE plant_id=? AND session_code=? AND hrs > 0',
+            (plant_id, session_code)).fetchone()[0]
+        pd_anomalies = []
+        if avg_2a and avg_2a > 0 and abs(hours - avg_2a) / avg_2a > 0.25:
+            pd_anomalies.append(f'hours_mismatch(2C={hours} vs avg2A={avg_2a:.1f})')
+            flash(f'Note: 2C hours ({hours}) differ from average 2A hours ({avg_2a:.1f}) by >25%. Saved — please verify.', 'warning')
+
         fy_start, fy_end = _current_fy()
         start_date = f.get('start_date', '')
         if start_date and not _in_current_fy(start_date):
             flash(f'Start date must be within the current financial year ({fy_start} to {fy_end}).', 'danger')
             return redirect(url_for('programme_details'))
 
-        db.execute('''INSERT INTO programme_details
-            (plant_id,session_code,programme_name,prog_type,level,cal_new,mode,
-             start_date,end_date,audience,hours_actual,faculty_name,int_ext,cost,
-             venue,course_feedback,faculty_feedback,trainer_fb_participants,trainer_fb_facilities)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-            (plant_id, session_code, prog_name, prog_type, level, cal_new, mode,
-             f.get('start_date',''), f.get('end_date',''), audience,
-             float(f.get('hours_actual') or 0), f.get('faculty_name',''),
-             f.get('int_ext',''), float(f.get('cost') or 0),
-             f.get('venue',''),
-             _safe_float(f.get('course_feedback')),
-             _safe_float(f.get('faculty_feedback')),
-             _safe_float(f.get('trainer_fb_participants')),
-             _safe_float(f.get('trainer_fb_facilities'))))
+        # Phase 5: compute extended anomalies for verification path
+        from datetime import datetime as _dt
+        sum_hrs = db.execute(
+            'SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND session_code=?',
+            (plant_id, session_code)).fetchone()[0]
+        anomalies = list(pd_anomalies)  # carry over hours_mismatch if any
+        planned_pax = cal['planned_pax'] or 0
+        if planned_pax > 0 and attended < planned_pax * 0.5:
+            anomalies.append(f'low_attendance({attended}/{planned_pax})')
+        if audience in ('Blue Collared', 'White Collared'):
+            mc = db.execute(
+                'SELECT COUNT(*) FROM emp_training t '
+                'JOIN employees e ON e.plant_id=t.plant_id AND e.emp_code=t.emp_code '
+                'WHERE t.plant_id=? AND t.session_code=? AND e.collar IS NOT NULL AND e.collar != ?',
+                (plant_id, session_code, audience)).fetchone()[0]
+            if mc > 0:
+                anomalies.append(f'collar_mismatch({mc}_attendees)')
+
+        anom_pd = ','.join(anomalies) if anomalies else None
+
+        # Audit Tier 2 fix: a stub programme_details may already exist (created
+        # by feedback aggregator when QR responses arrived before 2C save).
+        # In that case UPDATE preserving feedback fields if SPOC left them blank.
+        existing_pd = db.execute(
+            'SELECT id, course_feedback, faculty_feedback, '
+            '       trainer_fb_participants, trainer_fb_facilities '
+            'FROM programme_details WHERE plant_id=? AND session_code=? LIMIT 1',
+            (plant_id, session_code)
+        ).fetchone()
+
+        form_course   = _safe_float(f.get('course_feedback'))
+        form_faculty  = _safe_float(f.get('faculty_feedback'))
+        form_partic   = _safe_float(f.get('trainer_fb_participants'))
+        form_facil    = _safe_float(f.get('trainer_fb_facilities'))
+
+        if existing_pd:
+            # Prefer non-blank form value; otherwise keep stub's pre-computed value.
+            cf = form_course  if form_course  not in (None, 0) else existing_pd['course_feedback']
+            ff = form_faculty if form_faculty not in (None, 0) else existing_pd['faculty_feedback']
+            tp = form_partic  if form_partic  not in (None, 0) else existing_pd['trainer_fb_participants']
+            tf = form_facil   if form_facil   not in (None, 0) else existing_pd['trainer_fb_facilities']
+            db.execute('''UPDATE programme_details SET
+                programme_name=?, prog_type=?, level=?, cal_new=?, mode=?,
+                start_date=?, end_date=?, audience=?,
+                hours_actual=?, faculty_name=?, int_ext=?, cost=?,
+                venue=?, course_feedback=?, faculty_feedback=?,
+                trainer_fb_participants=?, trainer_fb_facilities=?,
+                anomaly_flags=?
+                WHERE id=?''',
+                (prog_name, prog_type, level, cal_new, mode,
+                 f.get('start_date',''), f.get('end_date',''), audience,
+                 float(f.get('hours_actual') or 0), f.get('faculty_name',''),
+                 f.get('int_ext',''), float(f.get('cost') or 0),
+                 f.get('venue',''), cf, ff, tp, tf,
+                 anom_pd, existing_pd['id']))
+        else:
+            db.execute('''INSERT INTO programme_details
+                (plant_id,session_code,programme_name,prog_type,level,cal_new,mode,
+                 start_date,end_date,audience,hours_actual,faculty_name,int_ext,cost,
+                 venue,course_feedback,faculty_feedback,trainer_fb_participants,trainer_fb_facilities,
+                 anomaly_flags)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                (plant_id, session_code, prog_name, prog_type, level, cal_new, mode,
+                 f.get('start_date',''), f.get('end_date',''), audience,
+                 float(f.get('hours_actual') or 0), f.get('faculty_name',''),
+                 f.get('int_ext',''), float(f.get('cost') or 0),
+                 f.get('venue',''),
+                 form_course, form_faculty, form_partic, form_facil,
+                 anom_pd))
         db.commit()
-        db.execute("UPDATE calendar SET status='Conducted' WHERE session_code=? AND plant_id=?",
-                   (session_code, plant_id))
+
+        now_iso  = _dt.now().isoformat(timespec='seconds')
+        user_id  = session.get('user_id')
+        username = session.get('username', '')
+        user_role = session.get('role')
+
+        # Central/Admin save → instant Conducted. SPOC → Awaiting Verification.
+        if user_role in ('central', 'admin'):
+            new_status = 'Conducted'
+            v_at, v_by, stage = now_iso, user_id, 'verified_on_2c'
+        else:
+            new_status = 'Awaiting Verification'
+            v_at, v_by, stage = None, None, '2c_added'
+
+        db.execute(
+            'UPDATE calendar SET status=?, conducted_at=?, conducted_by=?, '
+            'verified_at=?, verified_by=?, actual_pax=?, actual_hrs=? '
+            'WHERE session_code=? AND plant_id=?',
+            (new_status, now_iso, user_id, v_at, v_by, attended, sum_hrs,
+             session_code, plant_id))
+        db.execute(
+            'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail) '
+            'VALUES (?,?,?,?,?,?)',
+            (session_code, plant_id, stage, username, user_id,
+             '; '.join(anomalies) if anomalies else 'clean'))
         db.commit()
-        log_action('RECORD_ADD', f"2c:{session_code}")
-        flash(f'Programme {session_code} details saved.', 'success')
+
+        log_action('RECORD_ADD', f"2c:{session_code}:{new_status}")
+        if new_status == 'Conducted':
+            flash(f'Programme {session_code} saved and verified.', 'success')
+        else:
+            n_anom = len(anomalies)
+            anom_str = f' ({n_anom} anomal{"y" if n_anom == 1 else "ies"} flagged)' if anomalies else ''
+            flash(f'Programme {session_code} saved → Awaiting Verification by Central L&D{anom_str}.', 'warning')
         return redirect(url_for('programme_details'))
 
     @app.route('/programme/<int:rec_id>/delete', methods=['POST'])
@@ -407,8 +530,17 @@ def _register(app):
                          (rec_id, session['plant_id'])).fetchone()
         if rec:
             db.execute('DELETE FROM programme_details WHERE id=? AND plant_id=?', (rec_id, session['plant_id']))
-            db.execute("UPDATE calendar SET status='To Be Planned' WHERE session_code=? AND plant_id=?",
-                       (rec['session_code'], session['plant_id']))
+            db.execute(
+                "UPDATE calendar SET status='To Be Planned', conducted_at=NULL, conducted_by=NULL, "
+                "verified_at=NULL, verified_by=NULL, actual_pax=0, actual_hrs=0 "
+                "WHERE session_code=? AND plant_id=?",
+                (rec['session_code'], session['plant_id']))
+            db.execute(
+                'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail) '
+                'VALUES (?,?,?,?,?,?)',
+                (rec['session_code'], session['plant_id'], '2c_deleted',
+                 session.get('username', ''), session.get('user_id'),
+                 'Reverted to To Be Planned'))
             db.commit()
             log_action('RECORD_DELETE', f"2c:{rec['session_code']}")
         if _is_ajax():
@@ -427,8 +559,11 @@ def _register(app):
             recs = db.execute(f'SELECT session_code FROM programme_details WHERE id IN ({ph}) AND plant_id=?',
                               ids + [plant_id]).fetchall()
             for r in recs:
-                db.execute("UPDATE calendar SET status='To Be Planned' WHERE session_code=? AND plant_id=?",
-                           (r['session_code'], plant_id))
+                db.execute(
+                    "UPDATE calendar SET status='To Be Planned', conducted_at=NULL, conducted_by=NULL, "
+                    "verified_at=NULL, verified_by=NULL, actual_pax=0, actual_hrs=0 "
+                    "WHERE session_code=? AND plant_id=?",
+                    (r['session_code'], plant_id))
             db.execute(f'DELETE FROM programme_details WHERE id IN ({ph}) AND plant_id=?', ids + [plant_id])
             db.commit()
             log_action('BULK_DELETE', f"2c:{len(ids)}")
@@ -501,22 +636,99 @@ def _register(app):
                 else:
                     errors.append(f'Row {i+2}: Session Code {sc} not found in Calendar.')
                 continue
+
+            # GAP 1: block Cancelled/Re-Scheduled
+            if cal['status'] in ('Cancelled', 'Re-Scheduled'):
+                errors.append(f'Row {i+2}: Session {sc} is {cal["status"]} — cannot record 2C.')
+                continue
+
             if db.execute('SELECT 1 FROM programme_details WHERE session_code=? AND plant_id=?', (sc, plant_id)).fetchone():
                 errors.append(f'Row {i+2}: Session {sc} already has programme details recorded.')
                 continue
             if not start_date:
                 errors.append(f'Row {i+2}: Actual Start Date is required.')
                 continue
+
+            # GAP 9: FY date check (was missing in bulk path)
+            if not _in_current_fy(start_date):
+                fy_s, fy_e = _current_fy()
+                errors.append(f'Row {i+2}: Start date {start_date} is outside current FY ({fy_s} to {fy_e}).')
+                continue
+
+            # GAP 2 (time gate): 2C cannot be entered before plan_end
+            from datetime import date as _d
+            today_iso = _d.today().isoformat()
+            if cal['plan_end'] and today_iso < cal['plan_end']:
+                errors.append(f'Row {i+2}: Session {sc} not yet ended (plan_end {cal["plan_end"]}). 2C cannot be saved before session ends.')
+                continue
+
+            # GAP 2 (Phase 4): minimum 1 attendance must exist
+            attended = db.execute(
+                'SELECT COUNT(*) FROM emp_training WHERE plant_id=? AND session_code=?',
+                (plant_id, sc)).fetchone()[0]
+            if attended < 1:
+                errors.append(f'Row {i+2}: Session {sc} has no attendance — add 2A records first.')
+                continue
+
+            # Phase 5: anomaly check + status routing (25% standard)
+            from datetime import datetime as _dt2
+            sum_hrs = db.execute(
+                'SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND session_code=?',
+                (plant_id, sc)).fetchone()[0]
+            avg_hrs_2a = db.execute(
+                'SELECT AVG(hrs) FROM emp_training WHERE plant_id=? AND session_code=? AND hrs > 0',
+                (plant_id, sc)).fetchone()[0] or 0
+            row_anomalies = []
+            planned_pax = cal['planned_pax'] or 0
+            if planned_pax > 0 and attended < planned_pax * 0.5:
+                row_anomalies.append(f'low_attendance({attended}/{planned_pax})')
+            if avg_hrs_2a > 0 and abs(hrs - avg_hrs_2a) / avg_hrs_2a > 0.25:
+                row_anomalies.append(f'hours_mismatch(2C={hrs} vs avg2A={avg_hrs_2a:.1f})')
+            tgt_aud = cal['target_audience'] or ''
+            if tgt_aud in ('Blue Collared', 'White Collared'):
+                mc = db.execute(
+                    'SELECT COUNT(*) FROM emp_training t '
+                    'JOIN employees e ON e.plant_id=t.plant_id AND e.emp_code=t.emp_code '
+                    'WHERE t.plant_id=? AND t.session_code=? AND e.collar IS NOT NULL AND e.collar != ?',
+                    (plant_id, sc, tgt_aud)).fetchone()[0]
+                if mc > 0:
+                    row_anomalies.append(f'collar_mismatch({mc}_attendees)')
+
+            anom_pd_bulk = ','.join(row_anomalies) if row_anomalies else None
             db.execute('''INSERT INTO programme_details
                 (plant_id,session_code,programme_name,prog_type,level,cal_new,mode,
                  start_date,end_date,audience,hours_actual,faculty_name,int_ext,cost,
-                 venue,course_feedback,faculty_feedback,trainer_fb_participants,trainer_fb_facilities)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                 venue,course_feedback,faculty_feedback,trainer_fb_participants,trainer_fb_facilities,
+                 anomaly_flags)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (plant_id, sc, cal['programme_name'], cal['prog_type'], cal['level'],
                  'Calendar Program', cal['mode'], start_date, end_date,
-                 cal['target_audience'], hrs, faculty, int_ext, cost, venue, cfb, ffb, tfbp, tfbf))
-            db.execute("UPDATE calendar SET status='Conducted' WHERE session_code=? AND plant_id=?",
-                       (sc, plant_id))
+                 cal['target_audience'], hrs, faculty, int_ext, cost, venue, cfb, ffb, tfbp, tfbf,
+                 anom_pd_bulk))
+
+            now_iso  = _dt2.now().isoformat(timespec='seconds')
+            user_id  = session.get('user_id')
+            username = session.get('username', '')
+            user_role = session.get('role')
+
+            if user_role in ('central', 'admin'):
+                new_status = 'Conducted'
+                v_at, v_by, stage = now_iso, user_id, 'verified_on_2c'
+            else:
+                new_status = 'Awaiting Verification'
+                v_at, v_by, stage = None, None, '2c_added'
+
+            db.execute(
+                'UPDATE calendar SET status=?, conducted_at=?, conducted_by=?, '
+                'verified_at=?, verified_by=?, actual_pax=?, actual_hrs=? '
+                'WHERE session_code=? AND plant_id=?',
+                (new_status, now_iso, user_id, v_at, v_by, attended, sum_hrs,
+                 sc, plant_id))
+            db.execute(
+                'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail) '
+                'VALUES (?,?,?,?,?,?)',
+                (sc, plant_id, stage, username, user_id,
+                 '; '.join(row_anomalies) if row_anomalies else 'clean'))
             inserted += 1
         db.commit()
         if errors:

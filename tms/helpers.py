@@ -1493,3 +1493,228 @@ def _error_excel_for_tni(error_rows, dup_rows=None, plant_id=None, db=None):
     buf = io.BytesIO()
     wb.save(buf); buf.seek(0)
     return buf
+
+
+# ── Cross-table calendar row validator ──────────────────────────────────────
+# Centralises every cross-table check that calendar writes (add/edit/bulk) used
+# to do (or skip) individually. Audit-driven: 8 of the Calendar audit's confirmed
+# gaps reduce to "no cross-table validation at write time".
+#
+# Returns (errors, warnings).
+#   errors   = hard blockers, write must NOT proceed
+#   warnings = soft signals, write may proceed but UI should surface them
+#
+# Each item is a tuple (field_name_or_'_general_', message_string).
+#
+# row keys expected (all str unless noted): programme_name, prog_type, source,
+# planned_month, plan_start, plan_end, time_from, time_to, duration_hrs (number),
+# level, mode, target_audience, planned_pax (int), trainer_vendor, status (opt)
+def validate_calendar_row(row, plant_id, db, is_edit=False, exclude_id=None):
+    from tms.constants import (PROG_TYPES, MODES, LEVELS, AUDIENCES,
+                                MONTHS_FY, STATUSES)
+
+    errors = []
+    warnings = []
+
+    def E(field, msg): errors.append((field, msg))
+    def W(field, msg): warnings.append((field, msg))
+
+    # ── Programme name + master gate (existing _canonical_prog logic, surfaced) ──
+    prog_raw = (row.get('programme_name') or '').strip()
+    if not prog_raw:
+        E('programme_name', 'Programme Name is required.')
+        return errors, warnings  # downstream checks all key off programme
+    canonical = _canonical_prog(prog_raw, plant_id, db, strict=True)
+    if canonical is None:
+        E('programme_name',
+          f'Programme "{prog_raw}" not in Programme Master. Add it first.')
+        return errors, warnings
+    prog_name = canonical
+
+    # ── prog_type: hard enum check + cross-check vs programme_master ──
+    prog_type = (row.get('prog_type') or '').strip()
+    if not prog_type:
+        E('prog_type', 'Type of Programme is required.')
+    elif prog_type not in PROG_TYPES:
+        E('prog_type',
+          f'Invalid Type "{prog_type}". Allowed: {", ".join(PROG_TYPES)}')
+    else:
+        master_pt = db.execute(
+            'SELECT prog_type FROM programme_master WHERE plant_id=? AND name=? LIMIT 1',
+            (plant_id, prog_name)
+        ).fetchone()
+        if master_pt and master_pt[0] and master_pt[0] != prog_type:
+            W('prog_type',
+              f'Type "{prog_type}" differs from Programme Master ("{master_pt[0]}"). '
+              f'Verify or update master.')
+
+    # ── source enum (silently coerced to TNI Driven if invalid — keep behaviour
+    # but warn so SPOC sees the silent fix) ──
+    source = (row.get('source') or '').strip()
+    if source and source not in ('TNI Driven', 'New Requirement'):
+        W('source',
+          f'Source "{source}" not allowed. Coerced to "TNI Driven".')
+
+    # ── Date order + FY window + auto-derive planned_month ──
+    ps = (row.get('plan_start') or '').strip()
+    pe = (row.get('plan_end') or '').strip()
+    fy_start, fy_end = _current_fy()
+    if ps and not _in_current_fy(ps):
+        E('plan_start',
+          f'Plan Start date {ps} outside current FY ({fy_start} to {fy_end}).')
+    if pe and not _in_current_fy(pe):
+        E('plan_end',
+          f'Plan End date {pe} outside current FY ({fy_start} to {fy_end}).')
+    if ps and pe and ps > pe:
+        E('plan_end',
+          f'Plan End ({pe}) must be on or after Plan Start ({ps}).')
+
+    # planned_month auto-derive from plan_start if blank or mismatched
+    planned_month = (row.get('planned_month') or '').strip()
+    if ps:
+        try:
+            mnum = int(ps[5:7])
+            month_names = ['', 'January', 'February', 'March', 'April', 'May',
+                           'June', 'July', 'August', 'September', 'October',
+                           'November', 'December']
+            derived = month_names[mnum]
+            if not planned_month:
+                row['planned_month'] = derived
+            elif planned_month != derived:
+                W('planned_month',
+                  f'Planned Month "{planned_month}" does not match Plan Start month '
+                  f'"{derived}". Will use derived value.')
+                row['planned_month'] = derived
+        except (ValueError, IndexError):
+            pass
+
+    # ── Times ordering ──
+    tf = (row.get('time_from') or '').strip()
+    tt = (row.get('time_to') or '').strip()
+    if tf and tt and tt <= tf:
+        E('time_to', f'Time-to ({tt}) must be after Time-from ({tf}).')
+
+    # ── duration_hrs bounds ──
+    try:
+        dur = float(row.get('duration_hrs') or 0)
+    except (ValueError, TypeError):
+        dur = 0
+    if dur <= 0:
+        E('duration_hrs', 'Duration must be greater than 0 hours.')
+    elif dur > 80:
+        E('duration_hrs', f'Duration {dur} hrs unrealistic (max 80). Check input.')
+
+    # ── mode / level / audience enum (warn — keep behaviour permissive but flag) ──
+    mode = (row.get('mode') or '').strip()
+    if mode and mode not in MODES:
+        E('mode', f'Invalid Mode "{mode}". Allowed: {", ".join(MODES)}')
+    level = (row.get('level') or '').strip()
+    if level and level not in LEVELS:
+        W('level', f'Level "{level}" not in standard set. Allowed: {", ".join(LEVELS)}')
+
+    # status (if provided — used by edit)
+    status = (row.get('status') or '').strip()
+    if status and status not in STATUSES:
+        E('status', f'Invalid Status "{status}".')
+
+    # ── planned_pax bounds ──
+    try:
+        ppx = int(row.get('planned_pax') or 0)
+    except (ValueError, TypeError):
+        ppx = 0
+    if ppx < 0:
+        E('planned_pax', 'Planned Pax cannot be negative.')
+    elif ppx > 500:
+        E('planned_pax', f'Planned Pax {ppx} unrealistic (max 500/session). Check input.')
+
+    # ── Duplicate detection: same plant+programme+plan_start+time_from already scheduled ──
+    if ps:
+        dup_sql = (
+            'SELECT id, session_code FROM calendar '
+            'WHERE plant_id=? AND programme_name=? AND plan_start=? '
+            'AND COALESCE(time_from,"")=COALESCE(?,"")'
+        )
+        params = [plant_id, prog_name, ps, tf]
+        if is_edit and exclude_id is not None:
+            dup_sql += ' AND id!=?'
+            params.append(exclude_id)
+        dup = db.execute(dup_sql, params).fetchone()
+        if dup:
+            W('plan_start',
+              f'A session for "{prog_name}" already exists on {ps}'
+              + (f' at {tf}' if tf else '')
+              + f' (session {dup["session_code"]}). Confirm this is a second batch.')
+
+    # ── Over-plan vs TNI demand ──
+    # Sum planned_pax for this programme this FY (this plant). If new total > 1.5× demand,
+    # treat as block-grade; if > 1.2× demand, warn.
+    demand_row = db.execute(
+        'SELECT COUNT(DISTINCT emp_code) AS d FROM tni '
+        'WHERE plant_id=? AND LOWER(programme_name)=LOWER(?)',
+        (plant_id, prog_name)
+    ).fetchone()
+    demand = (demand_row['d'] if demand_row else 0) or 0
+    if demand > 0 and ppx > 0:
+        existing_sql = (
+            'SELECT COALESCE(SUM(planned_pax),0) AS s FROM calendar '
+            'WHERE plant_id=? AND LOWER(programme_name)=LOWER(?) AND status!=?'
+        )
+        existing_params = [plant_id, prog_name, 'Cancelled']
+        if is_edit and exclude_id is not None:
+            existing_sql += ' AND id!=?'
+            existing_params.append(exclude_id)
+        existing_pax = db.execute(existing_sql, existing_params).fetchone()['s'] or 0
+        new_total = existing_pax + ppx
+        ratio = new_total / demand
+        if ratio > 1.5:
+            E('planned_pax',
+              f'Over-plan: {prog_name} would be planned for {new_total} pax vs TNI demand '
+              f'{demand} (ratio {ratio:.1f}x). Block — reduce pax or add TNI nominations.')
+        elif ratio > 1.2:
+            W('planned_pax',
+              f'Soft over-plan: {prog_name} cumulative planned {new_total} pax vs TNI demand '
+              f'{demand} (ratio {ratio:.1f}x). Confirm intentional.')
+
+    return errors, warnings
+
+
+def flash_validation(errors, warnings, flash_fn):
+    """Helper: surface errors+warnings to the user via flash()."""
+    for fld, msg in errors:
+        flash_fn(f'❌ {msg}' if fld == '_general_' else f'❌ {fld}: {msg}', 'danger')
+    for fld, msg in warnings:
+        flash_fn(f'⚠ {msg}' if fld == '_general_' else f'⚠ {fld}: {msg}', 'warning')
+
+
+def resync_calendar_audience(plant_id, prog_names, db):
+    """When TNI changes for a programme, re-derive target_audience on every
+    calendar row for that programme. Closes a Calendar audit gap where audience
+    was stamped at calendar add time and never re-derived later.
+
+    prog_names: iterable of programme names (case-insensitive). Pass None or
+    empty to skip. Returns count of calendar rows updated.
+    """
+    if not prog_names:
+        return 0
+    seen = set()
+    updated = 0
+    for pn in prog_names:
+        if not pn:
+            continue
+        key = pn.strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        new_aud = _derive_audience(plant_id, pn, db)
+        if not new_aud:
+            continue  # nothing in TNI for this programme — leave as-is
+        cur = db.execute(
+            'UPDATE calendar SET target_audience=? '
+            'WHERE plant_id=? AND LOWER(programme_name)=? '
+            'AND COALESCE(target_audience,"") != ?',
+            (new_aud, plant_id, key, new_aud)
+        )
+        updated += cur.rowcount
+    if updated:
+        db.commit()
+    return updated

@@ -10,6 +10,7 @@ from tms.helpers import (
     _derive_audience, _sync_calendar_from_2c,
     _read_upload_file, _clean, _safe_float, _error_excel_response,
     _current_fy, _in_current_fy, _parse_date_strict,
+    validate_calendar_row, flash_validation,
 )
 
 import openpyxl
@@ -81,55 +82,63 @@ def _register(app):
         plant_id = session['plant_id']
         f = request.form
         db = get_db()
-        prog_name_raw = f.get('programme_name', '').strip()
-        prog_name = _canonical_prog(prog_name_raw, plant_id, db, strict=True)
-        if prog_name is None:
-            flash(f'Programme "{prog_name_raw}" not found in Programme Master. Add it to the master list first.', 'danger')
+
+        # Centralised cross-table validation (Tier 1+4)
+        row = {
+            'programme_name': f.get('programme_name', ''),
+            'prog_type':      f.get('prog_type', ''),
+            'source':         f.get('source', ''),
+            'planned_month':  f.get('planned_month', ''),
+            'plan_start':     f.get('plan_start', ''),
+            'plan_end':       f.get('plan_end', ''),
+            'time_from':      f.get('time_from', ''),
+            'time_to':        f.get('time_to', ''),
+            'duration_hrs':   f.get('duration_hrs', 0),
+            'level':          f.get('level', ''),
+            'mode':           f.get('mode', ''),
+            'target_audience': f.get('target_audience', ''),
+            'planned_pax':    f.get('planned_pax', 0),
+            'trainer_vendor': f.get('trainer_vendor', ''),
+        }
+        errors, warnings = validate_calendar_row(row, plant_id, db, is_edit=False)
+        if errors:
+            flash_validation(errors, warnings, flash)
             return redirect(url_for('training_calendar'))
-        prog_type = f.get('prog_type', '')
+
+        # All validation passed — extract canonicalised values
+        prog_name = _canonical_prog(row['programme_name'], plant_id, db, strict=True)
+        prog_type = row['prog_type']
+        dur       = float(row['duration_hrs'] or 0)
+        source    = row['source'] if row['source'] in ('TNI Driven', 'New Requirement') else 'TNI Driven'
 
         prog_code    = _get_or_create_prog_code(plant_id, prog_name, prog_type, db)
         session_code = _new_session_code(plant_id, prog_code, db)
 
         tni_audience  = _derive_audience(plant_id, prog_name, db)
-        form_audience = f.get('target_audience', '')
+        form_audience = row['target_audience']
         audience      = tni_audience if tni_audience else form_audience
-
-        try:
-            dur = float(f.get('duration_hrs') or 0)
-        except (ValueError, TypeError):
-            dur = 0
-        if dur <= 0:
-            flash('Duration must be greater than 0 hours.', 'danger')
-            return redirect(url_for('training_calendar'))
-        fy_start, fy_end = _current_fy()
-        for fld, lbl in [('plan_start', 'Plan Start'), ('plan_end', 'Plan End')]:
-            val = f.get(fld, '')
-            if val and not _in_current_fy(val):
-                flash(f'{lbl} date must be within the current financial year ({fy_start} to {fy_end}).', 'danger')
-                return redirect(url_for('training_calendar'))
 
         db.execute('''INSERT INTO calendar
             (plant_id,prog_code,session_code,source,programme_name,prog_type,
              planned_month,plan_start,plan_end,time_from,time_to,duration_hrs,
              level,mode,target_audience,planned_pax,trainer_vendor,status)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-            (plant_id, prog_code, session_code,
-             f.get('source','TNI Driven') if f.get('source','') in ('TNI Driven','New Requirement') else 'TNI Driven',
+            (plant_id, prog_code, session_code, source,
              prog_name, prog_type,
-             f.get('planned_month',''), f.get('plan_start',''), f.get('plan_end',''),
-             f.get('time_from',''), f.get('time_to',''),
-             dur,
-             f.get('level',''), f.get('mode',''), audience,
-             int(f.get('planned_pax') or 0) if str(f.get('planned_pax') or '0').isdigit() else 0,
-             f.get('trainer_vendor',''),
-             'To Be Planned'))
+             row['planned_month'], row['plan_start'], row['plan_end'],
+             row['time_from'], row['time_to'], dur,
+             row['level'], row['mode'], audience,
+             int(row['planned_pax'] or 0),
+             row['trainer_vendor'], 'To Be Planned'))
         db.commit()
         log_action('RECORD_ADD', f"cal:{session_code}")
         msg = f'Session {session_code} added.'
         if tni_audience and form_audience and form_audience != tni_audience:
-            msg += f' Audience set to "{tni_audience}" (locked from TNI — TNI has both BC & WC employees).'
+            msg += f' Audience set to "{tni_audience}" (locked from TNI).'
         flash(msg, 'success')
+        # Surface non-blocking warnings as well
+        if warnings:
+            flash_validation([], warnings, flash)
         return redirect(url_for('training_calendar'))
 
     @app.route('/calendar/<int:cal_id>/delete', methods=['POST'])
@@ -176,28 +185,35 @@ def _register(app):
             if not has_qr or not has_feedback:
                 flash("Can't mark Conducted. Process: Generate QR code → Mark Attendance → Collect Feedback. Contact Corporate L&D for assistance.", 'danger')
                 return redirect(url_for('training_calendar'))
-        edit_prog_raw     = f.get('programme_name','').strip()
-        edit_prog         = _canonical_prog(edit_prog_raw, plant_id, db, strict=True)
-        if edit_prog is None:
-            flash(f'Programme "{edit_prog_raw}" not found in Programme Master. Add it to the master list first.', 'danger')
+        row = {
+            'programme_name': f.get('programme_name', ''),
+            'prog_type':      f.get('prog_type', ''),
+            'source':         f.get('source', ''),
+            'planned_month':  f.get('planned_month', ''),
+            'plan_start':     f.get('plan_start', ''),
+            'plan_end':       f.get('plan_end', ''),
+            'time_from':      f.get('time_from', ''),
+            'time_to':        f.get('time_to', ''),
+            'duration_hrs':   f.get('duration_hrs', 0),
+            'level':          f.get('level', ''),
+            'mode':           f.get('mode', ''),
+            'target_audience': f.get('target_audience', ''),
+            'planned_pax':    f.get('planned_pax', 0),
+            'trainer_vendor': f.get('trainer_vendor', ''),
+            'status':         f.get('status', 'To Be Planned'),
+        }
+        errors, warnings = validate_calendar_row(row, plant_id, db, is_edit=True, exclude_id=cal_id)
+        if errors:
+            flash_validation(errors, warnings, flash)
             return redirect(url_for('training_calendar'))
-        tni_audience_edit = _derive_audience(plant_id, edit_prog, db)
-        form_audience_edit = f.get('target_audience', '')
-        edit_audience     = tni_audience_edit if tni_audience_edit else form_audience_edit
 
-        try:
-            dur = float(f.get('duration_hrs') or 0)
-        except (ValueError, TypeError):
-            dur = 0
-        if dur <= 0:
-            flash('Duration must be greater than 0 hours.', 'danger')
-            return redirect(url_for('training_calendar'))
-        fy_start, fy_end = _current_fy()
-        for fld, lbl in [('plan_start', 'Plan Start'), ('plan_end', 'Plan End')]:
-            val = f.get(fld, '')
-            if val and not _in_current_fy(val):
-                flash(f'{lbl} date must be within the current financial year ({fy_start} to {fy_end}).', 'danger')
-                return redirect(url_for('training_calendar'))
+        edit_prog = _canonical_prog(row['programme_name'], plant_id, db, strict=True)
+        dur       = float(row['duration_hrs'] or 0)
+        source    = row['source'] if row['source'] in ('TNI Driven', 'New Requirement') else 'TNI Driven'
+
+        tni_audience_edit  = _derive_audience(plant_id, edit_prog, db)
+        form_audience_edit = row['target_audience']
+        edit_audience      = tni_audience_edit if tni_audience_edit else form_audience_edit
 
         db.execute('''UPDATE calendar SET
             programme_name=?, prog_type=?, source=?, planned_month=?,
@@ -205,16 +221,12 @@ def _register(app):
             duration_hrs=?, level=?, mode=?, target_audience=?,
             planned_pax=?, trainer_vendor=?, status=?
             WHERE id=? AND plant_id=?''',
-            (edit_prog, f.get('prog_type',''),
-             f.get('source','TNI Driven') if f.get('source','') in ('TNI Driven','New Requirement') else 'TNI Driven',
-             f.get('planned_month',''),
-             f.get('plan_start',''), f.get('plan_end',''),
-             f.get('time_from',''), f.get('time_to',''),
-             dur, f.get('level',''),
-             f.get('mode',''), edit_audience,
-             int(f.get('planned_pax') or 0) if str(f.get('planned_pax') or '0').isdigit() else 0,
-             f.get('trainer_vendor',''),
-             f.get('status','To Be Planned'),
+            (edit_prog, row['prog_type'], source,
+             row['planned_month'], row['plan_start'], row['plan_end'],
+             row['time_from'], row['time_to'], dur,
+             row['level'], row['mode'], edit_audience,
+             int(row['planned_pax'] or 0), row['trainer_vendor'],
+             row['status'],
              cal_id, plant_id))
         db.commit()
         log_action('RECORD_EDIT', f"cal:{cal_id}")
@@ -222,6 +234,8 @@ def _register(app):
         if tni_audience_edit and form_audience_edit and form_audience_edit != tni_audience_edit:
             msg += f' Audience locked to "{tni_audience_edit}" from TNI.'
         flash(msg, 'success')
+        if warnings:
+            flash_validation([], warnings, flash)
         return redirect(url_for('training_calendar'))
 
     @app.route('/calendar/bulk-delete', methods=['POST'])
@@ -288,51 +302,70 @@ def _register(app):
         except Exception as e:
             flash(f'Could not read file: {e}', 'danger')
             return redirect(url_for('training_calendar'))
-        db = get_db(); inserted = 0; errors = []
-        for i, row in df.iterrows():
-            prog_name = _clean(row, ['programme name', 'programme_name', 'program name'])
-            prog_type = _clean(row, ['type of programme', 'type', 'prog type'])
-            raw_src   = _clean(row, ['source']) or ''
-            source    = raw_src if raw_src in ('TNI Driven', 'New Requirement') else 'TNI Driven'
-            month     = _clean(row, ['planned month', 'month'])
-            raw_start = _clean(row, ['plan start (dd-mm-yyyy)', 'plan start (yyyy-mm-dd)', 'plan start', 'start date'])
-            raw_end   = _clean(row, ['plan end (dd-mm-yyyy)', 'plan end (yyyy-mm-dd)', 'plan end', 'end date'])
+        db = get_db(); inserted = 0; errors = []; warnings_all = []
+        for i, row_in in df.iterrows():
+            prog_name = _clean(row_in, ['programme name', 'programme_name', 'program name'])
+            prog_type = _clean(row_in, ['type of programme', 'type', 'prog type'])
+            raw_src   = _clean(row_in, ['source']) or ''
+            month     = _clean(row_in, ['planned month', 'month'])
+            raw_start = _clean(row_in, ['plan start (dd-mm-yyyy)', 'plan start (yyyy-mm-dd)', 'plan start', 'start date'])
+            raw_end   = _clean(row_in, ['plan end (dd-mm-yyyy)', 'plan end (yyyy-mm-dd)', 'plan end', 'end date'])
             try:
                 plan_start = _parse_date_strict(raw_start)
                 plan_end   = _parse_date_strict(raw_end)
             except ValueError as e:
-                errors.append(f'Row {i+2}: Date format error — {e}. Use DD-MM-YYYY (e.g. 15-06-2026).')
+                errors.append(f'Row {i+2}: Date format error — {e}. Use DD-MM-YYYY.')
                 continue
-            duration  = _safe_float(_clean(row, ['duration (hrs)', 'duration', 'hrs'])) or 0
-            level     = _clean(row, ['level'])
-            mode      = _clean(row, ['mode'])
-            audience  = _clean(row, ['target audience', 'audience'])
-            pax       = int(_safe_float(_clean(row, ['planned pax', 'pax'])) or 0)
-            trainer   = _clean(row, ['trainer/vendor', 'trainer', 'vendor'])
-            if not prog_name:
-                errors.append(f'Row {i+2}: Programme Name is required.')
+            duration  = _safe_float(_clean(row_in, ['duration (hrs)', 'duration', 'hrs'])) or 0
+            level     = _clean(row_in, ['level'])
+            mode      = _clean(row_in, ['mode'])
+            audience  = _clean(row_in, ['target audience', 'audience'])
+            pax       = int(_safe_float(_clean(row_in, ['planned pax', 'pax'])) or 0)
+            trainer   = _clean(row_in, ['trainer/vendor', 'trainer', 'vendor'])
+            time_from = _clean(row_in, ['time from', 'start time'])
+            time_to   = _clean(row_in, ['time to', 'end time'])
+
+            # Run same centralised validator as single-row add/edit
+            validate_input = {
+                'programme_name': prog_name, 'prog_type': prog_type,
+                'source': raw_src, 'planned_month': month,
+                'plan_start': plan_start, 'plan_end': plan_end,
+                'time_from': time_from, 'time_to': time_to,
+                'duration_hrs': duration, 'level': level, 'mode': mode,
+                'target_audience': audience, 'planned_pax': pax,
+                'trainer_vendor': trainer,
+            }
+            row_errors, row_warnings = validate_calendar_row(validate_input, plant_id, db, is_edit=False)
+            if row_errors:
+                for fld, msg in row_errors:
+                    errors.append(f'Row {i+2} [{fld}]: {msg}')
                 continue
-            if not prog_type:
-                errors.append(f'Row {i+2}: Type of Programme is required.')
-                continue
-            canonical = _canonical_prog(prog_name, plant_id, db, strict=True)
-            if canonical is None:
-                errors.append(f'Row {i+2}: Programme "{prog_name}" not in Programme Master — add it first.')
-                continue
-            prog_name    = canonical
+            for fld, msg in row_warnings:
+                warnings_all.append(f'Row {i+2} [{fld}]: {msg}')
+
+            # Use validator-corrected values (e.g. auto-derived planned_month)
+            prog_name    = _canonical_prog(prog_name, plant_id, db, strict=True)
+            month        = validate_input['planned_month']
+            source       = raw_src if raw_src in ('TNI Driven', 'New Requirement') else 'TNI Driven'
             tni_aud      = _derive_audience(plant_id, prog_name, db)
             audience     = tni_aud if tni_aud else audience
             prog_code    = _get_or_create_prog_code(plant_id, prog_name, prog_type, db)
             session_code = _new_session_code(plant_id, prog_code, db)
             db.execute('''INSERT INTO calendar
                 (plant_id,prog_code,session_code,source,programme_name,prog_type,
-                 planned_month,plan_start,plan_end,duration_hrs,level,mode,
-                 target_audience,planned_pax,trainer_vendor,status)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'To Be Planned')''',
+                 planned_month,plan_start,plan_end,time_from,time_to,duration_hrs,
+                 level,mode,target_audience,planned_pax,trainer_vendor,status)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'To Be Planned')''',
                 (plant_id, prog_code, session_code, source, prog_name, prog_type,
-                 month, plan_start, plan_end, duration, level, mode, audience, pax, trainer))
+                 month, plan_start, plan_end, time_from, time_to,
+                 duration, level, mode, audience, pax, trainer))
             inserted += 1
         db.commit()
+        # Surface warnings (non-blocking) as well
+        for w in warnings_all[:20]:  # cap to avoid flash flood
+            flash(f'⚠ {w}', 'warning')
+        if len(warnings_all) > 20:
+            flash(f'⚠ +{len(warnings_all) - 20} more warnings suppressed.', 'warning')
         if errors:
             if inserted:
                 flash(f'Bulk upload complete: {inserted} sessions added. {len(errors)} rows had errors — downloading error report.', 'warning')

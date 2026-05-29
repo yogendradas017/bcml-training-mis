@@ -17,6 +17,7 @@ from tms.helpers import (
     _error_excel_response, _process_fresh_tni, _parse_msforms_excel,
     _smart_analyze_rows, _fy_label, _tni_is_locked,
     _error_excel_for_tni, _cleanse_programme_names,
+    resync_calendar_audience,
 )
 
 import openpyxl
@@ -193,6 +194,8 @@ def _register(app):
             return redirect(url_for('tni'))
         _sync_master_from_tni(plant_id, db)
         db.commit()
+        # Re-derive audience on calendar rows for this programme (TNI changed → audience may shift)
+        resync_calendar_audience(plant_id, [prog_name], db)
         log_action('RECORD_ADD', f"tni:{emp_code}:{prog_name}")
         flash('TNI entry added.', 'success')
         return redirect(url_for('tni'))
@@ -225,8 +228,12 @@ def _register(app):
             flash('TNI window is closed. Contact admin to submit an override request.', 'danger')
             return redirect(url_for('tni'))
         db = get_db()
+        affected = db.execute('SELECT programme_name FROM tni WHERE id=? AND plant_id=?',
+                              (tni_id, session['plant_id'])).fetchone()
         db.execute('DELETE FROM tni WHERE id=? AND plant_id=?', (tni_id, session['plant_id']))
         db.commit()
+        if affected:
+            resync_calendar_audience(session['plant_id'], [affected['programme_name']], db)
         log_action('RECORD_DELETE', f"tni:{tni_id}")
         if _is_ajax():
             return '', 204
@@ -263,20 +270,29 @@ def _register(app):
             join_sql = f'FROM tni t LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id WHERE {" AND ".join(where)}'
             count = db.execute(f'SELECT COUNT(*) {join_sql}', params).fetchone()[0]
             if count:
+                affected_progs = [r[0] for r in db.execute(
+                    f'SELECT DISTINCT t.programme_name {join_sql}', params).fetchall()]
                 db.execute(f'DELETE FROM tni WHERE id IN (SELECT t.id {join_sql})', params)
                 db.commit()
+                resync_calendar_audience(plant_id, affected_progs, db)
                 log_action('BULK_DELETE', f"tni:{count}")
                 flash(f'{count} TNI entries deleted.', 'warning')
         else:
             ids = request.form.getlist('ids[]')
             if ids:
                 deleted = 0
+                affected_progs = set()
                 for i in range(0, len(ids), 900):
                     chunk = ids[i:i+900]
                     ph = ','.join('?' * len(chunk))
+                    for r in db.execute(
+                        f'SELECT DISTINCT programme_name FROM tni WHERE id IN ({ph}) AND plant_id=?',
+                        chunk + [plant_id]).fetchall():
+                        affected_progs.add(r[0])
                     db.execute(f'DELETE FROM tni WHERE id IN ({ph}) AND plant_id=?', chunk + [plant_id])
                     deleted += len(chunk)
                 db.commit()
+                resync_calendar_audience(plant_id, affected_progs, db)
                 log_action('BULK_DELETE', f"tni:{deleted}")
                 flash(f'{deleted} TNI entries deleted.', 'warning')
         return redirect(url_for('tni'))
@@ -519,6 +535,7 @@ def _register(app):
             return redirect(url_for('tni'))
 
         db = get_db(); inserted = 0; errors = []
+        affected_progs = set()
         # Pre-load master once and employee set once — avoids N DB queries in loop
         master_cache = [r[0] for r in db.execute(
             'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
@@ -543,9 +560,11 @@ def _register(app):
             prog_name = _canonical_prog(prog_name, plant_id, db, _master=master_cache)
             db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,fy_year) VALUES(?,?,?,?,?,?,?)',
                        (plant_id, emp_code, prog_name, prog_type, mode, hours, fy))
+            affected_progs.add(prog_name)
             inserted += 1
         _sync_master_from_tni(plant_id, db)
         db.commit()
+        resync_calendar_audience(plant_id, affected_progs, db)
         if errors:
             if inserted:
                 flash(f'Bulk upload complete: {inserted} TNI entries added. {len(errors)} rows had errors — downloading error report.', 'warning')
@@ -612,6 +631,9 @@ def _register(app):
                 db.execute('INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, mode, source) VALUES(?,?,?,?,?)',
                            (plant_id, nr['name'], nr['prog_type'], nr['mode'], 'New Requirement'))
             db.commit()
+            # Full TNI replacement → audience for every calendar row may have shifted.
+            # Resync across all programmes touched by the new upload.
+            resync_calendar_audience(plant_id, {r['programme_name'] for r in rows}, db)
             try: os.remove(tmp_path)
             except Exception: pass
             log_action('BULK_UPLOAD', f"tni_fresh:{len(rows)}")
@@ -817,6 +839,7 @@ def _register(app):
             existing.add((er['emp_code'].strip().upper(), er['programme_name'].strip().lower()))
 
         dup_rows = []; updated = 0; seen_batch = {}
+        affected_progs = set()
 
         for row in rows:
             if row['status'] == 'error':
@@ -846,9 +869,11 @@ def _register(app):
                            (plant_id, row['emp_code'], prog_name,
                             row['prog_type'], row['mode'], row['planned_hours'], fy))
                 inserted += 1
+            affected_progs.add(prog_name)
 
         _sync_master_from_tni(plant_id, db)
         db.commit()
+        resync_calendar_audience(plant_id, affected_progs, db)
         try: os.remove(path)
         except OSError: pass
         # Also clean up any other stale analyze files to prevent disk accumulation

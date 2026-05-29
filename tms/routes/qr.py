@@ -8,7 +8,7 @@ from flask import (abort, flash, jsonify, redirect, render_template,
 
 from tms.db import get_db
 from tms.decorators import spoc_required, central_required, spoc_or_central_required
-from tms.helpers import _date_to_month
+from tms.helpers import _date_to_month, _recompute_session_actuals
 from tms.constants import CENTRAL_PLANT_ID
 from tms.audit import log_action
 
@@ -44,6 +44,13 @@ def _validate_token(token, db, check_expiry=True):
 
 
 def _recompute_feedback_aggregates(plant_id, session_code, db):
+    """Recompute course/faculty feedback aggregates for a session.
+
+    Audit Tier 2 fix: if no programme_details (2C) row exists yet, INSERT a stub
+    with what we know from calendar. Previously this was a silent UPDATE no-op
+    leaving the aggregates orphaned until SPOC opened 2C — at which point the
+    2C INSERT overwrote them with blank form values.
+    """
     row = db.execute('''
         SELECT
             AVG(NULLIF(q_obj_explained,0))        AS q1,
@@ -63,11 +70,33 @@ def _recompute_feedback_aggregates(plant_id, session_code, db):
     prog_avg    = _avg([row['q1'], row['q2'], row['q3'], row['q4'], row['q5']])
     trainer_avg = _avg([row['q6'], row['q7'], row['q8'], row['q9']])
 
-    db.execute('''UPDATE programme_details SET
+    cur = db.execute('''UPDATE programme_details SET
                    course_feedback=?, faculty_feedback=?,
                    trainer_fb_participants=?, trainer_fb_facilities=?
                   WHERE plant_id=? AND session_code=?''',
                (prog_avg, trainer_avg, row['q8'], row['q9'], plant_id, session_code))
+    if cur.rowcount == 0:
+        # No 2C row yet — stub one from calendar so feedback isn't lost.
+        cal = db.execute(
+            'SELECT programme_name, prog_type, mode, target_audience, plan_start, plan_end '
+            'FROM calendar WHERE plant_id=? AND session_code=? LIMIT 1',
+            (plant_id, session_code)
+        ).fetchone()
+        if cal:
+            db.execute('''INSERT INTO programme_details
+                (plant_id, session_code, programme_name, prog_type, mode,
+                 audience, start_date, end_date,
+                 course_feedback, faculty_feedback,
+                 trainer_fb_participants, trainer_fb_facilities)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?)''',
+                (plant_id, session_code,
+                 cal['programme_name'] or '',
+                 cal['prog_type'] or '',
+                 cal['mode'] or '',
+                 cal['target_audience'] or '',
+                 cal['plan_start'] or '',
+                 cal['plan_end'] or '',
+                 prog_avg, trainer_avg, row['q8'], row['q9']))
 
 
 def _make_qr_png(url):
@@ -110,7 +139,11 @@ def _register(app):
         if stage not in ('attendance', 'feedback'):
             stage = 'attendance'
 
-        # Calculate expiry: plan_end + 1 day; if already past, use today + 30 days
+        # GAP 16: block QR generation if calendar has no plan_end
+        if not cal['plan_end'] or not cal['plan_start']:
+            flash('Cannot generate QR — session has no planned start/end date. Set dates in calendar first.', 'danger')
+            return _cal_home()
+
         try:
             plan_end    = datetime.date.fromisoformat(cal['plan_end'])
             expiry_date = plan_end + datetime.timedelta(days=1)
@@ -118,7 +151,8 @@ def _register(app):
                 expiry_date = datetime.date.today() + datetime.timedelta(days=30)
             expires = expiry_date.isoformat() + 'T23:59:59'
         except Exception:
-            expires = (datetime.date.today() + datetime.timedelta(days=30)).isoformat() + 'T23:59:59'
+            flash('Cannot generate QR — calendar plan_end date is invalid.', 'danger')
+            return _cal_home()
 
         existing = db.execute(
             'SELECT id FROM session_qr WHERE plant_id=? AND session_code=? AND stage=?',
@@ -552,6 +586,23 @@ def _register(app):
                                        has_pin=True,
                                        error='Incorrect session code. Ask your trainer for the 4-digit code.')
 
+        # GAP 6 (time gate): block scans before session start date
+        if qr['plan_start']:
+            today_iso = datetime.date.today().isoformat()
+            if today_iso < qr['plan_start']:
+                return render_template('qr_attendance.html', qr=qr, token=token,
+                                       has_pin=bool(qr['session_pin']),
+                                       error=f'Session has not started. Attendance opens on {qr["plan_start"]}.')
+
+        # GAP 1: block scans for Cancelled/Re-Scheduled sessions
+        cal_status = db.execute(
+            'SELECT status FROM calendar WHERE session_code=? AND plant_id=?',
+            (qr['session_code'], qr['plant_id'])).fetchone()
+        if cal_status and cal_status['status'] in ('Cancelled', 'Re-Scheduled'):
+            return render_template('qr_attendance.html', qr=qr, token=token,
+                                   has_pin=bool(qr['session_pin']),
+                                   error=f'Session is {cal_status["status"]}. Attendance closed.')
+
         emp_code = request.form.get('emp_code', '').strip().upper()
         if not emp_code:
             return render_template('qr_attendance.html', qr=qr, token=token,
@@ -604,6 +655,7 @@ def _register(app):
                 host_pid  = CENTRAL_PLANT_ID
 
             month = _date_to_month(qr['plan_start'] or '')
+            # GAP 7: cal_new must be 'Calendar Program' (session exists in calendar)
             db.execute('''INSERT OR IGNORE INTO emp_training
                 (plant_id, emp_code, session_code, programme_name, start_date, end_date,
                  hrs, prog_type, level, mode, cal_new, venue, month, host_plant_id)
@@ -611,7 +663,7 @@ def _register(app):
                 (emp_plant, emp_code, qr['session_code'], qr['programme_name'],
                  qr['plan_start'] or '', qr['plan_end'] or '',
                  qr['duration_hrs'] or 0, qr['prog_type'] or '',
-                 qr['level'] or '', qr['mode'] or '', 'New Requirement',
+                 qr['level'] or '', qr['mode'] or '', 'Calendar Program',
                  '', month, host_pid))
             # Auto-update programme_master for attendee's plant + central
             for pid in ({emp_plant, CENTRAL_PLANT_ID}):
@@ -628,19 +680,29 @@ def _register(app):
                 return render_template('qr_attendance.html', qr=qr, token=token,
                                        has_pin=bool(qr['session_pin']),
                                        error=f'Employee code "{emp_code}" not found for {qr["plant_name"]}.')
+
+            # Collar mismatch → ALLOW but flag (Central reviews via /anomalies)
+            anom = []
+            tgt = (qr['target_audience'] or '').strip()
+            if tgt in ('Blue Collared', 'White Collared') and emp['collar'] and emp['collar'] != tgt:
+                anom.append(f'collar_mismatch({emp["collar"]} vs {tgt})')
+
             emp_name = emp['name']
             month = _date_to_month(qr['plan_start'] or '')
             db.execute('''INSERT OR IGNORE INTO emp_training
                 (plant_id, emp_code, session_code, programme_name, start_date, end_date,
-                 hrs, prog_type, level, mode, cal_new, venue, month)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                 hrs, prog_type, level, mode, cal_new, venue, month, anomaly_flags)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (qr['plant_id'], emp_code, qr['session_code'], qr['programme_name'],
                  qr['plan_start'] or '', qr['plan_end'] or '',
                  qr['duration_hrs'] or 0, qr['prog_type'] or '',
                  qr['level'] or '', qr['mode'] or '', 'Calendar Program',
-                 '', month))
+                 '', month, ','.join(anom) if anom else None))
 
         changed = db.execute('SELECT changes()').fetchone()[0]
+        # Refresh calendar actuals if this is a new insert
+        if changed:
+            _recompute_session_actuals(qr['plant_id'], qr['session_code'], db)
         db.commit()
 
         if changed == 0:
@@ -670,6 +732,21 @@ def _register(app):
         if request.method == 'GET':
             return render_template('qr_feedback.html', qr=qr, token=token,
                                    error=None, lang=lang)
+
+        # Time gate: feedback opens once session starts
+        if qr['plan_start']:
+            today_iso = datetime.date.today().isoformat()
+            if today_iso < qr['plan_start']:
+                return render_template('qr_feedback.html', qr=qr, token=token, lang=lang,
+                                       error=f'Feedback opens on {qr["plan_start"]}. Session has not started yet.')
+
+        # Status check: block Cancelled/Re-Scheduled
+        cal_status = db.execute(
+            'SELECT status FROM calendar WHERE session_code=? AND plant_id=?',
+            (qr['session_code'], qr['plant_id'])).fetchone()
+        if cal_status and cal_status['status'] in ('Cancelled', 'Re-Scheduled'):
+            return render_template('qr_feedback.html', qr=qr, token=token, lang=lang,
+                                   error=f'Session is {cal_status["status"]}. Feedback closed.')
 
         emp_code = request.form.get('emp_code', '').strip().upper() or None
         ip = request.remote_addr or ''
