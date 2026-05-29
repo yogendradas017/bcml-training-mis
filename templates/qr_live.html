@@ -55,7 +55,23 @@
   </div>
 </div>
 
-{# Session PIN control #}
+{# Lock state: once 2C exists (Awaiting Verification / Conducted) or session is
+   Lapsed/Cancelled/Re-Scheduled, no PIN / QR mutation allowed. View becomes
+   read-only audit. #}
+{% set qr_unlocked = (cal.status == 'To Be Planned') %}
+
+{% if not qr_unlocked %}
+<div class="alert alert-warning d-flex align-items-center gap-2" style="font-size:13px;">
+  <i class="bi bi-lock-fill"></i>
+  <div>
+    <strong>QR controls locked.</strong> Session status is <strong>{{ cal.status }}</strong>.
+    No new scans, no PIN changes, no QR regeneration. View is read-only — attendee list and metrics shown for audit.
+  </div>
+</div>
+{% endif %}
+
+{% if qr_unlocked %}
+{# Session PIN control — only when unlocked #}
 <div class="card mb-4" style="border-left:4px solid {% if cal.session_pin %}#f59e0b{% else %}#d1d5db{% endif %};">
   <div class="card-body py-3 d-flex flex-wrap align-items-center gap-3">
     <div>
@@ -90,7 +106,7 @@
   </div>
 </div>
 
-{# QR codes #}
+{# QR codes — only when unlocked #}
 <div class="card mb-4">
   <div class="card-header" style="background:#1a1f35;color:#fff;font-size:13px;">
     <i class="bi bi-qr-code me-1"></i> QR Codes for this Session
@@ -146,6 +162,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 {# Attendee list #}
 <div class="card">

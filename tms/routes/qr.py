@@ -139,6 +139,14 @@ def _register(app):
         if stage not in ('attendance', 'feedback'):
             stage = 'attendance'
 
+        # Lock: QR generate only allowed while status='To Be Planned'.
+        # Once 2C exists (Awaiting Verification / Conducted) or session is
+        # Lapsed/Cancelled/Re-Scheduled, generating a new QR would let new
+        # scans mutate verified records.
+        if cal['status'] != 'To Be Planned':
+            flash(f'Cannot generate QR — session is "{cal["status"]}". QR is locked once 2C is recorded.', 'danger')
+            return _cal_home()
+
         # GAP 16: block QR generation if calendar has no plan_end
         if not cal['plan_end'] or not cal['plan_start']:
             flash('Cannot generate QR — session has no planned start/end date. Set dates in calendar first.', 'danger')
@@ -209,11 +217,23 @@ def _register(app):
     def qr_revoke(qr_id):
         role = session.get('role')
         db = get_db()
-        if role in ('central', 'admin'):
-            db.execute('UPDATE session_qr SET is_active=0 WHERE id=?', (qr_id,))
-        else:
-            db.execute('UPDATE session_qr SET is_active=0 WHERE id=? AND plant_id=?',
-                       (qr_id, session['plant_id']))
+        # Lock: only revoke QR for sessions still in 'To Be Planned'.
+        # Post-2C, the QR is already de-facto frozen by qr_attend/qr_feedback
+        # guards; allowing UPDATE here would create misleading audit churn.
+        q = db.execute(
+            'SELECT q.id, q.plant_id, c.status FROM session_qr q '
+            'JOIN calendar c ON c.session_code=q.session_code AND c.plant_id=q.plant_id '
+            'WHERE q.id=?', (qr_id,)).fetchone()
+        if not q:
+            flash('QR not found.', 'danger')
+            return _cal_home()
+        if role not in ('central', 'admin') and q['plant_id'] != session.get('plant_id'):
+            flash('Not your plant.', 'danger')
+            return _cal_home()
+        if q['status'] != 'To Be Planned':
+            flash(f'Cannot revoke — session is "{q["status"]}". QR is locked.', 'danger')
+            return _cal_home()
+        db.execute('UPDATE session_qr SET is_active=0 WHERE id=?', (qr_id,))
         db.commit()
         flash('QR revoked — old QR no longer accepts scans.', 'warning')
         return _cal_home()
@@ -226,6 +246,18 @@ def _register(app):
         role = session.get('role')
         plant_id = session['plant_id']
         db = get_db()
+        # Lock: PIN mutates calendar row. Block once session moves past planning.
+        cal = db.execute('SELECT status, plant_id FROM calendar WHERE id=?',
+                         (cal_id,)).fetchone()
+        if not cal:
+            flash('Session not found.', 'danger')
+            return _cal_home()
+        if role not in ('central', 'admin') and cal['plant_id'] != plant_id:
+            flash('Not your plant.', 'danger')
+            return _cal_home()
+        if cal['status'] != 'To Be Planned':
+            flash(f'Cannot set PIN — session is "{cal["status"]}". PIN is locked.', 'danger')
+            return redirect(url_for('qr_live', cal_id=cal_id))
         pin = request.form.get('pin', '').strip()
         if pin and (len(pin) != 4 or not pin.isdigit()):
             flash('PIN must be exactly 4 digits.', 'danger')
@@ -594,14 +626,17 @@ def _register(app):
                                        has_pin=bool(qr['session_pin']),
                                        error=f'Session has not started. Attendance opens on {qr["plan_start"]}.')
 
-        # GAP 1: block scans for Cancelled/Re-Scheduled sessions
+        # Lock: attendance scan only while status='To Be Planned'.
+        # Awaiting Verification / Conducted = 2C saved, central reviewing/done;
+        # Lapsed / Cancelled / Re-Scheduled = session not happening as planned.
+        # Allowing scans in any of these would mutate verified records.
         cal_status = db.execute(
             'SELECT status FROM calendar WHERE session_code=? AND plant_id=?',
             (qr['session_code'], qr['plant_id'])).fetchone()
-        if cal_status and cal_status['status'] in ('Cancelled', 'Re-Scheduled'):
+        if cal_status and cal_status['status'] != 'To Be Planned':
             return render_template('qr_attendance.html', qr=qr, token=token,
                                    has_pin=bool(qr['session_pin']),
-                                   error=f'Session is {cal_status["status"]}. Attendance closed.')
+                                   error=f'Attendance closed — session is "{cal_status["status"]}".')
 
         emp_code = request.form.get('emp_code', '').strip().upper()
         if not emp_code:
@@ -740,13 +775,15 @@ def _register(app):
                 return render_template('qr_feedback.html', qr=qr, token=token, lang=lang,
                                        error=f'Feedback opens on {qr["plan_start"]}. Session has not started yet.')
 
-        # Status check: block Cancelled/Re-Scheduled
+        # Lock: feedback submit only while status='To Be Planned'.
+        # Once 2C is saved, feedback aggregates feed verified programme_details —
+        # accepting new responses would silently mutate Central-reviewed data.
         cal_status = db.execute(
             'SELECT status FROM calendar WHERE session_code=? AND plant_id=?',
             (qr['session_code'], qr['plant_id'])).fetchone()
-        if cal_status and cal_status['status'] in ('Cancelled', 'Re-Scheduled'):
+        if cal_status and cal_status['status'] != 'To Be Planned':
             return render_template('qr_feedback.html', qr=qr, token=token, lang=lang,
-                                   error=f'Session is {cal_status["status"]}. Feedback closed.')
+                                   error=f'Feedback closed — session is "{cal_status["status"]}".')
 
         emp_code = request.form.get('emp_code', '').strip().upper() or None
         ip = request.remote_addr or ''

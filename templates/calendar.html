@@ -386,6 +386,11 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" style="font-size:13px;min-width:200px;">
                   {% set sq = qr_map.get(s.session_code, {}) %}
+                  {# QR generate/print allowed only while session is still 'To Be Planned'.
+                     Once 2C is saved (Awaiting Verification / Conducted) or session is
+                     Lapsed/Cancelled/Re-Scheduled, QR is locked. Prevents any new scan
+                     mutating verified attendance/feedback records. #}
+                  {% if s.status == 'To Be Planned' %}
                   {# Attendance QR #}
                   {% if sq.get('attendance') and sq['attendance']['is_active'] %}
                   <li><a class="dropdown-item" href="{{ url_for('qr_poster', token=sq['attendance']['token']) }}" target="_blank">
@@ -419,8 +424,14 @@
                   </li>
                   {% endif %}
                   <li><hr class="dropdown-divider"></li>
+                  {% else %}
+                  <li><span class="dropdown-item-text" style="font-size:11.5px;color:#92400e;background:#fef3c7;padding:6px 10px;">
+                    <i class="bi bi-lock-fill me-1"></i> QR locked — session is <strong>{{ s.status }}</strong>
+                  </span></li>
+                  <li><hr class="dropdown-divider"></li>
+                  {% endif %}
                   <li><a class="dropdown-item" href="{{ url_for('qr_live', cal_id=s.id) }}">
-                    <i class="bi bi-broadcast me-1 text-danger"></i> Live Attendance
+                    <i class="bi bi-broadcast me-1 text-danger"></i> Live Attendance{% if s.status != 'To Be Planned' %} <span style="font-size:10px;color:#6b7280;">(read-only)</span>{% endif %}
                   </a></li>
                 </ul>
               </div>
