@@ -1,4 +1,5 @@
 import hashlib
+import json as _json
 import logging
 import os
 from datetime import datetime, timezone, timedelta
@@ -13,8 +14,12 @@ def _now_ist():
     return datetime.now(_IST).strftime('%Y-%m-%d %H:%M:%S')
 
 
-def _compute_row_hash(prev_hash, ts, uid, username, plant_id, action, detail, ip):
-    """SHA-256 over canonical concatenation. Any tampered row breaks the chain."""
+def _compute_row_hash(prev_hash, ts, uid, username, plant_id, action, detail, ip, payload_hash=None):
+    """SHA-256 over canonical concatenation. Any tampered row breaks the chain.
+
+    payload_hash is included in the digest if present so any change to the
+    detailed payload also breaks the chain (defence in depth).
+    """
     h = hashlib.sha256()
     payload = '|'.join([
         prev_hash or _GENESIS,
@@ -25,12 +30,34 @@ def _compute_row_hash(prev_hash, ts, uid, username, plant_id, action, detail, ip
         action or '',
         detail or '',
         ip or '',
+        payload_hash or '',
     ])
     h.update(payload.encode('utf-8'))
     return h.hexdigest()
 
 
-def log_action(action, detail='', user_id=None, username=None, plant_id=None):
+def _compute_payload_hash(payload_json_str):
+    """SHA-256 of the canonical payload JSON string."""
+    if not payload_json_str:
+        return ''
+    return hashlib.sha256(payload_json_str.encode('utf-8')).hexdigest()
+
+
+def _row_diff(before, after, ignore_keys=()):
+    """Compute field-level diff dict {field: {before, after}} between two row dicts.
+    Strips ignored keys + ts-style auto fields. Returns {} if no changes."""
+    diff = {}
+    keys = (set(before or {}) | set(after or {})) - set(ignore_keys or ())
+    for k in keys:
+        b = (before or {}).get(k)
+        a = (after  or {}).get(k)
+        if b != a:
+            diff[k] = {'before': b, 'after': a}
+    return diff
+
+
+def log_action(action, detail='', user_id=None, username=None, plant_id=None,
+               payload=None):
     try:
         from tms.db import get_db
         db = get_db()
@@ -44,17 +71,33 @@ def log_action(action, detail='', user_id=None, username=None, plant_id=None):
         ts  = _now_ist()
         det = str(detail)[:500]
 
+        # Serialise payload to canonical JSON (sorted keys, str default) so
+        # the hash is reproducible at verify time.
+        payload_json_str = None
+        payload_hash = ''
+        if payload is not None:
+            try:
+                payload_json_str = _json.dumps(payload, sort_keys=True, default=str,
+                                                separators=(',', ':'))
+                payload_hash = _compute_payload_hash(payload_json_str)
+            except (TypeError, ValueError):
+                payload_json_str = None
+                payload_hash = ''
+
         # Tamper-evident chain: link to previous row's hash
         last = db.execute(
             'SELECT row_hash FROM audit_log ORDER BY id DESC LIMIT 1'
         ).fetchone()
         prev_hash = (last['row_hash'] if last and last['row_hash'] else _GENESIS)
-        row_hash  = _compute_row_hash(prev_hash, ts, uid, uname, pid, action, det, ip)
+        row_hash  = _compute_row_hash(prev_hash, ts, uid, uname, pid, action, det, ip,
+                                       payload_hash)
 
         db.execute(
-            'INSERT INTO audit_log(ts,user_id,username,plant_id,action,detail,ip_address,prev_hash,row_hash)'
-            ' VALUES(?,?,?,?,?,?,?,?,?)',
-            (ts, uid, uname, pid, action, det, ip, prev_hash, row_hash)
+            'INSERT INTO audit_log(ts,user_id,username,plant_id,action,detail,ip_address,'
+            'prev_hash,row_hash,payload_json,payload_hash)'
+            ' VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+            (ts, uid, uname, pid, action, det, ip,
+             prev_hash, row_hash, payload_json_str, payload_hash)
         )
         db.commit()
     except Exception as e:
@@ -69,21 +112,67 @@ def log_action(action, detail='', user_id=None, username=None, plant_id=None):
 
 def verify_chain(db, limit=None):
     """Recompute hashes for the entire audit_log and return list of broken row ids.
-    Empty list = chain intact. Used by admin verification page."""
-    q = 'SELECT id, ts, user_id, username, plant_id, action, detail, ip_address, prev_hash, row_hash FROM audit_log ORDER BY id ASC'
+    Empty list = chain intact. Used by admin verification page.
+
+    Verifies both the row_hash chain AND the payload_hash (if present).
+    """
+    q = ('SELECT id, ts, user_id, username, plant_id, action, detail, ip_address, '
+         'prev_hash, row_hash, payload_json, payload_hash '
+         'FROM audit_log ORDER BY id ASC')
     if limit:
         q += f' LIMIT {int(limit)}'
     broken = []
     prev = _GENESIS
     for r in db.execute(q):
+        # 1. payload_hash check (if payload exists)
+        stored_payload_hash = r['payload_hash'] if 'payload_hash' in r.keys() else ''
+        payload_str = r['payload_json'] if 'payload_json' in r.keys() else None
+        recomputed_payload_hash = _compute_payload_hash(payload_str) if payload_str else ''
+        if stored_payload_hash and recomputed_payload_hash and stored_payload_hash != recomputed_payload_hash:
+            broken.append(r['id'])
+        # 2. row_hash chain check
         expected = _compute_row_hash(
             prev, r['ts'], r['user_id'], r['username'],
-            r['plant_id'], r['action'], r['detail'] or '', r['ip_address'] or ''
+            r['plant_id'], r['action'], r['detail'] or '', r['ip_address'] or '',
+            stored_payload_hash or ''
         )
         if r['row_hash'] and r['row_hash'] != expected:
-            broken.append(r['id'])
+            if r['id'] not in broken:
+                broken.append(r['id'])
         if r['prev_hash'] and r['prev_hash'] != prev:
             if r['id'] not in broken:
                 broken.append(r['id'])
         prev = r['row_hash'] or expected
     return broken
+
+
+# Convenience wrapper for snapshot-on-write callers
+def log_record_change(action, row_id, table, before=None, after=None,
+                       extra_detail=''):
+    """Convenience: log a row change with a structured payload.
+
+    action: e.g. 'RECORD_EDIT' / 'RECORD_ADD' / 'RECORD_DELETE'
+    row_id: scalar row identifier (e.g. cal_id)
+    table:  source table name for context ('calendar', 'programme_details', etc.)
+    before / after: dict snapshots; for ADD pass before=None, for DELETE pass after=None
+    """
+    diff = _row_diff(before, after,
+                     ignore_keys=('id', 'created_at', 'updated_at',
+                                  'audit_json', 'created_by'))
+    payload = {
+        'table':  table,
+        'row_id': row_id,
+        'before': before,
+        'after':  after,
+        'diff':   diff,
+    }
+    short_fields = ','.join(sorted(diff.keys())) if diff else ''
+    if before and not after:
+        detail = f'{table}:{row_id} DELETED'
+    elif after and not before:
+        detail = f'{table}:{row_id} CREATED'
+    else:
+        detail = f'{table}:{row_id} fields:{short_fields}'
+    if extra_detail:
+        detail = f'{detail} | {extra_detail}'
+    log_action(action, detail=detail, payload=payload)

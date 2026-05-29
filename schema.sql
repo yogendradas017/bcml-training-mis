@@ -214,16 +214,18 @@ CREATE INDEX IF NOT EXISTS idx_corp_active ON corp_members(is_active, name);
 CREATE INDEX IF NOT EXISTS idx_prog_plant ON programme_details(plant_id);
 
 CREATE TABLE IF NOT EXISTS audit_log (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    ts          TEXT    DEFAULT (datetime('now','localtime')),
-    user_id     INTEGER,
-    username    TEXT,
-    plant_id    INTEGER,
-    action      TEXT    NOT NULL,
-    detail      TEXT,
-    ip_address  TEXT,
-    prev_hash   TEXT,
-    row_hash    TEXT
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts           TEXT    DEFAULT (datetime('now','localtime')),
+    user_id      INTEGER,
+    username     TEXT,
+    plant_id     INTEGER,
+    action       TEXT    NOT NULL,
+    detail       TEXT,
+    ip_address   TEXT,
+    prev_hash    TEXT,
+    row_hash     TEXT,
+    payload_json TEXT,
+    payload_hash TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_audit_ts   ON audit_log(ts);
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(username);

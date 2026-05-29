@@ -402,7 +402,11 @@ def _migrate_force_default_password_change(db):
 def _migrate_audit_hash_chain(db):
     """Tamper-evident audit log: add prev_hash + row_hash columns.
     Hash chain ensures any backdated/deleted/altered row is detectable by
-    re-computing hashes from genesis row."""
+    re-computing hashes from genesis row.
+
+    Also adds payload_json + payload_hash for field-level evidence (Tier 3
+    of Calendar audit). detail field stays short and human-readable; the full
+    snapshot/diff goes in payload_json with SHA-256 of payload in payload_hash."""
     import logging
     try:
         cols = {r[1] for r in db.execute("PRAGMA table_info(audit_log)")}
@@ -410,6 +414,10 @@ def _migrate_audit_hash_chain(db):
             db.execute("ALTER TABLE audit_log ADD COLUMN prev_hash TEXT")
         if 'row_hash' not in cols:
             db.execute("ALTER TABLE audit_log ADD COLUMN row_hash TEXT")
+        if 'payload_json' not in cols:
+            db.execute("ALTER TABLE audit_log ADD COLUMN payload_json TEXT")
+        if 'payload_hash' not in cols:
+            db.execute("ALTER TABLE audit_log ADD COLUMN payload_hash TEXT")
         db.commit()
     except Exception as e:
         logging.warning(f'_migrate_audit_hash_chain failed: {e}')

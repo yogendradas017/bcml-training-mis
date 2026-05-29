@@ -16,7 +16,7 @@ from tms.helpers import (
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
-from tms.audit import log_action
+from tms.audit import log_action, log_record_change
 
 
 def _register(app):
@@ -131,7 +131,11 @@ def _register(app):
              int(row['planned_pax'] or 0),
              row['trainer_vendor'], 'To Be Planned'))
         db.commit()
-        log_action('RECORD_ADD', f"cal:{session_code}")
+        # Audit Tier 3: snapshot the new row in payload
+        new_snap = db.execute('SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
+                              (session_code, plant_id)).fetchone()
+        log_record_change('RECORD_ADD', session_code, 'calendar',
+                          before=None, after=dict(new_snap) if new_snap else None)
         msg = f'Session {session_code} added.'
         if tni_audience and form_audience and form_audience != tni_audience:
             msg += f' Audience set to "{tni_audience}" (locked from TNI).'
@@ -145,19 +149,21 @@ def _register(app):
     @spoc_required
     def delete_calendar(cal_id):
         db = get_db()
-        cal = db.execute('SELECT session_code, status FROM calendar WHERE id=? AND plant_id=?',
+        cal = db.execute('SELECT * FROM calendar WHERE id=? AND plant_id=?',
                          (cal_id, session['plant_id'])).fetchone()
         if cal and cal['status'] == 'Conducted':
             if _is_ajax():
                 return 'Conducted sessions cannot be deleted.', 403
             flash('Conducted sessions cannot be deleted.', 'danger')
             return redirect(url_for('training_calendar'))
+        before_snap_dict = dict(cal) if cal else None
         if cal:
             db.execute('DELETE FROM session_qr WHERE plant_id=? AND session_code=?',
                        (session['plant_id'], cal['session_code']))
         db.execute('DELETE FROM calendar WHERE id=? AND plant_id=?', (cal_id, session['plant_id']))
         db.commit()
-        log_action('RECORD_DELETE', f"cal:{cal_id}")
+        log_record_change('RECORD_DELETE', cal_id, 'calendar',
+                          before=before_snap_dict, after=None)
         if _is_ajax():
             return '', 204
         flash('Calendar entry deleted.', 'warning')
@@ -207,6 +213,11 @@ def _register(app):
             flash_validation(errors, warnings, flash)
             return redirect(url_for('training_calendar'))
 
+        # Audit Tier 3: capture before-snapshot for field-level diff
+        before_snap = db.execute('SELECT * FROM calendar WHERE id=? AND plant_id=?',
+                                  (cal_id, plant_id)).fetchone()
+        before_snap_dict = dict(before_snap) if before_snap else None
+
         edit_prog = _canonical_prog(row['programme_name'], plant_id, db, strict=True)
         dur       = float(row['duration_hrs'] or 0)
         source    = row['source'] if row['source'] in ('TNI Driven', 'New Requirement') else 'TNI Driven'
@@ -229,7 +240,11 @@ def _register(app):
              row['status'],
              cal_id, plant_id))
         db.commit()
-        log_action('RECORD_EDIT', f"cal:{cal_id}")
+        after_snap = db.execute('SELECT * FROM calendar WHERE id=? AND plant_id=?',
+                                 (cal_id, plant_id)).fetchone()
+        log_record_change('RECORD_EDIT', cal_id, 'calendar',
+                          before=before_snap_dict,
+                          after=dict(after_snap) if after_snap else None)
         msg = 'Session updated.'
         if tni_audience_edit and form_audience_edit and form_audience_edit != tni_audience_edit:
             msg += f' Audience locked to "{tni_audience_edit}" from TNI.'

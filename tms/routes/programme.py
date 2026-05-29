@@ -15,7 +15,7 @@ from tms.helpers import (
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
-from tms.audit import log_action
+from tms.audit import log_action, log_record_change
 
 
 def _register(app):
@@ -513,7 +513,16 @@ def _register(app):
              '; '.join(anomalies) if anomalies else 'clean'))
         db.commit()
 
-        log_action('RECORD_ADD', f"2c:{session_code}:{new_status}")
+        # Audit Tier 3: snapshot the 2C row in payload (INSERT or UPDATE-of-stub)
+        new_pd = db.execute(
+            'SELECT * FROM programme_details WHERE plant_id=? AND session_code=? LIMIT 1',
+            (plant_id, session_code)).fetchone()
+        log_record_change(
+            'RECORD_EDIT' if existing_pd else 'RECORD_ADD',
+            session_code, 'programme_details',
+            before=dict(existing_pd) if existing_pd else None,
+            after=dict(new_pd) if new_pd else None,
+            extra_detail=f'status:{new_status}')
         if new_status == 'Conducted':
             flash(f'Programme {session_code} saved and verified.', 'success')
         else:
@@ -526,9 +535,10 @@ def _register(app):
     @spoc_required
     def delete_programme(rec_id):
         db = get_db()
-        rec = db.execute('SELECT session_code FROM programme_details WHERE id=? AND plant_id=?',
+        rec = db.execute('SELECT * FROM programme_details WHERE id=? AND plant_id=?',
                          (rec_id, session['plant_id'])).fetchone()
         if rec:
+            before_snap_dict = dict(rec)
             db.execute('DELETE FROM programme_details WHERE id=? AND plant_id=?', (rec_id, session['plant_id']))
             db.execute(
                 "UPDATE calendar SET status='To Be Planned', conducted_at=NULL, conducted_by=NULL, "
@@ -542,7 +552,8 @@ def _register(app):
                  session.get('username', ''), session.get('user_id'),
                  'Reverted to To Be Planned'))
             db.commit()
-            log_action('RECORD_DELETE', f"2c:{rec['session_code']}")
+            log_record_change('RECORD_DELETE', rec_id, 'programme_details',
+                              before=before_snap_dict, after=None)
         if _is_ajax():
             return '', 204
         flash('Programme record deleted.', 'warning')
