@@ -12,6 +12,9 @@ def get_db():
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA journal_mode=WAL")
         g.db.execute("PRAGMA foreign_keys = ON")
+        # 15s busy_timeout (default 5s). Multiple concurrent writers
+        # otherwise hit "database is locked" cascade under SQLite + WAL.
+        g.db.execute("PRAGMA busy_timeout=15000")
     return g.db
 
 
@@ -20,6 +23,8 @@ def _ensure_indexes(db):
         CREATE INDEX IF NOT EXISTS idx_emp_plant_code ON employees(plant_id, emp_code);
         CREATE INDEX IF NOT EXISTS idx_tni_prog ON tni(plant_id, programme_name);
         CREATE INDEX IF NOT EXISTS idx_et_lookup ON emp_training(plant_id, emp_code, programme_name);
+        CREATE INDEX IF NOT EXISTS idx_et_plant_date ON emp_training(plant_id, start_date);
+        CREATE INDEX IF NOT EXISTS idx_cal_plant_plan ON calendar(plant_id, plan_start);
     ''')
     db.commit()
 
@@ -451,6 +456,23 @@ def _migrate_anomaly_flags(db):
         logging.warning(f'_migrate_anomaly_flags failed: {e}')
 
 
+def _migrate_session_time(db):
+    """Standardise Start Time / End Time fields across emp_training and
+    programme_details (2A + 2C). Calendar already has them. Adds columns
+    idempotently so existing DBs match fresh-deploy schema."""
+    import logging
+    try:
+        for table in ('emp_training', 'programme_details'):
+            cols = {r[1] for r in db.execute(f"PRAGMA table_info({table})")}
+            if 'time_from' not in cols:
+                db.execute(f"ALTER TABLE {table} ADD COLUMN time_from TEXT")
+            if 'time_to' not in cols:
+                db.execute(f"ALTER TABLE {table} ADD COLUMN time_to TEXT")
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_session_time failed: {e}')
+
+
 def _migrate_calendar_verification(db):
     """Add verification audit columns to calendar table."""
     import logging
@@ -549,6 +571,7 @@ def init_db():
     _migrate_calendar_verification(db)
     _migrate_verification_log(db)
     _migrate_anomaly_flags(db)
+    _migrate_session_time(db)
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
                    (p['id'], p['name'], p['unit_code']))

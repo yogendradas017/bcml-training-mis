@@ -1,0 +1,40 @@
+name: Nightly DB Backup
+
+# Fires the /cron/backup endpoint on the live Render service daily.
+# Endpoint dumps SQLite, gzips, emails as attachment to BACKUP_RECIPIENT
+# (defaults to SMTP_USER on the service).
+#
+# Required GitHub repo secrets:
+#   CRON_SECRET   — must match the env var on the Render service
+#   APP_URL       — e.g. https://bcml-training-mis.onrender.com
+#
+# Schedule: 22:00 UTC = 03:30 IST daily (quiet hour for India).
+
+on:
+  schedule:
+    - cron: '0 22 * * *'
+  workflow_dispatch:  # allow manual "Run workflow" from Actions tab
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit backup endpoint
+        env:
+          APP_URL:     ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "ERROR: APP_URL or CRON_SECRET secret not set in repo settings"
+            exit 1
+          fi
+          RESPONSE=$(curl -sS -w "\nHTTP_STATUS:%{http_code}" \
+            --max-time 120 \
+            "$APP_URL/cron/backup?token=$CRON_SECRET")
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          STATUS=$(echo "$RESPONSE" | tail -n1 | cut -d: -f2)
+          echo "Status: $STATUS"
+          echo "Body:   $BODY"
+          if [ "$STATUS" != "200" ]; then
+            exit 1
+          fi

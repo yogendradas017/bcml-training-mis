@@ -7,6 +7,7 @@ from tms.decorators import central_required
 from tms.helpers import (
     _get_or_create_prog_code, _new_session_code,
     _canonical_prog, _current_fy, _in_current_fy,
+    validate_calendar_row, flash_validation,
 )
 from tms.audit import log_action
 
@@ -167,24 +168,23 @@ def _register(app):
             return redirect(url_for('central_calendar'))
         f = request.form
         db = get_db()
-        prog_name_raw = f.get('programme_name', '').strip()
-        prog_name = _canonical_prog(prog_name_raw, CENTRAL_PLANT_ID, db, strict=True)
-        if prog_name is None:
-            flash(f'Programme "{prog_name_raw}" not found in Central Programme Master. Add it to the master list first.', 'danger')
+        # Centralised validation (same checks as plant calendar, minus TNI
+        # over-plan + audience-from-TNI which don't apply at central).
+        row = {k: f.get(k, '') for k in (
+            'programme_name', 'prog_type', 'source', 'planned_month',
+            'plan_start', 'plan_end', 'time_from', 'time_to',
+            'duration_hrs', 'level', 'mode', 'target_audience',
+            'planned_pax', 'trainer_vendor')}
+        errors, warnings = validate_calendar_row(
+            row, CENTRAL_PLANT_ID, db, is_edit=False, is_central=True)
+        if errors:
+            flash_validation(errors, warnings, flash)
             return redirect(url_for('central_calendar'))
+
+        prog_name = _canonical_prog(f.get('programme_name', '').strip(),
+                                    CENTRAL_PLANT_ID, db, strict=True)
         prog_type = f.get('prog_type', '')
-        dur = float(f.get('duration_hrs') or 0)
-        if dur <= 0:
-            flash('Duration must be greater than 0 hours.', 'danger')
-            return redirect(url_for('central_calendar'))
-
-        fy_start, fy_end = _current_fy()
-        for fld, lbl in [('plan_start', 'Plan Start'), ('plan_end', 'Plan End')]:
-            val = f.get(fld, '')
-            if val and not _in_current_fy(val):
-                flash(f'{lbl} date must be within the current FY ({fy_start} to {fy_end}).', 'danger')
-                return redirect(url_for('central_calendar'))
-
+        dur       = float(f.get('duration_hrs') or 0)
         prog_code    = _get_or_create_prog_code(CENTRAL_PLANT_ID, prog_name, prog_type, db)
         session_code = _new_session_code(CENTRAL_PLANT_ID, prog_code, db)
 
@@ -219,29 +219,26 @@ def _register(app):
         if existing['status'] == 'Conducted':
             flash('Conducted sessions cannot be edited.', 'danger')
             return redirect(url_for('central_calendar'))
+        # Pull prev prog_type so legacy edits don't get blocked on Master drift
+        prev_row = db.execute('SELECT prog_type FROM calendar WHERE id=?',
+                              (cal_id,)).fetchone()
+        prev_prog_type = prev_row['prog_type'] if prev_row else None
         f = request.form
-        try:
-            dur = float(f.get('duration_hrs') or 0)
-        except (ValueError, TypeError):
-            dur = 0
-        if dur <= 0:
-            flash('Duration must be greater than 0 hours.', 'danger')
+        row = {k: f.get(k, '') for k in (
+            'programme_name', 'prog_type', 'source', 'planned_month',
+            'plan_start', 'plan_end', 'time_from', 'time_to',
+            'duration_hrs', 'level', 'mode', 'target_audience',
+            'planned_pax', 'trainer_vendor', 'status')}
+        errors, warnings = validate_calendar_row(
+            row, CENTRAL_PLANT_ID, db, is_edit=True, exclude_id=cal_id,
+            is_central=True, prev_prog_type=prev_prog_type)
+        if errors:
+            flash_validation(errors, warnings, flash)
             return redirect(url_for('central_calendar'))
 
-        # Canonicalise programme name
-        prog_name_raw = f.get('programme_name', '').strip()
-        prog_name = _canonical_prog(prog_name_raw, CENTRAL_PLANT_ID, db, strict=True)
-        if prog_name is None:
-            flash(f'Programme "{prog_name_raw}" not found in Central Programme Master.', 'danger')
-            return redirect(url_for('central_calendar'))
-
-        # FY date guard
-        fy_start, fy_end = _current_fy()
-        for fld, lbl in [('plan_start', 'Plan Start'), ('plan_end', 'Plan End')]:
-            val = f.get(fld, '')
-            if val and not _in_current_fy(val):
-                flash(f'{lbl} date must be within the current FY ({fy_start} to {fy_end}).', 'danger')
-                return redirect(url_for('central_calendar'))
+        prog_name = _canonical_prog(f.get('programme_name', '').strip(),
+                                    CENTRAL_PLANT_ID, db, strict=True)
+        dur = float(f.get('duration_hrs') or 0)
 
         new_status = f.get('status', 'To Be Planned')
         if new_status not in STATUSES:

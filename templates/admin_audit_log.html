@@ -5,6 +5,13 @@
 <div class="d-flex align-items-center gap-3 mb-4">
   <h4 class="mb-0 fw-semibold"><i class="bi bi-shield-lock-fill me-2" style="color:#fbbf24;"></i>Audit Log</h4>
   <span class="badge bg-secondary">Last 500 entries</span>
+  <form method="POST" action="{{ url_for('admin_audit_log_verify') }}" class="ms-auto">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-sm btn-outline-warning"
+            onclick="return confirm('Recompute hash chain for all audit rows? May take a few seconds.');">
+      <i class="bi bi-shield-check"></i> Verify Chain
+    </button>
+  </form>
 </div>
 
 <form method="GET" class="row g-2 mb-4">

@@ -4,7 +4,7 @@ from tms.constants import PROG_TYPES
 from tms.db import get_db
 from tms.decorators import login_required, spoc_required
 import datetime
-from tms.helpers import _fy_label, _derive_audience, _calc_compliance, _current_fy
+from tms.helpers import _fy_label, _derive_audience, _calc_compliance, _current_fy, _now_ist
 
 
 def _register(app):
@@ -217,7 +217,7 @@ def _register(app):
                             'planned': plan_map.get(mo_num, 0)})
 
         comp = _calc_compliance(pid, db)
-        cur_mo = datetime.datetime.now().strftime('%m')
+        cur_mo = _now_ist().strftime('%m')
 
         bc_target    = comp.get('bc_mandate', 0)
         wc_target    = comp.get('wc_mandate', 0)

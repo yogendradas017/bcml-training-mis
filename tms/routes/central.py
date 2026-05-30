@@ -564,10 +564,12 @@ def _register(app):
         Optional ?month=YYYY-MM to backfill any prior month. Optional ?to=email override.
         """
         from tms.email_util import send_email
+        import hmac as _hmac
         secret = _os.environ.get('CRON_SECRET', '').strip()
         if not secret:
             return jsonify({'ok': False, 'error': 'CRON_SECRET not configured'}), 500
-        if request.args.get('token', '') != secret:
+        # Constant-time compare prevents network-timing byte recovery.
+        if not _hmac.compare_digest(request.args.get('token', ''), secret):
             return jsonify({'ok': False, 'error': 'invalid token'}), 403
 
         # Determine reporting month — default = previous calendar month.
@@ -649,6 +651,72 @@ def _register(app):
             'month': month_label, 'total_errors': summary['total'],
             'recipient': recipient,
         }), status_code
+
+    @app.route('/cron/backup')
+    def cron_backup():
+        """Nightly DB backup → emailed as gzipped attachment.
+        Auth: ?token=<CRON_SECRET>. Recipient: BACKUP_RECIPIENT env (defaults to
+        SMTP_USER). Uses sqlite3 online .backup API — safe with live writers.
+        """
+        import hmac as _hmac, sqlite3 as _sq3, gzip as _gz, tempfile as _tmp
+        import os as _os2
+        from datetime import datetime as _dt
+        from tms.email_util import send_email
+        from tms.constants import DB_PATH
+
+        secret = _os.environ.get('CRON_SECRET', '').strip()
+        if not secret:
+            return jsonify({'ok': False, 'error': 'CRON_SECRET not configured'}), 500
+        if not _hmac.compare_digest(request.args.get('token', ''), secret):
+            return jsonify({'ok': False, 'error': 'invalid token'}), 403
+
+        recipient = (request.args.get('to', '').strip()
+                     or _os.environ.get('BACKUP_RECIPIENT', '').strip()
+                     or _os.environ.get('SMTP_USER', '').strip())
+        if not recipient:
+            return jsonify({'ok': False, 'error': 'no recipient'}), 500
+
+        stamp = _dt.now().strftime('%Y-%m-%d')
+        tmpd = _tmp.mkdtemp()
+        try:
+            snap_path = _os2.path.join(tmpd, 'snap.db')
+            # Online-safe snapshot — works while gunicorn holds connection.
+            src = _sq3.connect(DB_PATH)
+            dst = _sq3.connect(snap_path)
+            with dst:
+                src.backup(dst)
+            dst.close(); src.close()
+
+            with open(snap_path, 'rb') as f:
+                raw = f.read()
+            gz_bytes = _gz.compress(raw, compresslevel=9)
+            size_mb = len(gz_bytes) / (1024 * 1024)
+        finally:
+            try:
+                import shutil as _sh; _sh.rmtree(tmpd, ignore_errors=True)
+            except Exception:
+                pass
+
+        body = f"""
+        <p>TMS nightly backup — {stamp}</p>
+        <ul>
+            <li>DB source: <code>{DB_PATH}</code></li>
+            <li>Compressed size: <strong>{size_mb:.2f} MB</strong></li>
+            <li>Retention: kept in your Gmail; search "BCML TMS Backup" to find</li>
+            <li>Restore: gunzip the attachment, replace DATABASE_PATH file, restart</li>
+        </ul>
+        <p>— BCML TMS</p>
+        """
+        ok, detail = send_email(
+            to_addrs=recipient,
+            subject=f'BCML TMS Backup — {stamp}',
+            body_html=body,
+            attachments=[(f'tms_backup_{stamp}.db.gz', gz_bytes, 'application/gzip')],
+        )
+        return jsonify({
+            'ok': ok, 'detail': detail, 'date': stamp,
+            'size_mb': round(size_mb, 2), 'recipient': recipient,
+        }), (200 if ok else 500)
 
     @app.route('/central/plant/<int:plant_id>')
     @central_required

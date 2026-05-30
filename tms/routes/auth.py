@@ -11,7 +11,7 @@ import base64
 from tms.constants import PLANT_MAP, DB_PATH
 from tms.db import get_db
 from tms.decorators import spoc_required, login_required, admin_required
-from tms.helpers import _current_fy
+from tms.helpers import _current_fy, _now_ist
 from tms.audit import log_action
 
 
@@ -70,7 +70,7 @@ def _register(app):
             # Account lockout check
             if user and user['locked_until']:
                 try:
-                    if datetime.now() < datetime.fromisoformat(user['locked_until']):
+                    if _now_ist() < datetime.fromisoformat(user['locked_until']):
                         flash('Account locked. Try again in 15 minutes.', 'danger')
                         log_action('LOGIN_FAIL', f'locked:{username}', username=username)
                         return render_template('login.html')
@@ -114,7 +114,7 @@ def _register(app):
                     new_count = (user['failed_attempts'] or 0) + 1
                     locked_until = None
                     if new_count >= 5:
-                        locked_until = (datetime.now() + timedelta(minutes=15)).isoformat()
+                        locked_until = (_now_ist() + timedelta(minutes=15)).isoformat()
                         flash('Too many failed attempts. Account locked for 15 minutes.', 'danger')
                         log_action('ACCOUNT_LOCKED', f'user:{username}', username=username)
                     else:
@@ -209,6 +209,25 @@ def _register(app):
         ).fetchall()]
         return render_template('admin_audit_log.html', logs=logs, actions=actions,
                                q=q, sel_action=action)
+
+    @app.route('/admin/audit-log/verify', methods=['POST'])
+    @admin_required
+    def admin_audit_log_verify():
+        """Recompute the full audit-log hash chain and flash result.
+        Surfaces any tampered rows by id. Cheap enough to run interactively;
+        also wired to the nightly cron for unattended verification."""
+        from tms.audit import verify_chain
+        db = get_db()
+        broken = verify_chain(db)
+        if broken:
+            flash(f'AUDIT CHAIN BROKEN — {len(broken)} row(s) tampered: '
+                  + ', '.join(str(i) for i in broken[:20])
+                  + ('…' if len(broken) > 20 else ''), 'danger')
+        else:
+            count = db.execute('SELECT COUNT(*) FROM audit_log').fetchone()[0]
+            flash(f'Audit chain intact — verified {count} rows.', 'success')
+        log_action('AUDIT_VERIFY', f'broken={len(broken)}')
+        return redirect(url_for('admin_audit_log'))
 
     @app.route('/2fa/setup', methods=['GET', 'POST'])
     @login_required

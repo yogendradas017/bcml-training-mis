@@ -250,7 +250,10 @@ def _register(app):
             'trainer_vendor': f.get('trainer_vendor', ''),
             'status':         f.get('status', 'To Be Planned'),
         }
-        errors, warnings = validate_calendar_row(row, plant_id, db, is_edit=True, exclude_id=cal_id)
+        prev = db.execute('SELECT prog_type FROM calendar WHERE id=?', (cal_id,)).fetchone()
+        prev_pt = prev['prog_type'] if prev else None
+        errors, warnings = validate_calendar_row(row, plant_id, db, is_edit=True,
+                                                  exclude_id=cal_id, prev_prog_type=prev_pt)
         if errors:
             flash_validation(errors, warnings, flash)
             return redirect(url_for('training_calendar'))

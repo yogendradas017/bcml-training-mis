@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    name: Import + syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile all .py
+        run: |
+          python -m py_compile $(git ls-files '*.py')
+
+      - name: Import app (boot smoke)
+        env:
+          SECRET_KEY: ci-test-key-not-secret
+        run: |
+          python -c "import app; print('OK')"
+
+      - name: Init DB smoke
+        env:
+          SECRET_KEY: ci-test-key-not-secret
+          DATABASE_PATH: /tmp/ci_test.db
+        run: |
+          python -c "from app import init_db; init_db(); print('init_db OK')"

@@ -103,11 +103,14 @@
           </div>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Type of Programme <span class="required-star">*</span></label>
-          <select name="prog_type" class="form-select" required>
+          <label class="form-label d-flex align-items-center gap-1">Type of Programme <span class="required-star">*</span>
+            <span id="type-lock-badge" style="display:none;font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:10px;font-weight:600;"><i class="bi bi-lock-fill"></i> Master</span>
+          </label>
+          <select name="prog_type" id="add_type" class="form-select" required>
             <option value="">-- Select --</option>
             {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
           </select>
+          <div class="invalid-feedback" id="err_add_type"></div>
         </div>
         <div class="col-md-2">
           <label class="form-label">Source</label>
@@ -125,15 +128,26 @@
         </div>
         <div class="col-md-2">
           <label class="form-label">Plan Start Date</label>
-          <input type="date" name="plan_start" class="form-control">
+          <input type="date" name="plan_start" id="add_pstart" class="form-control">
         </div>
         <div class="col-md-2">
           <label class="form-label">Plan End Date</label>
-          <input type="date" name="plan_end" class="form-control">
+          <input type="date" name="plan_end" id="add_pend" class="form-control">
+          <div class="invalid-feedback" id="err_add_pend"></div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Start Time</label>
+          <input type="time" name="time_from" id="add_tfrom" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">End Time</label>
+          <input type="time" name="time_to" id="add_tto" class="form-control">
+          <div class="invalid-feedback" id="err_add_tto"></div>
         </div>
         <div class="col-md-2">
           <label class="form-label">Duration (Hrs)</label>
-          <input type="number" name="duration_hrs" class="form-control" step="0.5" min="0" value="0">
+          <input type="number" name="duration_hrs" id="add_dur" class="form-control" step="0.5" min="0" value="0">
+          <div class="invalid-feedback" id="err_add_dur"></div>
         </div>
         <div class="col-md-2">
           <label class="form-label">Level</label>
@@ -160,7 +174,8 @@
         </div>
         <div class="col-md-2">
           <label class="form-label">Planned Pax</label>
-          <input type="number" name="planned_pax" class="form-control" min="0" value="0">
+          <input type="number" name="planned_pax" id="add_pax" class="form-control" min="0" value="0">
+          <div class="invalid-feedback" id="err_add_pax"></div>
         </div>
         <div class="col-md-4">
           <label class="form-label">Trainer / Vendor</label>
@@ -505,14 +520,16 @@
             <div class="col-md-3">
               <label class="form-label fw-semibold" style="font-size:13px;">Duration (Hrs)</label>
               <input type="number" name="duration_hrs" id="e_hrs" class="form-control form-control-sm" step="0.5" min="0">
+              <div class="invalid-feedback" id="err_e_hrs"></div>
             </div>
             <div class="col-md-3">
-              <label class="form-label fw-semibold" style="font-size:13px;">Time From</label>
+              <label class="form-label fw-semibold" style="font-size:13px;">Start Time</label>
               <input type="time" name="time_from" id="e_tfrom" class="form-control form-control-sm">
             </div>
             <div class="col-md-3">
-              <label class="form-label fw-semibold" style="font-size:13px;">Time To</label>
+              <label class="form-label fw-semibold" style="font-size:13px;">End Time</label>
               <input type="time" name="time_to" id="e_tto" class="form-control form-control-sm">
+              <div class="invalid-feedback" id="err_e_tto"></div>
             </div>
             <div class="col-md-3">
               <label class="form-label fw-semibold" style="font-size:13px;">Mode</label>
@@ -566,6 +583,188 @@
 </div>
 {% endblock %}
 {% block scripts %}
+<script>
+/* Live inline validation for Add Calendar form.
+   Shows red border + message on field as user types — does NOT wait for submit.
+   Mirrors validate_calendar_row() server-side; cheap front-line guard. */
+window.AddLiveValidate = (function(){
+  const $ = id => document.getElementById(id);
+
+  function setErr(inputId, msgId, msg){
+    const inp = $(inputId), err = $(msgId);
+    if (!inp) return;
+    if (msg) {
+      inp.classList.add('is-invalid');
+      if (err) err.textContent = msg;
+    } else {
+      inp.classList.remove('is-invalid');
+      if (err) err.textContent = '';
+    }
+  }
+
+  function toMin(hhmm){
+    if (!hhmm || hhmm.indexOf(':')<0) return null;
+    const [h,m] = hhmm.split(':').map(Number);
+    return (h*60)+m;
+  }
+
+  function checkTime(){
+    const tf = ($('add_tfrom') || {}).value || '';
+    const tt = ($('add_tto')   || {}).value || '';
+    const dur = parseFloat(($('add_dur') || {}).value || 0);
+    const ps = ($('add_pstart') || {}).value || '';
+    const pe = ($('add_pend')   || {}).value || '';
+
+    if (tf && tt) {
+      const fm = toMin(tf), tm = toMin(tt);
+      if (fm !== null && tm !== null && tm <= fm) {
+        setErr('add_tto','err_add_tto', `End Time (${tt}) must be after Start Time (${tf}).`);
+        setErr('add_dur','err_add_dur', '');
+        return;
+      }
+      setErr('add_tto','err_add_tto','');
+      if (dur > 0 && fm !== null && tm !== null) {
+        const perDay = (tm - fm)/60;
+        let days = 1;
+        if (ps && pe) {
+          const d1 = new Date(ps), d2 = new Date(pe);
+          if (!isNaN(d1) && !isNaN(d2)) days = Math.max(1, Math.round((d2-d1)/86400000)+1);
+        }
+        const expected = perDay * days;
+        if (Math.abs(expected - dur)*60 > 15) {
+          const dayPart = days>1 ? ` × ${days} day(s)` : '';
+          setErr('add_dur','err_add_dur',
+            `Window ${tf}–${tt}${dayPart} = ${expected.toFixed(2)} hrs, but Duration is ${dur}. Fix one.`);
+          return;
+        }
+      }
+    } else {
+      setErr('add_tto','err_add_tto','');
+    }
+    setErr('add_dur','err_add_dur','');
+  }
+
+  function checkDates(){
+    const ps = ($('add_pstart') || {}).value || '';
+    const pe = ($('add_pend')   || {}).value || '';
+    if (ps && pe && pe < ps) {
+      setErr('add_pend','err_add_pend', `End Date (${pe}) must be on or after Start (${ps}).`);
+    } else {
+      setErr('add_pend','err_add_pend','');
+    }
+  }
+
+  function checkPax(){
+    const v = parseInt(($('add_pax') || {}).value || 0);
+    const demand = window._addTniDemand || 0;
+    if (!demand || v <= 0) { setErr('add_pax','err_add_pax',''); return; }
+    const ratio = v / demand;
+    if (ratio >= 1.5) {
+      setErr('add_pax','err_add_pax',
+        `Over-plan: ${v} pax vs TNI demand ${demand} (${ratio.toFixed(2)}x). Reduce or add TNI nominations.`);
+    } else if (ratio >= 1.2) {
+      const inp = $('add_pax'), err = $('err_add_pax');
+      if (inp) { inp.classList.remove('is-invalid'); inp.style.borderColor = '#f59e0b'; }
+      if (err) { err.style.display = 'block'; err.style.color = '#d97706'; err.textContent =
+        `Heads-up: ${v} pax vs TNI demand ${demand} (${ratio.toFixed(2)}x). Close to cap.`; }
+    } else {
+      const inp = $('add_pax'), err = $('err_add_pax');
+      if (inp) { inp.classList.remove('is-invalid'); inp.style.borderColor = ''; }
+      if (err) { err.style.display = ''; err.style.color = ''; err.textContent = ''; }
+    }
+  }
+
+  function checkType(){
+    // prog_type vs master mismatch is enforced server-side; here, if select is
+    // disabled (locked from master), no UI check needed. If user can edit it
+    // and value is blank → block.
+    const el = $('add_type');
+    if (!el) return;
+    if (!el.value) {
+      setErr('add_type','err_add_type','Type is required.');
+    } else {
+      setErr('add_type','err_add_type','');
+    }
+  }
+
+  function run(){
+    checkDates();
+    checkTime();
+    checkPax();
+    checkType();
+  }
+
+  function bind(){
+    ['add_tfrom','add_tto','add_dur','add_pstart','add_pend'].forEach(id=>{
+      const el = $(id);
+      if (el) el.addEventListener('input', run);
+    });
+    const pax = $('add_pax');     if (pax)  pax.addEventListener('input', checkPax);
+    const type = $('add_type');   if (type) type.addEventListener('change', checkType);
+  }
+
+  if (document.readyState !== 'loading') bind();
+  else document.addEventListener('DOMContentLoaded', bind);
+
+  return { run: run };
+})();
+
+/* Live validation for Edit modal — minimal mirror of AddLiveValidate.
+   Only checks time-vs-duration and date order (no TNI / pax check —
+   edit modal does not auto-load TNI coverage). */
+window.EditLiveValidate = (function(){
+  const $ = id => document.getElementById(id);
+  function setErr(inputId, msgId, msg){
+    const inp = $(inputId), err = $(msgId);
+    if (!inp) return;
+    if (msg) { inp.classList.add('is-invalid'); if (err) err.textContent = msg; }
+    else     { inp.classList.remove('is-invalid'); if (err) err.textContent = ''; }
+  }
+  function toMin(s){ if(!s||s.indexOf(':')<0) return null; const [h,m]=s.split(':').map(Number); return h*60+m; }
+  function run(){
+    const tf=($('e_tfrom')||{}).value||'', tt=($('e_tto')||{}).value||'';
+    const dur=parseFloat(($('e_hrs')||{}).value||0);
+    const ps=($('e_start')||{}).value||'', pe=($('e_end')||{}).value||'';
+    if (tf && tt){
+      const fm=toMin(tf), tm=toMin(tt);
+      if (fm!==null && tm!==null && tm<=fm){
+        setErr('e_tto','err_e_tto', `End Time (${tt}) must be after Start Time (${tf}).`);
+        setErr('e_hrs','err_e_hrs','');
+        return;
+      }
+      setErr('e_tto','err_e_tto','');
+      if (dur>0 && fm!==null && tm!==null){
+        const perDay=(tm-fm)/60;
+        let days=1;
+        if (ps && pe){
+          const d1=new Date(ps), d2=new Date(pe);
+          if (!isNaN(d1)&&!isNaN(d2)) days=Math.max(1, Math.round((d2-d1)/86400000)+1);
+        }
+        const expected=perDay*days;
+        if (Math.abs(expected-dur)*60 > 15){
+          const dp = days>1 ? ` × ${days} day(s)` : '';
+          setErr('e_hrs','err_e_hrs',
+            `Window ${tf}–${tt}${dp} = ${expected.toFixed(2)} hrs, but Duration is ${dur}. Fix one.`);
+          return;
+        }
+      }
+    } else if (tf || tt){
+      setErr('e_tto','err_e_tto', 'Both Start Time and End Time required.');
+    } else {
+      setErr('e_tto','err_e_tto','');
+    }
+    setErr('e_hrs','err_e_hrs','');
+  }
+  function bind(){
+    ['e_tfrom','e_tto','e_hrs','e_start','e_end'].forEach(id=>{
+      const el=$(id); if (el) el.addEventListener('input', run);
+    });
+  }
+  if (document.readyState!=='loading') bind();
+  else document.addEventListener('DOMContentLoaded', bind);
+  return { run: run };
+})();
+</script>
 <script>
 TBL.init('calTable', 30);
 
@@ -640,6 +839,20 @@ function _fetchCoverage(val) {
           addAud.disabled = false;
           if (addBadge) addBadge.style.display = 'none';
         }
+        // Lock prog_type from Programme Master — single source of truth.
+        const typeEl = document.getElementById('add_type');
+        const typeBadge = document.getElementById('type-lock-badge');
+        if (d.prog_type && typeEl) {
+          typeEl.value = d.prog_type;
+          typeEl.disabled = true;
+          if (typeBadge) typeBadge.style.display = '';
+        } else if (typeEl) {
+          typeEl.disabled = false;
+          if (typeBadge) typeBadge.style.display = 'none';
+        }
+        // Stash demand for live pax validator
+        window._addTniDemand = d.demand || 0;
+        AddLiveValidate.run();
       })
       .catch(() => { document.getElementById('tni-coverage-panel').style.display='none'; });
 }
@@ -703,6 +916,7 @@ function openEdit(id, prog, type, source, month, start, end, tfrom, tto, hrs, le
     eAud.disabled = false;
     if (eBadge) eBadge.style.display = 'none';
   }
+  if (window.EditLiveValidate) window.EditLiveValidate.run();
   new bootstrap.Modal(document.getElementById('editModal')).show();
 }
 

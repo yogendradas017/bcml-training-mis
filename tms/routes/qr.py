@@ -8,7 +8,7 @@ from flask import (abort, flash, jsonify, redirect, render_template,
 
 from tms.db import get_db
 from tms.decorators import spoc_required, central_required, spoc_or_central_required
-from tms.helpers import _date_to_month, _recompute_session_actuals
+from tms.helpers import _date_to_month, _recompute_session_actuals, _now_ist, _today_ist
 from tms.constants import CENTRAL_PLANT_ID
 from tms.audit import log_action
 
@@ -16,7 +16,8 @@ from tms.audit import log_action
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def _now_iso():
-    return datetime.datetime.now().isoformat(timespec='seconds')
+    # IST wall-clock; on Render (UTC) datetime.now() naive would drift 5.5h.
+    return _now_ist().isoformat(timespec='seconds')
 
 
 def _avg(vals):
@@ -78,17 +79,18 @@ def _recompute_feedback_aggregates(plant_id, session_code, db):
     if cur.rowcount == 0:
         # No 2C row yet — stub one from calendar so feedback isn't lost.
         cal = db.execute(
-            'SELECT programme_name, prog_type, mode, target_audience, plan_start, plan_end '
+            'SELECT programme_name, prog_type, mode, target_audience, plan_start, plan_end, '
+            'time_from, time_to '
             'FROM calendar WHERE plant_id=? AND session_code=? LIMIT 1',
             (plant_id, session_code)
         ).fetchone()
         if cal:
             db.execute('''INSERT INTO programme_details
                 (plant_id, session_code, programme_name, prog_type, mode,
-                 audience, start_date, end_date,
+                 audience, start_date, end_date, time_from, time_to,
                  course_feedback, faculty_feedback,
                  trainer_fb_participants, trainer_fb_facilities)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?)''',
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (plant_id, session_code,
                  cal['programme_name'] or '',
                  cal['prog_type'] or '',
@@ -96,6 +98,8 @@ def _recompute_feedback_aggregates(plant_id, session_code, db):
                  cal['target_audience'] or '',
                  cal['plan_start'] or '',
                  cal['plan_end'] or '',
+                 cal['time_from'] or None,
+                 cal['time_to'] or None,
                  prog_avg, trainer_avg, row['q8'], row['q9']))
 
 
@@ -155,8 +159,8 @@ def _register(app):
         try:
             plan_end    = datetime.date.fromisoformat(cal['plan_end'])
             expiry_date = plan_end + datetime.timedelta(days=1)
-            if expiry_date < datetime.date.today():
-                expiry_date = datetime.date.today() + datetime.timedelta(days=30)
+            if expiry_date < _today_ist():
+                expiry_date = _today_ist() + datetime.timedelta(days=30)
             expires = expiry_date.isoformat() + 'T23:59:59'
         except Exception:
             flash('Cannot generate QR — calendar plan_end date is invalid.', 'danger')
@@ -620,7 +624,7 @@ def _register(app):
 
         # GAP 6 (time gate): block scans before session start date
         if qr['plan_start']:
-            today_iso = datetime.date.today().isoformat()
+            today_iso = _today_ist().isoformat()
             if today_iso < qr['plan_start']:
                 return render_template('qr_attendance.html', qr=qr, token=token,
                                        has_pin=bool(qr['session_pin']),
@@ -770,7 +774,7 @@ def _register(app):
 
         # Time gate: feedback opens once session starts
         if qr['plan_start']:
-            today_iso = datetime.date.today().isoformat()
+            today_iso = _today_ist().isoformat()
             if today_iso < qr['plan_start']:
                 return render_template('qr_feedback.html', qr=qr, token=token, lang=lang,
                                        error=f'Feedback opens on {qr["plan_start"]}. Session has not started yet.')

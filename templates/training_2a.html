@@ -103,6 +103,14 @@
           <input type="date" name="end_date" id="tr_end_date" class="form-control">
         </div>
         <div class="col-md-2">
+          <label class="form-label">Start Time</label>
+          <input type="time" name="time_from" id="tr_time_from" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">End Time</label>
+          <input type="time" name="time_to" id="tr_time_to" class="form-control">
+        </div>
+        <div class="col-md-2">
           <label class="form-label">Hours <span class="required-star">*</span></label>
           <input type="number" name="hrs" id="tr_hrs" class="form-control" step="0.5" min="0" required value="0">
         </div>
@@ -194,10 +202,15 @@
       <tbody>
         {% for rec in records %}
         {% set src = rec.cal_source or '' %}
+        {% set has_anom = rec.anomaly_flags and rec.anomaly_flags|length > 0 %}
         <tr data-collar="{{ rec.collar or '' }}" data-type="{{ rec.prog_type or '' }}"
-            data-month="{{ rec.month or '' }}" data-source="{{ src }}">
+            data-month="{{ rec.month or '' }}" data-source="{{ src }}"
+            {% if has_anom %}style="background:#fff7ed;" title="Anomaly: {{ rec.anomaly_flags }}"{% endif %}>
           <td style="width:40px;"><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
-          <td style="color:#9ca3af;font-size:12px;">{{ loop.index }}</td>
+          <td style="color:#9ca3af;font-size:12px;">
+            {{ loop.index }}
+            {% if has_anom %}<i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:11px;margin-left:3px;" title="{{ rec.anomaly_flags }}"></i>{% endif %}
+          </td>
           <td>
             <div class="cell-emp-name">{{ rec.emp_name or rec.emp_code }}</div>
             <div class="cell-emp-sub">{{ rec.emp_code }}</div>
@@ -253,7 +266,7 @@ BulkSelect.init('training2aTable', '{{ url_for("training_bulk_delete") }}');
 // Session data embedded at render time — no DOM traversal, no fetch
 const _SESS2A = {
   {% for s in sessions %}
-  {{ s.session_code | tojson }}: {n:{{ (s.programme_name or '') | tojson }},t:{{ (s.prog_type or '') | tojson }},m:{{ (s.mode or '') | tojson }},h:{{ s.duration_hrs or 0 }},ps:{{ (s.plan_start or '') | tojson }},pe:{{ (s.plan_end or '') | tojson }}},
+  {{ s.session_code | tojson }}: {n:{{ (s.programme_name or '') | tojson }},t:{{ (s.prog_type or '') | tojson }},m:{{ (s.mode or '') | tojson }},h:{{ s.duration_hrs or 0 }},ps:{{ (s.plan_start or '') | tojson }},pe:{{ (s.plan_end or '') | tojson }},tf:{{ (s.time_from or '') | tojson }},tt:{{ (s.time_to or '') | tojson }}},
   {% endfor %}
 };
 function _fill2A(val) {
@@ -267,6 +280,8 @@ function _fill2A(val) {
   s('tr_hrs',            d.h || 0);
   if (d.ps) s('tr_start_date', d.ps);
   if (d.pe) s('tr_end_date',   d.pe);
+  if (d.tf) s('tr_time_from',  d.tf);
+  if (d.tt) s('tr_time_to',    d.tt);
 }
 (function(){
   var sel = document.getElementById('tr_session_code');

@@ -113,6 +113,102 @@ def _date_to_month(date_str):
         return ''
 
 
+# ── IST-aware datetime helpers ──
+# Render runs in UTC; user-facing dates/times must be IST. Naive datetime.now()
+# / date.today() drift by 5.5 hours and have already caused production bugs
+# (lockout view skew, "session has not started" gate false-rejecting at 00:00-05:30 IST,
+# month-end KPI snapback). Always use _now_ist / _today_ist for user-facing values.
+def _now_ist():
+    """Current datetime in IST (Asia/Kolkata). Returns timezone-naive datetime
+    representing IST wall-clock time — drop-in for datetime.now() but stable
+    on UTC servers."""
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo('Asia/Kolkata')).replace(tzinfo=None)
+    except Exception:
+        from datetime import timedelta as _td
+        return datetime.utcnow() + _td(hours=5, minutes=30)
+
+
+def _today_ist():
+    """Current date in IST. Drop-in for date.today()."""
+    return _now_ist().date()
+
+
+def _time_to_minutes(hhmm):
+    """'HH:MM' → integer minutes since midnight. None on bad input."""
+    if not hhmm or ':' not in str(hhmm):
+        return None
+    try:
+        h, m = str(hhmm).strip().split(':')[:2]
+        h, m = int(h), int(m)
+        if 0 <= h <= 23 and 0 <= m <= 59:
+            return h * 60 + m
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
+def _validate_time_vs_duration(time_from, time_to, total_hours,
+                                start_date='', end_date='',
+                                tolerance_min=15):
+    """Cross-check that (End Time − Start Time) × days ≈ total_hours.
+
+    Used by Calendar / 2C validators (2A skips this — per-person hrs is
+    apples-to-oranges vs session window). All inputs optional — passes when
+    not enough data to check.
+
+    For multi-day sessions, time_from/time_to is per-day window; total_hours
+    is cumulative across days. So expected = per_day_hrs × days.
+
+    Required-pair: if exactly one of time_from / time_to is set, blocks with
+    a 'must provide both' error.
+
+    Returns (ok: bool, msg: str). tolerance_min default = 15 min slack.
+    """
+    tf_set, tt_set = bool(time_from), bool(time_to)
+    if tf_set != tt_set:  # exactly one set
+        which = 'Start Time' if tt_set else 'End Time'
+        return False, f'{which} is required when the other is provided.'
+    if not (time_from and time_to and total_hours):
+        return True, ''
+    try:
+        total = float(total_hours)
+    except (ValueError, TypeError):
+        return True, ''
+    if total <= 0:
+        return True, ''
+    fmin = _time_to_minutes(time_from)
+    tmin = _time_to_minutes(time_to)
+    if fmin is None or tmin is None:
+        return True, ''
+    if tmin <= fmin:
+        return False, f'End Time ({time_to}) must be after Start Time ({time_from}).'
+    per_day_hrs = (tmin - fmin) / 60.0
+
+    days = 1
+    if start_date and end_date:
+        try:
+            from datetime import date as _d
+            d1 = _d.fromisoformat(str(start_date)[:10])
+            d2 = _d.fromisoformat(str(end_date)[:10])
+            days = max(1, (d2 - d1).days + 1)
+        except (ValueError, TypeError):
+            pass
+
+    expected = per_day_hrs * days
+    diff_min = abs(expected - total) * 60
+    if diff_min > tolerance_min:
+        day_part = f' × {days} day(s)' if days > 1 else ''
+        return False, (
+            f'Time window does not match Duration. '
+            f'{time_from}–{time_to}{day_part} = {expected:.2f} hrs, '
+            f'but Duration is set to {total:g} hrs. '
+            f'Fix one: Start Time, End Time, or Duration (Hrs).'
+        )
+    return True, ''
+
+
 def _parse_date_strict(raw):
     """Accept DD-MM-YYYY only (bulk upload user input). Returns YYYY-MM-DD for storage.
     Returns '' for empty. Raises ValueError with message on bad format."""
@@ -247,121 +343,124 @@ def _prog_in_use(prog_name, plant_id, db):
 # ── Summary calculations ──────────────────────────────────────────────────────
 
 def _calc_summary(plant_id, month_filter, db):
-    rows = []
+    """Per-prog_type Summary table. Refactored 2026-05-30: was 10 queries × 6
+    prog_types = 60 round-trips; now 4 GROUP BY queries × 1 = 4 round-trips.
+    Same outputs, ~15× faster on cold disk."""
     fy   = _fy_label()
     mn = MONTH_NUM.get(month_filter, '') if month_filter else ''
-    month_clause_2c  = f"AND strftime('%m', p.start_date)='{mn}'"  if mn else ("AND 1=0" if month_filter else "")
-    month_clause_pd  = f"AND strftime('%m', pd.start_date)='{mn}'" if mn else ("AND 1=0" if month_filter else "")
-    # Use strftime on start_date for emp_training month filtering — the free-text
-    # `month` field can be blank or inconsistently cased; start_date is authoritative.
-    clause           = f"AND strftime('%m', t.start_date)='{mn}'"  if mn else ("AND 1=0" if month_filter else "")
-    central_month_clause = f"AND strftime('%m', et.start_date)='{mn}'" if mn else ("AND 1=0" if month_filter else "")
+    # ms_* clauses force empty result when a month is selected but missing
+    # from MONTH_NUM (preserves old 'AND 1=0' semantics).
+    month_pd_clause      = f"AND strftime('%m', p.start_date)='{mn}'"  if mn else ("AND 1=0" if month_filter else "")
+    month_et_clause      = f"AND strftime('%m', t.start_date)='{mn}'"  if mn else ("AND 1=0" if month_filter else "")
+    month_central_clause = f"AND strftime('%m', et.start_date)='{mn}'" if mn else ("AND 1=0" if month_filter else "")
+    month_pdx_clause     = f"AND strftime('%m', pd.start_date)='{mn}'" if mn else ("AND 1=0" if month_filter else "")
 
+    # Query 1: programme_details aggregates per prog_type
+    pd_rows = db.execute(f'''
+        SELECT prog_type,
+               COUNT(DISTINCT CASE WHEN audience='Blue Collared'  THEN programme_name END) AS bc_progs,
+               COUNT(DISTINCT CASE WHEN audience='White Collared' THEN programme_name END) AS wc_progs,
+               COUNT(DISTINCT CASE WHEN audience='Common'         THEN programme_name END) AS common_progs,
+               COUNT(DISTINCT programme_name) AS total_progs,
+               COUNT(DISTINCT CASE WHEN int_ext='Internal' THEN programme_name END) AS int_prog,
+               COUNT(DISTINCT CASE WHEN int_ext='External' THEN programme_name END) AS ext_prog
+        FROM programme_details p
+        WHERE p.plant_id=? {month_pd_clause}
+        GROUP BY prog_type
+    ''', [plant_id]).fetchall()
+    pd_map = {r['prog_type']: dict(r) for r in pd_rows}
+
+    # Query 2: central-hosted programmes (exclude already-in-2C). Group by
+    # prog_type + programme_name; classify collar mix in Python.
+    central_rows = db.execute(f'''
+        SELECT LOWER(et.prog_type) AS pt_lc, et.programme_name,
+               SUM(CASE WHEN e.collar='Blue Collared'  THEN 1 ELSE 0 END) AS bc_cnt,
+               SUM(CASE WHEN e.collar='White Collared' THEN 1 ELSE 0 END) AS wc_cnt
+        FROM emp_training et
+        LEFT JOIN employees e
+               ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
+        WHERE et.plant_id=? AND et.host_plant_id=99
+          {month_central_clause}
+          AND NOT EXISTS (
+              SELECT 1 FROM programme_details pd
+              WHERE pd.plant_id=et.plant_id
+              AND LOWER(pd.programme_name)=LOWER(et.programme_name)
+              AND LOWER(pd.prog_type)=LOWER(et.prog_type)
+              {month_pdx_clause}
+          )
+        GROUP BY pt_lc, et.programme_name
+    ''', [plant_id]).fetchall()
+    # Per-prog_type tally: {pt_lc: {'bc':n, 'wc':n, 'common':n, 'total':n}}
+    central_tally = {}
+    for r in central_rows:
+        bc_cnt, wc_cnt = r['bc_cnt'] or 0, r['wc_cnt'] or 0
+        bucket = central_tally.setdefault(r['pt_lc'],
+                    {'bc': 0, 'wc': 0, 'common': 0, 'total': 0})
+        if bc_cnt and wc_cnt:
+            bucket['common'] += 1; bucket['total'] += 1
+        elif bc_cnt:
+            bucket['bc'] += 1;     bucket['total'] += 1
+        elif wc_cnt:
+            bucket['wc'] += 1;     bucket['total'] += 1
+
+    # Query 3: emp_training seats + hrs per prog_type + collar
+    seat_rows = db.execute(f'''
+        SELECT t.prog_type, e.collar,
+               COUNT(*) AS seats,
+               COALESCE(SUM(t.hrs),0) AS hrs
+        FROM emp_training t
+        JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+        WHERE t.plant_id=? {month_et_clause}
+          AND e.collar IN ('Blue Collared', 'White Collared')
+        GROUP BY t.prog_type, e.collar
+    ''', [plant_id]).fetchall()
+    seat_map = {}
+    for r in seat_rows:
+        seat_map.setdefault(r['prog_type'], {})[r['collar']] = (r['seats'], r['hrs'])
+
+    # Query 4: TNI nominations + fulfilment per prog_type + collar
+    tni_rows = db.execute('''
+        SELECT t.prog_type, e.collar,
+               COUNT(*) AS fixed,
+               SUM(CASE WHEN EXISTS (
+                   SELECT 1 FROM emp_training et
+                   WHERE et.emp_code=t.emp_code AND et.plant_id=t.plant_id
+                   AND LOWER(et.programme_name)=LOWER(t.programme_name)
+               ) THEN 1 ELSE 0 END) AS fulfilled
+        FROM tni t
+        JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+        WHERE t.plant_id=? AND t.fy_year=? AND t.source='TNI Driven'
+          AND e.collar IN ('Blue Collared', 'White Collared')
+        GROUP BY t.prog_type, e.collar
+    ''', [plant_id, fy]).fetchall()
+    tni_map = {}
+    for r in tni_rows:
+        tni_map.setdefault(r['prog_type'], {})[r['collar']] = (r['fixed'] or 0, r['fulfilled'] or 0)
+
+    # Assemble rows in PROG_TYPES order
+    rows = []
     for pt in PROG_TYPES:
-        p_pt   = [plant_id, pt]
-        p_bc   = [plant_id, pt, 'Blue Collared']
-        p_wc   = [plant_id, pt, 'White Collared']
+        pd_row = pd_map.get(pt, {})
+        bc_progs     = pd_row.get('bc_progs', 0)
+        wc_progs     = pd_row.get('wc_progs', 0)
+        common_progs = pd_row.get('common_progs', 0)
+        total_progs  = pd_row.get('total_progs', 0)
+        int_prog     = pd_row.get('int_prog', 0)
+        ext_prog     = pd_row.get('ext_prog', 0)
 
-        pq = db.execute(f'''SELECT
-            COUNT(DISTINCT CASE WHEN audience='Blue Collared'  THEN programme_name END),
-            COUNT(DISTINCT CASE WHEN audience='White Collared' THEN programme_name END),
-            COUNT(DISTINCT CASE WHEN audience='Common'         THEN programme_name END),
-            COUNT(DISTINCT programme_name),
-            COUNT(DISTINCT CASE WHEN int_ext='Internal' THEN programme_name END),
-            COUNT(DISTINCT CASE WHEN int_ext='External' THEN programme_name END)
-            FROM programme_details p
-            WHERE p.plant_id=? AND p.prog_type=? {month_clause_2c}''',
-            [plant_id, pt]).fetchone()
-        bc_progs     = pq[0] or 0
-        wc_progs     = pq[1] or 0
-        common_progs = pq[2] or 0
-        total_progs  = pq[3] or 0
-        int_prog     = pq[4] or 0
-        ext_prog     = pq[5] or 0
+        ct = central_tally.get(pt.lower(), {})
+        bc_progs    += ct.get('bc', 0)
+        wc_progs    += ct.get('wc', 0)
+        common_progs+= ct.get('common', 0)
+        total_progs += ct.get('total', 0)
 
-        # ── Augment with central-hosted programmes ────────────────────────────
-        # Exclude any programme already counted via programme_details (C4 — no double-count).
-        # Aggregate by programme_name (not session) for COUNT(DISTINCT) consistency.
-        # Only increment totals when collar is classifiable (C5/M5 — unclassified rows ignored).
-        central_rows = db.execute(f'''
-            SELECT et.programme_name,
-                   SUM(CASE WHEN e.collar='Blue Collared'  THEN 1 ELSE 0 END) AS bc_cnt,
-                   SUM(CASE WHEN e.collar='White Collared' THEN 1 ELSE 0 END) AS wc_cnt
-            FROM emp_training et
-            LEFT JOIN employees e
-                   ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
-            WHERE et.plant_id=? AND et.host_plant_id=99
-              AND LOWER(et.prog_type)=LOWER(?)
-              {central_month_clause}
-              AND NOT EXISTS (
-                  SELECT 1 FROM programme_details pd
-                  WHERE pd.plant_id=et.plant_id
-                  AND LOWER(pd.programme_name)=LOWER(et.programme_name)
-                  AND LOWER(pd.prog_type)=LOWER(et.prog_type)
-                  {month_clause_pd}
-              )
-            GROUP BY et.programme_name
-        ''', [plant_id, pt]).fetchall()
-        for r in central_rows:
-            bc_cnt = r['bc_cnt'] or 0
-            wc_cnt = r['wc_cnt'] or 0
-            if bc_cnt and wc_cnt:
-                common_progs += 1
-                total_progs  += 1
-            elif bc_cnt:
-                bc_progs    += 1
-                total_progs += 1
-            elif wc_cnt:
-                wc_progs    += 1
-                total_progs += 1
-            # unclassified collar → skip (don't distort total_progs)
+        sm = seat_map.get(pt, {})
+        bc_seats, bc_hrs = sm.get('Blue Collared',  (0, 0))
+        wc_seats, wc_hrs = sm.get('White Collared', (0, 0))
 
-        bc_seats = db.execute(f'''SELECT COUNT(*) FROM emp_training t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', p_bc).fetchone()[0]
-        wc_seats = db.execute(f'''SELECT COUNT(*) FROM emp_training t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', p_wc).fetchone()[0]
-        bc_hrs = db.execute(f'''SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', p_bc).fetchone()[0]
-        wc_hrs = db.execute(f'''SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND e.collar=? {clause}''', p_wc).fetchone()[0]
-
-        # nomination-level coverage: count rows not distinct employees
-        bc_fixed = db.execute('''SELECT COUNT(*) FROM tni t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND t.fy_year=? AND e.collar='Blue Collared'
-              AND t.source='TNI Driven' ''',
-            [plant_id, pt, fy]).fetchone()[0]
-        wc_fixed = db.execute('''SELECT COUNT(*) FROM tni t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND t.fy_year=? AND e.collar='White Collared'
-              AND t.source='TNI Driven' ''',
-            [plant_id, pt, fy]).fetchone()[0]
-
-        # fulfilled nominations: tni row matched by emp_code + programme_name in emp_training
-        bc_cum = db.execute('''SELECT COUNT(*) FROM tni t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND t.fy_year=? AND e.collar='Blue Collared'
-              AND t.source='TNI Driven'
-              AND EXISTS (
-                  SELECT 1 FROM emp_training et
-                  WHERE et.emp_code=t.emp_code AND et.plant_id=t.plant_id
-                  AND LOWER(et.programme_name)=LOWER(t.programme_name)
-              ) ''',
-            [plant_id, pt, fy]).fetchone()[0]
-        wc_cum = db.execute('''SELECT COUNT(*) FROM tni t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.prog_type=? AND t.fy_year=? AND e.collar='White Collared'
-              AND t.source='TNI Driven'
-              AND EXISTS (
-                  SELECT 1 FROM emp_training et
-                  WHERE et.emp_code=t.emp_code AND et.plant_id=t.plant_id
-                  AND LOWER(et.programme_name)=LOWER(t.programme_name)
-              ) ''',
-            [plant_id, pt, fy]).fetchone()[0]
+        tm = tni_map.get(pt, {})
+        bc_fixed, bc_cum = tm.get('Blue Collared',  (0, 0))
+        wc_fixed, wc_cum = tm.get('White Collared', (0, 0))
 
         bc_cov  = round(bc_cum  / bc_fixed  * 100, 1) if bc_fixed  else 0
         wc_cov  = round(wc_cum  / wc_fixed  * 100, 1) if wc_fixed  else 0
@@ -1509,7 +1608,8 @@ def _error_excel_for_tni(error_rows, dup_rows=None, plant_id=None, db=None):
 # row keys expected (all str unless noted): programme_name, prog_type, source,
 # planned_month, plan_start, plan_end, time_from, time_to, duration_hrs (number),
 # level, mode, target_audience, planned_pax (int), trainer_vendor, status (opt)
-def validate_calendar_row(row, plant_id, db, is_edit=False, exclude_id=None):
+def validate_calendar_row(row, plant_id, db, is_edit=False, exclude_id=None,
+                          is_central=False, prev_prog_type=None):
     from tms.constants import (PROG_TYPES, MODES, LEVELS, AUDIENCES,
                                 MONTHS_FY, STATUSES)
 
@@ -1544,9 +1644,20 @@ def validate_calendar_row(row, plant_id, db, is_edit=False, exclude_id=None):
             (plant_id, prog_name)
         ).fetchone()
         if master_pt and master_pt[0] and master_pt[0] != prog_type:
-            W('prog_type',
-              f'Type "{prog_type}" differs from Programme Master ("{master_pt[0]}"). '
-              f'Verify or update master.')
+            # Legacy edit grace: if user is EDITING and not actually changing
+            # prog_type (it matches the previous saved value), don't block. The
+            # mismatch is pre-existing data; SPOC may just be fixing date/pax.
+            # Otherwise HARD BLOCK — prog_type must match Programme Master.
+            if is_edit and prev_prog_type and prev_prog_type == prog_type:
+                W('prog_type',
+                  f'Type "{prog_type}" does not match Programme Master '
+                  f'("{master_pt[0]}"). Pre-existing drift — fix via '
+                  f'Programme Master sync.')
+            else:
+                E('prog_type',
+                  f'Type "{prog_type}" does not match Programme Master '
+                  f'("{master_pt[0]}") for "{prog_name}". '
+                  f'Pick the master Type, or update Programme Master first.')
 
     # ── source enum (silently coerced to TNI Driven if invalid — keep behaviour
     # but warn so SPOC sees the silent fix) ──
@@ -1592,7 +1703,7 @@ def validate_calendar_row(row, plant_id, db, is_edit=False, exclude_id=None):
     tf = (row.get('time_from') or '').strip()
     tt = (row.get('time_to') or '').strip()
     if tf and tt and tt <= tf:
-        E('time_to', f'Time-to ({tt}) must be after Time-from ({tf}).')
+        E('time_to', f'End Time ({tt}) must be after Start Time ({tf}).')
 
     # ── duration_hrs bounds ──
     try:
@@ -1603,6 +1714,13 @@ def validate_calendar_row(row, plant_id, db, is_edit=False, exclude_id=None):
         E('duration_hrs', 'Duration must be greater than 0 hours.')
     elif dur > 80:
         E('duration_hrs', f'Duration {dur} hrs unrealistic (max 80). Check input.')
+
+    # ── Time window vs duration cross-check ──
+    # (End Time − Start Time) × days  must equal Duration (Hrs), ±15 min.
+    # Catches: "9-5 = 8hrs but Duration=2", "1hr session but 9-12 window".
+    ok, msg = _validate_time_vs_duration(tf, tt, dur, ps, pe)
+    if not ok:
+        E('duration_hrs', msg)
 
     # ── mode / level / audience enum (warn — keep behaviour permissive but flag) ──
     mode = (row.get('mode') or '').strip()
@@ -1645,10 +1763,8 @@ def validate_calendar_row(row, plant_id, db, is_edit=False, exclude_id=None):
               + (f' at {tf}' if tf else '')
               + f' (session {dup["session_code"]}). Confirm this is a second batch.')
 
-    # ── Over-plan vs TNI demand ──
-    # Sum planned_pax for this programme this FY (this plant). If new total > 1.5× demand,
-    # treat as block-grade; if > 1.2× demand, warn.
-    demand_row = db.execute(
+    # ── Over-plan vs TNI demand ── (SKIP for central — no single-plant TNI)
+    demand_row = None if is_central else db.execute(
         'SELECT COUNT(DISTINCT emp_code) AS d FROM tni '
         'WHERE plant_id=? AND LOWER(programme_name)=LOWER(?)',
         (plant_id, prog_name)

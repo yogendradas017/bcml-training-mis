@@ -10,6 +10,7 @@ from tms.helpers import (
     _is_ajax, _smart_title, _prog_in_use, _canonical_prog,
     _read_upload_file, _clean, _safe_float, _error_excel_response,
     _sync_master_from_tni, _current_fy, _in_current_fy, _parse_date_strict,
+    _validate_time_vs_duration,
 )
 
 import openpyxl
@@ -334,7 +335,8 @@ def _register(app):
         ''', (plant_id,)).fetchall()
 
         cal_sessions = db.execute(
-            "SELECT session_code, programme_name, prog_type, duration_hrs, plan_start, plan_end"
+            "SELECT session_code, programme_name, prog_type, duration_hrs, plan_start, plan_end,"
+            " time_from, time_to"
             " FROM calendar WHERE plant_id=? ORDER BY session_code",
             (plant_id,)).fetchall()
         return render_template('programme_2c.html', records=records,
@@ -401,20 +403,36 @@ def _register(app):
             flash('Actual hours must be greater than 0.', 'danger')
             return redirect(url_for('programme_details'))
 
-        # Hours mismatch — 25% threshold standard
-        avg_2a = db.execute(
-            'SELECT AVG(hrs) FROM emp_training WHERE plant_id=? AND session_code=? AND hrs > 0',
-            (plant_id, session_code)).fetchone()[0]
-        pd_anomalies = []
-        if avg_2a and avg_2a > 0 and abs(hours - avg_2a) / avg_2a > 0.25:
-            pd_anomalies.append(f'hours_mismatch(2C={hours} vs avg2A={avg_2a:.1f})')
-            flash(f'Note: 2C hours ({hours}) differ from average 2A hours ({avg_2a:.1f}) by >25%. Saved — please verify.', 'warning')
-
+        # Validate hard rules FIRST (FY window, time window). Anomaly flagging
+        # comes after, so we don't compute+flash anomalies for a row that's
+        # about to be rejected.
         fy_start, fy_end = _current_fy()
         start_date = f.get('start_date', '')
         if start_date and not _in_current_fy(start_date):
             flash(f'Start date must be within the current financial year ({fy_start} to {fy_end}).', 'danger')
             return redirect(url_for('programme_details'))
+
+        time_from = (f.get('time_from', '') or '').strip() or (cal['time_from'] or '')
+        time_to   = (f.get('time_to', '')   or '').strip() or (cal['time_to']   or '')
+        ok, tmsg = _validate_time_vs_duration(
+            time_from, time_to, hours,
+            f.get('start_date', ''), f.get('end_date', ''))
+        if not ok:
+            flash(tmsg, 'danger')
+            return redirect(url_for('programme_details'))
+
+        # Hours mismatch — 25% threshold standard. For centrally-hosted
+        # sessions, attendees live under their own plant_id; widen the AVG
+        # query to include host_plant_id matches.
+        avg_2a = db.execute(
+            'SELECT AVG(hrs) FROM emp_training '
+            'WHERE session_code=? AND hrs > 0 '
+            'AND (plant_id=? OR host_plant_id=?)',
+            (session_code, plant_id, plant_id)).fetchone()[0]
+        pd_anomalies = []
+        if avg_2a and avg_2a > 0 and abs(hours - avg_2a) / avg_2a > 0.25:
+            pd_anomalies.append(f'hours_mismatch(2C={hours} vs avg2A={avg_2a:.1f})')
+            flash(f'Note: 2C hours ({hours}) differ from average 2A hours ({avg_2a:.1f}) by >25%. Saved — please verify.', 'warning')
 
         # Phase 5: compute extended anomalies for verification path
         from datetime import datetime as _dt
@@ -459,14 +477,15 @@ def _register(app):
             tf = form_facil   if form_facil   not in (None, 0) else existing_pd['trainer_fb_facilities']
             db.execute('''UPDATE programme_details SET
                 programme_name=?, prog_type=?, level=?, cal_new=?, mode=?,
-                start_date=?, end_date=?, audience=?,
+                start_date=?, end_date=?, time_from=?, time_to=?, audience=?,
                 hours_actual=?, faculty_name=?, int_ext=?, cost=?,
                 venue=?, course_feedback=?, faculty_feedback=?,
                 trainer_fb_participants=?, trainer_fb_facilities=?,
                 anomaly_flags=?
                 WHERE id=?''',
                 (prog_name, prog_type, level, cal_new, mode,
-                 f.get('start_date',''), f.get('end_date',''), audience,
+                 f.get('start_date',''), f.get('end_date',''),
+                 time_from or None, time_to or None, audience,
                  float(f.get('hours_actual') or 0), f.get('faculty_name',''),
                  f.get('int_ext',''), float(f.get('cost') or 0),
                  f.get('venue',''), cf, ff, tp, tf,
@@ -474,12 +493,13 @@ def _register(app):
         else:
             db.execute('''INSERT INTO programme_details
                 (plant_id,session_code,programme_name,prog_type,level,cal_new,mode,
-                 start_date,end_date,audience,hours_actual,faculty_name,int_ext,cost,
+                 start_date,end_date,time_from,time_to,audience,hours_actual,faculty_name,int_ext,cost,
                  venue,course_feedback,faculty_feedback,trainer_fb_participants,trainer_fb_facilities,
                  anomaly_flags)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (plant_id, session_code, prog_name, prog_type, level, cal_new, mode,
-                 f.get('start_date',''), f.get('end_date',''), audience,
+                 f.get('start_date',''), f.get('end_date',''),
+                 time_from or None, time_to or None, audience,
                  float(f.get('hours_actual') or 0), f.get('faculty_name',''),
                  f.get('int_ext',''), float(f.get('cost') or 0),
                  f.get('venue',''),
@@ -705,15 +725,24 @@ def _register(app):
                 if mc > 0:
                     row_anomalies.append(f'collar_mismatch({mc}_attendees)')
 
+            # Cross-check time window vs hrs × days
+            ok_t, t_msg = _validate_time_vs_duration(
+                cal['time_from'] or '', cal['time_to'] or '', hrs,
+                start_date, end_date)
+            if not ok_t:
+                errors.append(f'Row {i+2}: {t_msg}')
+                continue
+
             anom_pd_bulk = ','.join(row_anomalies) if row_anomalies else None
             db.execute('''INSERT INTO programme_details
                 (plant_id,session_code,programme_name,prog_type,level,cal_new,mode,
-                 start_date,end_date,audience,hours_actual,faculty_name,int_ext,cost,
+                 start_date,end_date,time_from,time_to,audience,hours_actual,faculty_name,int_ext,cost,
                  venue,course_feedback,faculty_feedback,trainer_fb_participants,trainer_fb_facilities,
                  anomaly_flags)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (plant_id, sc, cal['programme_name'], cal['prog_type'], cal['level'],
                  'Calendar Program', cal['mode'], start_date, end_date,
+                 cal['time_from'] or None, cal['time_to'] or None,
                  cal['target_audience'], hrs, faculty, int_ext, cost, venue, cfb, ffb, tfbp, tfbf,
                  anom_pd_bulk))
 

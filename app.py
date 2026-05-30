@@ -16,6 +16,24 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s'
 )
 
+# Sentry error monitoring — opt-in via SENTRY_DSN env var.
+# Silent no-op if SDK not installed OR DSN not set (free tier on prod only).
+_sentry_dsn = os.environ.get('SENTRY_DSN', '').strip()
+if _sentry_dsn:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=0.05,
+            send_default_pii=False,
+            environment=os.environ.get('RENDER_GIT_BRANCH', 'local'),
+            release=os.environ.get('RENDER_GIT_COMMIT', 'dev')[:7],
+        )
+    except ImportError:
+        logging.warning('SENTRY_DSN set but sentry-sdk not installed; skip')
+
 app = Flask(__name__)
 
 # SECRET_KEY: required on production. Refuse to start without it on Render.
@@ -201,6 +219,10 @@ def not_found(e):
 
 @app.errorhandler(500)
 def server_error(e):
+    import sys, traceback as _tb
+    sys.stderr.write(f'\n=== 500 ON {request.path} ===\n')
+    _tb.print_exc(file=sys.stderr)
+    sys.stderr.flush()
     logging.error(f'500 error: {e}', exc_info=True)
     wants_html = 'text/html' in request.accept_mimetypes.values()
     if wants_html:
