@@ -191,6 +191,14 @@ def _register(app):
             flash(f'Training date must be within the current financial year ({fy_start} to {fy_end}).', 'danger')
             return redirect(url_for('emp_training'))
 
+        # Pre / Post rating range: 1-4 scale (matches feedback question scale).
+        pre_r  = _safe_float(f.get('pre_rating'))
+        post_r = _safe_float(f.get('post_rating'))
+        for lbl, v in [('Pre', pre_r), ('Post', post_r)]:
+            if v is not None and v != 0 and not (1 <= v <= 4):
+                flash(f'{lbl}-Session Rating must be between 1 and 4 (got {v}).', 'danger')
+                return redirect(url_for('emp_training'))
+
         anom_str = ','.join(anomaly_flags) if anomaly_flags else None
         month = _date_to_month(start_date)
         db.execute('''INSERT OR IGNORE INTO emp_training
@@ -201,7 +209,7 @@ def _register(app):
             (plant_id, emp_code, session_code, prog_name,
              start_date, end_date, time_from or None, time_to or None, hrs,
              prog_type, level, mode, cal_new,
-             _safe_float(f.get('pre_rating')), _safe_float(f.get('post_rating')),
+             pre_r, post_r,
              f.get('venue',''), month, host_plant_id, anom_str))
         if db.execute('SELECT changes()').fetchone()[0] == 0:
             flash('Duplicate record — this employee already has a training entry for this programme on this date.', 'warning')
@@ -269,15 +277,15 @@ def _register(app):
         ws.title = '2A_Bulk_Upload'
         headers = ['Employee Code', 'Session Code (optional)', 'Programme Name',
                    'Type of Programme', 'Start Date (DD-MM-YYYY)', 'End Date (DD-MM-YYYY)',
-                   'Hours', 'Venue', 'Pre-Session Rating (1-5)', 'Post-Session Rating (1-5)']
+                   'Hours', 'Venue', 'Pre-Session Rating (1-4)', 'Post-Session Rating (1-4)']
         hdr_fill = PatternFill('solid', start_color='1F4E79')
         hdr_font = Font(bold=True, color='FFFFFF')
         for i, h in enumerate(headers, 1):
             cell = ws.cell(row=1, column=i, value=h)
             cell.fill = hdr_fill; cell.font = hdr_font
             ws.column_dimensions[get_column_letter(i)].width = 26
-        ws.append(['21700011', 'BCM/EHS/001/B01', 'Fire Safety Training', 'EHS/HR', '10-06-2026', '10-06-2026', 4, 'Training Hall', 3.5, 4.2])
-        ws.append(['21101568', '', 'MS Office Basics', 'IT', '05-07-2026', '06-07-2026', 8, 'Computer Lab', '', 4.0])
+        ws.append(['21700011', 'BCM/EHS/001/B01', 'Fire Safety Training', 'EHS/HR', '10-06-2026', '10-06-2026', 4, 'Training Hall', 2.5, 3.8])
+        ws.append(['21101568', '', 'MS Office Basics', 'IT', '05-07-2026', '06-07-2026', 8, 'Computer Lab', '', 3.5])
         ws['A5'] = 'NOTE: Session Code is optional. If provided, Programme Name/Type/Mode auto-fill from Calendar. Dates must be DD-MM-YYYY.'
         out = io.BytesIO()
         wb.save(out); out.seek(0)
@@ -316,6 +324,12 @@ def _register(app):
             venue        = _clean(row, ['venue'])
             pre_r        = _safe_float(_clean(row, ['pre-session rating', 'pre rating', 'pre_rating']))
             post_r       = _safe_float(_clean(row, ['post-session rating', 'post rating', 'post_rating']))
+            # Rating bounds 1-4 — block bad rows so silent garbage doesn't poison stats.
+            bad = next(((lbl, v) for lbl, v in [('Pre', pre_r), ('Post', post_r)]
+                        if v is not None and v != 0 and not (1 <= v <= 4)), None)
+            if bad:
+                errors.append(f'Row {i+2}: {bad[0]}-Session Rating must be 1-4 (got {bad[1]}).')
+                continue
 
             if not emp_code:
                 errors.append(f'Row {i+2}: Employee Code is required.')
