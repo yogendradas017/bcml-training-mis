@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS calendar (
     source TEXT DEFAULT 'TNI',
     programme_name TEXT NOT NULL,
     prog_type TEXT,
+    category TEXT DEFAULT 'General',
     planned_month TEXT,
     plan_start TEXT,
     plan_end TEXT,
@@ -184,6 +185,7 @@ CREATE TABLE IF NOT EXISTS programme_master (
     prog_type TEXT,
     mode TEXT,
     source TEXT DEFAULT 'TNI Requirement',
+    category TEXT DEFAULT 'General',
     created_at TEXT DEFAULT (date('now')),
     UNIQUE(plant_id, name)
 );
@@ -262,6 +264,25 @@ CREATE TABLE IF NOT EXISTS verification_log (
 );
 CREATE INDEX IF NOT EXISTS idx_vlog_session ON verification_log(session_code, plant_id);
 CREATE INDEX IF NOT EXISTS idx_vlog_stage   ON verification_log(stage);
+
+CREATE TABLE IF NOT EXISTS effectiveness_review (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    plant_id        INTEGER NOT NULL,
+    session_code    TEXT    NOT NULL,
+    emp_code        TEXT    NOT NULL,
+    conducted_date  TEXT    NOT NULL,
+    due_date        TEXT    NOT NULL,
+    completed_date  TEXT,
+    rating          INTEGER CHECK(rating IS NULL OR (rating >= 1 AND rating <= 5)),
+    behaviour_change    TEXT,
+    application_on_job  TEXT,
+    comments        TEXT,
+    filed_by        INTEGER,
+    filed_at        TEXT,
+    UNIQUE(plant_id, session_code, emp_code)
+);
+CREATE INDEX IF NOT EXISTS idx_eff_plant_status ON effectiveness_review(plant_id, completed_date, due_date);
+CREATE INDEX IF NOT EXISTS idx_eff_session ON effectiveness_review(session_code);
 
 CREATE TABLE IF NOT EXISTS calendar_reschedule_history (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -65,6 +65,12 @@
     <li><a href="{{ url_for('feedback_reports_index') }}" class="{% if request.endpoint=='feedback_reports_index' %}active{% endif %}">
       <i class="bi bi-chat-square-text-fill"></i> Feedback Reports
     </a></li>
+    <li><a href="{{ url_for('effectiveness') }}" class="{% if request.endpoint=='effectiveness' %}active{% endif %}">
+      <i class="bi bi-stars"></i> Effectiveness Reviews
+      {% if eff_open_count and eff_open_count > 0 %}
+      <span title="open reviews (pending + due + overdue)" style="background:{% if eff_overdue_count > 0 %}#dc2626{% else %}#6b7280{% endif %};color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ eff_open_count }}</span>
+      {% endif %}
+    </a></li>
     <li><a href="{{ url_for('programme_intelligence') }}" class="{% if request.endpoint=='programme_intelligence' %}active{% endif %}">
       <i class="bi bi-graph-up-arrow"></i> Programme Intelligence
     </a></li>
@@ -108,6 +114,12 @@
       <i class="bi bi-exclamation-triangle-fill"></i> Anomalies Review
       {% if anomaly_count and anomaly_count > 0 %}
       <span style="background:#d97706;color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ anomaly_count }}</span>
+      {% endif %}
+    </a></li>
+    <li><a href="{{ url_for('effectiveness') }}" class="{% if request.endpoint=='effectiveness' %}active{% endif %}" style="color:#fbbf24;">
+      <i class="bi bi-stars"></i> Effectiveness Reviews
+      {% if eff_open_count and eff_open_count > 0 %}
+      <span title="open reviews (pending + due + overdue)" style="background:{% if eff_overdue_count > 0 %}#dc2626{% else %}#6b7280{% endif %};color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ eff_open_count }}</span>
       {% endif %}
     </a></li>
     <li><a href="{{ url_for('central_tni_errors') }}" class="{% if request.endpoint=='central_tni_errors' %}active{% endif %}">

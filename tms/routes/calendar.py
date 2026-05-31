@@ -146,13 +146,20 @@ def _register(app):
         form_audience = row['target_audience']
         audience      = tni_audience if tni_audience else form_audience
 
+        # Category is inherited from Programme Master (single source of truth).
+        # SPOC cannot override per-session — prevents drift.
+        cat_row = db.execute(
+            'SELECT category FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
+            (plant_id, prog_name)).fetchone()
+        category = (cat_row['category'] if cat_row and cat_row['category'] else 'General')
+
         db.execute('''INSERT INTO calendar
-            (plant_id,prog_code,session_code,source,programme_name,prog_type,
+            (plant_id,prog_code,session_code,source,programme_name,prog_type,category,
              planned_month,plan_start,plan_end,time_from,time_to,duration_hrs,
              level,mode,target_audience,planned_pax,trainer_vendor,status)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
             (plant_id, prog_code, session_code, source,
-             prog_name, prog_type,
+             prog_name, prog_type, category,
              row['planned_month'], row['plan_start'], row['plan_end'],
              row['time_from'], row['time_to'], dur,
              row['level'], row['mode'], audience,
@@ -271,13 +278,19 @@ def _register(app):
         form_audience_edit = row['target_audience']
         edit_audience      = tni_audience_edit if tni_audience_edit else form_audience_edit
 
+        # Re-derive Category from Programme Master (in case programme changed)
+        cat_row = db.execute(
+            'SELECT category FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
+            (plant_id, edit_prog)).fetchone()
+        edit_category = (cat_row['category'] if cat_row and cat_row['category'] else 'General')
+
         db.execute('''UPDATE calendar SET
-            programme_name=?, prog_type=?, source=?, planned_month=?,
+            programme_name=?, prog_type=?, source=?, category=?, planned_month=?,
             plan_start=?, plan_end=?, time_from=?, time_to=?,
             duration_hrs=?, level=?, mode=?, target_audience=?,
             planned_pax=?, trainer_vendor=?, status=?
             WHERE id=? AND plant_id=?''',
-            (edit_prog, row['prog_type'], source,
+            (edit_prog, row['prog_type'], source, edit_category,
              row['planned_month'], row['plan_start'], row['plan_end'],
              row['time_from'], row['time_to'], dur,
              row['level'], row['mode'], edit_audience,

@@ -350,8 +350,13 @@
             <td><input type="checkbox" class="cb-row" value="{{ s.id }}"></td>
             <td>{{ loop.index }}</td>
             <td style="white-space:nowrap;"><code style="font-size:10px;">{{ s.session_code }}</code></td>
-            <td style="max-width:160px;">
+            <td style="max-width:180px;">
               <span title="{{ s.programme_name }}" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;">{{ s.programme_name }}</span>
+              {% if s.category == 'Specialized' %}
+              <span title="Specialized — 3-mo effectiveness review required" style="font-size:9px;font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-top:2px;display:inline-block;">
+                <i class="bi bi-stars"></i> SPL
+              </span>
+              {% endif %}
             </td>
             <td><span class="badge-unit" style="font-size:10px;">{{ s.prog_type or '—' }}</span></td>
             <td>{{ s.planned_month or '—' }}</td>

@@ -97,7 +97,41 @@ def _register(app):
                           before=before_snap_dict,
                           after=dict(after_snap) if after_snap else None,
                           extra_detail=f'note:{note[:200]}')
-        flash(f'Session {session_code} verified — now counted as Conducted.', 'success')
+
+        # SOP: Specialized programmes trigger 3-month post-training effectiveness
+        # review for every attendee. Seed pending review rows now so SPOC can
+        # track + central/admin sees pending count.
+        seeded = 0
+        if after_snap and (after_snap['category'] or 'General') == 'Specialized':
+            conducted_date = (after_snap['plan_end'] or after_snap['plan_start'] or
+                              now_iso[:10])
+            from datetime import date as _d, timedelta as _td
+            try:
+                due_date = (_d.fromisoformat(conducted_date) +
+                             _td(days=90)).isoformat()
+            except (ValueError, TypeError):
+                due_date = conducted_date  # degenerate fallback
+            attendees = db.execute(
+                'SELECT DISTINCT emp_code FROM emp_training '
+                'WHERE plant_id=? AND session_code=?',
+                (plant_id, session_code)).fetchall()
+            for a in attendees:
+                cur = db.execute(
+                    'INSERT OR IGNORE INTO effectiveness_review '
+                    '(plant_id, session_code, emp_code, conducted_date, due_date) '
+                    'VALUES (?,?,?,?,?)',
+                    (plant_id, session_code, a['emp_code'],
+                     conducted_date, due_date))
+                if cur.rowcount:
+                    seeded += 1
+            if seeded:
+                db.commit()
+
+        msg = f'Session {session_code} verified — now counted as Conducted.'
+        if seeded:
+            msg += (f' {seeded} effectiveness review(s) seeded — '
+                    f'manager input due by {due_date}.')
+        flash(msg, 'success')
         return redirect(url_for('verify_sessions'))
 
     @app.route('/verify-sessions/<session_code>/<int:plant_id>/reject', methods=['POST'])
@@ -124,6 +158,8 @@ def _register(app):
             "WHERE session_code=? AND plant_id=?",
             (session_code, plant_id))
         db.execute('DELETE FROM programme_details WHERE session_code=? AND plant_id=?',
+                   (session_code, plant_id))
+        db.execute('DELETE FROM effectiveness_review WHERE session_code=? AND plant_id=?',
                    (session_code, plant_id))
         db.execute(
             'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail) '

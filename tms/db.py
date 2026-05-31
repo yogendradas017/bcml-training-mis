@@ -473,6 +473,44 @@ def _migrate_session_time(db):
         logging.warning(f'_migrate_session_time failed: {e}')
 
 
+def _migrate_category_and_effectiveness(db):
+    """Add Category (Specialized/General) on programme_master + calendar.
+    Create effectiveness_review table for post-training 3-month manager
+    review tracking (SOP: 25% of programmes are Specialized).
+    Idempotent."""
+    import logging
+    try:
+        pm_cols = {r[1] for r in db.execute("PRAGMA table_info(programme_master)")}
+        if 'category' not in pm_cols:
+            db.execute("ALTER TABLE programme_master ADD COLUMN category TEXT DEFAULT 'General'")
+        cal_cols = {r[1] for r in db.execute("PRAGMA table_info(calendar)")}
+        if 'category' not in cal_cols:
+            db.execute("ALTER TABLE calendar ADD COLUMN category TEXT DEFAULT 'General'")
+        db.executescript('''
+            CREATE TABLE IF NOT EXISTS effectiveness_review (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_id        INTEGER NOT NULL,
+                session_code    TEXT    NOT NULL,
+                emp_code        TEXT    NOT NULL,
+                conducted_date  TEXT    NOT NULL,
+                due_date        TEXT    NOT NULL,
+                completed_date  TEXT,
+                rating          INTEGER,
+                behaviour_change    TEXT,
+                application_on_job  TEXT,
+                comments        TEXT,
+                filed_by        INTEGER,
+                filed_at        TEXT,
+                UNIQUE(plant_id, session_code, emp_code)
+            );
+            CREATE INDEX IF NOT EXISTS idx_eff_plant_status ON effectiveness_review(plant_id, completed_date, due_date);
+            CREATE INDEX IF NOT EXISTS idx_eff_session ON effectiveness_review(session_code);
+        ''')
+        db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_category_and_effectiveness failed: {e}')
+
+
 def _migrate_calendar_verification(db):
     """Add verification audit columns to calendar table."""
     import logging
@@ -572,6 +610,7 @@ def init_db():
     _migrate_verification_log(db)
     _migrate_anomaly_flags(db)
     _migrate_session_time(db)
+    _migrate_category_and_effectiveness(db)
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
                    (p['id'], p['name'], p['unit_code']))

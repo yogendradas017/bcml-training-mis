@@ -6,7 +6,7 @@
   <div>
     <h5 class="mb-0">Programme Master — {{ session.plant_name }}</h5>
     <small class="text-muted">{{ progs|length }} canonical programme{{ 's' if progs|length != 1 }}. TNI Analyzer matches uploads against this list.</small>
-  </div>
+  </div>{# header right-side buttons follow below; banner appears under the title row #}
   <div class="d-flex gap-2 flex-wrap">
     <a href="{{ url_for('programme_master_template') }}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-download"></i> Download Template
@@ -20,6 +20,24 @@
     <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#bulkModal">
       <i class="bi bi-upload"></i> Bulk Upload
     </button>
+  </div>
+</div>
+
+{% set spl_count = progs | selectattr('category', 'equalto', 'Specialized') | list | length %}
+{% set spl_target = ((progs|length * 0.25) | round(0, 'ceil')) | int %}
+<div class="alert d-flex align-items-start gap-2 mb-3"
+     style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12.5px;border-left:4px solid #f59e0b;">
+  <i class="bi bi-stars" style="font-size:16px;color:#dc2626;margin-top:1px;"></i>
+  <div style="flex:1;">
+    <strong>Category</strong> — For programmes identified as <strong>Specialized</strong>,
+    effectiveness of the training will be gauged <strong>post 3 months from the date the training is commenced</strong>.
+    Click any programme's Category badge to switch between General and Specialized.
+    Target: ~25% of yearly TNI programmes.
+    <span id="spl-pill" data-count="{{ spl_count }}" data-total="{{ progs|length }}" data-target="{{ spl_target }}"
+          style="margin-left:8px;padding:2px 8px;border-radius:12px;font-weight:700;
+                 background:{% if progs|length and spl_count >= spl_target %}#d1fae5;color:#065f46{% else %}#fee2e2;color:#991b1b{% endif %};">
+      <span id="spl-pill-text">{{ spl_count }} / {{ progs|length }} Specialized ({{ ((spl_count / (progs|length or 1)) * 100) | round(0) | int }}%)</span>
+    </span>
   </div>
 </div>
 
@@ -70,6 +88,7 @@
           <th style="padding:10px 14px;">Programme Name</th>
           <th style="padding:10px 16px;min-width:160px;">Type of Programme</th>
           <th style="padding:10px 16px;width:170px;">Source</th>
+          <th style="padding:10px 16px;width:140px;">Category</th>
           <th style="padding:10px 16px;width:48px;"></th>
         </tr>
       </thead>
@@ -77,8 +96,9 @@
         {% for p in progs %}
         {% set src = p.source or 'TNI Requirement' %}
         {% set typ = p.prog_type or '' %}
+        {% set cat = p.category or 'General' %}
         <tr class="pm-row" data-name="{{ p.name|lower }}" data-id="{{ p.id }}"
-            data-source="{{ src }}" data-prog-type="{{ typ }}"
+            data-source="{{ src }}" data-prog-type="{{ typ }}" data-category="{{ cat }}"
             data-prog-name="{{ p.name|replace('"','&quot;') }}"
             oncontextmenu="pmContextMenu(event,this)"
             style="cursor:default;transition:background .12s;">
@@ -111,6 +131,19 @@
               </span>
             {% endif %}
           </td>
+          <td style="padding:9px 16px;">
+            {% if cat == 'Specialized' %}
+              <span class="pm-cat-badge" data-id="{{ p.id }}"
+                    style="font-size:11px;background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #fca5a5;">
+                <i class="bi bi-stars me-1"></i>Specialized
+              </span>
+            {% else %}
+              <span class="pm-cat-badge" data-id="{{ p.id }}"
+                    style="font-size:11px;background:#f3f4f6;color:#374151;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #d1d5db;">
+                <i class="bi bi-book me-1"></i>General
+              </span>
+            {% endif %}
+          </td>
           <td style="padding:9px 14px;text-align:center;">
             <form method="POST" action="{{ url_for('programme_master_delete', prog_id=p.id) }}"
                   onsubmit="return confirm('Remove \'{{ p.name|replace("'","\\'") }}\'?');" style="display:inline;">
@@ -133,25 +166,16 @@
 <div id="pm-ctx-menu" style="display:none;position:fixed;z-index:9999;background:#fff;border:1px solid #e5e9f2;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.14);min-width:230px;padding:6px 0;font-size:13px;">
   <div style="padding:8px 16px 4px;font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="pm-ctx-title"></div>
   <hr style="margin:4px 0;border-color:#f1f5f9;">
-  <a href="#" class="pm-ctx-item" id="pm-ctx-change-type" style="display:flex;align-items:center;gap:10px;padding:9px 16px;color:#374151;text-decoration:none;">
-    <i class="bi bi-tag" style="color:#2e6da4;width:14px;"></i> Change Type of Programme
-  </a>
-  <a href="#" class="pm-ctx-item" id="pm-ctx-toggle-src" style="display:flex;align-items:center;gap:10px;padding:9px 16px;color:#374151;text-decoration:none;">
-    <i class="bi bi-arrow-left-right" style="color:#0891b2;width:14px;"></i>
-    <span id="pm-ctx-toggle-label">Switch Source</span>
+  {# Change Type + Switch Source intentionally removed — both drive compliance grouping;
+     mid-life change silently shifts 2A/2C inheritance + reports. SPOC must delete + re-add. #}
+  <a href="#" class="pm-ctx-item" id="pm-ctx-toggle-cat" style="display:flex;align-items:center;gap:10px;padding:9px 16px;color:#374151;text-decoration:none;">
+    <i class="bi bi-stars" style="color:#dc2626;width:14px;"></i>
+    <span id="pm-ctx-toggle-cat-label">Switch Category</span>
   </a>
   <hr style="margin:4px 0;border-color:#f1f5f9;">
   <a href="#" class="pm-ctx-item" id="pm-ctx-delete" style="display:flex;align-items:center;gap:10px;padding:9px 16px;color:#ef4444;text-decoration:none;">
     <i class="bi bi-trash3" style="width:14px;"></i> Delete Programme
   </a>
-</div>
-
-{# ── Change Type floating picker ── #}
-<div id="pm-type-picker" style="display:none;position:fixed;z-index:10000;background:#fff;border:1px solid #e5e9f2;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.13);padding:8px;min-width:200px;">
-  {% for pt in prog_types %}
-  <div class="pm-type-opt" data-val="{{ pt }}"
-       style="padding:8px 12px;cursor:pointer;border-radius:6px;font-size:12px;font-weight:600;color:#374151;">{{ pt }}</div>
-  {% endfor %}
 </div>
 
 <script>
@@ -164,13 +188,11 @@ const TYPE_COLORS = {
   'Commercial': {bg:'#ffedd5',color:'#9a3412'},
 };
 
-let _ctx = {id:null, source:null, name:null, type:null};
+let _ctx = {id:null, source:null, name:null, type:null, category:null};
 const _ctxMenu    = document.getElementById('pm-ctx-menu');
-const _typePicker = document.getElementById('pm-type-picker');
 
 function _hideAll() {
   _ctxMenu.style.display = 'none';
-  _typePicker.style.display = 'none';
 }
 
 function _pos(el, x, y, w) {
@@ -183,81 +205,117 @@ function _pos(el, x, y, w) {
 function pmContextMenu(e, row) {
   e.preventDefault();
   _hideAll();
-  _ctx.id     = row.dataset.id;
-  _ctx.source = row.dataset.source;
-  _ctx.name   = row.dataset.progName;
-  _ctx.type   = row.dataset.progType;
+  _ctx.id       = row.dataset.id;
+  _ctx.source   = row.dataset.source;
+  _ctx.name     = row.dataset.progName;
+  _ctx.type     = row.dataset.progType;
+  _ctx.category = row.dataset.category || 'General';
   document.getElementById('pm-ctx-title').textContent = _ctx.name;
-  const other = _ctx.source === 'New Requirement' ? 'TNI Requirement' : 'New Requirement';
-  const icon  = other === 'New Requirement' ? 'bi-plus-circle' : 'bi-diagram-3';
-  document.getElementById('pm-ctx-toggle-label').innerHTML =
-    `<i class="bi ${icon} me-1"></i>Mark as <strong>${other}</strong>`;
+  const otherCat = _ctx.category === 'Specialized' ? 'General' : 'Specialized';
+  const catIcon  = otherCat === 'Specialized' ? 'bi-stars' : 'bi-book';
+  document.getElementById('pm-ctx-toggle-cat-label').innerHTML =
+    `<i class="bi ${catIcon} me-1"></i>Mark as <strong>${otherCat}</strong>`;
   _pos(_ctxMenu, e.clientX, e.clientY, 234);
 }
 
-document.getElementById('pm-ctx-change-type').onclick = function(e) {
-  e.preventDefault();
-  _ctxMenu.style.display = 'none';
-  document.querySelectorAll('.pm-type-opt').forEach(o => {
-    o.style.background = o.dataset.val === _ctx.type ? '#e8f0fe' : '';
-    o.style.color      = o.dataset.val === _ctx.type ? '#2e6da4' : '#374151';
-  });
-  const btn = document.getElementById('pm-ctx-change-type');
-  const r   = btn.getBoundingClientRect();
-  _pos(_typePicker, r.right + 4, r.top, 204);
-};
+// Change Type of Programme handler removed — see context-menu HTML for rationale.
 
-document.querySelectorAll('.pm-type-opt').forEach(opt => {
-  opt.onmouseenter = () => opt.style.background = '#f0f6ff';
-  opt.onmouseleave = () => {
-    opt.style.background = opt.dataset.val === _ctx.type ? '#e8f0fe' : '';
-  };
-  opt.onclick = async function() {
-    _hideAll();
-    const val = this.dataset.val;
-    try {
-      const res = await fetch(`/programme-master/${_ctx.id}/set-type`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({prog_type: val})
-      });
-      const data = await res.json();
-      if (data.ok) {
-        const row = document.querySelector(`tr[data-id="${_ctx.id}"]`);
-        row.dataset.progType = val;
-        _ctx.type = val;
-        const td  = row.querySelector('td:nth-child(4)');
-        const c   = TYPE_COLORS[val] || {bg:'#f3f4f6', color:'#374151'};
-        td.innerHTML = `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;background:${c.bg};color:${c.color};">${val}</span>`;
-      } else { alert('Failed to update type. Please refresh and try again.'); }
-    } catch(e) { alert('Network error. Please check your connection and try again.'); }
-  };
+// Click-to-toggle on Category badge: confirm → POST → swap badge styles inline.
+// Right-click context menu remains as alternate path.
+function _flashToast(msg, kind) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText =
+    'position:fixed;top:18px;right:18px;z-index:11000;max-width:360px;' +
+    'padding:12px 16px;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);' +
+    'font-size:13px;font-weight:500;line-height:1.4;' +
+    (kind === 'success' ? 'background:#d1fae5;color:#065f46;border-left:4px solid #10b981;'
+                        : 'background:#f3f4f6;color:#374151;border-left:4px solid #6b7280;');
+  wrap.innerHTML = msg;
+  document.body.appendChild(wrap);
+  setTimeout(() => { wrap.style.transition = 'opacity .35s'; wrap.style.opacity = '0'; }, 4500);
+  setTimeout(() => wrap.remove(), 5000);
+}
+
+function _updateSplPill(delta) {
+  const pill = document.getElementById('spl-pill');
+  const text = document.getElementById('spl-pill-text');
+  if (!pill || !text) return;
+  const count = Math.max(0, parseInt(pill.dataset.count || '0') + delta);
+  const total = parseInt(pill.dataset.total || '0') || 1;
+  const target = parseInt(pill.dataset.target || '0');
+  pill.dataset.count = count;
+  const pct = Math.round((count / total) * 100);
+  text.textContent = `${count} / ${total} Specialized (${pct}%)`;
+  if (count >= target) {
+    pill.style.background = '#d1fae5';
+    pill.style.color = '#065f46';
+  } else {
+    pill.style.background = '#fee2e2';
+    pill.style.color = '#991b1b';
+  }
+}
+
+async function _toggleCategory(badgeEl) {
+  const row = badgeEl.closest('tr.pm-row');
+  if (!row) return;
+  const id   = row.dataset.id;
+  const name = row.dataset.progName;
+  const cur  = row.dataset.category || 'General';
+  const next = cur === 'Specialized' ? 'General' : 'Specialized';
+  const ask = `Mark "${name}" as ${next}?`;
+  if (!confirm(ask)) return;
+  try {
+    const res = await fetch(`/programme-master/${id}/set-category`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({category: next})
+    });
+    const data = await res.json();
+    if (!data.ok) { alert('Failed to update category.'); return; }
+    row.dataset.category = next;
+    if (next === 'Specialized') {
+      badgeEl.style.cssText = 'cursor:pointer;font-size:11px;background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #fca5a5;';
+      badgeEl.innerHTML = '<i class="bi bi-stars me-1"></i>Specialized';
+      _flashToast(`<strong>${name}</strong> marked Specialized.<br><span style="font-size:11.5px;color:#065f46;">Effectiveness will be gauged post 3 months from the date the training is commenced.</span>`, 'success');
+    } else {
+      badgeEl.style.cssText = 'cursor:pointer;font-size:11px;background:#f3f4f6;color:#374151;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #d1d5db;';
+      badgeEl.innerHTML = '<i class="bi bi-book me-1"></i>General';
+      _flashToast(`<strong>${name}</strong> reverted to General.`, '');
+    }
+    _updateSplPill(next === 'Specialized' ? 1 : -1);
+  } catch(e) { alert('Network error.'); }
+}
+
+document.querySelectorAll('.pm-cat-badge').forEach(b => {
+  b.style.cursor = 'pointer';
+  b.title = 'Click to switch category';
+  b.addEventListener('click', () => _toggleCategory(b));
 });
 
-document.getElementById('pm-ctx-toggle-src').onclick = async function(e) {
+// Switch Source handler removed — source is fixed at creation; see context-menu HTML rationale.
+
+document.getElementById('pm-ctx-toggle-cat').onclick = async function(e) {
   e.preventDefault();
   _hideAll();
-  const newSrc = _ctx.source === 'New Requirement' ? 'TNI Requirement' : 'New Requirement';
+  const newCat = _ctx.category === 'Specialized' ? 'General' : 'Specialized';
   try {
-  const res = await fetch(`/programme-master/${_ctx.id}/set-source`, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({source: newSrc})
-  });
-  const data = await res.json();
-  if (!data.ok) { alert('Failed to update source. Please refresh and try again.'); return; }
-  if (data.ok) {
+    const res = await fetch(`/programme-master/${_ctx.id}/set-category`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({category: newCat})
+    });
+    const data = await res.json();
+    if (!data.ok) { alert('Failed to update category.'); return; }
     const row   = document.querySelector(`tr[data-id="${_ctx.id}"]`);
-    row.dataset.source = newSrc;
-    _ctx.source = newSrc;
-    const badge = row.querySelector('.pm-src-badge');
-    if (newSrc === 'New Requirement') {
-      badge.style.cssText = 'font-size:11px;background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #fde047;';
-      badge.innerHTML = '<i class="bi bi-plus-circle me-1"></i>New Req.';
+    row.dataset.category = newCat;
+    _ctx.category = newCat;
+    const badge = row.querySelector('.pm-cat-badge');
+    if (newCat === 'Specialized') {
+      badge.style.cssText = 'font-size:11px;background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #fca5a5;';
+      badge.innerHTML = '<i class="bi bi-stars me-1"></i>Specialized';
     } else {
-      badge.style.cssText = 'font-size:11px;background:#eff6ff;color:#1d4ed8;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #bfdbfe;';
-      badge.innerHTML = '<i class="bi bi-diagram-3 me-1"></i>TNI Req.';
+      badge.style.cssText = 'font-size:11px;background:#f3f4f6;color:#374151;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #d1d5db;';
+      badge.innerHTML = '<i class="bi bi-book me-1"></i>General';
     }
-  }
-  } catch(e) { alert('Network error. Please check your connection and try again.'); }
+  } catch(e) { alert('Network error.'); }
 };
 
 document.getElementById('pm-ctx-delete').onclick = function(e) {
@@ -321,6 +379,20 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
               </label>
             </div>
             <div style="font-size:11px;color:#6b7280;margin-top:5px;">TNI Requirement = part of annual TNI plan. New Requirement = mid-year addition.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:13px;">Category <span class="text-danger">*</span></label>
+            <div class="btn-group d-flex" role="group">
+              <input type="radio" class="btn-check" name="category" id="addCatGen" value="General" autocomplete="off" checked>
+              <label class="btn btn-outline-secondary btn-sm" for="addCatGen" style="font-size:12px;font-weight:600;">
+                <i class="bi bi-book me-1"></i>General
+              </label>
+              <input type="radio" class="btn-check" name="category" id="addCatSpec" value="Specialized" autocomplete="off">
+              <label class="btn btn-outline-danger btn-sm" for="addCatSpec" style="font-size:12px;font-weight:600;">
+                <i class="bi bi-stars me-1"></i>Specialized
+              </label>
+            </div>
+            <div style="font-size:11px;color:#6b7280;margin-top:5px;">Specialized = 3-month post-training effectiveness review required (SOP: 25% of yearly programmes).</div>
           </div>
         </div>
         <div class="modal-footer">

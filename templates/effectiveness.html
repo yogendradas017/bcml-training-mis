@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block page_title %}Effectiveness Reviews{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="mb-0 fw-semibold">
+      <i class="bi bi-stars me-2" style="color:#dc2626;"></i>
+      Effectiveness Reviews
+    </h4>
+    <small class="text-muted">3-month post-training manager feedback for Specialized programmes.</small>
+  </div>
+</div>
+
+{# Scorecards #}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <a href="{{ url_for('effectiveness', status='pending') }}" class="text-decoration-none">
+    <div class="card h-100 {% if sel_status == 'pending' %}border-primary{% endif %}" style="border-top:4px solid #6b7280;">
+      <div class="card-body py-3 text-center">
+        <div style="font-size:32px;font-weight:800;color:#6b7280;line-height:1;">{{ counts.pending }}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;">Pending (not yet due)</div>
+      </div>
+    </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{{ url_for('effectiveness', status='due') }}" class="text-decoration-none">
+    <div class="card h-100 {% if sel_status == 'due' %}border-warning{% endif %}" style="border-top:4px solid #f59e0b;">
+      <div class="card-body py-3 text-center">
+        <div style="font-size:32px;font-weight:800;color:#d97706;line-height:1;">{{ counts.due }}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;">Due (within 30 days)</div>
+      </div>
+    </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{{ url_for('effectiveness', status='overdue') }}" class="text-decoration-none">
+    <div class="card h-100 {% if sel_status == 'overdue' %}border-danger{% endif %}" style="border-top:4px solid #dc2626;">
+      <div class="card-body py-3 text-center">
+        <div style="font-size:32px;font-weight:800;color:#dc2626;line-height:1;">{{ counts.overdue }}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;">Overdue (&gt; 30 days)</div>
+      </div>
+    </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{{ url_for('effectiveness', status='completed') }}" class="text-decoration-none">
+    <div class="card h-100 {% if sel_status == 'completed' %}border-success{% endif %}" style="border-top:4px solid #10b981;">
+      <div class="card-body py-3 text-center">
+        <div style="font-size:32px;font-weight:800;color:#10b981;line-height:1;">{{ counts.completed }}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;">Completed</div>
+      </div>
+    </div>
+    </a>
+  </div>
+</div>
+
+{% if sel_status %}
+<div class="mb-3">
+  <a href="{{ url_for('effectiveness') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-x"></i> Clear filter ({{ sel_status }})
+  </a>
+</div>
+{% endif %}
+
+{% if not rows %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-check2-circle" style="font-size:48px;color:#16a34a;"></i>
+    <div class="mt-3" style="font-size:15px;color:#374151;">
+      {% if sel_status %}No reviews with status "{{ sel_status }}".{% else %}No effectiveness reviews yet.{% endif %}
+    </div>
+    {% if not sel_status %}
+    <div style="font-size:12px;color:#9ca3af;margin-top:6px;">Reviews are auto-seeded when a Specialized session is Conducted.</div>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+
+<div class="table-responsive">
+<table class="table table-hover align-middle" style="font-size:12.5px;background:#fff;">
+  <thead style="background:#1a3a5c;color:#fff;">
+    <tr>
+      {% if is_central %}<th style="padding:10px 12px;">Plant</th>{% endif %}
+      <th style="padding:10px 12px;">Programme</th>
+      <th style="padding:10px 12px;">Attendee</th>
+      <th style="padding:10px 12px;">Conducted</th>
+      <th style="padding:10px 12px;">Due</th>
+      <th style="padding:10px 12px;text-align:center;">Status</th>
+      <th style="padding:10px 12px;text-align:center;">Rating</th>
+      <th style="padding:10px 12px;text-align:center;">Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    {%- set st = r.status_ -%}
+    <tr style="border-bottom:1px solid #e5e7eb;
+      {% if st == 'overdue' %}background:#fef2f2;
+      {% elif st == 'due' %}background:#fffbeb;
+      {% endif %}">
+      {% if is_central %}
+      <td style="padding:9px 12px;">
+        <strong>{{ r.plant_name }}</strong>
+        <span class="badge-unit" style="font-size:10px;margin-left:4px;">{{ r.unit_code }}</span>
+      </td>
+      {% endif %}
+      <td style="padding:9px 12px;">
+        <div style="font-weight:600;">{{ r.programme_name or '—' }}</div>
+        <div style="font-size:10.5px;color:#6b7280;">{{ r.prog_type or '—' }} · <code style="font-size:10px;">{{ r.session_code }}</code></div>
+      </td>
+      <td style="padding:9px 12px;">
+        <div style="font-weight:600;">{{ r.emp_name or '—' }}</div>
+        <div style="font-size:10.5px;color:#6b7280;">{{ r.emp_code }} · {{ r.designation or '—' }} · {{ r.department or '—' }}</div>
+      </td>
+      <td style="padding:9px 12px;white-space:nowrap;font-size:11.5px;">{{ r.conducted_date }}</td>
+      <td style="padding:9px 12px;white-space:nowrap;font-size:11.5px;">{{ r.due_date }}</td>
+      <td style="padding:9px 12px;text-align:center;">
+        {% if st == 'completed' %}
+          <span style="font-size:11px;font-weight:700;background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:20px;"><i class="bi bi-check-circle-fill"></i> Completed</span>
+        {% elif st == 'overdue' %}
+          <span style="font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;padding:2px 10px;border-radius:20px;"><i class="bi bi-exclamation-triangle-fill"></i> Overdue</span>
+        {% elif st == 'due' %}
+          <span style="font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:20px;"><i class="bi bi-clock-fill"></i> Due</span>
+        {% else %}
+          <span style="font-size:11px;color:#6b7280;background:#f3f4f6;padding:2px 10px;border-radius:20px;">Pending</span>
+        {% endif %}
+      </td>
+      <td style="padding:9px 12px;text-align:center;font-weight:700;">
+        {% if r.rating %}
+          <span style="color:{% if r.rating >= 4 %}#10b981{% elif r.rating >= 3 %}#f59e0b{% else %}#dc2626{% endif %};">
+            {{ r.rating }} / 5
+          </span>
+        {% else %}—{% endif %}
+      </td>
+      <td style="padding:9px 12px;text-align:center;white-space:nowrap;">
+        {% if st == 'completed' %}
+          <button class="btn btn-sm btn-outline-secondary" style="font-size:11px;"
+                  data-bs-toggle="modal" data-bs-target="#viewModal-{{ r.id }}">
+            <i class="bi bi-eye"></i> View
+          </button>
+        {% else %}
+          <button class="btn btn-sm btn-primary" style="font-size:11px;"
+                  data-bs-toggle="modal" data-bs-target="#fileModal-{{ r.id }}">
+            <i class="bi bi-pencil-square"></i> File Review
+          </button>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{# File / View modals — separate per-row to keep markup simple #}
+{% for r in rows %}
+{%- set st = r.status_ -%}
+{% if st != 'completed' %}
+<div class="modal fade" id="fileModal-{{ r.id }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form method="POST" action="{{ url_for('effectiveness_file', eff_id=r.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-content">
+        <div class="modal-header" style="background:#1a3a5c;color:#fff;">
+          <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>File Effectiveness Review</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-light" style="font-size:12.5px;">
+            <strong>{{ r.programme_name }}</strong> · {{ r.emp_name or r.emp_code }} ({{ r.designation or '—' }})<br>
+            Conducted {{ r.conducted_date }} · Due {{ r.due_date }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:13px;">Manager's Rating <span class="text-danger">*</span></label>
+            <div class="btn-group d-flex" role="group">
+              {% for n in [1,2,3,4,5] %}
+              <input type="radio" class="btn-check" name="rating" id="r{{ r.id }}-{{ n }}" value="{{ n }}" autocomplete="off" required>
+              <label class="btn btn-outline-primary btn-sm" for="r{{ r.id }}-{{ n }}" style="font-size:13px;font-weight:600;">{{ n }}</label>
+              {% endfor %}
+            </div>
+            <div style="font-size:11px;color:#6b7280;margin-top:5px;">1 = No improvement · 5 = Significant improvement</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:13px;">Behaviour Change Observed</label>
+            <textarea name="behaviour_change" class="form-control form-control-sm" rows="2" maxlength="1000"
+                      placeholder="e.g. Started raising near-miss reports proactively; SOP adherence improved"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:13px;">Application on Job</label>
+            <textarea name="application_on_job" class="form-control form-control-sm" rows="2" maxlength="1000"
+                      placeholder="e.g. Now leads pre-shift safety briefing; conducted 3 internal trainings"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:13px;">Comments</label>
+            <textarea name="comments" class="form-control form-control-sm" rows="2" maxlength="1000"
+                      placeholder="Any additional context"></textarea>
+          </div>
+          <div style="font-size:11px;color:#9ca3af;">
+            <i class="bi bi-info-circle"></i> At least one of Behaviour Change OR Application on Job is required (min 10 chars).
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check2"></i> File Review</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="modal fade" id="viewModal-{{ r.id }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#10b981;color:#fff;">
+        <h5 class="modal-title"><i class="bi bi-check-circle me-2"></i>Review Filed</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-light" style="font-size:12.5px;">
+          <strong>{{ r.programme_name }}</strong> · {{ r.emp_name or r.emp_code }}<br>
+          Conducted {{ r.conducted_date }} · Filed {{ r.filed_at or r.completed_date }} by {{ r.filed_by_name or '—' }}
+        </div>
+        <div class="mb-2"><strong>Rating:</strong>
+          <span style="font-size:18px;font-weight:700;color:{% if r.rating >= 4 %}#10b981{% elif r.rating >= 3 %}#f59e0b{% else %}#dc2626{% endif %};">
+            {{ r.rating }} / 5
+          </span>
+        </div>
+        {% if r.behaviour_change %}<div class="mb-2"><strong>Behaviour Change:</strong><br>{{ r.behaviour_change }}</div>{% endif %}
+        {% if r.application_on_job %}<div class="mb-2"><strong>Application on Job:</strong><br>{{ r.application_on_job }}</div>{% endif %}
+        {% if r.comments %}<div class="mb-2"><strong>Comments:</strong><br>{{ r.comments }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% endif %}
+
+{% endblock %}

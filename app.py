@@ -146,6 +146,8 @@ def inject_pending_verify_count():
                 "SELECT (SELECT COUNT(*) FROM emp_training WHERE anomaly_flags IS NOT NULL AND anomaly_flags != '') + "
                 "       (SELECT COUNT(*) FROM programme_details WHERE anomaly_flags IS NOT NULL AND anomaly_flags != '')"
             ).fetchone()[0]
+            eff_scope = ''
+            eff_params = []
         else:
             pid = session.get('plant_id')
             verify_cnt = db.execute(
@@ -155,9 +157,37 @@ def inject_pending_verify_count():
                 "SELECT (SELECT COUNT(*) FROM emp_training WHERE plant_id=? AND anomaly_flags IS NOT NULL AND anomaly_flags != '') + "
                 "       (SELECT COUNT(*) FROM programme_details WHERE plant_id=? AND anomaly_flags IS NOT NULL AND anomaly_flags != '')",
                 (pid, pid)).fetchone()[0]
-        return {'pending_verify_count': verify_cnt, 'anomaly_count': anom_cnt}
+            eff_scope = ' WHERE plant_id=?'
+            eff_params = [pid]
+        # Effectiveness review counts (open = pending+due+overdue; overdue separately)
+        # Today computed in IST so day-rollover matches user wall clock.
+        from tms.helpers import _today_ist
+        today_iso = _today_ist().isoformat()
+        overdue_cutoff = (
+            __import__('datetime').date.fromisoformat(today_iso)
+            - __import__('datetime').timedelta(days=30)
+        ).isoformat()
+        # Single-pass: open = all incomplete; overdue = incomplete AND due_date < cutoff.
+        # One round-trip instead of two by using SUM(CASE WHEN ...) buckets.
+        eff_row = db.execute(
+            "SELECT "
+            "  SUM(CASE WHEN completed_date IS NULL THEN 1 ELSE 0 END) AS open_cnt, "
+            "  SUM(CASE WHEN completed_date IS NULL AND due_date < ? THEN 1 ELSE 0 END) AS overdue_cnt "
+            f"FROM effectiveness_review{eff_scope}",
+            [overdue_cutoff] + eff_params).fetchone()
+        eff_open_cnt = (eff_row['open_cnt'] if eff_row and eff_row['open_cnt'] is not None else 0)
+        eff_overdue_cnt = (eff_row['overdue_cnt'] if eff_row and eff_row['overdue_cnt'] is not None else 0)
+        return {
+            'pending_verify_count': verify_cnt,
+            'anomaly_count': anom_cnt,
+            'eff_open_count': eff_open_cnt,
+            'eff_overdue_count': eff_overdue_cnt,
+        }
     except Exception:
-        return {'pending_verify_count': 0, 'anomaly_count': 0}
+        return {
+            'pending_verify_count': 0, 'anomaly_count': 0,
+            'eff_open_count': 0, 'eff_overdue_count': 0,
+        }
 
 
 @app.template_filter('fmt_date')
@@ -249,7 +279,7 @@ def health():
 # Register all routes (deferred imports — app is defined above)
 from tms.routes import (auth, employees, tni, programme, calendar, training,
                         summary, central, export, api, qr, central_training, reports, requests,
-                        verify, anomalies)
+                        verify, anomalies, effectiveness)
 
 auth.             _register(app)
 employees.        _register(app)
@@ -267,6 +297,7 @@ reports.          _register(app)
 requests.         _register(app)
 verify.           _register(app)
 anomalies.        _register(app)
+effectiveness.    _register(app)
 
 # Rate-limit login: 20/min per IP AND 5/min per username (botnet bypass mitigation)
 def _login_user_key():

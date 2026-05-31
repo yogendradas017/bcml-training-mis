@@ -46,6 +46,8 @@ def _register(app):
         prog_type = request.form.get('prog_type', '').strip()
         raw_src   = request.form.get('source', '').strip()
         source    = raw_src if raw_src in ('TNI Requirement', 'New Requirement') else 'TNI Requirement'
+        raw_cat   = request.form.get('category', '').strip()
+        category  = raw_cat if raw_cat in ('Specialized', 'General') else 'General'
         if not name:
             flash('Programme name is required.', 'danger')
             return redirect(url_for('programme_master'))
@@ -54,17 +56,17 @@ def _register(app):
             existing = db.execute('SELECT id FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
                                   (plant_id, name)).fetchone()
             if existing:
-                db.execute('UPDATE programme_master SET prog_type=?, source=? WHERE id=?',
-                           (prog_type or None, source, existing['id']))
+                db.execute('UPDATE programme_master SET prog_type=?, source=?, category=? WHERE id=?',
+                           (prog_type or None, source, category, existing['id']))
                 db.commit()
-                log_action('RECORD_EDIT', f"pm:{name}")
+                log_action('RECORD_EDIT', f"pm:{name}:cat={category}")
                 flash(f'"{name}" updated.', 'success')
             else:
-                db.execute('INSERT INTO programme_master(plant_id,name,prog_type,source) VALUES(?,?,?,?)',
-                           (plant_id, name, prog_type or None, source))
+                db.execute('INSERT INTO programme_master(plant_id,name,prog_type,source,category) VALUES(?,?,?,?,?)',
+                           (plant_id, name, prog_type or None, source, category))
                 db.commit()
-                log_action('RECORD_ADD', f"pm:{name}:{source}")
-                flash(f'"{name}" added to master list as {source}.', 'success')
+                log_action('RECORD_ADD', f"pm:{name}:{source}:cat={category}")
+                flash(f'"{name}" added to master as {source} · {category}.', 'success')
         except Exception as e:
             logging.error(f'programme_master_add error: {e}')
             flash(f'Error: {e}', 'danger')
@@ -127,6 +129,25 @@ def _register(app):
         db.commit()
         log_action('RECORD_EDIT', f"pm_source:{prog_id}:{source}")
         return jsonify({'ok': True, 'source': source})
+
+    @app.route('/programme-master/<int:prog_id>/set-category', methods=['POST'])
+    @spoc_required
+    def programme_master_set_category(prog_id):
+        plant_id = session['plant_id']
+        data     = request.get_json(silent=True) or {}
+        category = data.get('category', '').strip()
+        if category not in ('Specialized', 'General'):
+            return jsonify({'ok': False, 'error': 'Invalid category'}), 400
+        db = get_db()
+        row = db.execute('SELECT id FROM programme_master WHERE id=? AND plant_id=?',
+                         (prog_id, plant_id)).fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': 'Not found'}), 404
+        db.execute('UPDATE programme_master SET category=? WHERE id=? AND plant_id=?',
+                   (category, prog_id, plant_id))
+        db.commit()
+        log_action('RECORD_EDIT', f"pm_category:{prog_id}:{category}")
+        return jsonify({'ok': True, 'category': category})
 
     @app.route('/programme-master/bulk-delete', methods=['POST'])
     @spoc_required
