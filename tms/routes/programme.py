@@ -168,10 +168,11 @@ def _register(app):
         db.execute('UPDATE programme_master SET category=? WHERE id=? AND plant_id=?',
                    (category, prog_id, plant_id))
         db.commit()
+        # log_record_change derives plant_id from session via log_action;
+        # passing plant_id= was a TypeError (wave1 bug → 500 → "Network error").
         log_record_change('RECORD_EDIT', prog_id, 'programme_master',
                           before={'category': old_category},
-                          after={'category': category},
-                          plant_id=plant_id)
+                          after={'category': category})
         return jsonify({'ok': True, 'category': category})
 
     @app.route('/programme-master/bulk-delete', methods=['POST'])
