@@ -101,7 +101,10 @@
             </button>
             {% endif %}
             <form method="POST" action="{{ url_for('central_calendar_delete', cal_id=s.id) }}"
-                  style="display:inline;" onsubmit="return confirm('Delete this session?')">
+                  style="display:inline;"
+                  data-tms-confirm="Delete this session from the central calendar?"
+                  data-tms-confirm-title="Delete Session"
+                  data-tms-confirm-ok="Delete">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size:10px;">
                 <i class="bi bi-trash"></i>

@@ -73,10 +73,23 @@ const countObserver = new IntersectionObserver((entries) => {
 }, { threshold: .3 });
 document.querySelectorAll('.sc').forEach(sc => countObserver.observe(sc));
 
-/* ── Close user dropdown on outside click ── */
+/* ── Close user dropdown on outside click / Escape ── */
+function _closeUserMenu(focusBtn) {
+  const menu = document.getElementById('userMenu');
+  if (!menu || !menu.classList.contains('open')) return;
+  menu.classList.remove('open');
+  const btn = document.getElementById('userMenuBtn');
+  if (btn) {
+    btn.setAttribute('aria-expanded', 'false');
+    if (focusBtn) btn.focus();
+  }
+}
 document.addEventListener('click', e => {
   const menu = document.getElementById('userMenu');
-  if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+  if (menu && !menu.contains(e.target)) _closeUserMenu(false);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') _closeUserMenu(true);
 });
 
 /* ═══════════════════════════════════════════════════
@@ -440,31 +453,39 @@ window.TBL = TBL;
    AJAX ROW DELETE
 ═══════════════════════════════════════════════════ */
 function ajaxDelete(btn, confirmMsg) {
-  if (!confirm(confirmMsg || 'Delete this record? This cannot be undone.')) return;
-  const form = btn.closest('form');
-  const row  = btn.closest('tr');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;border-width:2px;"></span>';
-  fetch(form.action, {
-    method: 'POST',
-    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-  }).then(r => {
-    if (r.status === 204 || r.ok) {
-      row.style.transition = 'opacity .18s ease, transform .18s ease';
-      row.style.opacity = '0';
-      row.style.transform = 'translateX(16px)';
-      setTimeout(() => row.remove(), 200);
-      showToast('Deleted successfully.', 'warning');
-    } else {
+  const msg = confirmMsg || 'Delete this record? This cannot be undone.';
+  const proceed = function(ok){
+    if (!ok) return;
+    const form = btn.closest('form');
+    const row  = btn.closest('tr');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;border-width:2px;"></span>';
+    fetch(form.action, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).then(r => {
+      if (r.status === 204 || r.ok) {
+        row.style.transition = 'opacity .18s ease, transform .18s ease';
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(16px)';
+        setTimeout(() => row.remove(), 200);
+        showToast('Deleted successfully.', 'warning');
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-trash"></i>';
+        showToast('Delete failed. Please try again.', 'danger');
+      }
+    }).catch(() => {
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-trash"></i>';
-      showToast('Delete failed. Please try again.', 'danger');
-    }
-  }).catch(() => {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-trash"></i>';
-    showToast('Network error.', 'danger');
-  });
+      showToast('Network error.', 'danger');
+    });
+  };
+  if (window.tmsConfirm) {
+    window.tmsConfirm({title:'Delete', body: msg, okText:'Delete'}).then(proceed);
+  } else {
+    proceed(window.confirm(msg));
+  }
 }
 
 function showToast(msg, type) {

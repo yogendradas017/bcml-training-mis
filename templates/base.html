@@ -185,12 +185,15 @@
       <span class="t-plant"><i class="bi bi-building" style="font-size:11px;"></i> <span class="plant-text">{{ session.plant_name }}</span></span>
       {% endif %}
       <div class="user-menu" id="userMenu">
-        <div class="user-btn" onclick="document.getElementById('userMenu').classList.toggle('open')">
+        <button type="button" class="user-btn" id="userMenuBtn"
+                aria-haspopup="menu" aria-expanded="false" aria-controls="userMenuDropdown"
+                aria-label="User menu for {{ session.username or 'User' }}"
+                onclick="(function(b){var m=document.getElementById('userMenu');var o=m.classList.toggle('open');b.setAttribute('aria-expanded',o?'true':'false');})(this)">
           <div class="user-avatar">{{ (session.username or 'U')[0]|upper }}</div>
           <span class="uname user-text">{{ session.username or 'User' }}</span>
-          <i class="bi bi-chevron-down" style="font-size:10px;color:#9ca3af;"></i>
-        </div>
-        <div class="user-dropdown">
+          <i class="bi bi-chevron-down" style="font-size:10px;color:#9ca3af;" aria-hidden="true"></i>
+        </button>
+        <div class="user-dropdown" id="userMenuDropdown" role="menu" aria-labelledby="userMenuBtn">
           <div class="ud-header">
             <div class="ud-avatar-lg">{{ (session.username or 'U')[0]|upper }}</div>
             <div class="ud-name">{{ session.username|title }}</div>
@@ -282,6 +285,80 @@
 
 {% block scripts %}{% endblock %}
 {% block modals %}{% endblock %}
+
+<!-- ─── Shared destructive-action confirm modal ─── -->
+<div class="modal fade" id="tmsConfirmModal" tabindex="-1" aria-labelledby="tmsConfirmTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:0;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+      <div class="modal-header" style="border-bottom:1px solid #fee2e2;background:#fef2f2;border-radius:14px 14px 0 0;">
+        <h5 class="modal-title" id="tmsConfirmTitle" style="font-size:15px;font-weight:700;color:#991b1b;">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i><span id="tmsConfirmTitleText">Confirm</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="tmsConfirmBody" style="font-size:13.5px;color:#374151;line-height:1.55;padding:18px 20px;">
+        Are you sure?
+      </div>
+      <div class="modal-footer" style="border-top:1px solid #f1f5f9;padding:12px 18px;">
+        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger btn-sm" id="tmsConfirmOk">
+          <i class="bi bi-check-lg"></i> <span id="tmsConfirmOkText">Confirm</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Shared destructive-confirm helper. Returns a Promise<bool>.
+// Also auto-binds to forms with [data-tms-confirm] and links with [data-tms-confirm].
+(function(){
+  let _modal = null, _resolver = null;
+  function _getModal(){
+    if (_modal) return _modal;
+    const el = document.getElementById('tmsConfirmModal');
+    if (!el || !window.bootstrap) return null;
+    _modal = new bootstrap.Modal(el);
+    document.getElementById('tmsConfirmOk').addEventListener('click', function(){
+      const r = _resolver; _resolver = null; _modal.hide();
+      if (r) r(true);
+    });
+    el.addEventListener('hidden.bs.modal', function(){
+      if (_resolver) { const r = _resolver; _resolver = null; r(false); }
+    });
+    return _modal;
+  }
+  window.tmsConfirm = function(opts){
+    opts = (typeof opts === 'string') ? {body: opts} : (opts || {});
+    return new Promise(function(resolve){
+      const m = _getModal();
+      if (!m) { resolve(window.confirm(opts.body || 'Confirm?')); return; }
+      document.getElementById('tmsConfirmTitleText').textContent = opts.title || 'Confirm';
+      document.getElementById('tmsConfirmBody').innerHTML       = opts.body  || 'Are you sure?';
+      document.getElementById('tmsConfirmOkText').textContent   = opts.okText || 'Confirm';
+      _resolver = resolve;
+      m.show();
+    });
+  };
+  // Auto-bind: <form data-tms-confirm="msg"> and <a data-tms-confirm="msg" href="...">
+  document.addEventListener('submit', function(e){
+    const f = e.target;
+    if (!(f instanceof HTMLFormElement)) return;
+    const msg = f.getAttribute('data-tms-confirm');
+    if (!msg || f.dataset.tmsConfirmed === '1') return;
+    e.preventDefault();
+    tmsConfirm({
+      title: f.getAttribute('data-tms-confirm-title') || 'Confirm',
+      body:  msg,
+      okText: f.getAttribute('data-tms-confirm-ok') || 'Confirm'
+    }).then(function(ok){
+      if (!ok) return;
+      f.dataset.tmsConfirmed = '1';
+      f.submit();
+    });
+  }, true);
+})();
+</script>
 
 <script>
 // Auto-inject CSRF token into all non-GET fetch() calls

@@ -1,35 +1,15 @@
 {% extends "base.html" %}
+{% from "_macros.html" import bulk_upload %}
 {% block page_title %}Training Records (2A){% endblock %}
 {% block content %}
 
 <!-- Bulk Upload -->
-<div class="card mb-4" style="border-left:5px solid #0d6efd;">
-  <div class="card-header ch-dark d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-cloud-upload"></i> Bulk Upload Training Records (Excel / CSV)</span>
-    <a href="{{ url_for('training_template') }}" class="btn btn-light btn-sm">
-      <i class="bi bi-file-earmark-arrow-down"></i> Download Template
-    </a>
-  </div>
-  <div class="card-body">
-    <p class="text-muted mb-2" style="font-size:13px;">
-      Download the template, fill in attendance data, then upload here. If you add a <strong>Session Code</strong>,
-      Programme Name / Type / Mode will auto-fill from the Calendar.
-      Required columns: <strong>Employee Code, Programme Name, Start Date, Hours</strong>
-    </p>
-    <form method="POST" action="{{ url_for('training_bulk_upload') }}" enctype="multipart/form-data">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="d-flex gap-2 align-items-end">
-        <div>
-          <label class="form-label">Select Excel or CSV file</label>
-          <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required style="width:100%;max-width:340px;">
-        </div>
-        <button type="submit" class="btn btn-primary px-4">
-          <i class="bi bi-upload"></i> Upload & Import
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
+{{ bulk_upload(
+     action_url=url_for('training_bulk_upload'),
+     template_url=url_for('training_template'),
+     title='Bulk Upload Training Records (Excel / CSV)',
+     hint='Download the template, fill in attendance data, then upload here. If you add a Session Code, Programme Name / Type / Mode will auto-fill from the Calendar. Required: Employee Code, Programme Name, Start Date, Hours.'
+) }}
 
 <div class="card mb-4">
   <div class="card-header ch-dark">
@@ -44,7 +24,7 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row g-3">
         <div class="col-md-4">
-          <label class="form-label">Employee <span class="required-star">*</span></label>
+          <label class="form-label" for="tr_emp_code">Employee <span class="required-star">*</span></label>
           <select name="emp_code" id="tr_emp_code" class="form-select" required
                   onchange="fillEmpDetails(this,'tr')">
             <option value="">-- Select Employee --</option>
@@ -57,16 +37,16 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label">Collar</label>
+          <label class="form-label" for="tr_collar">Collar</label>
           <input type="text" id="tr_collar" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Department</label>
+          <label class="form-label" for="tr_dept">Department</label>
           <input type="text" id="tr_dept" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Session Code (from Calendar)</label>
-          <select name="session_code" id="tr_session_code" class="form-select">
+          <label class="form-label" for="tr_session_code">Session Code (from Calendar)</label>
+          <select name="session_code" id="tr_session_code" class="form-select" autocomplete="off">
             <option value="">-- Type to search session --</option>
             {% for s in sessions %}
             <option value="{{ s.session_code }}"
@@ -82,49 +62,49 @@
           </select>
         </div>
         <div class="col-md-5">
-          <label class="form-label">Programme Name <span class="required-star">*</span></label>
+          <label class="form-label" for="tr_prog_name">Programme Name <span class="required-star">*</span></label>
           <input type="text" name="programme_name" id="tr_prog_name" class="form-control"
-                 required placeholder="Auto-fill from session or type manually">
+                 required placeholder="Auto-fill from session or type manually" autocomplete="off">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Type</label>
+          <label class="form-label" for="tr_prog_type_disp">Type</label>
           <input type="text" id="tr_prog_type_disp" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Mode</label>
+          <label class="form-label" for="tr_mode_disp">Mode</label>
           <input type="text" id="tr_mode_disp" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Start Date <span class="required-star">*</span></label>
+          <label class="form-label" for="tr_start_date">Start Date <span class="required-star">*</span></label>
           <input type="date" name="start_date" id="tr_start_date" class="form-control" required>
         </div>
         <div class="col-md-2">
-          <label class="form-label">End Date</label>
+          <label class="form-label" for="tr_end_date">End Date</label>
           <input type="date" name="end_date" id="tr_end_date" class="form-control">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Start Time</label>
+          <label class="form-label" for="tr_time_from">Start Time</label>
           <input type="time" name="time_from" id="tr_time_from" class="form-control">
         </div>
         <div class="col-md-2">
-          <label class="form-label">End Time</label>
+          <label class="form-label" for="tr_time_to">End Time</label>
           <input type="time" name="time_to" id="tr_time_to" class="form-control">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Hours <span class="required-star">*</span></label>
+          <label class="form-label" for="tr_hrs">Hours <span class="required-star">*</span></label>
           <input type="number" name="hrs" id="tr_hrs" class="form-control" step="0.5" min="0" required value="0">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Venue</label>
-          <input type="text" name="venue" class="form-control" placeholder="e.g. Training Hall, Plant">
+          <label class="form-label" for="auto_venue">Venue</label>
+          <input type="text" name="venue" id="auto_venue" class="form-control" placeholder="e.g. Training Hall, Plant" autocomplete="off">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Pre-Session Rating (1-4)</label>
-          <input type="number" name="pre_rating" class="form-control" min="1" max="4" step="0.1" placeholder="1-4">
+          <label class="form-label" for="auto_pre_rating">Pre-Session Rating (1-4)</label>
+          <input type="number" name="pre_rating" id="auto_pre_rating" class="form-control" min="1" max="4" step="0.1" placeholder="1-4">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Post-Session Rating (1-4)</label>
-          <input type="number" name="post_rating" class="form-control" min="1" max="4" step="0.1" placeholder="1-4">
+          <label class="form-label" for="auto_post_rating">Post-Session Rating (1-4)</label>
+          <input type="number" name="post_rating" id="auto_post_rating" class="form-control" min="1" max="4" step="0.1" placeholder="1-4">
         </div>
         <div class="col-12">
           <button type="submit" class="btn btn-success px-4">

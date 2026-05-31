@@ -146,7 +146,10 @@
           </td>
           <td style="padding:9px 14px;text-align:center;">
             <form method="POST" action="{{ url_for('programme_master_delete', prog_id=p.id) }}"
-                  onsubmit="return confirm('Remove \'{{ p.name|replace("'","\\'") }}\'?');" style="display:inline;">
+                  data-tms-confirm="Remove &lsquo;{{ p.name|e }}&rsquo; from the programme master?"
+                  data-tms-confirm-title="Delete Programme"
+                  data-tms-confirm-ok="Delete"
+                  style="display:inline;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-link p-0" style="color:#d1d5db;font-size:14px;" title="Delete"
                       onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='#d1d5db'">
@@ -321,10 +324,23 @@ document.getElementById('pm-ctx-toggle-cat').onclick = async function(e) {
 document.getElementById('pm-ctx-delete').onclick = function(e) {
   e.preventDefault();
   _hideAll();
-  if (!confirm(`Remove "${_ctx.name}"?`)) return;
-  const f = document.createElement('form');
-  f.method = 'POST'; f.action = `/programme-master/${_ctx.id}/delete`;
-  document.body.appendChild(f); f.submit();
+  const doDelete = function(ok){
+    if (!ok) return;
+    const f = document.createElement('form');
+    f.method = 'POST'; f.action = `/programme-master/${_ctx.id}/delete`;
+    const tok = document.querySelector('meta[name="csrf-token"]');
+    if (tok) {
+      const t = document.createElement('input');
+      t.type='hidden'; t.name='csrf_token'; t.value=tok.content;
+      f.appendChild(t);
+    }
+    document.body.appendChild(f); f.submit();
+  };
+  if (window.tmsConfirm) {
+    window.tmsConfirm({title:'Delete Programme', body:`Remove <strong>${_ctx.name}</strong> from the programme master?`, okText:'Delete'}).then(doDelete);
+  } else {
+    doDelete(window.confirm(`Remove "${_ctx.name}"?`));
+  }
 };
 
 document.querySelectorAll('.pm-ctx-item').forEach(el => {
@@ -352,7 +368,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label fw-semibold" style="font-size:13px;">Programme Name <span class="text-danger">*</span></label>
+            <label class="form-label fw-semibold" style="font-size:13px;" for="addNameInput">Programme Name <span class="text-danger">*</span></label>
             <input type="text" id="addNameInput" name="name" class="form-control form-control-sm" placeholder="e.g. Fire Safety" required autocomplete="off">
             <div style="position:relative;">
               <div id="addSuggestions" style="display:none;position:absolute;left:0;right:0;top:2px;border:1px solid #e5e9f2;border-radius:8px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);max-height:180px;overflow-y:auto;z-index:9999;"></div>
@@ -360,8 +376,8 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
             <div id="addMatchHint" style="display:none;margin-top:6px;"></div>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-semibold" style="font-size:13px;">Type of Programme</label>
-            <select name="prog_type" class="form-select form-select-sm">
+            <label class="form-label fw-semibold" style="font-size:13px;" for="auto_pm_prog_type">Type of Programme</label>
+            <select name="prog_type" id="auto_pm_prog_type" class="form-select form-select-sm">
               <option value="">— Select —</option>
               {% for pt in prog_types %}<option>{{ pt }}</option>{% endfor %}
             </select>

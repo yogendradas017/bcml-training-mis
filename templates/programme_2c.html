@@ -1,31 +1,15 @@
 {% extends "base.html" %}
+{% from "_macros.html" import bulk_upload %}
 {% block page_title %}Programme Details (2C){% endblock %}
 {% block content %}
 
 <!-- Bulk Upload -->
-<div class="card mb-4" style="border-left:4px solid #2e6da4;">
-  <div class="card-header ch-dark d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-cloud-upload"></i> Bulk Upload Programme Details (Excel / CSV)</span>
-    <a href="{{ url_for('programme_template') }}" class="btn btn-light btn-sm">
-      <i class="bi bi-file-earmark-arrow-down"></i> Download Template
-    </a>
-  </div>
-  <div class="card-body">
-    <p class="text-muted mb-2" style="font-size:13px;">
-      Session Code must already exist in Calendar. Required: <strong>Session Code, Actual Start Date</strong>.
-    </p>
-    <form method="POST" action="{{ url_for('programme_bulk_upload') }}" enctype="multipart/form-data">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="d-flex gap-2 align-items-end">
-        <div>
-          <label class="form-label">Select Excel or CSV file</label>
-          <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required style="width:100%;max-width:340px;">
-        </div>
-        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-upload"></i> Upload &amp; Import</button>
-      </div>
-    </form>
-  </div>
-</div>
+{{ bulk_upload(
+     action_url=url_for('programme_bulk_upload'),
+     template_url=url_for('programme_template'),
+     title='Bulk Upload Programme Details (Excel / CSV)',
+     hint='Session Code must already exist in Calendar. Required: Session Code, Actual Start Date.'
+) }}
 
 <div class="card mb-4">
   <div class="card-header ch-dark">
@@ -40,8 +24,8 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row g-3">
         <div class="col-md-4">
-          <label class="form-label">Session Code <span class="required-star">*</span></label>
-          <select name="session_code" id="pc_session_code" class="form-select" required>
+          <label class="form-label" for="pc_session_code">Session Code <span class="required-star">*</span></label>
+          <select name="session_code" id="pc_session_code" class="form-select" required autocomplete="off">
             <option value="">-- Type to search session --</option>
             {% for s in cal_sessions %}
             <option value="{{ s.session_code }}"
@@ -54,68 +38,68 @@
           </select>
         </div>
         <div class="col-md-5">
-          <label class="form-label">Programme Name</label>
+          <label class="form-label" for="pc_prog_name">Programme Name</label>
           <input type="text" id="pc_prog_name" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Type</label>
+          <label class="form-label" for="pc_prog_type">Type</label>
           <input type="text" id="pc_prog_type" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Actual Start Date <span class="required-star">*</span></label>
+          <label class="form-label" for="pc_start_date">Actual Start Date <span class="required-star">*</span></label>
           <input type="date" name="start_date" id="pc_start_date" class="form-control" required>
         </div>
         <div class="col-md-2">
-          <label class="form-label">Actual End Date</label>
+          <label class="form-label" for="pc_end_date">Actual End Date</label>
           <input type="date" name="end_date" id="pc_end_date" class="form-control">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Start Time</label>
+          <label class="form-label" for="pc_time_from">Start Time</label>
           <input type="time" name="time_from" id="pc_time_from" class="form-control">
         </div>
         <div class="col-md-2">
-          <label class="form-label">End Time</label>
+          <label class="form-label" for="pc_time_to">End Time</label>
           <input type="time" name="time_to" id="pc_time_to" class="form-control">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Actual Hours</label>
+          <label class="form-label" for="pc_hours">Actual Hours</label>
           <input type="number" name="hours_actual" id="pc_hours" class="form-control" step="0.5" min="0" value="0">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Faculty Name</label>
-          <input type="text" name="faculty_name" class="form-control" placeholder="Trainer / Faculty name">
+          <label class="form-label" for="auto_faculty_name">Faculty Name</label>
+          <input type="text" name="faculty_name" id="auto_faculty_name" class="form-control" placeholder="Trainer / Faculty name" autocomplete="off">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Internal / External</label>
-          <select name="int_ext" class="form-select">
+          <label class="form-label" for="auto_int_ext">Internal / External</label>
+          <select name="int_ext" id="auto_int_ext" class="form-select">
             <option value="">-- Select --</option>
             {% for ie in int_ext %}<option>{{ ie }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label">Cost (&#8377;)</label>
-          <input type="number" name="cost" class="form-control" step="0.01" min="0" value="0">
+          <label class="form-label" for="auto_cost">Cost (&#8377;)</label>
+          <input type="number" name="cost" id="auto_cost" class="form-control" step="0.01" min="0" value="0">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Venue</label>
-          <input type="text" name="venue" class="form-control" placeholder="e.g. Training Hall">
+          <label class="form-label" for="auto_2c_venue">Venue</label>
+          <input type="text" name="venue" id="auto_2c_venue" class="form-control" placeholder="e.g. Training Hall" autocomplete="off">
         </div>
         <div class="col-12"><hr class="my-1"><strong style="font-size:13px;">Feedback Scores (1&#8211;5)</strong></div>
         <div class="col-md-3">
-          <label class="form-label">Course Feedback</label>
-          <input type="number" name="course_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
+          <label class="form-label" for="auto_course_feedback">Course Feedback</label>
+          <input type="number" name="course_feedback" id="auto_course_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Faculty Feedback</label>
-          <input type="number" name="faculty_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
+          <label class="form-label" for="auto_faculty_feedback">Faculty Feedback</label>
+          <input type="number" name="faculty_feedback" id="auto_faculty_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Trainer FB &#8212; Participants</label>
-          <input type="number" name="trainer_fb_participants" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
+          <label class="form-label" for="auto_trainer_fb_participants">Trainer FB &#8212; Participants</label>
+          <input type="number" name="trainer_fb_participants" id="auto_trainer_fb_participants" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Trainer FB &#8212; Facilities</label>
-          <input type="number" name="trainer_fb_facilities" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
+          <label class="form-label" for="auto_trainer_fb_facilities">Trainer FB &#8212; Facilities</label>
+          <input type="number" name="trainer_fb_facilities" id="auto_trainer_fb_facilities" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-12">
           <button type="submit" class="btn btn-primary px-4"><i class="bi bi-plus-circle"></i> Save Programme Details</button>
