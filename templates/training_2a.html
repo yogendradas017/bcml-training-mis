@@ -221,7 +221,14 @@
             {% else %}<span class="text-muted">—</span>{% endif %}
           </td>
           <td><code>{{ rec.session_code or '—' }}</code></td>
-          <td style="font-weight:600;color:#111827;">{{ rec.programme_name }}</td>
+          <td style="font-weight:600;color:#111827;">
+            {{ rec.programme_name }}
+            {% if rec.category == 'Specialized' %}
+            <span title="Specialized — 3-mo effectiveness review required" style="font-size:9px;font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
+              <i class="bi bi-stars"></i> SPL
+            </span>
+            {% endif %}
+          </td>
           <td><span class="badge-unit">{{ rec.prog_type or '—' }}</span></td>
           <td>
             {% if rec.cal_source == 'New Requirement' %}

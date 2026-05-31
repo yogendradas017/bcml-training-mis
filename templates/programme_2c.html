@@ -175,7 +175,14 @@
               {% if has_anom %}<i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:11px;margin-left:3px;" title="{{ rec.anomaly_flags }}"></i>{% endif %}
             </td>
             <td><code style="font-size:11px;">{{ rec.session_code }}</code></td>
-            <td><strong>{{ rec.programme_name or '—' }}</strong></td>
+            <td>
+              <strong>{{ rec.programme_name or '—' }}</strong>
+              {% if rec.category == 'Specialized' %}
+              <span title="Specialized — 3-mo effectiveness review required" style="font-size:9px;font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
+                <i class="bi bi-stars"></i> SPL
+              </span>
+              {% endif %}
+            </td>
             <td><span class="badge-unit" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
             <td>
               {% if rec.cal_source == 'New Requirement' %}<span class="badge bg-warning text-dark" style="font-size:11px;">New Req</span>
@@ -235,7 +242,14 @@
           <tr>
             <td>{{ loop.index }}</td>
             <td><code style="font-size:11px;color:#7c3aed;">{{ rec.session_code }}</code></td>
-            <td><strong>{{ rec.programme_name or '—' }}</strong></td>
+            <td>
+              <strong>{{ rec.programme_name or '—' }}</strong>
+              {% if rec.category == 'Specialized' %}
+              <span title="Specialized — 3-mo effectiveness review required" style="font-size:9px;font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
+                <i class="bi bi-stars"></i> SPL
+              </span>
+              {% endif %}
+            </td>
             <td><span class="badge-unit" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
             <td><span class="badge bg-warning text-dark" style="font-size:11px;">New Req</span></td>
             <td>{{ rec.start_date | fmt_date }}</td>

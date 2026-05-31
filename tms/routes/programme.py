@@ -243,6 +243,7 @@ def _register(app):
             return redirect(url_for('programme_master'))
 
         src_col = next((cols_lower[k] for k in ['source','requirement','req type'] if k in cols_lower), None)
+        cat_col = next((cols_lower[k] for k in ['category','cat'] if k in cols_lower), None)
         db = get_db()
         inserted = skipped = 0
         for _, row in df.iterrows():
@@ -252,9 +253,11 @@ def _register(app):
             prog_type = str(row.get(type_col, '')).strip() if type_col else ''
             raw_src   = str(row.get(src_col, '')).strip() if src_col else ''
             source    = raw_src if raw_src in ('TNI Requirement', 'New Requirement') else 'TNI Requirement'
+            raw_cat   = str(row.get(cat_col, '')).strip() if cat_col else ''
+            category  = raw_cat if raw_cat in ('Specialized', 'General') else 'General'
             try:
-                db.execute('INSERT INTO programme_master(plant_id,name,prog_type,source) VALUES(?,?,?,?)',
-                           (plant_id, name, prog_type or None, source))
+                db.execute('INSERT INTO programme_master(plant_id,name,prog_type,source,category) VALUES(?,?,?,?,?)',
+                           (plant_id, name, prog_type or None, source, category))
                 inserted += 1
             except Exception:
                 skipped += 1
@@ -271,8 +274,8 @@ def _register(app):
         ws = wb.active
         ws.title = 'Programme Master'
         hdr_fill = PatternFill('solid', fgColor='1A1F35')
-        headers = ['Programme Name', 'Type of Programme', 'Source']
-        widths  = [45, 30, 20]
+        headers = ['Programme Name', 'Type of Programme', 'Source', 'Category']
+        widths  = [45, 30, 20, 18]
         for ci, (h, w) in enumerate(zip(headers, widths), 1):
             c = ws.cell(row=1, column=ci, value=h)
             c.fill = hdr_fill
@@ -280,16 +283,19 @@ def _register(app):
             c.alignment = Alignment(horizontal='center')
             ws.column_dimensions[get_column_letter(ci)].width = w
         ws.row_dimensions[1].height = 22
-        for row in [('Fire Safety', 'EHS/HR', 'TNI Requirement'),
-                    ('5-S Management', 'EHS/HR', 'TNI Requirement'),
-                    ('English Communication', 'Behavioural/Leadership', 'New Requirement')]:
+        for row in [('Fire Safety', 'EHS/HR', 'TNI Requirement', 'Specialized'),
+                    ('5-S Management', 'EHS/HR', 'TNI Requirement', 'General'),
+                    ('English Communication', 'Behavioural/Leadership', 'New Requirement', 'General')]:
             ws.append(row)
         dv_type = DataValidation(type='list', formula1=f'"{",".join(PROG_TYPES)}"', allow_blank=True)
         dv_type.sqref = 'B2:B500'
         dv_src = DataValidation(type='list', formula1='"TNI Requirement,New Requirement"', allow_blank=True)
         dv_src.sqref = 'C2:C500'
+        dv_cat = DataValidation(type='list', formula1='"Specialized,General"', allow_blank=True)
+        dv_cat.sqref = 'D2:D500'
         ws.add_data_validation(dv_type)
         ws.add_data_validation(dv_src)
+        ws.add_data_validation(dv_cat)
         ws.freeze_panes = 'A2'
         buf = io.BytesIO(); wb.save(buf); buf.seek(0)
         return send_file(buf, as_attachment=True, download_name='Programme_Master_Template.xlsx',
@@ -301,13 +307,13 @@ def _register(app):
         plant_id   = session['plant_id']
         plant_name = session.get('plant_name', 'Plant')
         db = get_db()
-        progs = db.execute('SELECT name, prog_type, source, created_at FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
+        progs = db.execute('SELECT name, prog_type, source, category, created_at FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Programme Master'
         hdr_fill = PatternFill('solid', fgColor='1A1F35')
-        headers = ['#', 'Programme Name', 'Type of Programme', 'Source', 'Added On']
-        widths  = [5, 45, 30, 20, 14]
+        headers = ['#', 'Programme Name', 'Type of Programme', 'Source', 'Category', 'Added On']
+        widths  = [5, 45, 30, 20, 18, 14]
         for ci, (h, w) in enumerate(zip(headers, widths), 1):
             c = ws.cell(row=1, column=ci, value=h)
             c.fill = hdr_fill
@@ -317,7 +323,8 @@ def _register(app):
         ws.row_dimensions[1].height = 22
         ws.freeze_panes = 'A2'
         for i, r in enumerate(progs, 1):
-            ws.append([i, r['name'], r['prog_type'] or '', r['source'] or 'TNI Requirement', r['created_at'] or ''])
+            ws.append([i, r['name'], r['prog_type'] or '', r['source'] or 'TNI Requirement',
+                       r['category'] or 'General', r['created_at'] or ''])
         buf = io.BytesIO(); wb.save(buf); buf.seek(0)
         return send_file(buf, as_attachment=True,
                          download_name=f'Programme_Master_{plant_name}.xlsx',
@@ -333,10 +340,12 @@ def _register(app):
         records = db.execute('''
             SELECT p.*,
                    c.source as cal_source,
+                   COALESCE(c.category, pm.category, 'General') as category,
                    (SELECT COUNT(*) FROM emp_training t WHERE t.session_code=p.session_code AND t.plant_id=p.plant_id) as participants,
                    (SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t WHERE t.session_code=p.session_code AND t.plant_id=p.plant_id) as man_hours
             FROM programme_details p
             LEFT JOIN calendar c ON c.session_code=p.session_code AND c.plant_id=p.plant_id
+            LEFT JOIN programme_master pm ON pm.plant_id=p.plant_id AND LOWER(pm.name)=LOWER(p.programme_name)
             WHERE p.plant_id=?
             ORDER BY p.id DESC
         ''', (plant_id,)).fetchall()
@@ -345,6 +354,7 @@ def _register(app):
         central_records = db.execute('''
             SELECT p.*,
                    c.source as cal_source,
+                   COALESCE(c.category, 'General') as category,
                    COUNT(t.id) as participants,
                    COALESCE(SUM(t.hrs),0) as man_hours
             FROM programme_details p

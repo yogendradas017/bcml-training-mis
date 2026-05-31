@@ -30,12 +30,14 @@ def _register(app):
             SELECT t.*, e.name as emp_name, e.designation, e.grade, e.collar,
                    e.department, e.section,
                    COALESCE(c.source, cc.source) as cal_source,
+                   COALESCE(c.category, cc.category, pm.category, 'General') as category,
                    CASE WHEN t.host_plant_id=99 THEN 1 ELSE 0 END as is_central
             FROM emp_training t
             LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
             LEFT JOIN calendar c  ON c.session_code=t.session_code AND c.plant_id=t.plant_id
             LEFT JOIN calendar cc ON cc.session_code=t.session_code AND cc.plant_id=99
                                   AND t.host_plant_id=99
+            LEFT JOIN programme_master pm ON pm.plant_id=t.plant_id AND LOWER(pm.name)=LOWER(t.programme_name)
             WHERE t.plant_id=?
             ORDER BY t.id DESC
         ''', (plant_id,)).fetchall()

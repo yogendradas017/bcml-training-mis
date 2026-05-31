@@ -20,15 +20,24 @@
           <th style="padding:8px 14px;">#</th>
           <th style="padding:8px 14px;">Programme Name</th>
           <th style="padding:8px 14px;">Type</th>
+          <th style="padding:8px 14px;">Category</th>
           <th style="padding:8px 14px;"></th>
         </tr>
       </thead>
       <tbody>
         {% for p in programmes %}
+        {% set cat = p.category or 'General' %}
         <tr>
           <td style="padding:6px 14px;color:#9ca3af;">{{ loop.index }}</td>
           <td style="padding:6px 14px;font-weight:500;">{{ p.name }}</td>
           <td style="padding:6px 14px;">{{ p.prog_type or '—' }}</td>
+          <td style="padding:6px 14px;">
+            {% if cat == 'Specialized' %}
+              <span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-weight:600;"><i class="bi bi-stars"></i> Specialized</span>
+            {% else %}
+              <span style="font-size:11px;color:#6b7280;">General</span>
+            {% endif %}
+          </td>
           <td style="padding:6px 14px;">
             <form method="POST" action="{{ url_for('central_programme_delete', prog_id=p.id) }}"
                   style="display:inline;" onsubmit="return confirm('Delete ' + {{ p.name|tojson }} + '?')">
@@ -40,7 +49,7 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="4" class="text-center text-muted py-4">No programmes yet. Add one to get started.</td></tr>
+        <tr><td colspan="5" class="text-center text-muted py-4">No programmes yet. Add one to get started.</td></tr>
         {% endfor %}
       </tbody>
     </table>
