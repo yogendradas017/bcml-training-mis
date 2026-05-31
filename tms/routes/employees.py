@@ -7,8 +7,8 @@ import sqlite3
 from tms.constants import GENDERS, GRADES, CATEGORIES, COLLARS, PH_OPTIONS, TEMP_UPLOAD_DIR
 from tms.db import get_db
 from tms.decorators import spoc_required
-from tms.helpers import normalise_collar
-from tms.audit import log_action
+from tms.helpers import normalise_collar, _today_ist
+from tms.audit import log_action, log_record_change
 
 try:
     import openpyxl
@@ -98,7 +98,7 @@ def _register(app):
                                genders=GENDERS, grades=GRADES, categories=CATEGORIES,
                                collars=COLLARS, ph_options=PH_OPTIONS,
                                departments=departments, sections=sections,
-                               today=str(date.today()))
+                               today=str(_today_ist()))
 
     @app.route('/employees/add', methods=['POST'])
     @spoc_required
@@ -139,19 +139,66 @@ def _register(app):
     @spoc_required
     def exit_employee(emp_id):
         db = get_db()
-        exit_date   = request.form.get('exit_date', str(date.today()))
+        plant_id = session['plant_id']
+        exit_date   = request.form.get('exit_date', str(_today_ist()))
         exit_reason = request.form.get('exit_reason', '')
-        if exit_date > str(date.today()):
+        confirm_pending = request.form.get('confirm_pending', '0') == '1'
+        if exit_date > str(_today_ist()):
             flash('Exit date cannot be a future date.', 'danger')
             return redirect(url_for('employees'))
         if not exit_reason.strip():
             flash('Exit reason is mandatory for attrition analysis.', 'danger')
             return redirect(url_for('employees'))
+
+        # Load the employee row first — needed for emp_code lookup + audit before-snapshot
+        before = db.execute(
+            'SELECT * FROM employees WHERE id=? AND plant_id=?',
+            (emp_id, plant_id)).fetchone()
+        if not before:
+            flash('Employee not found.', 'danger')
+            return redirect(url_for('employees'))
+        emp_code = before['emp_code']
+
+        # Downstream pending-rows guard: block exit if attendance / effectiveness
+        # rows still reference this employee, unless SPOC explicitly confirms.
+        # emp_training rows are immutable history (always present for trained staff)
+        # so we only block on effectiveness_review rows that are NOT yet completed.
+        train_n = db.execute(
+            'SELECT COUNT(*) FROM emp_training WHERE emp_code=? AND plant_id=?',
+            (emp_code, plant_id)).fetchone()[0]
+        eff_pending = db.execute(
+            "SELECT COUNT(*) FROM effectiveness_review "
+            "WHERE emp_code=? AND plant_id=? "
+            "AND (completed_date IS NULL OR completed_date='')",
+            (emp_code, plant_id)).fetchone()[0]
+
+        if eff_pending > 0 and not confirm_pending:
+            flash(
+                f"Cannot exit {emp_code}: {eff_pending} pending effectiveness "
+                f"review(s) open. Close them first, or resubmit with the "
+                f"'Confirm exit despite pending reviews' checkbox ticked.",
+                'danger')
+            return redirect(url_for('employees'))
+
         db.execute('UPDATE employees SET is_active=0, exit_date=?, exit_reason=? WHERE id=? AND plant_id=?',
-                   (exit_date, exit_reason, emp_id, session['plant_id']))
+                   (exit_date, exit_reason, emp_id, plant_id))
         db.commit()
-        log_action('RECORD_EDIT', f"emp_exit:{emp_id}")
-        flash('Employee marked as exited.', 'warning')
+        after = db.execute(
+            'SELECT * FROM employees WHERE id=? AND plant_id=?',
+            (emp_id, plant_id)).fetchone()
+        extra = (f"emp_exit:{emp_code} train_rows={train_n} "
+                 f"eff_pending={eff_pending} confirmed={confirm_pending}")
+        log_record_change('RECORD_EDIT', emp_id, 'employees',
+                          before=dict(before) if before else None,
+                          after=dict(after) if after else None,
+                          extra_detail=extra)
+        if eff_pending > 0:
+            flash(
+                f'Employee exited. WARNING: {eff_pending} pending effectiveness '
+                f'review(s) remain open against {emp_code}.',
+                'warning')
+        else:
+            flash('Employee marked as exited.', 'warning')
         return redirect(url_for('employees'))
 
     @app.route('/employees/<int:emp_id>/reactivate', methods=['POST'])

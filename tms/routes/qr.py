@@ -173,18 +173,23 @@ def _register(app):
 
         if existing:
             new_token = secrets.token_urlsafe(16)
+            # IST timestamp written explicitly — schema has no SQL DEFAULT so Render
+            # (UTC host) and local (IST host) agree.
+            now_ist_iso = _now_ist().isoformat(timespec='seconds')
             db.execute('''UPDATE session_qr SET token=?, is_active=1, expires_at=?,
-                          created_at=datetime('now','localtime'), created_by=?
+                          created_at=?, created_by=?
                           WHERE id=?''',
-                       (new_token, expires, session.get('user_id'), existing['id']))
+                       (new_token, expires, now_ist_iso, session.get('user_id'), existing['id']))
             db.commit()
             flash(f'QR regenerated for {stage}.', 'success')
         else:
             new_token = secrets.token_urlsafe(16)
+            # IST timestamp written explicitly — schema has no SQL DEFAULT.
+            now_ist_iso = _now_ist().isoformat(timespec='seconds')
             db.execute('''INSERT INTO session_qr
-                (plant_id, session_code, token, stage, expires_at, created_by)
-                VALUES(?,?,?,?,?,?)''',
-                (plant_id, cal['session_code'], new_token, stage, expires,
+                (plant_id, session_code, token, stage, created_at, expires_at, created_by)
+                VALUES(?,?,?,?,?,?,?)''',
+                (plant_id, cal['session_code'], new_token, stage, now_ist_iso, expires,
                  session.get('user_id')))
             db.commit()
             flash(f'QR generated for {stage}.', 'success')

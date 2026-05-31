@@ -99,7 +99,8 @@ CREATE TABLE IF NOT EXISTS emp_training (
     month TEXT,
     host_plant_id INTEGER,
     anomaly_flags TEXT,
-    created_at TEXT DEFAULT (date('now'))
+    created_at TEXT DEFAULT (date('now')),
+    UNIQUE(plant_id, emp_code, programme_name, start_date)
 );
 
 CREATE TABLE IF NOT EXISTS programme_details (
@@ -135,10 +136,12 @@ CREATE TABLE IF NOT EXISTS session_qr (
     session_code TEXT NOT NULL,
     token TEXT NOT NULL UNIQUE,
     stage TEXT NOT NULL DEFAULT 'attendance' CHECK(stage IN ('attendance','feedback')),
-    created_at TEXT DEFAULT (datetime('now','localtime')),
+    -- created_at: written explicitly by Python via _now_ist() so timestamps are IST
+    -- on both local (IST host) and Render (UTC host). Do NOT add a SQL DEFAULT here.
+    created_at TEXT,
     expires_at TEXT,
     is_active INTEGER DEFAULT 1,
-    created_by INTEGER REFERENCES users(id)
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS feedback_response (
@@ -216,12 +219,16 @@ CREATE INDEX IF NOT EXISTS idx_tni_prog ON tni(plant_id, programme_name);
 CREATE INDEX IF NOT EXISTS idx_cal_plant ON calendar(plant_id);
 CREATE INDEX IF NOT EXISTS idx_training_plant ON emp_training(plant_id);
 CREATE INDEX IF NOT EXISTS idx_et_lookup ON emp_training(plant_id, emp_code, programme_name);
+CREATE INDEX IF NOT EXISTS idx_et_dedup ON emp_training(plant_id, emp_code, programme_name, start_date);
+CREATE INDEX IF NOT EXISTS idx_et_session ON emp_training(plant_id, session_code);
 CREATE INDEX IF NOT EXISTS idx_corp_active ON corp_members(is_active, name);
 CREATE INDEX IF NOT EXISTS idx_prog_plant ON programme_details(plant_id);
 
 CREATE TABLE IF NOT EXISTS audit_log (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    ts           TEXT    DEFAULT (datetime('now','localtime')),
+    -- ts: written explicitly by tms.audit._now_ist() (IST) on every INSERT so the
+    -- chain hash matches between Render (UTC host) and local. Do NOT add SQL DEFAULT.
+    ts           TEXT,
     user_id      INTEGER,
     username     TEXT,
     plant_id     INTEGER,

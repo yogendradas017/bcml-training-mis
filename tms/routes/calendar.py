@@ -193,8 +193,14 @@ def _register(app):
             return redirect(url_for('training_calendar'))
         before_snap_dict = dict(cal) if cal else None
         if cal:
-            db.execute('DELETE FROM session_qr WHERE plant_id=? AND session_code=?',
-                       (session['plant_id'], cal['session_code']))
+            sc = cal['session_code']
+            pid = session['plant_id']
+            # Cascade cleanup — atomic with calendar delete to avoid orphans.
+            # Safe because delete is blocked for Conducted sessions above; these
+            # downstream rows should normally be empty for non-Conducted ones.
+            db.execute('DELETE FROM session_qr WHERE plant_id=? AND session_code=?', (pid, sc))
+            db.execute('DELETE FROM emp_training WHERE plant_id=? AND session_code=?', (pid, sc))
+            db.execute('DELETE FROM effectiveness_review WHERE plant_id=? AND session_code=?', (pid, sc))
         db.execute('DELETE FROM calendar WHERE id=? AND plant_id=?', (cal_id, session['plant_id']))
         db.commit()
         log_record_change('RECORD_DELETE', cal_id, 'calendar',
@@ -215,6 +221,26 @@ def _register(app):
         if existing and existing['status'] == 'Conducted':
             flash('Conducted sessions cannot be edited.', 'danger')
             return redirect(url_for('training_calendar'))
+        # Defence-in-depth: block downgrade away from a post-conducted state
+        # (Conducted/Awaiting Verification) while pending effectiveness_review
+        # rows exist. Prevents orphan eff_review rows pointing at a session
+        # whose status no longer warrants them. SPOC must clear/handle via the
+        # verify_reject path (which cascades) before downgrading here.
+        new_status = f.get('status', 'To Be Planned')
+        if (existing and existing['status'] in ('Conducted', 'Awaiting Verification')
+                and new_status not in ('Conducted', 'Awaiting Verification')):
+            sc_chk = existing['session_code']
+            pending_eff = db.execute(
+                'SELECT COUNT(*) FROM effectiveness_review '
+                'WHERE plant_id=? AND session_code=? AND completed_date IS NULL',
+                (plant_id, sc_chk)).fetchone()[0]
+            if pending_eff > 0:
+                flash(
+                    f"Can't downgrade — {pending_eff} pending effectiveness review(s) "
+                    f"exist for {sc_chk}. Use Verify Sessions → Reject to cascade-clean, "
+                    f"or complete the reviews first.",
+                    'danger')
+                return redirect(url_for('training_calendar'))
         if f.get('status') == 'Conducted' and session.get('role') != 'admin':
             sc = existing['session_code'] if existing else None
             has_qr = sc and db.execute(
@@ -350,15 +376,26 @@ def _register(app):
             for i in range(0, len(ids), 900):
                 chunk = ids[i:i+900]
                 ph = ','.join('?' * len(chunk))
-                codes = db.execute(
-                    f'SELECT session_code FROM calendar WHERE id IN ({ph}) AND plant_id=? AND status != "Conducted"',
+                # Fetch rows eligible for delete (non-Conducted only) with full
+                # snapshot for per-record audit + session_code for cascade.
+                rows = db.execute(
+                    f'SELECT * FROM calendar WHERE id IN ({ph}) AND plant_id=? AND status != "Conducted"',
                     chunk + [plant_id]
                 ).fetchall()
-                for c in codes:
+                for r in rows:
+                    sc = r['session_code']
+                    # Cascade cleanup — atomic with calendar delete to avoid orphans.
                     db.execute('DELETE FROM session_qr WHERE plant_id=? AND session_code=?',
-                               (plant_id, c['session_code']))
-                db.execute(f'DELETE FROM calendar WHERE id IN ({ph}) AND plant_id=? AND status != "Conducted"', chunk + [plant_id])
-                deleted += len(chunk)
+                               (plant_id, sc))
+                    db.execute('DELETE FROM emp_training WHERE plant_id=? AND session_code=?',
+                               (plant_id, sc))
+                    db.execute('DELETE FROM effectiveness_review WHERE plant_id=? AND session_code=?',
+                               (plant_id, sc))
+                    db.execute('DELETE FROM calendar WHERE id=? AND plant_id=?',
+                               (r['id'], plant_id))
+                    log_record_change('RECORD_DELETE', r['id'], 'calendar',
+                                      before=dict(r), after=None)
+                    deleted += 1
             db.commit()
             log_action('BULK_DELETE', f"cal:{deleted}")
             flash(f'{deleted} calendar sessions deleted.', 'warning')

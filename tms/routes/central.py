@@ -1,13 +1,13 @@
 import io as _io
 import os as _os
-from flask import render_template, request, redirect, url_for, session, flash, jsonify
+from flask import render_template, request, redirect, url_for, session, flash, jsonify, abort
 
 from datetime import date as _date
 
 from tms.constants import PLANTS, PLANT_MAP, MONTHS_FY
 from tms.db import get_db
 from tms.decorators import central_required
-from tms.helpers import _calc_summary, _calc_totals, _calc_compliance, _current_fy
+from tms.helpers import _calc_summary, _calc_totals, _calc_compliance, _current_fy, _today_ist
 
 
 # --- SPOC error categorisation ---------------------------------------------
@@ -157,7 +157,23 @@ def _register(app):
             #   losers_<idx>: comma-separated master ids to merge in
             #   plant_<idx>: plant_id for this cluster
             plant_id = int(request.form.get('plant_id') or 0)
+            # SECURITY: validate plant_id against PLANT_MAP to prevent form-tampering
+            # cross-plant writes. Central/admin may touch any *real* plant, but never
+            # an arbitrary integer. Plant 99 (central) is not a real merge target.
+            session_role = session.get('role')
+            session_plant = session.get('plant_id')
+            def _plant_allowed(pid):
+                if not pid or pid == 99 or pid not in PLANT_MAP:
+                    return False
+                # central can touch any real plant; admin same; spoc would be blocked
+                # by @central_required already, but defence-in-depth:
+                if session_role == 'spoc' and session_plant and pid != session_plant:
+                    return False
+                return True
+            if plant_id and not _plant_allowed(plant_id):
+                abort(403, description='Invalid plant_id in request.')
             merged_clusters = 0
+            rejected_clusters = 0
             total_counts = {'tni': 0, 'calendar': 0, 'programme_details': 0, 'emp_training': 0,
                             'winner_renamed': 0, 'losers_deleted': 0}
             for key in request.form:
@@ -169,6 +185,9 @@ def _register(app):
                 canonical  = request.form.get(f'canonical_{idx}', '').strip()
                 cluster_pid = int(request.form.get(f'plant_{idx}') or plant_id or 0)
                 if not winner_id or not losers_raw or not canonical or not cluster_pid:
+                    continue
+                if not _plant_allowed(cluster_pid):
+                    rejected_clusters += 1
                     continue
                 loser_ids = [int(x) for x in losers_raw.split(',') if x.strip().isdigit()]
                 if not loser_ids:
@@ -188,6 +207,8 @@ def _register(app):
                     'success')
             else:
                 flash('No merges selected.', 'warning')
+            if rejected_clusters:
+                flash(f'Rejected {rejected_clusters} cluster(s) with invalid plant_id.', 'danger')
             return redirect(url_for('central_duplicates'))
 
         # GET — scan
@@ -317,7 +338,8 @@ def _register(app):
             best_unit = worst_unit = {'name': '—', 'cnt': 0}
 
         # KPI trend: this month vs avg of prior months in FY
-        today = _date.today()
+        # IST so month rollover matches user wall clock on Render (UTC host).
+        today = _today_ist()
         this_month_label = month_num_to_label.get(today.month, MONTHS_FY[0])
         this_month_cnt = sum(month_unit_matrix.get(this_month_label, {}).values())
         prior_months = [m for m in MONTHS_FY if m != this_month_label]
@@ -587,7 +609,9 @@ def _register(app):
             except ValueError:
                 return jsonify({'ok': False, 'error': 'month must be YYYY-MM'}), 400
         else:
-            today = _d.today()
+            # IST today; on Render (UTC) bare .today() flips at 18:30 UTC giving
+            # phantom month-end for cron triggered between 18:30 UTC + 00:00 IST.
+            today = _today_ist()
             # First day of CURRENT month, then subtract one day to get last day of previous month
             first_this = _d(today.year, today.month, 1)
             last_prev  = first_this - _td(days=1)

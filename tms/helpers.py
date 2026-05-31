@@ -66,8 +66,9 @@ def _safe_float(val):
 
 
 def _current_fy():
-    """Returns (fy_start, fy_end) as 'YYYY-MM-DD' strings for the current financial year (Apr–Mar)."""
-    today = date.today()
+    """Returns (fy_start, fy_end) as 'YYYY-MM-DD' strings for the current financial year (Apr–Mar).
+    Uses IST wall-clock — Render runs UTC and would roll the FY 5.5h early otherwise."""
+    today = _today_ist()
     yr = today.year if today.month >= 4 else today.year - 1
     return f'{yr}-04-01', f'{yr+1}-03-31'
 
@@ -85,9 +86,10 @@ def _in_current_fy(date_str):
 
 
 def _tni_is_locked():
-    """True if today is past March 31 of the current FY (TNI write window closed)."""
+    """True if today is past March 31 of the current FY (TNI write window closed).
+    Uses IST so the lock flips at IST midnight, not 18:30 IST (UTC midnight)."""
     _, fy_end = _current_fy()
-    return date.today() > date.fromisoformat(fy_end)
+    return _today_ist() > date.fromisoformat(fy_end)
 
 
 def _recompute_session_actuals(plant_id, session_code, db):
@@ -250,13 +252,15 @@ def _derive_audience(plant_id, prog_name, db):
 # ── Session code helpers ──────────────────────────────────────────────────────
 
 def _fy_label():
-    """Returns short FY label like '26-27' for use in session codes."""
-    today = date.today()
+    """Returns short FY label like '26-27' for use in session codes.
+    Uses IST so session-code FY rolls at IST midnight, not UTC midnight."""
+    today = _today_ist()
     y = today.year
     return f'{str(y-1)[2:]}-{str(y)[2:]}' if today.month < 4 else f'{str(y)[2:]}-{str(y+1)[2:]}'
 
 
 def _get_or_create_prog_code(plant_id, prog_name, prog_type, db):
+    # Atomic: reuse existing prog_code if the programme already has one.
     existing = db.execute(
         'SELECT prog_code FROM calendar WHERE plant_id=? AND programme_name=? LIMIT 1',
         (plant_id, prog_name)).fetchone()
@@ -264,18 +268,44 @@ def _get_or_create_prog_code(plant_id, prog_name, prog_type, db):
         return existing['prog_code']
     unit_code = PLANT_MAP[plant_id]['unit_code']
     abbrev    = TYPE_ABBREV.get(prog_type, 'GEN')
-    count     = db.execute(
-        "SELECT COUNT(DISTINCT prog_code) FROM calendar WHERE plant_id=? AND prog_code LIKE ?",
-        (plant_id, f'{unit_code}/{abbrev}/%')).fetchone()[0]
-    return f'{unit_code}/{abbrev}/{count+1:03d}'
+    prefix    = f'{unit_code}/{abbrev}/'
+    # Use MAX of the numeric suffix instead of COUNT(DISTINCT) — COUNT is racy
+    # when two workers insert concurrently (both see N, both pick N+1, collision).
+    # MAX+1 is also racy on its own, so caller wraps session_code creation in a
+    # retry loop guarded by the UNIQUE(session_code) constraint, which catches
+    # any duplicate prog_code attempt as a downstream session_code conflict.
+    row = db.execute(
+        "SELECT MAX(CAST(SUBSTR(prog_code, ?+1) AS INTEGER)) AS mx "
+        "FROM calendar WHERE plant_id=? AND prog_code LIKE ?",
+        (len(prefix), plant_id, f'{prefix}%')).fetchone()
+    nxt = (row['mx'] or 0) + 1
+    return f'{prefix}{nxt:03d}'
 
 
 def _new_session_code(plant_id, prog_code, db):
-    fy    = _fy_label()
-    count = db.execute(
-        'SELECT COUNT(*) FROM calendar WHERE plant_id=? AND prog_code=? AND session_code LIKE ?',
-        (plant_id, prog_code, f'{prog_code}/{fy}/%')).fetchone()[0]
-    return f'{prog_code}/{fy}/B{count+1:02d}'
+    """Generate next session_code for (plant_id, prog_code) in current FY.
+    Uses MAX(suffix)+1; if two workers race, the UNIQUE(session_code) constraint
+    on calendar will reject one — caller must retry. We probe with a few attempts
+    here so most callers don't need their own loop."""
+    import sqlite3
+    fy     = _fy_label()
+    prefix = f'{prog_code}/{fy}/B'
+    for attempt in range(5):
+        row = db.execute(
+            "SELECT MAX(CAST(SUBSTR(session_code, ?+1) AS INTEGER)) AS mx "
+            "FROM calendar WHERE plant_id=? AND prog_code=? AND session_code LIKE ?",
+            (len(prefix), plant_id, prog_code, f'{prefix}%')).fetchone()
+        nxt  = (row['mx'] or 0) + 1 + attempt   # bump on retry to dodge races
+        code = f'{prefix}{nxt:02d}'
+        # Pre-check uniqueness inside same txn — cheap guard; UNIQUE constraint
+        # on calendar.session_code is the final authority.
+        clash = db.execute(
+            'SELECT 1 FROM calendar WHERE session_code=? LIMIT 1', (code,)).fetchone()
+        if not clash:
+            return code
+    # Last-resort: include microsecond to guarantee uniqueness rather than crash.
+    from datetime import datetime
+    return f'{prefix}{(row["mx"] or 0)+1:02d}X{datetime.utcnow().strftime("%f")}'
 
 
 # ── Calendar sync ─────────────────────────────────────────────────────────────

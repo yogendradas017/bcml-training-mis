@@ -84,22 +84,38 @@ def log_action(action, detail='', user_id=None, username=None, plant_id=None,
                 payload_json_str = None
                 payload_hash = ''
 
-        # Tamper-evident chain: link to previous row's hash
-        last = db.execute(
-            'SELECT row_hash FROM audit_log ORDER BY id DESC LIMIT 1'
-        ).fetchone()
-        prev_hash = (last['row_hash'] if last and last['row_hash'] else _GENESIS)
-        row_hash  = _compute_row_hash(prev_hash, ts, uid, uname, pid, action, det, ip,
-                                       payload_hash)
+        # Tamper-evident chain: link to previous row's hash.
+        # Use BEGIN IMMEDIATE to take a RESERVED lock before reading the tail,
+        # so concurrent writers serialise and no two rows ever compute against
+        # the same prev_hash (which would invalidate the chain).
+        try:
+            db.execute('BEGIN IMMEDIATE')
+        except Exception:
+            # Already in a transaction (autocommit off + pending stmt) — proceed;
+            # SQLite will still serialise the upcoming write.
+            pass
+        try:
+            last = db.execute(
+                'SELECT row_hash FROM audit_log ORDER BY id DESC LIMIT 1'
+            ).fetchone()
+            prev_hash = (last['row_hash'] if last and last['row_hash'] else _GENESIS)
+            row_hash  = _compute_row_hash(prev_hash, ts, uid, uname, pid, action, det, ip,
+                                           payload_hash)
 
-        db.execute(
-            'INSERT INTO audit_log(ts,user_id,username,plant_id,action,detail,ip_address,'
-            'prev_hash,row_hash,payload_json,payload_hash)'
-            ' VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-            (ts, uid, uname, pid, action, det, ip,
-             prev_hash, row_hash, payload_json_str, payload_hash)
-        )
-        db.commit()
+            db.execute(
+                'INSERT INTO audit_log(ts,user_id,username,plant_id,action,detail,ip_address,'
+                'prev_hash,row_hash,payload_json,payload_hash)'
+                ' VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                (ts, uid, uname, pid, action, det, ip,
+                 prev_hash, row_hash, payload_json_str, payload_hash)
+            )
+            db.commit()
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            raise
     except Exception as e:
         logging.warning(f'audit_log write failed: {e}')
         try:

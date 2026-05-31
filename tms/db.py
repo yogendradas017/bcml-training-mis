@@ -24,6 +24,7 @@ def _ensure_indexes(db):
         CREATE INDEX IF NOT EXISTS idx_tni_prog ON tni(plant_id, programme_name);
         CREATE INDEX IF NOT EXISTS idx_et_lookup ON emp_training(plant_id, emp_code, programme_name);
         CREATE INDEX IF NOT EXISTS idx_et_plant_date ON emp_training(plant_id, start_date);
+        CREATE INDEX IF NOT EXISTS idx_et_session ON emp_training(plant_id, session_code);
         CREATE INDEX IF NOT EXISTS idx_cal_plant_plan ON calendar(plant_id, plan_start);
     ''')
     db.commit()
@@ -178,7 +179,7 @@ def _ensure_qr_tables(db):
             created_at TEXT DEFAULT (datetime('now','localtime')),
             expires_at TEXT,
             is_active INTEGER DEFAULT 1,
-            created_by INTEGER
+            created_by INTEGER REFERENCES users(id) ON DELETE SET NULL
         );
         CREATE TABLE IF NOT EXISTS feedback_response (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -555,6 +556,48 @@ def _migrate_verification_log(db):
         logging.warning(f'_migrate_verification_log failed: {e}')
 
 
+def _migrate_session_qr_fk(db):
+    """Rebuild session_qr if created_by FK lacks ON DELETE SET NULL — prevents orphan QR rows."""
+    import logging
+    try:
+        row = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='session_qr'").fetchone()
+        if not row or not row[0]:
+            return
+        ddl = row[0]
+        if 'ON DELETE SET NULL' in ddl.upper() or 'ON DELETE CASCADE' in ddl.upper():
+            return
+        # Idempotency guard: drop any orphaned __new table from a previously crashed run
+        # before recreating it, otherwise the CREATE below fails with "table already exists".
+        orphan = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='session_qr__new'").fetchone()
+        if orphan:
+            db.executescript('DROP TABLE IF EXISTS session_qr__new;')
+        db.executescript('''
+            PRAGMA foreign_keys=OFF;
+            BEGIN;
+            CREATE TABLE session_qr__new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_id INTEGER NOT NULL REFERENCES plants(id),
+                session_code TEXT NOT NULL,
+                token TEXT NOT NULL UNIQUE,
+                stage TEXT NOT NULL DEFAULT 'attendance' CHECK(stage IN ('attendance','feedback')),
+                created_at TEXT,
+                expires_at TEXT,
+                is_active INTEGER DEFAULT 1,
+                created_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+            );
+            INSERT INTO session_qr__new (id, plant_id, session_code, token, stage, created_at, expires_at, is_active, created_by)
+                SELECT id, plant_id, session_code, token, stage, created_at, expires_at, is_active, created_by FROM session_qr;
+            DROP TABLE session_qr;
+            ALTER TABLE session_qr__new RENAME TO session_qr;
+            CREATE INDEX IF NOT EXISTS idx_qr_token   ON session_qr(token);
+            CREATE INDEX IF NOT EXISTS idx_qr_session ON session_qr(plant_id, session_code);
+            COMMIT;
+            PRAGMA foreign_keys=ON;
+        ''')
+    except Exception as e:
+        logging.warning(f'_migrate_session_qr_fk failed: {e}')
+
+
 def _migrate_spoc_requests(db):
     import logging
     try:
@@ -595,6 +638,7 @@ def init_db():
     _migrate_programme_master_source(db)
     _migrate_emp_training_dedup(db)
     _ensure_qr_tables(db)
+    _migrate_session_qr_fk(db)
     _migrate_session_pin(db)
     _migrate_central_plant(db)
     _migrate_calendar_is_central(db)

@@ -10,7 +10,7 @@ from tms.helpers import (
     _is_ajax, _smart_title, _prog_in_use, _canonical_prog,
     _read_upload_file, _clean, _safe_float, _error_excel_response,
     _sync_master_from_tni, _current_fy, _in_current_fy, _parse_date_strict,
-    _validate_time_vs_duration,
+    _validate_time_vs_duration, _today_ist,
 )
 
 import openpyxl
@@ -139,14 +139,39 @@ def _register(app):
         if category not in ('Specialized', 'General'):
             return jsonify({'ok': False, 'error': 'Invalid category'}), 400
         db = get_db()
-        row = db.execute('SELECT id FROM programme_master WHERE id=? AND plant_id=?',
+        row = db.execute('SELECT id, name, category FROM programme_master WHERE id=? AND plant_id=?',
                          (prog_id, plant_id)).fetchone()
         if not row:
             return jsonify({'ok': False, 'error': 'Not found'}), 404
+        old_category = row['category']
+        # Block Specialized → General demotion if effectiveness_review rows
+        # have already been auto-seeded for sessions of this programme.
+        # Demoting would orphan those rows (review queue still shows them,
+        # but the programme is no longer Specialized — inconsistent state).
+        if old_category == 'Specialized' and category == 'General':
+            orphan_count = db.execute('''
+                SELECT COUNT(*) FROM effectiveness_review er
+                WHERE er.plant_id=?
+                  AND er.session_code IN (
+                      SELECT session_code FROM calendar
+                       WHERE plant_id=? AND programme_name=?
+                      UNION
+                      SELECT session_code FROM programme_details
+                       WHERE plant_id=? AND programme_name=?
+                  )
+            ''', (plant_id, plant_id, row['name'], plant_id, row['name'])).fetchone()[0]
+            if orphan_count:
+                return jsonify({
+                    'ok': False,
+                    'error': f'Cannot demote to General — {orphan_count} effectiveness review row(s) already exist for this programme. Complete or remove those reviews first.'
+                }), 409
         db.execute('UPDATE programme_master SET category=? WHERE id=? AND plant_id=?',
                    (category, prog_id, plant_id))
         db.commit()
-        log_action('RECORD_EDIT', f"pm_category:{prog_id}:{category}")
+        log_record_change('RECORD_EDIT', prog_id, 'programme_master',
+                          before={'category': old_category},
+                          after={'category': category},
+                          plant_id=plant_id)
         return jsonify({'ok': True, 'category': category})
 
     @app.route('/programme-master/bulk-delete', methods=['POST'])
@@ -341,14 +366,22 @@ def _register(app):
             SELECT p.*,
                    c.source as cal_source,
                    COALESCE(c.category, pm.category, 'General') as category,
-                   (SELECT COUNT(*) FROM emp_training t WHERE t.session_code=p.session_code AND t.plant_id=p.plant_id) as participants,
-                   (SELECT COALESCE(SUM(t.hrs),0) FROM emp_training t WHERE t.session_code=p.session_code AND t.plant_id=p.plant_id) as man_hours
+                   COALESCE(agg.participants, 0) as participants,
+                   COALESCE(agg.man_hours, 0)   as man_hours
             FROM programme_details p
             LEFT JOIN calendar c ON c.session_code=p.session_code AND c.plant_id=p.plant_id
             LEFT JOIN programme_master pm ON pm.plant_id=p.plant_id AND LOWER(pm.name)=LOWER(p.programme_name)
+            LEFT JOIN (
+                SELECT session_code, plant_id,
+                       COUNT(*) as participants,
+                       COALESCE(SUM(hrs),0) as man_hours
+                FROM emp_training
+                WHERE plant_id=?
+                GROUP BY session_code, plant_id
+            ) agg ON agg.session_code=p.session_code AND agg.plant_id=p.plant_id
             WHERE p.plant_id=?
             ORDER BY p.id DESC
-        ''', (plant_id,)).fetchall()
+        ''', (plant_id, plant_id)).fetchall()
 
         # Central 2C rows where this plant's employees attended — read-only
         central_records = db.execute('''
@@ -405,8 +438,8 @@ def _register(app):
             return redirect(url_for('programme_details'))
 
         # GAP 2 (time gate): 2C cannot be entered before plan_end
-        from datetime import date as _d
-        today_iso = _d.today().isoformat()
+        # _today_ist used so Render (UTC host) matches IST wall clock.
+        today_iso = _today_ist().isoformat()
         if cal['plan_end'] and today_iso < cal['plan_end']:
             flash(f'Session not yet ended. 2C can be entered from {cal["plan_end"]} onwards.', 'danger')
             return redirect(url_for('programme_details'))
@@ -589,7 +622,31 @@ def _register(app):
         rec = db.execute('SELECT * FROM programme_details WHERE id=? AND plant_id=?',
                          (rec_id, session['plant_id'])).fetchone()
         if rec:
+            # Block delete if downstream effectiveness reviews are already filed.
+            filed = db.execute(
+                'SELECT COUNT(*) AS n FROM effectiveness_review '
+                'WHERE plant_id=? AND session_code=? AND completed_date IS NOT NULL',
+                (session['plant_id'], rec['session_code'])).fetchone()
+            if filed and filed['n']:
+                msg = (f'Cannot delete {rec["session_code"]}: '
+                       f'{filed["n"]} effectiveness review(s) already filed. '
+                       f'Remove/withdraw the filed reviews first.')
+                if _is_ajax():
+                    return msg, 409
+                flash(msg, 'danger')
+                return redirect(url_for('programme_details'))
+
             before_snap_dict = dict(rec)
+            # Cascade-cleanup unfiled effectiveness stubs atomically with the revert.
+            eff_stubs = db.execute(
+                'SELECT * FROM effectiveness_review '
+                'WHERE plant_id=? AND session_code=? AND completed_date IS NULL',
+                (session['plant_id'], rec['session_code'])).fetchall()
+            eff_before = [dict(r) for r in eff_stubs]
+            db.execute(
+                'DELETE FROM effectiveness_review '
+                'WHERE plant_id=? AND session_code=? AND completed_date IS NULL',
+                (session['plant_id'], rec['session_code']))
             db.execute('DELETE FROM programme_details WHERE id=? AND plant_id=?', (rec_id, session['plant_id']))
             db.execute(
                 "UPDATE calendar SET status='To Be Planned', conducted_at=NULL, conducted_by=NULL, "
@@ -601,10 +658,15 @@ def _register(app):
                 'VALUES (?,?,?,?,?,?)',
                 (rec['session_code'], session['plant_id'], '2c_deleted',
                  session.get('username', ''), session.get('user_id'),
-                 'Reverted to To Be Planned'))
+                 f'Reverted to To Be Planned; purged {len(eff_before)} unfiled effectiveness stub(s)'))
             db.commit()
             log_record_change('RECORD_DELETE', rec_id, 'programme_details',
-                              before=before_snap_dict, after=None)
+                              before=before_snap_dict, after=None,
+                              extra_detail=f'cascaded {len(eff_before)} effectiveness stub(s)')
+            for eb in eff_before:
+                log_record_change('RECORD_DELETE', eb.get('id'), 'effectiveness_review',
+                                  before=eb, after=None,
+                                  extra_detail=f'cascade from 2C delete {rec["session_code"]}')
         if _is_ajax():
             return '', 204
         flash('Programme record deleted.', 'warning')
@@ -717,9 +779,8 @@ def _register(app):
                 errors.append(f'Row {i+2}: Start date {start_date} is outside current FY ({fy_s} to {fy_e}).')
                 continue
 
-            # GAP 2 (time gate): 2C cannot be entered before plan_end
-            from datetime import date as _d
-            today_iso = _d.today().isoformat()
+            # GAP 2 (time gate): 2C cannot be entered before plan_end (IST)
+            today_iso = _today_ist().isoformat()
             if cal['plan_end'] and today_iso < cal['plan_end']:
                 errors.append(f'Row {i+2}: Session {sc} not yet ended (plan_end {cal["plan_end"]}). 2C cannot be saved before session ends.')
                 continue

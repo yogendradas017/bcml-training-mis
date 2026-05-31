@@ -9,7 +9,7 @@ from tms.helpers import (
     _canonical_prog, _current_fy, _in_current_fy,
     validate_calendar_row, flash_validation,
 )
-from tms.audit import log_action
+from tms.audit import log_action, log_record_change
 
 
 def _register(app):
@@ -282,17 +282,30 @@ def _register(app):
         if request.method == 'GET':
             return redirect(url_for('central_calendar'))
         db = get_db()
-        cal = db.execute('SELECT session_code, status FROM calendar WHERE id=? AND plant_id=?',
+        cal = db.execute('SELECT * FROM calendar WHERE id=? AND plant_id=?',
                          (cal_id, CENTRAL_PLANT_ID)).fetchone()
         if not cal:
             flash('Session not found.', 'danger')
             return redirect(url_for('central_calendar'))
+        if cal['status'] == 'Conducted':
+            flash('Conducted sessions cannot be deleted.', 'danger')
+            return redirect(url_for('central_calendar'))
+        before_snap_dict = dict(cal)
+        sc = cal['session_code']
+        # Cascade cleanup — atomic with calendar delete to avoid orphans.
+        # Mirrors plant-side delete_calendar pattern; safe because Conducted is blocked above.
         db.execute('DELETE FROM session_qr WHERE plant_id=? AND session_code=?',
-                   (CENTRAL_PLANT_ID, cal['session_code']))
+                   (CENTRAL_PLANT_ID, sc))
+        db.execute('DELETE FROM emp_training WHERE plant_id=? AND session_code=?',
+                   (CENTRAL_PLANT_ID, sc))
+        db.execute('DELETE FROM effectiveness_review WHERE plant_id=? AND session_code=?',
+                   (CENTRAL_PLANT_ID, sc))
         db.execute('DELETE FROM calendar WHERE id=? AND plant_id=?',
                    (cal_id, CENTRAL_PLANT_ID))
         db.commit()
-        log_action('RECORD_DELETE', f"central_cal:{cal['session_code']}")
+        log_record_change('RECORD_DELETE', cal_id, 'calendar',
+                          before=before_snap_dict, after=None,
+                          extra_detail=f'central_cal:{sc}')
         flash('Session deleted.', 'warning')
         return redirect(url_for('central_calendar'))
 
