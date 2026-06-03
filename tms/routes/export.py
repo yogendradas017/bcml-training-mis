@@ -6,6 +6,7 @@ from tms.constants import PLANT_MAP, PLANTS, MONTHS_FY
 from tms.db import get_db
 from tms.decorators import login_required, central_required
 from tms.helpers import _fy_label, _current_fy
+from tms.config import get_config
 
 import openpyxl
 from openpyxl.cell import WriteOnlyCell
@@ -294,8 +295,8 @@ def _register(app):
                 mh       = _mh.get(pid, 0)
                 bc_hrs   = _bc_hrs.get(pid, 0)
                 wc_hrs   = _wc_hrs.get(pid, 0)
-                bc_mandate = bc * 12
-                wc_mandate = wc * 24
+                bc_mandate = bc * get_config('mh_target_bc', 12, plant_id=pid)
+                wc_mandate = wc * get_config('mh_target_wc', 24, plant_id=pid)
                 bc_pct = round(bc_hrs / bc_mandate * 100, 1) if bc_mandate else 0
                 wc_pct = round(wc_hrs / wc_mandate * 100, 1) if wc_mandate else 0
                 ws.append([p['name'], p['unit_code'], bc, wc, bc + wc,

@@ -327,3 +327,23 @@ CREATE TABLE IF NOT EXISTS tni_upload_errors (
 );
 CREATE INDEX IF NOT EXISTS idx_tue_ts    ON tni_upload_errors(ts);
 CREATE INDEX IF NOT EXISTS idx_tue_plant ON tni_upload_errors(plant_id, ts);
+
+-- Tenant configuration (scoped: global default + optional per-plant override).
+-- SQLite rejects expressions in inline UNIQUE constraints, so the uniqueness
+-- on COALESCE(plant_id,-1) lives on a UNIQUE INDEX. The UPSERT ON CONFLICT
+-- target in tms/config.py resolves to this index.
+CREATE TABLE IF NOT EXISTS org_config (
+    scope       TEXT    NOT NULL CHECK(scope IN ('global','plant')),
+    plant_id    INTEGER,
+    key         TEXT    NOT NULL,
+    value       TEXT    NOT NULL,
+    value_type  TEXT    NOT NULL DEFAULT 'string'
+                CHECK(value_type IN ('string','int','float','bool','json')),
+    label       TEXT    DEFAULT '',
+    category    TEXT    DEFAULT 'general',
+    updated_at  TEXT,
+    updated_by  TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_org_config_scope_plant_key
+    ON org_config(scope, COALESCE(plant_id,-1), key);
+CREATE INDEX IF NOT EXISTS idx_org_config_key ON org_config(key, scope);

@@ -24,8 +24,8 @@
 {# ── Compliance cards ── #}
 <div class="row g-3 mb-4">
   {% set cards = [
-    ('Blue Collar', compliance.bc_pct, compliance.bc_actual, compliance.bc_mandate, compliance.bc_emp, 12, '#3b82f6', '#1d4ed8'),
-    ('White Collar', compliance.wc_pct, compliance.wc_actual, compliance.wc_mandate, compliance.wc_emp, 24, '#10b981', '#065f46'),
+    ('Blue Collar', compliance.bc_pct, compliance.bc_actual, compliance.bc_mandate, compliance.bc_emp, mh_target_bc, '#3b82f6', '#1d4ed8'),
+    ('White Collar', compliance.wc_pct, compliance.wc_actual, compliance.wc_mandate, compliance.wc_emp, mh_target_wc, '#10b981', '#065f46'),
     ('Overall', compliance.total_pct, compliance.bc_actual + compliance.wc_actual, compliance.bc_mandate + compliance.wc_mandate, compliance.bc_emp + compliance.wc_emp, '—', '#1a7a3c', '#1e4c7a'),
   ] %}
   {% for label, pct, actual, mandate, emp, hrs, c1, c2 in cards %}

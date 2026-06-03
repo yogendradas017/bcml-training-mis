@@ -512,6 +512,45 @@ def _migrate_category_and_effectiveness(db):
         logging.warning(f'_migrate_category_and_effectiveness failed: {e}')
 
 
+def _migrate_org_config(db):
+    """Idempotent: scoped tenant configuration table + seed global defaults.
+    The CREATE statements must succeed (table is required) so we raise on
+    schema failure; only per-row seed errors are swallowed."""
+    import logging
+    db.executescript('''
+        CREATE TABLE IF NOT EXISTS org_config (
+            scope       TEXT    NOT NULL CHECK(scope IN ('global','plant')),
+            plant_id    INTEGER,
+            key         TEXT    NOT NULL,
+            value       TEXT    NOT NULL,
+            value_type  TEXT    NOT NULL DEFAULT 'string'
+                        CHECK(value_type IN ('string','int','float','bool','json')),
+            label       TEXT    DEFAULT '',
+            category    TEXT    DEFAULT 'general',
+            updated_at  TEXT,
+            updated_by  TEXT
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ux_org_config_scope_plant_key
+            ON org_config(scope, COALESCE(plant_id,-1), key);
+        CREATE INDEX IF NOT EXISTS idx_org_config_key ON org_config(key, scope);
+    ''')
+    try:
+        from tms.config import CONFIG_DEFAULTS
+        db.execute('BEGIN IMMEDIATE')
+        for key, default, vtype, label, cat in CONFIG_DEFAULTS:
+            db.execute(
+                "INSERT OR IGNORE INTO org_config(scope, plant_id, key, value, value_type, label, category) "
+                "VALUES('global', NULL, ?, ?, ?, ?, ?)",
+                (key, default, vtype, label, cat)
+            )
+        db.commit()
+        logging.info('org_config seeded %d default(s)', len(CONFIG_DEFAULTS))
+    except Exception:
+        try: db.rollback()
+        except Exception: pass
+        logging.exception('org_config seed failed (table exists, defaults skipped)')
+
+
 def _migrate_calendar_verification(db):
     """Add verification audit columns to calendar table."""
     import logging
@@ -655,6 +694,7 @@ def init_db():
     _migrate_anomaly_flags(db)
     _migrate_session_time(db)
     _migrate_category_and_effectiveness(db)
+    _migrate_org_config(db)
     for p in PLANTS:
         db.execute('INSERT OR IGNORE INTO plants(id,name,unit_code) VALUES(?,?,?)',
                    (p['id'], p['name'], p['unit_code']))

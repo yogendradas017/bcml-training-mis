@@ -154,7 +154,7 @@
               <text x="60" y="70" text-anchor="middle" font-size="9" fill="#6e6e73" font-family="Inter,system-ui,sans-serif">%</text>
             </svg>
             <div class="gauge-lbl">Blue Collar</div>
-            <div class="gauge-sub">Target {{ stats.blue_collar }} × 12 = {{ (stats.blue_collar * 12)|int }} hrs</div>
+            <div class="gauge-sub">Target {{ stats.blue_collar }} × {{ mh_target_bc }} = {{ (stats.blue_collar * mh_target_bc)|int }} hrs</div>
             <div class="gauge-abs" id="gauge-bc-abs">— / — hrs</div>
             <div class="gauge-hint"><i class="bi bi-zoom-in"></i> Drill down</div>
           </div>
@@ -171,7 +171,7 @@
               <text x="60" y="70" text-anchor="middle" font-size="9" fill="#6e6e73" font-family="Inter,system-ui,sans-serif">%</text>
             </svg>
             <div class="gauge-lbl">White Collar</div>
-            <div class="gauge-sub">Target {{ stats.white_collar }} × 24 = {{ (stats.white_collar * 24)|int }} hrs</div>
+            <div class="gauge-sub">Target {{ stats.white_collar }} × {{ mh_target_wc }} = {{ (stats.white_collar * mh_target_wc)|int }} hrs</div>
             <div class="gauge-abs" id="gauge-wc-abs">— / — hrs</div>
             <div class="gauge-hint"><i class="bi bi-zoom-in"></i> Drill down</div>
           </div>
@@ -188,13 +188,13 @@
               <text x="60" y="70" text-anchor="middle" font-size="9" fill="#6e6e73" font-family="Inter,system-ui,sans-serif">%</text>
             </svg>
             <div class="gauge-lbl">Overall</div>
-            <div class="gauge-sub">Target {{ (stats.blue_collar * 12 + stats.white_collar * 24)|int }} hrs total</div>
+            <div class="gauge-sub">Target {{ (stats.blue_collar * mh_target_bc + stats.white_collar * mh_target_wc)|int }} hrs total</div>
             <div class="gauge-abs" id="gauge-ov-abs">— / — hrs</div>
             <div class="gauge-hint"><i class="bi bi-zoom-in"></i> Drill down</div>
           </div>
         </div>
       </div>
-      <div class="gauge-foot">Manhour compliance · BC: 12 hrs/yr · WC: 24 hrs/yr · <i class="bi bi-hand-index-thumb-fill" style="color:var(--c-primary);"></i> Click any gauge to explore employee data</div>
+      <div class="gauge-foot">Manhour compliance · BC: {{ mh_target_bc }} hrs/yr · WC: {{ mh_target_wc }} hrs/yr · <i class="bi bi-hand-index-thumb-fill" style="color:var(--c-primary);"></i> Click any gauge to explore employee data</div>
     </div>
   </div>
 
@@ -245,7 +245,7 @@
       {%- set pct = (row.cnt / total * 100)|round(1) -%}
       {%- set progs = tni_drill.get(row.prog_type, []) -%}
       <div class="col-12 col-sm-6 col-lg-4">
-        <div class="tni-type-card" onclick="toggleTniDrill(this)" style="background:#f9fafb;border-radius:10px;padding:10px 14px;border-left:4px solid {{ clr }};cursor:pointer;user-select:none;">
+        <div class="tni-type-card" role="button" tabindex="0" aria-expanded="false" aria-controls="tni-drill-{{ loop.index }}" onclick="toggleTniDrill(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTniDrill(this);}" style="background:#f9fafb;border-radius:10px;padding:10px 14px;border-left:4px solid {{ clr }};cursor:pointer;user-select:none;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <span style="font-size:12px;font-weight:600;color:#111827;">{{ row.prog_type }}</span>
             <div style="display:flex;align-items:center;gap:8px;">
@@ -258,16 +258,24 @@
           </div>
           <div style="font-size:10.5px;color:#6b7280;margin-top:4px;">{{ pct }}% of total TNI &nbsp;·&nbsp; {{ progs|length }} programme{{ 's' if progs|length != 1 }}</div>
         </div>
-        <div class="tni-drill-panel" style="display:none;background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:4px 14px 8px;margin-top:-4px;max-height:220px;overflow-y:auto;">
-          <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;padding:6px 0 4px;border-bottom:1px solid #f3f4f6;margin-bottom:2px;">TNI — {{ row.prog_type }}</div>
+        <div id="tni-drill-{{ loop.index }}" class="tni-drill-panel" style="display:none;background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:4px 14px 8px;margin-top:-4px;max-height:260px;overflow-y:auto;">
+          <div class="tni-drill-head" style="position:sticky;top:0;background:#fff;padding:6px 0 4px;border-bottom:1px solid #f3f4f6;z-index:1;">
+            <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">TNI — {{ row.prog_type }}</div>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text" style="background:#f3f4f6;border-right:0;padding:2px 8px;"><i class="bi bi-search" style="font-size:11px;"></i></span>
+              <input type="text" class="form-control tni-drill-q" aria-label="Filter {{ row.prog_type }} programmes" placeholder="Filter programmes…" oninput="tniDrillFilter(this)" style="border-left:0;font-size:11.5px;padding:2px 8px;">
+            </div>
+            <div class="tni-drill-count visually-hidden" aria-live="polite"></div>
+          </div>
           {% for prog_name, emp_cnt in progs %}
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #f9fafb;font-size:11.5px;">
+          <div class="tni-drill-row" data-name="{{ prog_name|lower }}" style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #f9fafb;font-size:11.5px;">
             <span style="color:#374151;flex:1;padding-right:8px;">{{ prog_name }}</span>
             <span style="font-weight:700;color:{{ clr }};white-space:nowrap;">{{ emp_cnt }} nominated</span>
           </div>
           {% else %}
           <div style="font-size:11.5px;color:#9ca3af;padding:8px 0;">No data</div>
           {% endfor %}
+          <div class="tni-drill-empty" hidden style="font-size:11.5px;color:#9ca3af;padding:12px 0;text-align:center;"><i class="bi bi-search" style="opacity:.5;"></i> No programmes match</div>
         </div>
       </div>
       {% endfor %}
@@ -280,13 +288,16 @@
 <div class="section-hd">Quick Actions</div>
 <div class="row g-3">
   {% set modules = [
-    ('employees',         'bi-people-fill',         'linear-gradient(135deg,#2e6da4,#2e6da4)', 'Employee Master',       'Add joiners, mark exits, view active employees'),
+    ('employees',         'bi-people-fill',          'linear-gradient(135deg,#2e6da4,#2e6da4)', 'Employee Master',       'Add joiners, mark exits, view active employees'),
     ('tni',               'bi-clipboard-check-fill', 'linear-gradient(135deg,#d97706,#f59e0b)', 'TNI Tracking',          'Record training needs for each employee'),
     ('training_calendar', 'bi-calendar3',            'linear-gradient(135deg,#0891b2,#06b6d4)', 'Training Calendar',     'Plan sessions, track Plan vs Actual'),
     ('emp_training',      'bi-person-check-fill',    'linear-gradient(135deg,#059669,#10b981)', 'Training Records (2A)', 'Log who attended which training programme'),
     ('programme_details', 'bi-journal-richtext',     'linear-gradient(135deg,#1a5a8e,#2e6da4)', 'Programme Details (2C)','Faculty, feedback, cost per programme'),
-    ('monthly_summary',   'bi-bar-chart-fill',       'linear-gradient(135deg,#e11d48,#f43f5e)', 'Monthly Summary',       'Auto-calculated MIS by programme type'),
   ] %}
+  {% if session.role in ('spoc','admin') and session.plant_id %}
+    {% set modules = modules + [('effectiveness', 'bi-clipboard-pulse', 'linear-gradient(135deg,#7c3aed,#a855f7)', 'Effectiveness Review', 'Post-training impact: file Kirkpatrick L2/L3 scores')] %}
+  {% endif %}
+  {% set modules = modules + [('monthly_summary', 'bi-bar-chart-fill', 'linear-gradient(135deg,#e11d48,#f43f5e)', 'Monthly Summary', 'Auto-calculated MIS by programme type')] %}
   {% for endpoint, icon, grad, title, desc in modules %}
   <div class="col-12 col-md-6 col-lg-4">
     <a href="{{ url_for(endpoint) }}" class="text-decoration-none">
@@ -429,13 +440,42 @@ function toggleSessDrill() {
 function toggleTniDrill(card) {
   var panel = card.nextElementSibling;
   var icon  = card.querySelector('.tni-chevron');
-  var open  = panel.style.display !== 'none';
-  document.querySelectorAll('.tni-drill-panel').forEach(function(p){ p.style.display='none'; });
-  document.querySelectorAll('.tni-chevron').forEach(function(i){ i.style.transform=''; });
+  var open  = panel.style.display === 'block';
+  document.querySelectorAll('.tni-drill-panel').forEach(function(p){
+    p.style.display = 'none';
+    var q = p.querySelector('.tni-drill-q'); if (q) q.value = '';
+    p.querySelectorAll('.tni-drill-row').forEach(function(r){ r.hidden = false; });
+    var e = p.querySelector('.tni-drill-empty'); if (e) e.hidden = true;
+  });
+  document.querySelectorAll('.tni-type-card').forEach(function(c){
+    c.setAttribute('aria-expanded', 'false');
+    var i = c.querySelector('.tni-chevron'); if (i) i.style.transform = '';
+  });
   if (!open) {
     panel.style.display = 'block';
-    icon.style.transform = 'rotate(180deg)';
+    card.setAttribute('aria-expanded', 'true');
+    if (icon) icon.style.transform = 'rotate(180deg)';
+    var q = panel.querySelector('.tni-drill-q'); if (q) setTimeout(function(){ q.focus(); }, 30);
   }
+}
+var _tniDebounce = null;
+function tniDrillFilter(input) {
+  clearTimeout(_tniDebounce);
+  _tniDebounce = setTimeout(function(){
+    var panel = input.closest('.tni-drill-panel');
+    var q = input.value.trim().toLowerCase();
+    var rows = panel.querySelectorAll('.tni-drill-row');
+    var shown = 0;
+    rows.forEach(function(r){
+      var match = !q || (r.dataset.name || '').indexOf(q) !== -1;
+      r.hidden = !match;
+      if (match) shown++;
+    });
+    var empty = panel.querySelector('.tni-drill-empty');
+    if (empty) empty.hidden = (shown !== 0) || rows.length === 0;
+    var counter = panel.querySelector('.tni-drill-count');
+    if (counter) counter.textContent = shown + ' of ' + rows.length + ' shown';
+  }, 200);
 }
 </script>
 <script>

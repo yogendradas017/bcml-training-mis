@@ -153,6 +153,9 @@
     <li><a href="{{ url_for('admin_backup_restore') }}" class="{% if request.endpoint in ('admin_backup_restore','admin_backup_download') %}active{% endif %}" style="color:#fbbf24;">
       <i class="bi bi-database-fill-down"></i> Backup &amp; Restore
     </a></li>
+    <li><a href="{{ url_for('admin_settings') }}" class="{% if request.endpoint and request.endpoint.startswith('admin_settings') %}active{% endif %}" style="color:#fbbf24;">
+      <i class="bi bi-sliders"></i> Organisation Settings
+    </a></li>
     {% endif %}
   </ul>
   {% endif %}

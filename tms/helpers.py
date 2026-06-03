@@ -591,8 +591,11 @@ def _calc_compliance(plant_id, db):
         WHERE t.plant_id=? AND e.collar='White Collared'
           AND t.start_date BETWEEN ? AND ?''',
         (plant_id, fy_start, fy_end)).fetchone()[0]
-    bc_mandate = bc * 12
-    wc_mandate = wc * 24
+    from tms.config import get_config
+    bc_target = get_config('mh_target_bc', 12, plant_id=plant_id)
+    wc_target = get_config('mh_target_wc', 24, plant_id=plant_id)
+    bc_mandate = bc * bc_target
+    wc_mandate = wc * wc_target
     return {
         'bc_emp': bc, 'wc_emp': wc,
         'bc_mandate': bc_mandate, 'wc_mandate': wc_mandate,

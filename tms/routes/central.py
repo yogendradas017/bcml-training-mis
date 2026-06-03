@@ -8,6 +8,7 @@ from tms.constants import PLANTS, PLANT_MAP, MONTHS_FY
 from tms.db import get_db
 from tms.decorators import central_required
 from tms.helpers import _calc_summary, _calc_totals, _calc_compliance, _current_fy, _today_ist
+from tms.config import get_config
 
 
 # --- SPOC error categorisation ---------------------------------------------
@@ -108,8 +109,8 @@ def _register(app):
             manhours = mh_all.get(pid, 0)
             bc_hrs   = mh_bc.get(pid, 0)
             wc_hrs   = mh_wc.get(pid, 0)
-            bc_mandate = bc * 12
-            wc_mandate = wc * 24
+            bc_mandate = bc * get_config('mh_target_bc', 12, plant_id=pid)
+            wc_mandate = wc * get_config('mh_target_wc', 24, plant_id=pid)
             bc_pct = round(bc_hrs / bc_mandate * 100, 1) if bc_mandate else 0
             wc_pct = round(wc_hrs / wc_mandate * 100, 1) if wc_mandate else 0
             plant_summaries.append({**p,

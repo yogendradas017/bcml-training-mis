@@ -198,6 +198,27 @@ def inject_pending_verify_count():
         }
 
 
+@app.context_processor
+def inject_org_config():
+    """Expose tenant-configurable values to every template.
+    Short-circuits for anonymous requests (login/static/healthz) to avoid
+    DB hits for pages that don't render gauges. Uses request-scoped flask.g
+    cache so multiple template lookups share one DB roundtrip."""
+    try:
+        if not session.get('user_id'):
+            return {'mh_target_bc': 12, 'mh_target_wc': 24,
+                    'cfg': lambda k, d=None, **kw: d}
+        from tms.config import get_config
+        return {
+            'mh_target_bc': get_config('mh_target_bc', 12),
+            'mh_target_wc': get_config('mh_target_wc', 24),
+            'cfg':          get_config,
+        }
+    except Exception:
+        return {'mh_target_bc': 12, 'mh_target_wc': 24,
+                'cfg': lambda k, d=None, **kw: d}
+
+
 @app.template_filter('fmt_date')
 def fmt_date(value):
     """Display any stored date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS) as DD-MM-YYYY."""
@@ -287,7 +308,7 @@ def health():
 # Register all routes (deferred imports — app is defined above)
 from tms.routes import (auth, employees, tni, programme, calendar, training,
                         summary, central, export, api, qr, central_training, reports, requests,
-                        verify, anomalies, effectiveness)
+                        verify, anomalies, effectiveness, admin)
 
 auth.             _register(app)
 employees.        _register(app)
@@ -306,6 +327,7 @@ requests.         _register(app)
 verify.           _register(app)
 anomalies.        _register(app)
 effectiveness.    _register(app)
+admin.            _register(app)
 
 # Rate-limit login: 20/min per IP AND 5/min per username (botnet bypass mitigation)
 def _login_user_key():

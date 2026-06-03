@@ -31,7 +31,7 @@
       <div style="font-size:2rem;font-weight:800;color:#0d6efd;">{{ compliance.bc_pct }}%</div>
       <div class="text-muted" style="font-size:12px;">
         {{ compliance.bc_actual }} / {{ compliance.bc_mandate }} hrs
-        ({{ compliance.bc_emp }} emp × 12 hrs)
+        ({{ compliance.bc_emp }} emp × {{ mh_target_bc }} hrs)
       </div>
       <div class="progress mt-2" style="height:8px;">
         <div class="progress-bar bg-primary" style="width:{{ [compliance.bc_pct,100]|min }}%"></div>
@@ -44,7 +44,7 @@
       <div style="font-size:2rem;font-weight:800;color:#198754;">{{ compliance.wc_pct }}%</div>
       <div class="text-muted" style="font-size:12px;">
         {{ compliance.wc_actual }} / {{ compliance.wc_mandate }} hrs
-        ({{ compliance.wc_emp }} emp × 24 hrs)
+        ({{ compliance.wc_emp }} emp × {{ mh_target_wc }} hrs)
       </div>
       <div class="progress mt-2" style="height:8px;">
         <div class="progress-bar bg-success" style="width:{{ [compliance.wc_pct,100]|min }}%"></div>
