@@ -178,7 +178,7 @@
   <div class="card-header ch-success d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('d-none')">
     <span><i class="bi bi-bullseye me-1"></i> TNI Coverage Plan — Are all demand employees covered?</span>
     <div class="d-flex gap-2 align-items-center">
-      <span style="{{ _pill }}background:var(--c-success-bg);color:var(--c-success-text);">{{ fully }} Fully Covered</span>
+      <span style="{{ _pill }}background:var(--c-success-bg);color:var(--c-success-text);">{{ fully }} Fully Planned</span>
       <span style="{{ _pill }}background:var(--c-warn-bg);color:var(--c-warn-text);">{{ partial }} Have Gap</span>
       <i class="bi bi-chevron-down" style="color:rgba(255,255,255,.8);"></i>
     </div>
@@ -235,7 +235,7 @@
             {% elif r.gap > 0 %}
               <span style="{{ _pill }}background:var(--c-warn-bg);color:var(--c-warn-text);">Under Planned</span>
             {% else %}
-              <span style="{{ _pill }}background:var(--c-success-bg);color:var(--c-success-text);">Fully Covered</span>
+              <span style="{{ _pill }}background:var(--c-success-bg);color:var(--c-success-text);">Fully Planned</span>
             {% endif %}
           </td>
         </tr>
