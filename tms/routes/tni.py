@@ -127,6 +127,67 @@ def _register(app):
 
         return jsonify({'total': total, 'page': page, 'per_page': per_page, 'rows': rows})
 
+    @app.route('/tni/export')
+    @spoc_required
+    def tni_export():
+        """Export current filtered TNI view as Excel. Honors q/collar/dept/type/mode/completed."""
+        plant_id = session['plant_id']
+        db       = get_db()
+        q         = request.args.get('q', '').strip()
+        collar    = request.args.get('collar', '')
+        dept      = request.args.get('dept', '')
+        ptype     = request.args.get('type', '')
+        mode      = request.args.get('mode', '')
+        completed = request.args.get('completed', '')
+
+        where  = ['t.plant_id=?', 't.fy_year=?']
+        params = [plant_id, _fy_label()]
+        if collar: where.append('e.collar=?');       params.append(collar)
+        if dept:   where.append('e.department=?');   params.append(dept)
+        if ptype:  where.append('t.prog_type=?');    params.append(ptype)
+        if mode:   where.append('t.mode=?');         params.append(mode)
+        if q:
+            where.append('(COALESCE(e.name,"") LIKE ? OR t.emp_code LIKE ? OR t.programme_name LIKE ?)')
+            like = f'%{q}%'; params += [like, like, like]
+        _et_exists = 'EXISTS(SELECT 1 FROM emp_training et WHERE et.plant_id=t.plant_id AND et.emp_code=t.emp_code AND et.programme_name=t.programme_name)'
+        if completed == 'Yes':     where.append(_et_exists)
+        elif completed == 'Pending': where.append(f'NOT {_et_exists}')
+
+        rows = db.execute(
+            f'''SELECT t.emp_code, e.name, e.collar, e.department,
+                       t.programme_name, t.prog_type, t.mode, t.planned_hours, t.source,
+                       CASE WHEN {_et_exists} THEN 'Yes' ELSE 'Pending' END AS completed
+                FROM tni t
+                LEFT JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+                WHERE {' AND '.join(where)}
+                ORDER BY e.name, t.programme_name''', params).fetchall()
+
+        wb = openpyxl.Workbook(); ws = wb.active; ws.title = 'TNI Export'
+        headers = ['Emp Code','Name','Collar','Department','Programme','Type','Mode','Planned Hours','Source','Completed']
+        for ci, h in enumerate(headers, 1):
+            c = ws.cell(row=1, column=ci, value=h)
+            c.font = Font(bold=True, color='FFFFFF')
+            c.fill = PatternFill('solid', fgColor='1E3A5F')
+            c.alignment = Alignment(horizontal='center')
+        for ri, r in enumerate(rows, 2):
+            ws.cell(row=ri, column=1, value=r['emp_code'])
+            ws.cell(row=ri, column=2, value=r['name'])
+            ws.cell(row=ri, column=3, value=r['collar'])
+            ws.cell(row=ri, column=4, value=r['department'])
+            ws.cell(row=ri, column=5, value=r['programme_name'])
+            ws.cell(row=ri, column=6, value=r['prog_type'])
+            ws.cell(row=ri, column=7, value=r['mode'])
+            ws.cell(row=ri, column=8, value=r['planned_hours'])
+            ws.cell(row=ri, column=9, value=r['source'])
+            ws.cell(row=ri, column=10, value=r['completed'])
+        for col_idx in range(1, len(headers)+1):
+            ws.column_dimensions[get_column_letter(col_idx)].width = 18
+        buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+        fy = _fy_label()
+        return send_file(buf, as_attachment=True,
+                         download_name=f'TNI_{session.get("unit_code","plant")}_{fy}.xlsx',
+                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
     @app.route('/tni/add', methods=['POST'])
     @spoc_required
     def add_tni():

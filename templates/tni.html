@@ -208,6 +208,9 @@
         <option value="Yes">Completed</option>
         <option value="Pending">Pending</option>
       </select>
+      <button type="button" class="btn btn-outline-primary btn-sm ms-auto" onclick="TNI._exportFiltered()" title="Download current filtered view as Excel">
+        <i class="bi bi-download me-1"></i> Export
+      </button>
     </div>
   </div>
   <div class="card-body p-0">
@@ -254,6 +257,12 @@ const TNI = {
     });
   },
 
+  _exportFiltered() {
+    const p = this._params();
+    p.delete('page');
+    window.location = '/tni/export?' + p.toString();
+  },
+
   init() {
     var $ = (id) => document.getElementById(id);
     if ($('tni-q')) $('tni-q').addEventListener('input', () => {
@@ -273,7 +282,7 @@ const TNI = {
   load(reset) {
     if (reset) { this.page = 1; this.selectAll = false; this.selectedIds.clear(); }
     const tbody = document.getElementById('tniBody');
-    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-3"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-3"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</td></tr>';
     fetch('/tni/data?' + this._params())
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(d => { this.total = d.total; this._render(d.rows, d.page, d.total, d.per_page); })

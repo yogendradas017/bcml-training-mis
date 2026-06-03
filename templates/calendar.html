@@ -262,12 +262,14 @@
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted-3);font-size:var(--fs-md);"></i>
         <input type="text" class="form-control" placeholder="Search session, programme, trainer..." style="padding-left:34px;" oninput="TBL.search('calTable',this.value)">
       </div>
-      <select class="form-select" style="width:155px;" onchange="TBL.filter('calTable','status',this.value)">
+      <select class="form-select" style="width:165px;" onchange="TBL.filter('calTable','status',this.value)">
         <option value="">All Status</option>
         <option>To Be Planned</option>
+        <option>Awaiting Verification</option>
         <option>Conducted</option>
         <option>Re-Scheduled</option>
         <option>Cancelled</option>
+        <option>Lapsed</option>
       </select>
       <select class="form-select" style="width:170px;" onchange="TBL.filter('calTable','type',this.value)">
         <option value="">All Types</option>
@@ -545,9 +547,11 @@
               <label class="form-label fw-semibold" style="font-size:var(--fs-md);">Status</label>
               <select name="status" id="e_status" class="form-select form-select-sm">
                 <option>To Be Planned</option>
+                <option>Awaiting Verification</option>
                 <option>Conducted</option>
                 <option>Re-Scheduled</option>
                 <option>Cancelled</option>
+                <option>Lapsed</option>
               </select>
             </div>
           </div>

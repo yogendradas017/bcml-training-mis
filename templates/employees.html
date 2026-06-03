@@ -228,6 +228,10 @@
       <select id="empDeptFilter" class="form-select" style="width:180px;" onchange="TBL.filter('empTable','dept',this.value)">
         <option value="">All Departments</option>
       </select>
+      <select id="empSectFilter" class="form-select" style="width:160px;" onchange="TBL.filter('empTable','sect',this.value)">
+        <option value="">All Sections</option>
+        {% for s in sections %}<option>{{ s }}</option>{% endfor %}
+      </select>
       <select class="form-select" style="width:130px;" onchange="TBL.filter('empTable','gender',this.value)">
         <option value="">All Gender</option>
         <option value="Male">Male</option>
@@ -252,7 +256,7 @@
         </thead>
         <tbody>
           {% for emp in employees %}
-          <tr {% if not emp.is_active %}class="table-secondary text-muted"{% endif %} data-collar="{{ emp.collar or '' }}" data-dept="{{ emp.department or '' }}" data-gender="{{ emp.gender or '' }}" data-status="{{ 'Active' if emp.is_active else 'Exited' }}">
+          <tr {% if not emp.is_active %}class="table-secondary text-muted"{% endif %} data-collar="{{ emp.collar or '' }}" data-dept="{{ emp.department or '' }}" data-sect="{{ emp.section or '' }}" data-gender="{{ emp.gender or '' }}" data-status="{{ 'Active' if emp.is_active else 'Exited' }}">
             <td>{{ loop.index }}</td>
             <td><span class="emp-code">{{ emp.emp_code }}</span></td>
             <td><strong>{{ emp.name }}</strong></td>
@@ -281,6 +285,7 @@
               {% if emp.is_active %}
               <button class="btn-action btn-action-primary edit-btn me-1"
                       data-emp-id="{{ emp.id }}"
+                      data-emp-code="{{ emp.emp_code }}"
                       data-emp-name="{{ emp.name }}"
                       data-emp-desig="{{ emp.designation or '' }}"
                       data-emp-grade="{{ emp.grade or '' }}"
@@ -382,6 +387,13 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <div class="row g-3">
+            <div class="col-md-12">
+              <div style="background:var(--c-surface-slate);border:1px solid var(--c-border);border-radius:var(--radius-sm);padding:8px 12px;display:flex;align-items:center;gap:10px;">
+                <span style="font-size:var(--fs-sm);color:var(--c-muted-2);font-weight:600;">Editing:</span>
+                <code id="edit_emp_code_display" style="font-size:var(--fs-md);background:var(--c-white);padding:2px 8px;border-radius:var(--radius-sm);color:var(--c-primary);font-weight:700;"></code>
+                <span style="font-size:var(--fs-sm);color:var(--c-muted-2);">— code is immutable</span>
+              </div>
+            </div>
             <div class="col-md-6"><label class="form-label">Full Name <span class="required-star">*</span></label>
               <input type="text" name="name" id="edit_name" class="form-control" required></div>
             <div class="col-md-6"><label class="form-label">Designation <span class="required-star">*</span></label>
@@ -499,6 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
       btn.addEventListener('click', function() {
         document.getElementById('editEmpLabel').textContent = 'Edit Employee — ' + this.dataset.empName;
         document.getElementById('editEmpForm').action     = this.dataset.editUrl;
+        document.getElementById('edit_emp_code_display').textContent = this.dataset.empCode || '';
         document.getElementById('edit_name').value        = this.dataset.empName || '';
         document.getElementById('edit_designation').value = this.dataset.empDesig || '';
         document.getElementById('edit_grade').value       = this.dataset.empGrade || '';
