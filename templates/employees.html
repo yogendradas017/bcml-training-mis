@@ -256,8 +256,8 @@
             <td>{{ loop.index }}</td>
             <td><span class="emp-code">{{ emp.emp_code }}</span></td>
             <td><strong>{{ emp.name }}</strong></td>
-            <td style="font-size:var(--fs-md);">{{ emp.designation or '—' }}</td>
-            <td style="font-size:var(--fs-body);">{{ emp.grade or '—' }}</td>
+            <td>{{ emp.designation or '—' }}</td>
+            <td>{{ emp.grade or '—' }}</td>
             <td>
               {% if emp.collar == 'Blue Collared' %}
               <span class="badge badge-bc">Blue</span>
@@ -267,8 +267,8 @@
               <span class="badge-unit">{{ emp.collar or '—' }}</span>
               {% endif %}
             </td>
-            <td style="font-size:var(--fs-md);">{{ emp.department or '—' }}</td>
-            <td style="font-size:var(--fs-md);">{{ emp.gender or '—' }}</td>
+            <td>{{ emp.department or '—' }}</td>
+            <td>{{ emp.gender or '—' }}</td>
             <td>
               {% if emp.is_active %}
               <span class="badge badge-active">Active</span>

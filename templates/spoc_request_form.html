@@ -66,8 +66,8 @@
             <tbody>
               {% for r in my_requests %}
               <tr>
-                <td style="font-size:var(--fs-body);white-space:nowrap;">{{ r.ts | fmt_dt }}</td>
-                <td style="font-size:var(--fs-body);">
+                <td style="white-space:nowrap;">{{ r.ts | fmt_dt }}</td>
+                <td>
                   {% if r.request_type == 'TNI_ADD' %}TNI Add
                   {% elif r.request_type == 'MARK_CONDUCTED' %}Mark Conducted
                   {% elif r.request_type == 'MANUAL_ATTENDANCE' %}Manual Attendance
@@ -78,7 +78,7 @@
                     {{ r.status }}
                   </span>
                 </td>
-                <td style="font-size:var(--fs-body);color:#6b7280;">{{ r.review_note or '—' }}</td>
+                <td style="color:#6b7280;">{{ r.review_note or '—' }}</td>
               </tr>
               {% endfor %}
             </tbody>

@@ -28,7 +28,7 @@
         {% set pct = (r.avg_score / 4 * 100) if r.avg_score else None %}
         <tr>
           <td style="padding:8px 14px;font-weight:500;">{{ r.programme_name }}</td>
-          <td style="padding:8px 14px;font-family:monospace;font-size:var(--fs-body);">{{ r.session_code }}</td>
+          <td style="padding:8px 14px;font-family:monospace;">{{ r.session_code }}</td>
           <td style="padding:8px 14px;color:#6b7280;">
             {{ r.plan_start | fmt_date }}{% if r.plan_end and r.plan_end != r.plan_start %} – {{ r.plan_end | fmt_date }}{% endif %}
           </td>

@@ -110,10 +110,10 @@
         <tbody>
           {% for emp in dept.employees %}
           <tr {% if emp.status == 'zero' %}style="background:#fff5f5;"{% endif %}>
-            <td style="font-size:var(--fs-body);padding:6px 10px;color:#94a3b8;">{{ loop.index }}</td>
-            <td style="font-size:var(--fs-body);padding:6px 10px;font-family:monospace;">{{ emp.emp_code }}</td>
-            <td style="font-size:var(--fs-body);padding:6px 10px;font-weight:600;">{{ emp.name }}</td>
-            <td style="font-size:var(--fs-body);padding:6px 10px;color:var(--c-slate);">{{ emp.designation or '—' }}</td>
+            <td style="padding:6px 10px;color:#94a3b8;">{{ loop.index }}</td>
+            <td style="padding:6px 10px;font-family:monospace;">{{ emp.emp_code }}</td>
+            <td style="padding:6px 10px;font-weight:600;">{{ emp.name }}</td>
+            <td style="padding:6px 10px;color:var(--c-slate);">{{ emp.designation or '—' }}</td>
             <td style="padding:6px 10px;">
               {% if emp.collar == 'Blue Collared' %}
               <span style="background:var(--c-info-bg);color:var(--c-info-strong);border-radius:99px;padding:1px 8px;font-size:var(--fs-xs);font-weight:700;">BC</span>
@@ -121,8 +121,8 @@
               <span style="background:var(--c-success-bg);color:var(--c-success-text);border-radius:99px;padding:1px 8px;font-size:var(--fs-xs);font-weight:700;">WC</span>
               {% endif %}
             </td>
-            <td style="font-size:var(--fs-body);padding:6px 10px;text-align:center;">{{ emp.target_hrs }}</td>
-            <td style="font-size:var(--fs-body);padding:6px 10px;text-align:center;font-weight:700;">{{ emp.actual_hrs }}</td>
+            <td style="padding:6px 10px;text-align:center;">{{ emp.target_hrs }}</td>
+            <td style="padding:6px 10px;text-align:center;font-weight:700;">{{ emp.actual_hrs }}</td>
             <td style="padding:6px 10px;">
               <div style="display:flex;align-items:center;gap:6px;">
                 <span style="font-size:var(--fs-body);font-weight:700;min-width:38px;">{{ emp.pct }}%</span>

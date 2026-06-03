@@ -29,16 +29,16 @@
         {% for r in pending %}
         <tr>
           <td>{{ r.id }}</td>
-          <td style="font-size:var(--fs-body);white-space:nowrap;">{{ r.ts | fmt_dt }}</td>
-          <td style="font-size:var(--fs-body);">{{ r.plant_name or r.plant_id }}</td>
-          <td style="font-size:var(--fs-body);">{{ r.requested_by }}</td>
-          <td style="font-size:var(--fs-body);">
+          <td style="white-space:nowrap;">{{ r.ts | fmt_dt }}</td>
+          <td>{{ r.plant_name or r.plant_id }}</td>
+          <td>{{ r.requested_by }}</td>
+          <td>
             {% if r.request_type == 'TNI_ADD' %}<span class="badge bg-primary">TNI Add</span>
             {% elif r.request_type == 'MARK_CONDUCTED' %}<span class="badge bg-info text-dark">Mark Conducted</span>
             {% elif r.request_type == 'MANUAL_ATTENDANCE' %}<span class="badge bg-secondary">Manual Attendance</span>
             {% else %}<span class="badge bg-dark">Other</span>{% endif %}
           </td>
-          <td style="font-size:var(--fs-body);max-width:300px;">{{ r.details }}</td>
+          <td style="max-width:300px;">{{ r.details }}</td>
           <td>
             <form method="POST" action="{{ url_for('admin_review_request', req_id=r.id) }}" class="d-flex gap-2 align-items-start flex-wrap">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -79,10 +79,10 @@
         {% for r in resolved %}
         <tr>
           <td>{{ r.id }}</td>
-          <td style="font-size:var(--fs-body);white-space:nowrap;">{{ r.ts | fmt_dt }}</td>
-          <td style="font-size:var(--fs-body);">{{ r.plant_name or r.plant_id }}</td>
-          <td style="font-size:var(--fs-body);">{{ r.requested_by }}</td>
-          <td style="font-size:var(--fs-body);">
+          <td style="white-space:nowrap;">{{ r.ts | fmt_dt }}</td>
+          <td>{{ r.plant_name or r.plant_id }}</td>
+          <td>{{ r.requested_by }}</td>
+          <td>
             {% if r.request_type == 'TNI_ADD' %}TNI Add
             {% elif r.request_type == 'MARK_CONDUCTED' %}Mark Conducted
             {% elif r.request_type == 'MANUAL_ATTENDANCE' %}Manual Attendance
@@ -91,8 +91,8 @@
           <td>
             <span class="badge {% if r.status == 'Approved' %}bg-success{% else %}bg-danger{% endif %}" style="font-size:var(--fs-sm);">{{ r.status }}</span>
           </td>
-          <td style="font-size:var(--fs-body);">{{ r.reviewed_by or '—' }}</td>
-          <td style="font-size:var(--fs-body);color:var(--c-muted-2);">{{ r.review_note or '—' }}</td>
+          <td>{{ r.reviewed_by or '—' }}</td>
+          <td style="color:var(--c-muted-2);">{{ r.review_note or '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>

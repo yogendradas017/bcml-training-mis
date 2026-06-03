@@ -537,12 +537,16 @@ body {
   background: linear-gradient(90deg, #eef4ff, #f8fbff) !important;
   border-left: 3px solid var(--c-primary);
 }
-/* core cell — override Bootstrap table-sm */
+/* core cell — single source of truth via typography token */
 .table td,
 .table.table-sm td,
 .table.table-sm > :not(caption) > * > * {
-  font-size: 13.5px; padding: 12px 16px; vertical-align: middle; border: none;
+  font-size: var(--fs-md); padding: 12px 16px; vertical-align: middle; border: none;
 }
+/* Cells that override font-size inline get pulled back to baseline so columns
+   don't visually drift. Badges + .emp-code style themselves; bare text stays uniform. */
+.table td > span:not([class]),
+.table td > strong:not([class]) { font-size: inherit; }
 .table thead th,
 .table.table-sm thead th,
 .table.table-sm > thead > * > * {

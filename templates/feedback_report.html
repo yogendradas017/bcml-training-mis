@@ -93,7 +93,7 @@
       <tbody>
         {# Programme section header #}
         <tr style="background:var(--c-info-bg-soft);">
-          <td colspan="9" style="padding:6px 12px;font-weight:600;font-size:var(--fs-body);color:var(--c-info);">
+          <td colspan="9" style="padding:6px 12px;font-weight:600;color:var(--c-info);">
             Programme Feedback (Q1–Q5)
           </td>
         </tr>
@@ -129,7 +129,7 @@
         {% endfor %}
         {# Programme subtotal #}
         <tr style="background:var(--c-success-bg-soft);font-weight:600;">
-          <td colspan="6" style="padding:6px 12px;font-size:var(--fs-body);color:var(--c-success-text);">Programme Sub-total</td>
+          <td colspan="6" style="padding:6px 12px;color:var(--c-success-text);">Programme Sub-total</td>
           <td class="text-center" style="padding:6px 8px;color:var(--c-success-text);">{{ prog_avg or '—' }}</td>
           <td class="text-center" style="padding:6px 8px;color:var(--c-success-text);">{{ prog_pct|round(1) if prog_pct else '—' }}{% if prog_pct %}%{% endif %}</td>
           <td style="padding:6px 12px;min-width:160px;">
@@ -143,7 +143,7 @@
 
         {# Trainer section header #}
         <tr style="background:var(--c-success-bg-soft);">
-          <td colspan="9" style="padding:6px 12px;font-weight:600;font-size:var(--fs-body);color:var(--c-success-text);">
+          <td colspan="9" style="padding:6px 12px;font-weight:600;color:var(--c-success-text);">
             Trainer Feedback (Q6–Q9)
           </td>
         </tr>
@@ -179,7 +179,7 @@
         {% endfor %}
         {# Trainer subtotal #}
         <tr style="background:#ecfdf5;font-weight:600;">
-          <td colspan="6" style="padding:6px 12px;font-size:var(--fs-body);color:var(--c-success-text);">Trainer Sub-total</td>
+          <td colspan="6" style="padding:6px 12px;color:var(--c-success-text);">Trainer Sub-total</td>
           <td class="text-center" style="padding:6px 8px;color:var(--c-success-text);">{{ trainer_avg or '—' }}</td>
           <td class="text-center" style="padding:6px 8px;color:var(--c-success-text);">{{ trainer_pct|round(1) if trainer_pct else '—' }}{% if trainer_pct %}%{% endif %}</td>
           <td style="padding:6px 12px;min-width:160px;">
@@ -193,7 +193,7 @@
 
         {# Overall #}
         <tr style="background:#1a1f35;color:#fff;font-weight:700;">
-          <td colspan="6" style="padding:8px 12px;font-size:var(--fs-md);">Overall Satisfaction</td>
+          <td colspan="6" style="padding:8px 12px;">Overall Satisfaction</td>
           <td class="text-center" style="padding:8px 8px;">{{ overall_avg or '—' }}</td>
           <td class="text-center" style="padding:8px 8px;">{{ overall_pct|round(1) if overall_pct else '—' }}{% if overall_pct %}%{% endif %}</td>
           <td style="padding:8px 12px;min-width:160px;">

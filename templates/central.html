@@ -135,21 +135,21 @@
               <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text);">{{ p.name }}</div>
               <span class="badge-unit" style="font-size:var(--fs-xs);">{{ p.unit_code }}</span>
             </td>
-            <td style="padding:12px;font-weight:700;font-size:var(--fs-md);">{{ p.total_emp }}</td>
+            <td style="padding:12px;font-weight:700;">{{ p.total_emp }}</td>
             <td style="padding:12px;">
               <span style="background:var(--c-info-bg);color:var(--c-info-strong);font-size:var(--fs-sm);font-weight:700;padding:2px 8px;border-radius:20px;">{{ p.blue_collar }}</span>
             </td>
             <td style="padding:12px;">
               <span style="background:#dcfce7;color:#15803d;font-size:var(--fs-sm);font-weight:700;padding:2px 8px;border-radius:20px;">{{ p.white_collar }}</span>
             </td>
-            <td style="padding:12px;font-size:var(--fs-md);">{{ p.sessions }}</td>
+            <td style="padding:12px;">{{ p.sessions }}</td>
             <td style="padding:12px;">
               <span style="font-weight:700;font-size:var(--fs-md);">{{ p.conducted }}</span>
               {% if p.sessions > 0 %}
               <span style="font-size:var(--fs-xs);color:var(--c-muted);margin-left:4px;">{{ "%.0f"|format(p.conducted/p.sessions*100) }}%</span>
               {% endif %}
             </td>
-            <td style="padding:12px;font-weight:700;font-size:var(--fs-md);">{{ p.manhours }}</td>
+            <td style="padding:12px;font-weight:700;">{{ p.manhours }}</td>
             <td style="padding:12px 16px;min-width:130px;">
               <div class="d-flex align-items-center gap-2">
                 <div style="flex:1;height:6px;background:var(--c-surface-slate-2);border-radius:4px;overflow:hidden;">
@@ -180,7 +180,7 @@
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="2" style="padding:11px 12px;background:#1a3a5c;color:#fff;font-weight:800;font-size:var(--fs-body);letter-spacing:.5px;">GRAND TOTAL</td>
+            <td colspan="2" style="padding:11px 12px;background:#1a3a5c;color:#fff;font-weight:800;letter-spacing:.5px;">GRAND TOTAL</td>
             <td style="padding:11px 12px;background:#1a3a5c;color:#fff;font-weight:800;">{{ grand.total_emp }}</td>
             <td style="padding:11px 12px;background:#1a3a5c;color:#93c5fd;font-weight:800;">{{ plants|sum(attribute='blue_collar') }}</td>
             <td style="padding:11px 12px;background:#1a3a5c;color:#86efac;font-weight:800;">{{ plants|sum(attribute='white_collar') }}</td>

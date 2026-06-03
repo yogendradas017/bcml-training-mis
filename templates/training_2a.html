@@ -179,7 +179,7 @@
             data-month="{{ rec.month or '' }}" data-source="{{ src }}"
             {% if has_anom %}style="background:#fff7ed;" title="Anomaly: {{ rec.anomaly_flags }}"{% endif %}>
           <td style="width:40px;"><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
-          <td style="color:#9ca3af;font-size:var(--fs-body);">
+          <td style="color:#9ca3af;">
             {{ loop.index }}
             {% if has_anom %}<i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:var(--fs-sm);margin-left:3px;" title="{{ rec.anomaly_flags }}"></i>{% endif %}
           </td>
@@ -218,7 +218,7 @@
           <td class="cell-rating">{{ rec.pre_rating or '—' }}</td>
           <td class="cell-rating">{{ rec.post_rating or '—' }}</td>
           <td style="color:#6b7280;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ rec.venue or '' }}">{{ rec.venue or '—' }}</td>
-          <td style="white-space:nowrap;color:#6b7280;font-size:var(--fs-body);">{{ rec.month or '—' }}</td>
+          <td style="white-space:nowrap;color:#6b7280;">{{ rec.month or '—' }}</td>
           <td>
             <form method="POST" action="{{ url_for('delete_emp_training', rec_id=rec.id) }}" style="display:inline;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
