@@ -283,6 +283,13 @@ const _SESS2C = {
   {% endfor %}
 };
 function _fill2C(val) {
+  // Clear any stale future-date warning
+  var warnId = '_2c_future_warn';
+  var oldWarn = document.getElementById(warnId);
+  if (oldWarn) oldWarn.remove();
+  var submitBtn = document.querySelector('button[type=submit][class*=btn-primary]');
+  if (submitBtn) submitBtn.disabled = false;
+
   if (!val) return;
   var d = _SESS2C[val];
   if (!d) return;
@@ -293,6 +300,22 @@ function _fill2C(val) {
   if (d.pe) document.getElementById('pc_end_date').value   = d.pe;
   if (d.tf) document.getElementById('pc_time_from').value  = d.tf;
   if (d.tt) document.getElementById('pc_time_to').value    = d.tt;
+
+  // Block submit if session is in the future — server rejects, this saves the trip
+  var today = new Date().toISOString().slice(0, 10);
+  var planEnd = d.pe || d.ps || '';
+  if (planEnd && planEnd > today) {
+    if (submitBtn) submitBtn.disabled = true;
+    var sel = document.getElementById('pc_session_code');
+    var host = sel && sel.closest('.col-md-4') || sel;
+    if (host) {
+      var w = document.createElement('div');
+      w.id = warnId;
+      w.style.cssText = 'margin-top:6px;font-size:var(--fs-sm);color:var(--c-danger);font-weight:600;';
+      w.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Session plan-end ' + planEnd + ' is in the future. Wait until session is conducted before filing 2C.';
+      host.appendChild(w);
+    }
+  }
 }
 (function(){
   var sel = document.getElementById('pc_session_code');

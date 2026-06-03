@@ -53,15 +53,26 @@ def _register(app):
             flash('Programme name is required.', 'danger')
             return redirect(url_for('programme_master'))
         db = get_db()
+        force = request.form.get('force_override', '') == '1'
         try:
-            existing = db.execute('SELECT id FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
+            existing = db.execute('SELECT id, prog_type, source, category FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
                                   (plant_id, name)).fetchone()
-            if existing:
+            if existing and not force:
+                # Block silent UPDATE. Show what would change so SPOC can decide.
+                flash(
+                    f'"{name}" already exists in Programme Master '
+                    f'(Type={existing["prog_type"] or "—"}, Source={existing["source"]}, Category={existing["category"]}). '
+                    f'Saving as new would have changed it to '
+                    f'Type={prog_type or "—"}, Source={source}, Category={category}. '
+                    f'Edit existing row inline instead, or re-submit with the Override checkbox to apply changes.',
+                    'warning')
+                return redirect(url_for('programme_master'))
+            if existing and force:
                 db.execute('UPDATE programme_master SET prog_type=?, source=?, category=? WHERE id=?',
                            (prog_type or None, source, category, existing['id']))
                 db.commit()
-                log_action('RECORD_EDIT', f"pm:{name}:cat={category}")
-                flash(f'"{name}" updated.', 'success')
+                log_action('RECORD_EDIT', f"pm:{name}:override cat={category}")
+                flash(f'"{name}" overridden — Type/Source/Category updated.', 'success')
             else:
                 db.execute('INSERT INTO programme_master(plant_id,name,prog_type,source,category) VALUES(?,?,?,?,?)',
                            (plant_id, name, prog_type or None, source, category))

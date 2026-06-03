@@ -475,7 +475,23 @@ const TNI = {
   _bulkDelete() {
     const count = this.selectAll ? this.total : this.selectedIds.size;
     if (!count) return;
-    if (!confirm(`Delete ${count} TNI entries? This cannot be undone.`)) return;
+    // Tier 1: cheap confirm for small ops
+    if (count < 50 && !this.selectAll) {
+      if (!confirm(`Delete ${count} TNI entries? This cannot be undone.`)) return;
+    } else {
+      // Tier 2: high-blast destructive op — require typed confirmation
+      const expected = `DELETE ${count}`;
+      const typed = prompt(
+        `You are about to PERMANENTLY DELETE ${count} TNI entries` +
+        (this.selectAll ? ' (matching current filter — across all pages)' : '') + `.\n\n` +
+        `This cannot be undone. TNI nominations will be lost; coverage calculations will shift.\n\n` +
+        `Type exactly:  ${expected}\n\nto confirm:`
+      );
+      if (typed !== expected) {
+        if (typed !== null) alert('Confirmation text did not match. Delete cancelled.');
+        return;
+      }
+    }
     const form = document.createElement('form');
     form.method = 'POST'; form.action = this.bulkUrl;
     // CSRF token — pulled from an existing form on the page (Flask-WTF).

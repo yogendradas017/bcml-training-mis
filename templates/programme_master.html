@@ -431,9 +431,18 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
             <div style="font-size:var(--fs-sm);color:var(--c-muted-2);margin-top:5px;">Specialized = 3-month post-training effectiveness review required (SOP: 25% of yearly programmes).</div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary btn-sm">Add</button>
+        <div class="modal-footer d-flex flex-column align-items-stretch gap-2">
+          <div class="form-check" style="font-size:var(--fs-sm);">
+            <input type="checkbox" class="form-check-input" id="force_override" name="force_override" value="1">
+            <label class="form-check-label" for="force_override">
+              <i class="bi bi-shield-exclamation me-1" style="color:var(--c-warn);"></i>
+              Override if programme already exists (changes Type/Source/Category of existing row)
+            </label>
+          </div>
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm">Add</button>
+          </div>
         </div>
       </div>
     </form>
