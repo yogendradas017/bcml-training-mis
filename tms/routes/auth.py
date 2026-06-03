@@ -48,12 +48,6 @@ def _validate_password_strength(pw, username=''):
 
 def _register(app):
 
-    @app.route('/_font-preview')
-    def _font_preview():
-        """Temporary preview: side-by-side font comparison on a Calendar-like table.
-        Remove this route + templates/_font_preview.html after font decision."""
-        return render_template('_font_preview.html')
-
     @app.route('/')
     def index():
         if 'user_id' not in session:
