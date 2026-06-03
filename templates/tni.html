@@ -157,6 +157,7 @@
         <div class="col-md-2">
           <label class="form-label">Planned Hours</label>
           <input type="number" name="planned_hours" class="form-control" step="0.5" min="0" value="0">
+          <div class="form-text" style="font-size:var(--fs-sm);">Estimated training duration per attendee.</div>
         </div>
         <div class="col-12">
           <button type="submit" class="btn btn-warning px-4">
@@ -171,7 +172,7 @@
 <!-- TNI Records -->
 <div class="card">
   <div class="card-header ch-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <span><i class="bi bi-clipboard-data"></i> TNI Records — <strong id="tni-total">{{ total }}</strong> entries</span>
+    <span><i class="bi bi-clipboard-data"></i> TNI Records — <strong id="tni-total" style="font-variant-numeric:tabular-nums;">{{ total }}</strong> entries</span>
     <div class="d-flex gap-2 align-items-center flex-wrap">
       <span class="badge" style="background:var(--c-success-bg);color:var(--c-success-text);" id="tni-showing">Loading...</span>
       <button id="mass-delete-btn" type="button" class="btn btn-danger btn-sm"
@@ -186,8 +187,8 @@
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted-3);font-size:var(--fs-md);"></i>
         <input type="text" id="tni-q" class="form-control" placeholder="Search name, code, programme..." style="padding-left:34px;">
       </div>
-      <select id="tni-collar" class="form-select" style="width:150px;">
-        <option value="">All Collar</option>
+      <select id="tni-collar" class="form-select" style="width:150px;" aria-label="Filter by collar">
+        <option value="">All Collars</option>
         <option value="Blue Collared">Blue Collar</option>
         <option value="White Collared">White Collar</option>
       </select>
@@ -208,7 +209,7 @@
         <option value="Yes">Completed</option>
         <option value="Pending">Pending</option>
       </select>
-      <button type="button" class="btn btn-outline-primary btn-sm ms-auto" onclick="TNI._exportFiltered()" title="Download current filtered view as Excel">
+      <button type="button" class="btn btn-outline-primary btn-sm ms-auto" onclick="TNI._exportFiltered()" title="Download current filtered view as Excel" aria-label="Export filtered TNI to Excel">
         <i class="bi bi-download me-1"></i> Export
       </button>
     </div>
@@ -228,7 +229,7 @@
             <th class="sticky-l" style="min-width:36px;"><input type="checkbox" id="tni-cb-all" class="cb-all"></th>
             <th>#</th><th class="sticky-l" style="left:36px;min-width:180px;">Employee</th><th>Collar</th><th>Department</th>
             <th>Programme Name</th><th>Type of Programme</th><th>Mode</th>
-            <th>Source</th><th>Hrs</th><th>Completed?</th><th class="sticky-r" style="min-width:90px;">Action</th>
+            <th>Source</th><th title="Planned training hours per nomination">Planned Hrs</th><th>Completed?</th><th class="sticky-r" style="min-width:90px;">Action</th>
           </tr>
         </thead>
         <tbody id="tniBody">
@@ -303,7 +304,7 @@ const TNI = {
       total === 0 ? '0 entries' : `Showing ${(page-1)*perPage+1}–${Math.min(page*perPage,total)} of ${total}`;
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">No TNI entries found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:24px;display:block;margin-bottom:6px;opacity:.5;"></i>No TNI entries match the current filters. Clear filters or upload a TNI file to get started.</td></tr>';
       document.getElementById('tni-pager').innerHTML = '';
       this._updateBulkBar(); return;
     }
@@ -351,7 +352,7 @@ const TNI = {
         <td>${doneBadge}</td>
         <td class="sticky-r"><form method="POST" action="${r.delete_url}" style="display:inline;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="button" class="btn btn-sm btn-outline-danger" onclick="ajaxDelete(this,'Delete this TNI entry?')">
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="ajaxDelete(this,'Delete this TNI entry?')" title="Delete this TNI entry" aria-label="Delete this TNI entry">
             <i class="bi bi-trash"></i></button></form></td>
       </tr>`;
     }).join('');

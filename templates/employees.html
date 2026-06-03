@@ -17,7 +17,7 @@
     <table class="table table-sm mb-0" style="font-size:var(--fs-md);">
       <thead>
         <tr style="background:var(--c-warn-bg);">
-          <th>#</th><th>Emp Code</th><th>Name</th><th>Exit Date</th><th>Reason</th><th>Action</th>
+          <th>#</th><th>Emp Code</th><th>Name</th><th>Exit Date</th><th>Exit Reason</th><th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -26,7 +26,7 @@
           <td class="text-muted">{{ loop.index }}</td>
           <td><span class="emp-code">{{ emp.emp_code }}</span></td>
           <td><strong>{{ emp.name }}</strong></td>
-          <td><span class="badge bg-warning text-dark">{{ emp.exit_date | fmt_date }}</span></td>
+          <td style="font-variant-numeric:tabular-nums;"><span class="badge bg-secondary">{{ emp.exit_date | fmt_date }}</span></td>
           <td style="color:var(--c-muted-2);">{{ emp.exit_reason or '—' }}</td>
           <td>
             <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}"
@@ -51,7 +51,7 @@
   <div class="ch" style="justify-content:space-between;">
     <span><i class="bi bi-person-plus"></i> Add New Employee</span>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('emp_bulk_template') }}" class="btn btn-sm btn-outline-secondary" style="font-size:var(--fs-body);">
+      <a href="{{ url_for('emp_bulk_template') }}" class="btn btn-sm btn-outline-secondary" style="font-size:var(--fs-body);" title="Download blank Excel template for bulk upload">
         <i class="bi bi-file-earmark-arrow-down"></i> Template
       </a>
       <button class="btn btn-sm btn-outline-secondary" style="font-size:var(--fs-body);" type="button" data-bs-toggle="collapse" data-bs-target="#bulkUploadSection">
@@ -76,7 +76,7 @@
             <label class="form-label fw-semibold mb-1" style="font-size:var(--fs-md);">
               <i class="bi bi-file-earmark-excel text-primary"></i> Upload Excel (.xlsx)
             </label>
-            <input type="file" name="bulk_update_file" class="form-control form-control-sm" accept=".xlsx" required style="max-width:18rem;">
+            <input type="file" name="bulk_update_file" class="form-control form-control-sm" accept=".xlsx" required style="max-width:18rem;" aria-label="Choose Excel file for bulk update">
           </div>
           <button type="submit" class="btn btn-primary btn-sm px-4">
             <i class="bi bi-cloud-upload"></i> Apply Updates
@@ -105,7 +105,7 @@
             <input type="file" name="bulk_file" class="form-control form-control-sm" accept=".xlsx" required style="max-width:18rem;">
           </div>
           <button type="submit" class="btn btn-success btn-sm px-4">
-            <i class="bi bi-cloud-upload"></i> Upload &amp; Validate
+            <i class="bi bi-cloud-upload"></i> Upload &amp; Add Employees
           </button>
           <div style="font-size:var(--fs-body);color:var(--c-muted-2);">
             <i class="bi bi-info-circle"></i>
@@ -124,6 +124,7 @@
         <div class="col-md-3">
           <label class="form-label">Employee Code <span class="required-star">*</span></label>
           <input type="text" name="emp_code" class="form-control" required placeholder="e.g. 21700011">
+          <div class="form-text" style="font-size:var(--fs-sm);">Must be unique within this plant. Cannot be changed later.</div>
         </div>
         <div class="col-md-4">
           <label class="form-label">Full Name <span class="required-star">*</span></label>
@@ -188,10 +189,11 @@
         <div class="col-md-3">
           <label class="form-label">Remarks</label>
           <input type="text" name="remarks" class="form-control" placeholder="Optional">
+          <div class="form-text" style="font-size:var(--fs-sm);">Free-text notes (e.g. contract type, deputation, special skills).</div>
         </div>
         <div class="col-12">
           <button type="submit" class="btn btn-primary px-4">
-            <i class="bi bi-plus-circle"></i> Add Employee
+            <i class="bi bi-plus-circle"></i> Save Employee
           </button>
         </div>
       </div>
@@ -232,10 +234,10 @@
     <div class="d-flex gap-2 flex-wrap">
       <div class="position-relative flex-grow-1" style="max-width:300px;">
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted-3);font-size:var(--fs-md);"></i>
-        <input type="text" class="form-control" placeholder="Search name, emp code..." style="padding-left:34px;" oninput="TBL.search('empTable',this.value)">
+        <input type="text" class="form-control" placeholder="Search name, emp code..." style="padding-left:34px;" oninput="TBL.search('empTable',this.value)" aria-label="Search employees by name or code">
       </div>
       <select class="form-select" style="width:150px;" onchange="TBL.filter('empTable','collar',this.value)">
-        <option value="">All Collar</option>
+        <option value="">All Collar Types</option>
         <option value="Blue Collared">Blue Collar</option>
         <option value="White Collared">White Collar</option>
       </select>
@@ -247,13 +249,13 @@
         {% for s in sections %}<option>{{ s }}</option>{% endfor %}
       </select>
       <select class="form-select" style="width:130px;" onchange="TBL.filter('empTable','gender',this.value)">
-        <option value="">All Gender</option>
+        <option value="">All Genders</option>
         <option value="Male">Male</option>
         <option value="Female">Female</option>
         <option value="Others">Others</option>
       </select>
       <select class="form-select" style="width:130px;" onchange="TBL.filter('empTable','status',this.value)">
-        <option value="">All Status</option>
+        <option value="">All Statuses</option>
         <option value="Active">Active</option>
         <option value="Exited">Exited</option>
       </select>
@@ -265,7 +267,7 @@
         <thead>
           <tr>
             <th>#</th><th>Emp Code</th><th>Name</th><th>Designation</th>
-            <th>Grade</th><th>Collar</th><th>Department</th><th>Gender</th><th>Status</th><th>Action</th>
+            <th>Grade</th><th>Collar</th><th>Department</th><th>Gender</th><th>Status</th><th scope="col">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -332,7 +334,7 @@
             </td>
           </tr>
           {% else %}
-          <tr data-empty="1"><td colspan="10" class="text-center text-muted py-4">No employees found.</td></tr>
+          <tr data-empty="1"><td colspan="10" class="text-center text-muted py-4">No employees match the current filters. Try clearing search or filters above, or use <strong>Add New Employee</strong> to create one.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -346,20 +348,21 @@
   <div class="modal-dialog modal-sm">
     <div class="modal-content">
       <div class="modal-header">
-        <h6 class="modal-title" id="exitModalLabel">Mark Exit</h6>
+        <h6 class="modal-title" id="exitModalLabel">Mark Employee as Exited</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="POST" id="exitModalForm" action="">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label">Exit Date</label>
+            <label class="form-label">Exit Date <span class="required-star">*</span></label>
             <input type="date" name="exit_date" id="exitDateInput" class="form-control" required>
+            <div class="form-text" style="font-size:var(--fs-sm);">Last working day. Cannot be a future date.</div>
           </div>
           <div class="mb-3">
             <label class="form-label">Reason <span class="required-star">*</span></label>
             <select name="exit_reason" class="form-select" required>
-              <option value="">-- Select Reason --</option>
+              <option value="">-- Select Exit Reason --</option>
               <option>Resignation</option>
               <option>Retirement</option>
               <option>Transfer</option>

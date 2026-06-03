@@ -62,7 +62,7 @@
           <input type="time" name="time_to" id="pc_time_to" class="form-control">
         </div>
         <div class="col-md-2">
-          <label class="form-label" for="pc_hours">Actual Hours</label>
+          <label class="form-label" for="pc_hours">Actual Hours (per session)</label>
           <input type="number" name="hours_actual" id="pc_hours" class="form-control" step="0.5" min="0" value="0">
         </div>
         <div class="col-md-3">
@@ -70,7 +70,7 @@
           <input type="text" name="faculty_name" id="auto_faculty_name" class="form-control" placeholder="Trainer / Faculty name" autocomplete="off">
         </div>
         <div class="col-md-3">
-          <label class="form-label" for="auto_int_ext">Internal / External</label>
+          <label class="form-label" for="auto_int_ext">Faculty Type (Internal / External)</label>
           <select name="int_ext" id="auto_int_ext" class="form-select">
             <option value="">-- Select --</option>
             {% for ie in int_ext %}<option>{{ ie }}</option>{% endfor %}
@@ -94,11 +94,11 @@
           <input type="number" name="faculty_feedback" id="auto_faculty_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-md-3">
-          <label class="form-label" for="auto_trainer_fb_participants">Trainer FB &#8212; Participants</label>
+          <label class="form-label" for="auto_trainer_fb_participants">Trainer Feedback on Participants</label>
           <input type="number" name="trainer_fb_participants" id="auto_trainer_fb_participants" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-md-3">
-          <label class="form-label" for="auto_trainer_fb_facilities">Trainer FB &#8212; Facilities</label>
+          <label class="form-label" for="auto_trainer_fb_facilities">Trainer Feedback on Facilities</label>
           <input type="number" name="trainer_fb_facilities" id="auto_trainer_fb_facilities" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-12">
@@ -131,7 +131,7 @@
         <option value="Online">Online</option>
       </select>
       <select class="form-select" style="width:170px;" onchange="TBL.filter('prog2cTable','status',this.value)">
-        <option value="">All Status</option>
+        <option value="">All Statuses</option>
         <option>To Be Planned</option>
         <option>Awaiting Verification</option>
         <option>Conducted</option>
@@ -149,7 +149,7 @@
             <th><input type="checkbox" class="cb-all"></th>
             <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th><th>Status</th>
             <th>Source</th><th>Start Date</th><th>Hrs</th><th>Faculty</th><th>Int/Ext</th>
-            <th>Cost (&#8377;)</th><th>Course FB</th><th>Participants</th><th>Man-Hrs</th><th>Action</th>
+            <th class="text-end">Cost (&#8377;)</th><th class="text-end">Course FB</th><th class="text-end">Participants</th><th class="text-end">Man-Hrs</th><th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -225,7 +225,7 @@
             </td>
           </tr>
           {% else %}
-          <tr data-empty="1"><td colspan="15" class="text-center text-muted py-4">No programme records yet. Add above.</td></tr>
+          <tr data-empty="1"><td colspan="16" class="text-center text-muted py-4"><div style="font-weight:600;margin-bottom:4px;">No programme records yet</div><div style="font-size:var(--fs-sm);">Pick a Session Code from the form above (or use Bulk Upload) to record a conducted session.</div></td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -246,8 +246,8 @@
         <thead>
           <tr>
             <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th>
-            <th>Source</th><th>Start Date</th><th>Hrs</th><th>Faculty</th><th>Int/Ext</th>
-            <th>Cost (&#8377;)</th><th>Course FB</th><th>Participants</th><th>Man-Hrs</th>
+            <th>Source</th><th>Start Date</th><th class="text-end">Hrs</th><th>Faculty</th><th>Int/Ext</th>
+            <th class="text-end">Cost (&#8377;)</th><th class="text-end">Course FB</th><th class="text-end">Participants</th><th class="text-end">Man-Hrs</th>
           </tr>
         </thead>
         <tbody>
@@ -318,7 +318,7 @@
               <input type="number" name="course_feedback" id="edit_2c_cf" class="form-control" min="1" max="5" step="0.1"></div>
             <div class="col-md-3"><label class="form-label">Faculty Feedback</label>
               <input type="number" name="faculty_feedback" id="edit_2c_ff" class="form-control" min="1" max="5" step="0.1"></div>
-            <div class="col-md-3"><label class="form-label">Trainer FB — Participants</label>
+            <div class="col-md-3"><label class="form-label">Trainer Feedback on Participants</label>
               <input type="number" name="trainer_fb_participants" id="edit_2c_trp" class="form-control" min="1" max="5" step="0.1"></div>
             <div class="col-md-3"><label class="form-label">Trainer FB — Facilities</label>
               <input type="number" name="trainer_fb_facilities" id="edit_2c_trf" class="form-control" min="1" max="5" step="0.1"></div>

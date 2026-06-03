@@ -148,7 +148,7 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label" for="add_pax">Planned Pax</label>
+          <label class="form-label" for="add_pax">Planned Pax (participants)</label>
           <input type="number" name="planned_pax" id="add_pax" class="form-control" min="0" value="0">
           <div class="invalid-feedback" id="err_add_pax"></div>
         </div>
@@ -310,12 +310,12 @@
             <th>Programme Name</th>
             <th>Type</th>
             <th style="width:70px;">Month</th>
-            <th style="width:90px;">Start</th>
-            <th style="width:60px;">Hrs</th>
+            <th style="width:90px;" title="Planned start date">Start Date</th>
+            <th style="width:60px;" title="Duration in hours">Hrs</th>
             <th style="width:80px;">Mode</th>
             <th style="width:80px;">Audience</th>
-            <th style="width:40px;">Pax</th>
-            <th style="width:45px;">Demand</th>
+            <th style="width:40px;" title="Planned participants (people)">Pax</th>
+            <th style="width:45px;" title="Employees nominated in TNI for this programme">Demand</th>
             <th style="width:90px;">Status</th>
             <th style="width:100px;">Action</th>
           </tr>
@@ -351,11 +351,11 @@
             </td>
             <td style="white-space:nowrap;padding:4px 6px;">
               {% if s.status == 'Conducted' %}
-              <button class="btn btn-sm btn-outline-secondary" title="Conducted — locked" style="padding:2px 6px;" disabled>
+              <button class="btn btn-sm btn-outline-secondary" title="Conducted — locked" aria-label="Session conducted — editing locked" style="padding:2px 6px;" disabled>
                 <i class="bi bi-lock-fill"></i>
               </button>
               {% else %}
-              <button class="btn btn-sm btn-outline-primary edit-cal-btn" title="Edit" style="padding:2px 6px;"
+              <button class="btn btn-sm btn-outline-primary edit-cal-btn" title="Edit session" aria-label="Edit session" style="padding:2px 6px;"
                 data-id="{{ s.id }}"
                 data-prog="{{ s.programme_name }}"
                 data-type="{{ s.prog_type or '' }}"
@@ -443,7 +443,7 @@
             </td>
           </tr>
           {% else %}
-          <tr data-empty="1"><td colspan="15" class="text-center text-muted py-4">No sessions planned yet.</td></tr>
+          <tr data-empty="1"><td colspan="15" class="text-center text-muted py-4">No sessions planned yet. Use <strong>Add Single Training Session</strong> above, or <strong>Bulk Upload</strong> to import from Excel.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -536,7 +536,7 @@
               </select>
             </div>
             <div class="col-md-3">
-              <label class="form-label fw-semibold" style="font-size:var(--fs-md);">Planned Pax</label>
+              <label class="form-label fw-semibold" style="font-size:var(--fs-md);">Planned Pax (participants)</label>
               <input type="number" name="planned_pax" id="e_pax" class="form-control form-control-sm" min="0">
             </div>
             <div class="col-md-5">

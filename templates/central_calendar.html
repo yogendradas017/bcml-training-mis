@@ -22,10 +22,10 @@
           <th style="padding:8px 14px;">Programme</th>
           <th style="padding:8px 14px;">Type</th>
           <th style="padding:8px 14px;">Dates</th>
-          <th style="padding:8px 14px;">Hrs</th>
-          <th style="padding:8px 14px;">Pax</th>
+          <th style="padding:8px 14px;" title="Duration in hours">Hrs</th>
+          <th style="padding:8px 14px;" title="Planned participants">Pax</th>
           <th style="padding:8px 14px;">Status</th>
-          <th style="padding:8px 14px;">FB</th>
+          <th style="padding:8px 14px;" title="Feedback responses received">Feedback</th>
           <th style="padding:8px 14px;">QR</th>
           <th style="padding:8px 14px;"></th>
         </tr>
@@ -45,7 +45,7 @@
           <td style="padding:6px 14px;">{{ s.planned_pax or '—' }}</td>
           <td style="padding:6px 14px;">
             {% set status_colors = {'Conducted':'success','To Be Planned':'secondary','Re-Scheduled':'warning','Cancelled':'danger'} %}
-            <span class="badge bg-{{ status_colors.get(s.status, 'secondary') }}">{{ s.status }}</span>
+            <span class="badge bg-{{ status_colors.get(s.status, 'secondary') }}" title="Session status">{{ s.status }}</span>
           </td>
           <td style="padding:6px 14px;">
             {% set fb_cnt = fb_counts.get(s.session_code, 0) %}
@@ -113,7 +113,7 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="11" class="text-center text-muted py-4">No central sessions yet.</td></tr>
+        <tr><td colspan="11" class="text-center text-muted py-4">No central sessions yet. Click <strong>Add Session</strong> above to schedule the first cross-plant training.</td></tr>
         {% endfor %}
       </tbody>
     </table>

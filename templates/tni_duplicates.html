@@ -8,12 +8,12 @@
     <small class="text-muted">Same employee listed for the same programme more than once</small>
   </div>
   <div class="d-flex gap-2">
-    <a href="{{ url_for('tni') }}" class="btn btn-outline-secondary btn-sm">← Back to TNI</a>
+    <a href="{{ url_for('tni') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to TNI</a>
     {% if rows %}
     <form method="POST" action="{{ url_for('tni_duplicates_delete') }}"
           onsubmit="return confirm('Remove {{ total_extra }} duplicate rows? The earliest entry for each pair will be kept.');">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="btn btn-danger btn-sm">Remove All Duplicates (keep oldest)</button>
+      <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash-fill me-1"></i> Remove All Duplicates (keep oldest)</button>
     </form>
     {% endif %}
   </div>
