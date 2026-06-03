@@ -30,7 +30,7 @@
       <tbody>
         {% for m in members %}
         <tr>
-          <td style="padding:6px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:6px 14px;color:var(--c-muted);">{{ loop.index }}</td>
           <td style="padding:6px 14px;font-family:monospace;">{{ m.emp_code }}</td>
           <td style="padding:6px 14px;font-weight:500;">{{ m.name }}</td>
           <td style="padding:6px 14px;">{{ m.designation or '—' }}</td>

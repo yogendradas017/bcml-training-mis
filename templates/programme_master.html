@@ -26,7 +26,7 @@
 {% set spl_count = progs | selectattr('category', 'equalto', 'Specialized') | list | length %}
 {% set spl_target = ((progs|length * 0.25) | round(0, 'ceil')) | int %}
 <div class="alert d-flex align-items-start gap-2 mb-3"
-     style="background:var(--c-warn-bg-alt);border:1px solid #fed7aa;color:#9a3412;font-size:var(--fs-body);border-left:4px solid #f59e0b;">
+     style="background:var(--c-warn-bg-alt);border:1px solid var(--c-warn-border);color:var(--c-warn-text);border-left:4px solid var(--c-warn);">
   <i class="bi bi-stars" style="font-size:var(--fs-lg);color:var(--c-danger);margin-top:1px;"></i>
   <div style="flex:1;">
     <strong>Category</strong> — For programmes identified as <strong>Specialized</strong>,
@@ -35,17 +35,17 @@
     Target: ~25% of yearly TNI programmes.
     <span id="spl-pill" data-count="{{ spl_count }}" data-total="{{ progs|length }}" data-target="{{ spl_target }}"
           style="margin-left:8px;padding:2px 8px;border-radius:12px;font-weight:700;
-                 background:{% if progs|length and spl_count >= spl_target %}#d1fae5;color:var(--c-success-text){% else %}#fee2e2;color:var(--c-danger-text){% endif %};">
+                 background:{% if progs|length and spl_count >= spl_target %}var(--c-success-bg);color:var(--c-success-text){% else %}var(--c-danger-bg);color:var(--c-danger-text){% endif %};">
       <span id="spl-pill-text">{{ spl_count }} / {{ progs|length }} Specialized ({{ ((spl_count / (progs|length or 1)) * 100) | round(0) | int }}%)</span>
     </span>
   </div>
 </div>
 
 {% if not progs %}
-<div class="card mb-3" style="border:2px dashed #bdd6f5;background:#f0f6ff;">
+<div class="card mb-3" style="border:2px dashed var(--c-info-border);background:var(--c-info-bg);">
   <div class="card-body text-center py-5">
-    <i class="bi bi-database-add" style="font-size:42px;display:block;margin-bottom:12px;color:var(--c-primary);"></i>
-    <div style="font-size:var(--fs-lg);font-weight:700;color:#1e1b4b;margin-bottom:6px;">Master list is empty</div>
+    <i class="bi bi-database-add" style="font-size:var(--icon-xl);display:block;margin-bottom:12px;color:var(--c-primary);"></i>
+    <div style="font-size:var(--fs-lg);font-weight:700;color:var(--c-text-strong);margin-bottom:6px;">Master list is empty</div>
     <div style="font-size:var(--fs-md);color:var(--c-muted-2);max-width:480px;margin:0 auto 20px;">
       Your Programme Master list will be built automatically when you upload TNI data for
       <strong>{{ session.plant_name }}</strong>. Every unique, clean programme name in your TNI becomes your master.
@@ -79,7 +79,7 @@
   <div class="card-body p-0">
     <div class="table-responsive">
     <table id="pm-table" class="table table-sm table-hover mb-0" style="font-size:var(--fs-md);">
-      <thead style="background:#1a1f35;color:#fff;border-bottom:2px solid #2e6da4;">
+      <thead style="background:var(--c-thead-dark);color:var(--c-white);border-bottom:2px solid var(--c-primary);">
         <tr>
           <th style="width:38px;padding:10px 14px;">
             <input type="checkbox" class="cb-all" style="cursor:pointer;width:16px;height:16px;accent-color:var(--c-primary);">
@@ -110,9 +110,9 @@
           <td style="padding:9px 16px;font-weight:600;color:var(--c-text-strong);">{{ p.name }}</td>
           <td style="padding:9px 16px;">
             {% if typ %}
-              {% set tc = {'Behavioural/Leadership':'#2e6da4','Technical':'#0369a1','EHS/HR':'#065f46','IT':'#0f766e','Cane':'#92400e','Commercial':'#9a3412'} %}
-              {% set bg = {'Behavioural/Leadership':'#e8f0fe','Technical':'#e0f2fe','EHS/HR':'#d1fae5','IT':'#ccfbf1','Cane':'#fef3c7','Commercial':'#ffedd5'} %}
-              <span style="font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;
+              {% set tc = {'Behavioural/Leadership':'var(--c-primary)','Technical':'#0369a1','EHS/HR':'var(--c-success-strong)','IT':'#0f766e','Cane':'#92400e','Commercial':'var(--c-warn-text)'} %}
+              {% set bg = {'Behavioural/Leadership':'#e8f0fe','Technical':'#e0f2fe','EHS/HR':'var(--c-success-bg)','IT':'#ccfbf1','Cane':'#fef3c7','Commercial':'#ffedd5'} %}
+              <span style="font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:var(--radius-pill);white-space:nowrap;
                            background:{{ bg.get(typ,'#f3f4f6') }};color:{{ tc.get(typ,'#374151') }};">{{ typ }}</span>
             {% else %}
               <span style="font-size:var(--fs-sm);color:var(--c-muted-3);font-style:italic;">— not set —</span>
@@ -121,12 +121,12 @@
           <td style="padding:9px 16px;">
             {% if src == 'New Requirement' %}
               <span class="pm-src-badge" data-id="{{ p.id }}"
-                    style="font-size:var(--fs-sm);background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #fde047;">
+                    style="font-size:var(--fs-sm);background:var(--c-warn-bg);color:var(--c-warn-text);padding:3px 10px;border-radius:var(--radius-pill);font-weight:600;white-space:nowrap;border:1px solid var(--c-warn-border);">
                 <i class="bi bi-plus-circle me-1"></i>New Req.
               </span>
             {% else %}
               <span class="pm-src-badge" data-id="{{ p.id }}"
-                    style="font-size:var(--fs-sm);background:var(--c-info-bg-soft);color:var(--c-info);padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #bfdbfe;">
+                    style="font-size:var(--fs-sm);background:var(--c-info-bg-soft);color:var(--c-info);padding:3px 10px;border-radius:var(--radius-pill);font-weight:600;white-space:nowrap;border:1px solid var(--c-info-border);">
                 <i class="bi bi-diagram-3 me-1"></i>TNI Req.
               </span>
             {% endif %}
@@ -134,12 +134,12 @@
           <td style="padding:9px 16px;">
             {% if cat == 'Specialized' %}
               <span class="pm-cat-badge" data-id="{{ p.id }}"
-                    style="font-size:var(--fs-sm);background:var(--c-danger-bg);color:var(--c-danger-text);padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #fca5a5;">
+                    style="font-size:var(--fs-sm);background:var(--c-danger-bg);color:var(--c-danger-text);padding:3px 10px;border-radius:var(--radius-pill);font-weight:600;white-space:nowrap;border:1px solid #fca5a5;">
                 <i class="bi bi-stars me-1"></i>Specialized
               </span>
             {% else %}
               <span class="pm-cat-badge" data-id="{{ p.id }}"
-                    style="font-size:var(--fs-sm);background:var(--c-surface-2);color:var(--c-text-2);padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #d1d5db;">
+                    style="font-size:var(--fs-sm);background:var(--c-surface-2);color:var(--c-text-2);padding:3px 10px;border-radius:var(--radius-pill);font-weight:600;white-space:nowrap;border:1px solid var(--c-border);">
                 <i class="bi bi-book me-1"></i>General
               </span>
             {% endif %}
@@ -152,7 +152,7 @@
                   style="display:inline;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-link p-0" style="color:var(--c-border-3);font-size:var(--fs-base);" title="Delete"
-                      onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='#d1d5db'">
+                      onmouseenter="this.style.color='var(--c-danger)'" onmouseleave="this.style.color='var(--c-border)'">
                 <i class="bi bi-trash3"></i>
               </button>
             </form>
@@ -166,7 +166,7 @@
 </div>
 
 {# ── Right-click context menu ── #}
-<div id="pm-ctx-menu" style="display:none;position:fixed;z-index:9999;background:#fff;border:1px solid #e5e9f2;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.14);min-width:230px;padding:6px 0;font-size:var(--fs-md);">
+<div id="pm-ctx-menu" style="display:none;position:fixed;z-index:9999;background:var(--c-white);border:1px solid var(--c-border);border-radius:12px;box-shadow:var(--shadow-lg);min-width:230px;padding:6px 0;font-size:var(--fs-md);">
   <div style="padding:8px 16px 4px;font-size:var(--fs-xs);color:var(--c-muted-3);font-weight:700;text-transform:uppercase;letter-spacing:.8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="pm-ctx-title"></div>
   <hr style="margin:4px 0;border-color:var(--c-surface-slate-2);">
   {# Change Type + Switch Source intentionally removed — both drive compliance grouping;
@@ -368,7 +368,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
     <form method="POST" action="{{ url_for('programme_master_add') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-content">
-        <div class="modal-header" style="background:#1a1f35;color:#fff;">
+        <div class="modal-header" style="background:var(--c-thead-dark);color:var(--c-white);">
           <h5 class="modal-title fs-6">Add Programme to Master</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
@@ -377,7 +377,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
             <label class="form-label fw-semibold" style="font-size:var(--fs-md);" for="addNameInput">Programme Name <span class="text-danger">*</span></label>
             <input type="text" id="addNameInput" name="name" class="form-control form-control-sm" placeholder="e.g. Fire Safety" required autocomplete="off">
             <div style="position:relative;">
-              <div id="addSuggestions" style="display:none;position:absolute;left:0;right:0;top:2px;border:1px solid #e5e9f2;border-radius:8px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);max-height:180px;overflow-y:auto;z-index:9999;"></div>
+              <div id="addSuggestions" style="display:none;position:absolute;left:0;right:0;top:2px;border:1px solid var(--c-border);border-radius:8px;background:var(--c-white);box-shadow:var(--shadow-md);max-height:180px;overflow-y:auto;z-index:9999;"></div>
             </div>
             <div id="addMatchHint" style="display:none;margin-top:6px;"></div>
           </div>
@@ -432,7 +432,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
     <form method="POST" action="{{ url_for('programme_master_bulk') }}" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-content">
-        <div class="modal-header" style="background:#1a1f35;color:#fff;">
+        <div class="modal-header" style="background:var(--c-thead-dark);color:var(--c-white);">
           <h5 class="modal-title fs-6">Bulk Upload Programme Master</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>

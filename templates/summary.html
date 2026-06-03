@@ -3,7 +3,7 @@
 {% block content %}
 
 {# ── Filter bar ── #}
-<div style="background:#fff;border-radius:12px;border:1px solid #e5e9f2;padding:14px 20px;margin-bottom:20px;box-shadow:0 1px 6px rgba(0,0,0,.05);">
+<div style="background:var(--c-white);border-radius:12px;border:1px solid var(--c-border);padding:14px 20px;margin-bottom:20px;box-shadow:0 1px 6px rgba(0,0,0,.05);">
   <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
     <span style="font-size:var(--fs-md);font-weight:700;color:var(--c-text-2);">Filter by Month:</span>
     <select name="month" class="form-select form-select-sm" style="width:180px;" onchange="this.form.submit()">
@@ -25,18 +25,18 @@
 <div class="row g-3 mb-4">
   {% set cards = [
     ('Blue Collar', compliance.bc_pct, compliance.bc_actual, compliance.bc_mandate, compliance.bc_emp, mh_target_bc, '#3b82f6', '#1d4ed8'),
-    ('White Collar', compliance.wc_pct, compliance.wc_actual, compliance.wc_mandate, compliance.wc_emp, mh_target_wc, '#10b981', '#065f46'),
+    ('White Collar', compliance.wc_pct, compliance.wc_actual, compliance.wc_mandate, compliance.wc_emp, mh_target_wc, 'var(--c-success)', 'var(--c-success-strong)'),
     ('Overall', compliance.total_pct, compliance.bc_actual + compliance.wc_actual, compliance.bc_mandate + compliance.wc_mandate, compliance.bc_emp + compliance.wc_emp, '—', '#1a7a3c', '#1e4c7a'),
   ] %}
   {% for label, pct, actual, mandate, emp, hrs, c1, c2 in cards %}
   <div class="col-md-4">
-    <div style="background:linear-gradient(135deg,{{ c1 }},{{ c2 }});border-radius:14px;padding:20px 22px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);">
+    <div style="background:linear-gradient(135deg,{{ c1 }},{{ c2 }});border-radius:14px;padding:20px 22px;color:var(--c-white);box-shadow:var(--shadow-md);">
       <div style="font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.8;margin-bottom:6px;">
         {{ label }} Compliance
       </div>
-      <div style="font-size:42px;font-weight:900;line-height:1;">{{ pct }}%</div>
-      <div style="margin-top:10px;background:rgba(255,255,255,.2);border-radius:99px;height:6px;overflow:hidden;">
-        <div style="width:{{ [pct,100]|min }}%;height:100%;border-radius:99px;background:#fff;"></div>
+      <div style="font-size:var(--icon-xl);font-weight:900;line-height:1;">{{ pct }}%</div>
+      <div style="margin-top:10px;background:rgba(255,255,255,.2);border-radius:var(--radius-pill);height:6px;overflow:hidden;">
+        <div style="width:{{ [pct,100]|min }}%;height:100%;border-radius:var(--radius-pill);background:var(--c-white);"></div>
       </div>
       <div style="font-size:var(--fs-sm);opacity:.85;margin-top:6px;">
         {{ actual }} hrs actual &nbsp;/&nbsp; {{ mandate }} hrs mandate
@@ -78,14 +78,14 @@
         <col style="width:5.5%"><col style="width:5.5%"><col style="width:5.5%">
       </colgroup>
       <thead>
-        <tr style="background:#1e3a5f;color:#fff;text-align:center;font-size:var(--fs-xs);font-weight:700;letter-spacing:.3px;">
+        <tr style="background:var(--c-text-strong);color:var(--c-white);text-align:center;font-size:var(--fs-xs);font-weight:700;letter-spacing:.3px;">
           <th rowspan="2" class="align-middle text-start" style="padding:8px 10px;">Programme Type</th>
           <th colspan="6" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;">No. of Programmes</th>
           <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;">Person Seats Trained</th>
           <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;">Man-Hours</th>
           <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;background:#1e4c7a;">% Covered (TNI) — YTD Cumulative</th>
         </tr>
-        <tr style="background:#2e5585;color:#fff;text-align:center;font-size:var(--fs-xs);">
+        <tr style="background:#2e5585;color:var(--c-white);text-align:center;font-size:var(--fs-xs);">
           <th style="padding:5px 2px;">BC</th><th style="padding:5px 2px;">WC</th><th style="padding:5px 2px;">Cmn</th><th style="padding:5px 2px;">Tot</th><th style="padding:5px 2px;">Int</th><th style="padding:5px 2px;">Ext</th>
           <th style="padding:5px 2px;">BC</th><th style="padding:5px 2px;">WC</th><th style="padding:5px 2px;">Tot</th>
           <th style="padding:5px 2px;">BC</th><th style="padding:5px 2px;">WC</th><th style="padding:5px 2px;">Tot</th>
@@ -97,17 +97,17 @@
       <tbody>
         {% for row in summary_rows %}
         <tr>
-          <td style="padding:7px 10px;font-weight:600;color:#1e3a5f;font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ row.prog_type }}">{{ row.prog_type }}</td>
+          <td style="padding:7px 10px;font-weight:600;color:var(--c-text-strong);font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ row.prog_type }}">{{ row.prog_type }}</td>
           {% for val in [row.bc_progs, row.wc_progs, row.common_progs, row.total_progs,
                          row.int_prog, row.ext_prog,
                          row.bc_seats, row.wc_seats, row.total_seats,
                          row.bc_hrs, row.wc_hrs, row.total_hrs] %}
-          <td style="text-align:center;padding:7px 3px;color:{% if val %}#111827{% else %}#d1d5db{% endif %};">{{ val if val else '—' }}</td>
+          <td style="text-align:center;padding:7px 3px;color:{% if val %}#111827{% else %}var(--c-border){% endif %};">{{ val if val else '—' }}</td>
           {% endfor %}
           {% for pct in [row.bc_cov, row.wc_cov, row.tot_cov] %}
           <td style="text-align:center;padding:7px 3px;font-weight:700;
-            background:{% if pct >= 100 %}#d1fae5{% elif pct >= 75 %}#fef3c7{% elif pct > 0 %}#fee2e2{% else %}#f9fafb{% endif %};
-            color:{% if pct >= 100 %}#065f46{% elif pct >= 75 %}#92400e{% elif pct > 0 %}#991b1b{% else %}#d1d5db{% endif %};">
+            background:{% if pct >= 100 %}var(--c-success-bg){% elif pct >= 75 %}#fef3c7{% elif pct > 0 %}var(--c-danger-bg){% else %}#f9fafb{% endif %};
+            color:{% if pct >= 100 %}var(--c-success-strong){% elif pct >= 75 %}#92400e{% elif pct > 0 %}#991b1b{% else %}var(--c-border){% endif %};">
             {% if pct %}{{ pct }}%{% else %}—{% endif %}
           </td>
           {% endfor %}
@@ -115,7 +115,7 @@
         {% endfor %}
       </tbody>
       <tfoot>
-        <tr style="background:#1a1f35;color:#fff;font-weight:700;text-align:center;font-size:var(--fs-sm);">
+        <tr style="background:var(--c-thead-dark);color:var(--c-white);font-weight:700;text-align:center;font-size:var(--fs-sm);">
           <td style="padding:8px 10px;text-align:left;">TOTAL</td>
           <td style="padding:7px 3px;">{{ totals.bc_progs or 0 }}</td>
           <td style="padding:7px 3px;">{{ totals.wc_progs or 0 }}</td>

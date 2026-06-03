@@ -94,13 +94,13 @@
     <div class="table-responsive">
       <table class="table table-bordered mb-0" style="font-size:var(--fs-md);">
         <thead>
-          <tr style="background:var(--c-primary);color:#fff;">
+          <tr style="background:var(--c-primary);color:var(--c-white);">
             <th rowspan="2" class="align-middle">Programme Type</th>
             <th colspan="4" class="text-center">No. of Programmes</th>
             <th colspan="3" class="text-center">Person Seats Trained</th>
             <th colspan="3" class="text-center">Man-Hours</th>
           </tr>
-          <tr style="background:#3a7dbf;color:#fff;">
+          <tr style="background:#3a7dbf;color:var(--c-white);">
             <th>BC</th><th>WC</th><th>Int.</th><th>Ext.</th>
             <th>BC</th><th>WC</th><th>Total</th>
             <th>BC</th><th>WC</th><th>Total</th>
@@ -122,7 +122,7 @@
             <td class="text-center"><strong>{{ row.total_hrs or '—' }}</strong></td>
           </tr>
           {% endfor %}
-          <tr style="background:#1a3a5c;color:#fff;font-weight:bold;">
+          <tr style="background:#1a3a5c;color:var(--c-white);font-weight:bold;">
             <td>TOTAL</td>
             <td class="text-center">{{ totals.bc_progs }}</td>
             <td class="text-center">{{ totals.wc_progs }}</td>

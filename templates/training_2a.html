@@ -38,11 +38,11 @@
         </div>
         <div class="col-md-2">
           <label class="form-label" for="tr_collar">Collar</label>
-          <input type="text" id="tr_collar" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+          <input type="text" id="tr_collar" class="form-control" readonly style="background:var(--c-surface-slate);" placeholder="Auto-fill">
         </div>
         <div class="col-md-3">
           <label class="form-label" for="tr_dept">Department</label>
-          <input type="text" id="tr_dept" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+          <input type="text" id="tr_dept" class="form-control" readonly style="background:var(--c-surface-slate);" placeholder="Auto-fill">
         </div>
         <div class="col-md-3">
           <label class="form-label" for="tr_session_code">Session Code (from Calendar)</label>
@@ -68,11 +68,11 @@
         </div>
         <div class="col-md-3">
           <label class="form-label" for="tr_prog_type_disp">Type</label>
-          <input type="text" id="tr_prog_type_disp" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+          <input type="text" id="tr_prog_type_disp" class="form-control" readonly style="background:var(--c-surface-slate);" placeholder="Auto-fill">
         </div>
         <div class="col-md-2">
           <label class="form-label" for="tr_mode_disp">Mode</label>
-          <input type="text" id="tr_mode_disp" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+          <input type="text" id="tr_mode_disp" class="form-control" readonly style="background:var(--c-surface-slate);" placeholder="Auto-fill">
         </div>
         <div class="col-md-2">
           <label class="form-label" for="tr_start_date">Start Date <span class="required-star">*</span></label>
@@ -127,7 +127,7 @@
   <div class="card-body py-3">
     <div class="d-flex gap-2 flex-wrap align-items-center">
       <div class="position-relative flex-grow-1" style="max-width:300px;">
-        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:var(--fs-md);pointer-events:none;"></i>
+        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted);font-size:var(--fs-md);pointer-events:none;"></i>
         <input type="text" class="form-control" placeholder="Search name, code, programme…" style="padding-left:36px;height:38px;" oninput="TBL.search('training2aTable',this.value)">
       </div>
       <select class="form-select" style="width:140px;height:38px;" onchange="TBL.filter('training2aTable','collar',this.value)">
@@ -177,11 +177,11 @@
         {% set has_anom = rec.anomaly_flags and rec.anomaly_flags|length > 0 %}
         <tr data-collar="{{ rec.collar or '' }}" data-type="{{ rec.prog_type or '' }}"
             data-month="{{ rec.month or '' }}" data-source="{{ src }}"
-            {% if has_anom %}style="background:#fff7ed;" title="Anomaly: {{ rec.anomaly_flags }}"{% endif %}>
+            {% if has_anom %}style="background:var(--c-white)7ed;" title="Anomaly: {{ rec.anomaly_flags }}"{% endif %}>
           <td style="width:40px;"><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
-          <td style="color:#9ca3af;">
+          <td style="color:var(--c-muted);">
             {{ loop.index }}
-            {% if has_anom %}<i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:var(--fs-sm);margin-left:3px;" title="{{ rec.anomaly_flags }}"></i>{% endif %}
+            {% if has_anom %}<i class="bi bi-exclamation-triangle-fill" style="color:var(--c-warn-strong);font-size:var(--fs-sm);margin-left:3px;" title="{{ rec.anomaly_flags }}"></i>{% endif %}
           </td>
           <td>
             <div class="cell-emp-name">{{ rec.emp_name or rec.emp_code }}</div>
@@ -196,7 +196,7 @@
           <td style="font-weight:600;color:#111827;">
             {{ rec.programme_name }}
             {% if rec.category == 'Specialized' %}
-            <span title="Specialized — 3-mo effectiveness review required" style="font-size:var(--fs-xs);font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
+            <span title="Specialized — 3-mo effectiveness review required" style="font-size:var(--fs-xs);font-weight:700;background:var(--c-danger-bg);color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
               <i class="bi bi-stars"></i> SPL
             </span>
             {% endif %}
@@ -217,8 +217,8 @@
           <td class="cell-hrs">{{ rec.hrs }}</td>
           <td class="cell-rating">{{ rec.pre_rating or '—' }}</td>
           <td class="cell-rating">{{ rec.post_rating or '—' }}</td>
-          <td style="color:#6b7280;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ rec.venue or '' }}">{{ rec.venue or '—' }}</td>
-          <td style="white-space:nowrap;color:#6b7280;">{{ rec.month or '—' }}</td>
+          <td style="color:var(--c-muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ rec.venue or '' }}">{{ rec.venue or '—' }}</td>
+          <td style="white-space:nowrap;color:var(--c-muted);">{{ rec.month or '—' }}</td>
           <td>
             <form method="POST" action="{{ url_for('delete_emp_training', rec_id=rec.id) }}" style="display:inline;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

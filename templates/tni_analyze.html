@@ -5,44 +5,44 @@
 {% if step == 'upload' %}
 <div class="row justify-content-center">
   <div class="col-lg-6">
-    <div class="card" style="border-left:5px solid #2e6da4;">
+    <div class="card" style="border-left:5px solid var(--c-primary);">
       <div class="card-header ch-dark">
         <i class="bi bi-stars me-1"></i> Smart TNI Analyzer — Upload Any File
       </div>
       <div class="card-body">
         <div class="row g-2 mb-4 text-center" style="font-size:var(--fs-body);">
           <div class="col">
-            <div style="background:var(--c-success-bg-soft);border:1px solid #bbf7d0;border-radius:10px;padding:10px;">
+            <div style="background:var(--c-success-bg-soft);border:1px solid #bbf7d0;border-radius:var(--radius-md);padding:10px;">
               <i class="bi bi-check-circle-fill text-success" style="font-size:var(--fs-xl);"></i>
               <div style="font-weight:700;color:var(--c-success-text);margin-top:4px;">Green</div>
               <div style="color:var(--c-muted-2);">100% correct</div>
             </div>
           </div>
           <div class="col">
-            <div style="background:var(--c-warn-bg-soft);border:1px solid #fde68a;border-radius:10px;padding:10px;">
+            <div style="background:var(--c-warn-bg-soft);border:1px solid #fde68a;border-radius:var(--radius-md);padding:10px;">
               <i class="bi bi-magic" style="font-size:var(--fs-xl);color:var(--c-warn);"></i>
               <div style="font-weight:700;color:var(--c-warn-text);margin-top:4px;">Amber</div>
               <div style="color:var(--c-muted-2);">Auto-fixed</div>
             </div>
           </div>
           <div class="col">
-            <div style="background:var(--c-danger-bg-soft);border:1px solid #fecaca;border-radius:10px;padding:10px;">
+            <div style="background:var(--c-danger-bg-soft);border:1px solid var(--c-danger-border);border-radius:var(--radius-md);padding:10px;">
               <i class="bi bi-x-circle-fill text-danger" style="font-size:var(--fs-xl);"></i>
               <div style="font-weight:700;color:var(--c-danger);margin-top:4px;">Red</div>
               <div style="color:var(--c-muted-2);">Error</div>
             </div>
           </div>
         </div>
-        <div style="font-size:var(--fs-body);color:#1e293b;margin-bottom:14px;background:var(--c-surface-slate);border-radius:8px;padding:14px 18px;line-height:1.55;">
-          <div style="font-weight:700;font-size:var(--fs-base);color:#1e3a5f;margin-bottom:6px;letter-spacing:-.2px;">
+        <div style="font-size:var(--fs-body);color:var(--c-text);margin-bottom:14px;background:var(--c-surface-slate);border-radius:8px;padding:14px 18px;line-height:1.55;">
+          <div style="font-weight:700;font-size:var(--fs-base);color:var(--c-text-strong);margin-bottom:6px;letter-spacing:-.2px;">
             One upload. Clean data. Confident reporting.
           </div>
           Free-text training entries are the single biggest source of monthly
           reporting errors in any plant L&amp;D system. This Analyzer eliminates
           that class of error at the upload step itself.
         </div>
-        <div style="font-size:var(--fs-body);color:#0c4a6e;margin-bottom:16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 18px;line-height:1.6;">
-          <div style="font-weight:700;color:#0c4a6e;margin-bottom:8px;">
+        <div style="font-size:var(--fs-body);color:var(--c-info-strong);margin-bottom:16px;background:var(--c-info-bg);border:1px solid var(--c-info-border);border-radius:8px;padding:14px 18px;line-height:1.6;">
+          <div style="font-weight:700;color:var(--c-info-strong);margin-bottom:8px;">
             <i class="bi bi-shield-check me-1"></i>Four guardrails, one click
           </div>
           <div style="display:grid;grid-template-columns:1fr;gap:6px;">
@@ -52,7 +52,7 @@
             <div><strong>Master match</strong> — every name reconciled against your Programme Master.</div>
           </div>
         </div>
-        <div style="background:var(--c-info-bg-soft);border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:var(--fs-body);color:var(--c-info);">
+        <div style="background:var(--c-info-bg-soft);border:1px solid var(--c-info-border);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:var(--fs-body);color:var(--c-info);">
           <i class="bi bi-info-circle me-1"></i>
           <strong>Upload any file</strong> — TMS template, Balrampur format, any headers, any column order. TMS auto-detects everything.
         </div>
@@ -74,7 +74,7 @@
             </select>
             <span style="color:var(--c-muted-3);">Use if file has a title/logo above headers</span>
           </div>
-          <button type="submit" class="btn px-4 fw-semibold" style="background:var(--c-primary);color:#fff;border:none;">
+          <button type="submit" class="btn px-4 fw-semibold" style="background:var(--c-primary);color:var(--c-white);border:none;">
             <i class="bi bi-stars me-1"></i> Analyze File
           </button>
         </form>
@@ -100,7 +100,7 @@
 {% set pct = ((import_count / total) * 100)|round|int if total > 0 else 0 %}
 
 <!-- Score card -->
-<div class="card mb-3" style="background:linear-gradient(135deg,#1e3a5f,#2563a8);color:#fff;border:none;border-radius:14px;">
+<div class="card mb-3" style="background:linear-gradient(135deg,var(--c-text-strong),#2563a8);color:var(--c-white);border:none;border-radius:var(--radius-lg);">
   <div class="card-body py-3">
     <div class="d-flex align-items-center gap-4 flex-wrap">
       <div style="text-align:center;">
@@ -124,15 +124,15 @@
       </div>
       <div style="flex:1;min-width:160px;">
         <div style="font-size:var(--fs-sm);opacity:.65;margin-bottom:5px;">Import Quality</div>
-        <div style="background:rgba(255,255,255,.15);border-radius:99px;height:12px;overflow:hidden;">
-          <div style="width:{{ pct }}%;height:100%;border-radius:99px;
+        <div style="background:rgba(255,255,255,.15);border-radius:var(--radius-pill);height:12px;overflow:hidden;">
+          <div style="width:{{ pct }}%;height:100%;border-radius:var(--radius-pill);
                background:{% if pct==100 %}#34d399{% elif pct>=70 %}#fbbf24{% else %}#f87171{% endif %};
                transition:width .5s ease;"></div>
         </div>
         <div style="font-size:var(--fs-body);margin-top:4px;opacity:.8;">{{ pct }}% importable</div>
       </div>
       <div class="d-flex gap-2 align-items-center flex-wrap">
-        <a href="{{ url_for('tni_analyze') }}" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:none;">
+        <a href="{{ url_for('tni_analyze') }}" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:var(--c-white);border:none;">
           <i class="bi bi-arrow-repeat"></i> Re-upload
         </a>
       </div>
@@ -141,7 +141,7 @@
 </div>
 
 {% if err_count > 0 %}
-<div class="alert d-flex gap-2 align-items-start py-2 mb-3" style="background:var(--c-danger-bg-soft);border:1px solid #fecaca;font-size:var(--fs-md);color:var(--c-danger);">
+<div class="alert d-flex gap-2 align-items-start py-2 mb-3" style="background:var(--c-danger-bg-soft);border:1px solid var(--c-danger-border);font-size:var(--fs-md);color:var(--c-danger);">
   <i class="bi bi-exclamation-triangle-fill mt-1" style="flex-shrink:0;"></i>
   <div>
     <strong>{{ err_count }} rows could not be auto-fixed</strong> — skipped from import, downloaded in correction Excel.
@@ -166,14 +166,14 @@
   <div class="card-body p-0">
     {% if not review_data %}
     <div style="padding:32px;text-align:center;color:var(--c-success);">
-      <i class="bi bi-check-circle-fill" style="font-size:36px;display:block;margin-bottom:10px;"></i>
+      <i class="bi bi-check-circle-fill" style="font-size:var(--icon-xl);display:block;margin-bottom:10px;"></i>
       <strong>All rows are clean — nothing to review.</strong>
     </div>
     {% else %}
     <!-- Filter + page controls -->
-    <div class="d-flex align-items-center gap-2 flex-wrap" style="padding:10px 14px;background:var(--c-surface-slate);border-bottom:1px solid #e5e9f2;">
+    <div class="d-flex align-items-center gap-2 flex-wrap" style="padding:10px 14px;background:var(--c-surface-slate);border-bottom:1px solid var(--c-border);">
       <div class="input-group input-group-sm" style="max-width:340px;">
-        <span class="input-group-text" style="background:#fff;font-size:var(--fs-body);"><i class="bi bi-search"></i></span>
+        <span class="input-group-text" style="background:var(--c-white);font-size:var(--fs-body);"><i class="bi bi-search"></i></span>
         <input type="text" id="an-filter" class="form-control" placeholder="Filter by emp code / name / programme / issue..." style="font-size:var(--fs-body);">
       </div>
       <div class="btn-group btn-group-sm" role="group" aria-label="status filter">
@@ -185,7 +185,7 @@
     </div>
     <div class="table-responsive" style="max-height:62vh;overflow-y:auto;">
       <table class="table table-sm mb-0" style="font-size:var(--fs-body);" id="an-table">
-        <thead style="position:sticky;top:0;z-index:10;background:#1e3a5f;color:#fff;">
+        <thead style="position:sticky;top:0;z-index:10;background:var(--c-thead-dark);color:var(--c-white);">
           <tr>
             <th>#</th><th>Status</th><th>Emp Code</th><th>Name</th>
             <th>Programme Name</th><th>Type</th><th>Mode</th><th>Hrs</th>
@@ -199,7 +199,7 @@
     </div>
     <!-- Pager -->
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2"
-         style="padding:10px 14px;background:var(--c-surface-slate);border-top:1px solid #e5e9f2;font-size:var(--fs-body);">
+         style="padding:10px 14px;background:var(--c-surface-slate);border-top:1px solid var(--c-border);font-size:var(--fs-body);">
       <span id="an-page-info" style="color:var(--c-muted-2);"></span>
       <div class="btn-group btn-group-sm" role="group">
         <button type="button" class="btn btn-outline-secondary" id="an-prev">&laquo; Prev</button>
@@ -216,9 +216,9 @@
 
 <!-- ── Master List vs This Upload ─────────────────────────────────────── -->
 {% set matched_count = master_progs | selectattr('lower' , 'defined') | list | length %}
-<div class="card mb-4" style="border-left:4px solid #2e6da4;">
+<div class="card mb-4" style="border-left:4px solid var(--c-primary);">
   <div class="card-header d-flex align-items-center gap-2"
-       style="background:var(--c-surface-slate);font-size:var(--fs-md);font-weight:600;color:#1e293b;">
+       style="background:var(--c-surface-slate);font-size:var(--fs-md);font-weight:600;color:var(--c-text);">
     <i class="bi bi-list-check" style="color:var(--c-primary);"></i>
     Programme Master vs This Upload
     <span style="font-weight:400;color:var(--c-muted-2);font-size:var(--fs-body);margin-left:4px;">
@@ -230,13 +230,13 @@
       {% for p in master_progs %}
         {% if p.lower() in upload_progs_lower %}
         <span style="background:var(--c-success-bg);color:var(--c-success-text);font-size:var(--fs-sm);font-weight:500;
-                     padding:3px 10px;border-radius:12px;border:1px solid #a7f3d0;
+                     padding:3px 10px;border-radius:12px;border:1px solid var(--c-success-border);
                      display:inline-flex;align-items:center;gap:4px;">
           <i class="bi bi-check2"></i>{{ p }}
         </span>
         {% else %}
-        <span style="background:var(--c-warn-bg-alt);color:#c2410c;font-size:var(--fs-sm);font-weight:500;
-                     padding:3px 10px;border-radius:12px;border:1px solid #fed7aa;
+        <span style="background:var(--c-warn-bg-alt);color:var(--c-warn-text);font-size:var(--fs-sm);font-weight:500;
+                     padding:3px 10px;border-radius:12px;border:1px solid var(--c-warn-border);
                      display:inline-flex;align-items:center;gap:4px;">
           <i class="bi bi-dash"></i>{{ p }}
         </span>
@@ -255,7 +255,7 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="aid" value="{{ aid }}">
   <div class="d-flex gap-3 align-items-center flex-wrap">
-    <button type="submit" class="btn px-5 py-2 fw-semibold" style="background:var(--c-success);color:#fff;border:none;font-size:var(--fs-base);">
+    <button type="submit" class="btn px-5 py-2 fw-semibold" style="background:var(--c-success);color:var(--c-white);border:none;font-size:var(--fs-base);">
       <i class="bi bi-check2-all me-1"></i>
       Confirm &amp; Import
       {% if blocked_count > 0 %}

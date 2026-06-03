@@ -14,7 +14,7 @@
   <div class="card-body">
     <form method="POST" action="{{ url_for('verify_approve', session_code=cal.session_code, plant_id=cal.plant_id) }}" id="verify-approve-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div style="font-size:var(--fs-md);color:#1e3a5f;margin-bottom:10px;">
+      <div style="font-size:var(--fs-md);color:var(--c-text-strong);margin-bottom:10px;">
         Tick every box and write a note explaining what was reviewed before approving:
       </div>
       {% for key, label in checklist_items %}
@@ -158,8 +158,8 @@
               <div>
                 <span style="font-weight:700;font-size:var(--fs-body);color:
                   {% if t.stage == 'verified' or t.stage == 'verified_on_2c' %}#16a34a
-                  {% elif t.stage == 'rejected' %}#dc2626
-                  {% elif t.stage == '2c_added' %}#d97706
+                  {% elif t.stage == 'rejected' %}var(--c-danger)
+                  {% elif t.stage == '2c_added' %}var(--c-warn-strong)
                   {% else %}#374151{% endif %};">
                   {{ t.stage }}
                 </span>
@@ -168,7 +168,7 @@
               <span style="font-size:var(--fs-xs);color:var(--c-muted-3);white-space:nowrap;">{{ t.ts | fmt_dt }}</span>
             </div>
             {% if t.detail %}
-            <div style="font-size:var(--fs-sm);color:var(--c-text-2);margin-top:4px;background:var(--c-surface-1);padding:6px 8px;border-radius:4px;">
+            <div style="font-size:var(--fs-sm);color:var(--c-text-2);margin-top:4px;background:var(--c-surface-1);padding:6px 8px;border-radius:var(--radius-xs);">
               {{ t.detail }}
             </div>
             {% endif %}

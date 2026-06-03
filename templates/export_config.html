@@ -22,11 +22,11 @@
       <div class="card-body">
         <div class="row g-3">
           {% set sheets = [
-            ('emp_master',  'bi-people',       '#2e6da4', 'Employee Master',        'All active and exited employees'),
-            ('tni',         'bi-clipboard2-check', '#0891b2', 'TNI Tracking',       'Training need identification records'),
-            ('calendar',    'bi-calendar3',    '#2e6da4', 'Training Calendar',      'Planned sessions vs actual'),
-            ('training_2a', 'bi-person-badge', '#065f46', '2A — Emp. Training',     'Individual attendance records'),
-            ('prog_2c',     'bi-journal-text', '#9a3412', '2C — Programme Details', 'Conducted session details & feedback'),
+            ('emp_master',  'bi-people',       'var(--c-primary)', 'Employee Master',        'All active and exited employees'),
+            ('tni',         'bi-clipboard2-check', 'var(--c-info)', 'TNI Tracking',       'Training need identification records'),
+            ('calendar',    'bi-calendar3',    'var(--c-primary)', 'Training Calendar',      'Planned sessions vs actual'),
+            ('training_2a', 'bi-person-badge', 'var(--c-success-strong)', '2A — Emp. Training',     'Individual attendance records'),
+            ('prog_2c',     'bi-journal-text', 'var(--c-warn-text)', '2C — Programme Details', 'Conducted session details & feedback'),
           ] %}
           {% for val, icon, color, label, desc in sheets %}
           <div class="col-md-4 col-lg-3">

@@ -2,14 +2,14 @@
 {% block page_title %}Central Dashboard — All Plants{% endblock %}
 
 {% set grand_sess_pct = (grand.conducted / grand.sessions * 100)|round(0)|int if grand.sessions else 0 %}
-{% set Q_COLORS = ['#2563eb','#0891b2','#d97706','#7c3aed'] %}
+{% set Q_COLORS = ['#2563eb','var(--c-info)','var(--c-warn-strong)','var(--c-central)'] %}
 {% set Q_BG    = ['#eff6ff','#ecfeff','#fffbeb','#f5f3ff'] %}
-{% set Q_BORD  = ['#bfdbfe','#a5f3fc','#fde68a','#ddd6fe'] %}
+{% set Q_BORD  = ['var(--c-info-border)','#a5f3fc','#fde68a','#ddd6fe'] %}
 
 {% block content %}
 
 {% if pending_verify_count and pending_verify_count > 0 %}
-<div style="background:var(--c-warn-bg-alt);border:1.5px solid #fcd34d;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;">
+<div style="background:var(--c-warn-bg-alt);border:1.5px solid #fcd34d;border-radius:var(--radius-md);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;">
   <i class="bi bi-patch-exclamation-fill" style="font-size:28px;color:var(--c-warn);"></i>
   <div style="flex:1;">
     <div style="font-size:var(--fs-base);font-weight:700;color:var(--c-warn-text);">
@@ -85,7 +85,7 @@
     <div class="row g-2">
       {% for p in plants %}
       {% set overall = ((p.bc_pct + p.wc_pct) / 2)|round(1) %}
-      {% set col = '#059669' if overall >= 75 else ('#d97706' if overall >= 40 else '#dc2626') %}
+      {% set col = '#059669' if overall >= 75 else ('var(--c-warn-strong)' if overall >= 40 else 'var(--c-danger)') %}
       <div class="col-6 col-md-4 col-lg-2">
         <a href="{{ url_for('admin_select_plant', plant_id=p.id) }}" class="plant-chip" style="text-decoration:none;">
           <div class="plant-chip-top">
@@ -127,8 +127,8 @@
         </thead>
         <tbody>
           {% for p in plants %}
-          {% set bc_col = '#059669' if p.bc_pct >= 75 else ('#d97706' if p.bc_pct >= 40 else '#dc2626') %}
-          {% set wc_col = '#059669' if p.wc_pct >= 75 else ('#d97706' if p.wc_pct >= 40 else '#dc2626') %}
+          {% set bc_col = '#059669' if p.bc_pct >= 75 else ('var(--c-warn-strong)' if p.bc_pct >= 40 else 'var(--c-danger)') %}
+          {% set wc_col = '#059669' if p.wc_pct >= 75 else ('var(--c-warn-strong)' if p.wc_pct >= 40 else 'var(--c-danger)') %}
           <tr>
             <td style="padding:12px;color:var(--c-muted);font-size:var(--fs-sm);">{{ loop.index }}</td>
             <td style="padding:12px;">
@@ -137,10 +137,10 @@
             </td>
             <td style="padding:12px;font-weight:700;">{{ p.total_emp }}</td>
             <td style="padding:12px;">
-              <span style="background:var(--c-info-bg);color:var(--c-info-strong);font-size:var(--fs-sm);font-weight:700;padding:2px 8px;border-radius:20px;">{{ p.blue_collar }}</span>
+              <span style="background:var(--c-info-bg);color:var(--c-info-strong);font-size:var(--fs-sm);font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);">{{ p.blue_collar }}</span>
             </td>
             <td style="padding:12px;">
-              <span style="background:#dcfce7;color:#15803d;font-size:var(--fs-sm);font-weight:700;padding:2px 8px;border-radius:20px;">{{ p.white_collar }}</span>
+              <span style="background:#dcfce7;color:#15803d;font-size:var(--fs-sm);font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);">{{ p.white_collar }}</span>
             </td>
             <td style="padding:12px;">{{ p.sessions }}</td>
             <td style="padding:12px;">
@@ -152,16 +152,16 @@
             <td style="padding:12px;font-weight:700;">{{ p.manhours }}</td>
             <td style="padding:12px 16px;min-width:130px;">
               <div class="d-flex align-items-center gap-2">
-                <div style="flex:1;height:6px;background:var(--c-surface-slate-2);border-radius:4px;overflow:hidden;">
-                  <div style="height:6px;width:{{ [p.bc_pct,100]|min }}%;background:{{ bc_col }};border-radius:4px;"></div>
+                <div style="flex:1;height:6px;background:var(--c-surface-slate-2);border-radius:var(--radius-xs);overflow:hidden;">
+                  <div style="height:6px;width:{{ [p.bc_pct,100]|min }}%;background:{{ bc_col }};border-radius:var(--radius-xs);"></div>
                 </div>
                 <span style="font-size:var(--fs-sm);font-weight:700;color:{{ bc_col }};min-width:36px;text-align:right;">{{ p.bc_pct }}%</span>
               </div>
             </td>
             <td style="padding:12px 16px;min-width:130px;">
               <div class="d-flex align-items-center gap-2">
-                <div style="flex:1;height:6px;background:var(--c-surface-slate-2);border-radius:4px;overflow:hidden;">
-                  <div style="height:6px;width:{{ [p.wc_pct,100]|min }}%;background:{{ wc_col }};border-radius:4px;"></div>
+                <div style="flex:1;height:6px;background:var(--c-surface-slate-2);border-radius:var(--radius-xs);overflow:hidden;">
+                  <div style="height:6px;width:{{ [p.wc_pct,100]|min }}%;background:{{ wc_col }};border-radius:var(--radius-xs);"></div>
                 </div>
                 <span style="font-size:var(--fs-sm);font-weight:700;color:{{ wc_col }};min-width:36px;text-align:right;">{{ p.wc_pct }}%</span>
               </div>
@@ -180,12 +180,12 @@
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="2" style="padding:11px 12px;background:#1a3a5c;color:#fff;font-weight:800;letter-spacing:.5px;">GRAND TOTAL</td>
-            <td style="padding:11px 12px;background:#1a3a5c;color:#fff;font-weight:800;">{{ grand.total_emp }}</td>
+            <td colspan="2" style="padding:11px 12px;background:#1a3a5c;color:var(--c-white);font-weight:800;letter-spacing:.5px;">GRAND TOTAL</td>
+            <td style="padding:11px 12px;background:#1a3a5c;color:var(--c-white);font-weight:800;">{{ grand.total_emp }}</td>
             <td style="padding:11px 12px;background:#1a3a5c;color:#93c5fd;font-weight:800;">{{ plants|sum(attribute='blue_collar') }}</td>
             <td style="padding:11px 12px;background:#1a3a5c;color:#86efac;font-weight:800;">{{ plants|sum(attribute='white_collar') }}</td>
-            <td style="padding:11px 12px;background:#1a3a5c;color:#fff;font-weight:800;">{{ grand.sessions }}</td>
-            <td style="padding:11px 12px;background:#1a3a5c;color:#fff;font-weight:800;">{{ grand.conducted }}</td>
+            <td style="padding:11px 12px;background:#1a3a5c;color:var(--c-white);font-weight:800;">{{ grand.sessions }}</td>
+            <td style="padding:11px 12px;background:#1a3a5c;color:var(--c-white);font-weight:800;">{{ grand.conducted }}</td>
             <td style="padding:11px 12px;background:#1a3a5c;color:#fbbf24;font-weight:800;">{{ grand.manhours }}</td>
             <td colspan="3" style="padding:11px 12px;background:#1a3a5c;"></td>
           </tr>

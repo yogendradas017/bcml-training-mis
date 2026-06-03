@@ -4,7 +4,7 @@
 
 <!-- Fresh Upload — admin only -->
 {% if session.role == 'admin' %}
-<div class="card mb-3" style="border-left:5px solid #10b981;">
+<div class="card mb-3" style="border-left:5px solid var(--c-success);">
   <div class="card-header ch-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
     <span><i class="bi bi-shield-check-fill me-1"></i> Fresh TNI Upload</span>
     <span class="badge" style="background:rgba(255,255,255,0.2);font-size:var(--fs-sm);">Recommended first-time setup</span>
@@ -15,7 +15,7 @@
       Unique programme names become your <strong>master list</strong>. Nothing garbage gets through.
     </p>
     <a href="{{ url_for('tni_fresh_upload') }}" class="btn fw-semibold px-4"
-       style="background:var(--c-success);color:#fff;border:none;">
+       style="background:var(--c-success);color:var(--c-white);border:none;">
       <i class="bi bi-shield-check me-1"></i> Start Fresh Upload
     </a>
   </div>
@@ -23,7 +23,7 @@
 {% endif %}
 
 <!-- TNI Analyzer — row-by-row review path -->
-<div class="card mb-4" style="border-left:5px solid #2e6da4;">
+<div class="card mb-4" style="border-left:5px solid var(--c-primary);">
   <div class="card-header ch-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
     <span><i class="bi bi-search me-1"></i> Bulk Upload TNI — with Data Analyzer</span>
     <a href="{{ url_for('tni_template') }}" class="btn btn-warning btn-sm fw-bold">
@@ -37,14 +37,14 @@
       <span style="color:var(--c-danger);font-weight:600;">red = issue</span>.
       Fix red rows inline, re-check, then confirm import.
     </p>
-    <a href="{{ url_for('tni_analyze') }}" class="btn fw-semibold px-4" style="background:var(--c-primary);color:#fff;border:none;">
+    <a href="{{ url_for('tni_analyze') }}" class="btn fw-semibold px-4" style="background:var(--c-primary);color:var(--c-white);border:none;">
       <i class="bi bi-search me-1"></i> Upload &amp; Analyze TNI Data
     </a>
   </div>
 </div>
 
 {% if dup_count > 0 or dirty_names %}
-<div class="mb-4" style="background:var(--c-warn-bg-alt);border:1px solid #fed7aa;border-radius:10px;padding:14px 16px;">
+<div class="mb-4" style="background:var(--c-warn-bg-alt);border:1px solid var(--c-warn-border);border-radius:var(--radius-md);padding:14px 16px;">
   <div class="d-flex align-items-start gap-3 flex-wrap">
     <i class="bi bi-exclamation-triangle-fill mt-1" style="color:var(--c-warn-alt);font-size:var(--fs-xl);flex-shrink:0;"></i>
     <div style="flex:1;min-width:0;">
@@ -65,7 +65,7 @@
         <div style="display:flex;flex-wrap:wrap;gap:5px;padding:8px 0;">
           {% for n in dirty_names %}
           <span style="background:var(--c-danger-bg);color:var(--c-danger);font-size:var(--fs-sm);font-weight:500;
-                       padding:2px 9px;border-radius:10px;border:1px solid #fecaca;">{{ n }}</span>
+                       padding:2px 9px;border-radius:var(--radius-md);border:1px solid var(--c-danger-border);">{{ n }}</span>
           {% endfor %}
         </div>
         <div style="font-size:var(--fs-sm);color:var(--c-muted-3);margin-top:4px;">
@@ -78,13 +78,13 @@
     <div class="d-flex gap-2 flex-wrap align-items-start">
       {% if dup_count > 0 %}
       <a href="{{ url_for('tni_duplicates') }}" class="btn btn-sm"
-         style="background:var(--c-warn-alt);color:#fff;border:none;font-size:var(--fs-body);font-weight:600;">
+         style="background:var(--c-warn-alt);color:var(--c-white);border:none;font-size:var(--fs-body);font-weight:600;">
         <i class="bi bi-copy me-1"></i> View &amp; Remove Duplicates
       </a>
       {% endif %}
       {% if dirty_names %}
       <a href="{{ url_for('tni_cleanse') }}" class="btn btn-sm"
-         style="background:var(--c-primary);color:#fff;border:none;font-size:var(--fs-body);font-weight:600;">
+         style="background:var(--c-primary);color:var(--c-white);border:none;font-size:var(--fs-body);font-weight:600;">
         <i class="bi bi-magic me-1"></i> Review &amp; Fix Names
       </a>
       {% endif %}
@@ -115,15 +115,15 @@
         </div>
         <div class="col-md-2">
           <label class="form-label">Grade</label>
-          <input type="text" id="tni_grade" class="form-control" placeholder="Auto-fill" readonly style="background:#f8f9fa;">
+          <input type="text" id="tni_grade" class="form-control" placeholder="Auto-fill" readonly style="background:var(--c-surface-slate);">
         </div>
         <div class="col-md-2">
           <label class="form-label">Collar</label>
-          <input type="text" id="tni_collar" class="form-control" placeholder="Auto-fill" readonly style="background:#f8f9fa;">
+          <input type="text" id="tni_collar" class="form-control" placeholder="Auto-fill" readonly style="background:var(--c-surface-slate);">
         </div>
         <div class="col-md-4">
           <label class="form-label">Department</label>
-          <input type="text" id="tni_dept" class="form-control" placeholder="Auto-fill" readonly style="background:#f8f9fa;">
+          <input type="text" id="tni_dept" class="form-control" placeholder="Auto-fill" readonly style="background:var(--c-surface-slate);">
         </div>
         <div class="col-md-4">
           <label class="form-label">Programme Name <span class="required-star">*</span></label>
@@ -228,7 +228,7 @@
         </tbody>
       </table>
     </div>
-    <div id="tni-pager" class="d-flex justify-content-between align-items-center px-3 py-2" style="font-size:var(--fs-md);border-top:1px solid #e5e7eb;"></div>
+    <div id="tni-pager" class="d-flex justify-content-between align-items-center px-3 py-2" style="font-size:var(--fs-md);border-top:var(--bw-1) solid var(--c-border);"></div>
   </div>
 </div>
 {% endblock %}

@@ -53,7 +53,7 @@
   <div class="tab-pane fade show active" id="tab-2a">
     <div class="table-responsive">
       <table class="table table-sm table-hover align-middle" style="font-size:var(--fs-body);">
-        <thead style="background:#1a3a5c;color:#fff;">
+        <thead style="background:#1a3a5c;color:var(--c-white);">
           <tr>
             <th style="padding:8px 10px;">Plant</th>
             <th style="padding:8px 10px;">Emp Code</th>
@@ -84,7 +84,7 @@
             <td style="padding:7px 10px;text-align:right;font-weight:600;">{{ r.hrs }}</td>
             <td style="padding:7px 10px;">
               {% for fl in r.anomaly_flags.split(',') %}
-              <span style="background:var(--c-warn-bg);color:var(--c-warn-text);font-size:var(--fs-xs);font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
+              <span style="background:var(--c-warn-bg);color:var(--c-warn-text);font-size:var(--fs-xs);font-weight:600;padding:2px 7px;border-radius:var(--radius-xs);display:inline-block;margin:1px;">
                 <i class="bi bi-exclamation-triangle-fill" style="font-size:var(--fs-xs);"></i> {{ fl.strip() }}
               </span>
               {% endfor %}
@@ -103,7 +103,7 @@
   <div class="tab-pane fade" id="tab-2c">
     <div class="table-responsive">
       <table class="table table-sm table-hover align-middle" style="font-size:var(--fs-body);">
-        <thead style="background:#1a3a5c;color:#fff;">
+        <thead style="background:#1a3a5c;color:var(--c-white);">
           <tr>
             <th style="padding:8px 10px;">Plant</th>
             <th style="padding:8px 10px;">Session</th>
@@ -130,7 +130,7 @@
             <td style="padding:7px 10px;">{{ r.faculty_name or '—' }}</td>
             <td style="padding:7px 10px;">
               {% for fl in r.anomaly_flags.split(',') %}
-              <span style="background:var(--c-warn-bg);color:var(--c-warn-text);font-size:var(--fs-xs);font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
+              <span style="background:var(--c-warn-bg);color:var(--c-warn-text);font-size:var(--fs-xs);font-weight:600;padding:2px 7px;border-radius:var(--radius-xs);display:inline-block;margin:1px;">
                 <i class="bi bi-exclamation-triangle-fill" style="font-size:var(--fs-xs);"></i> {{ fl.strip() }}
               </span>
               {% endfor %}

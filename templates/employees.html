@@ -4,7 +4,7 @@
 
 {% if recent_exited and not show_exited %}
 <!-- Undo Exit — Dedicated Section at Top -->
-<div class="card mb-4" style="border:2px solid #f59e0b;">
+<div class="card mb-4" style="border:var(--bw-2) solid var(--c-warn);">
   <div class="ch" style="gap:12px;">
     <i class="bi bi-arrow-counterclockwise" style="font-size:var(--fs-lg);color:var(--c-warn);"></i>
     <div>
@@ -76,13 +76,13 @@
             <label class="form-label fw-semibold mb-1" style="font-size:var(--fs-md);">
               <i class="bi bi-file-earmark-excel text-primary"></i> Upload Excel (.xlsx)
             </label>
-            <input type="file" name="bulk_update_file" class="form-control form-control-sm" accept=".xlsx" required style="width:280px;">
+            <input type="file" name="bulk_update_file" class="form-control form-control-sm" accept=".xlsx" required style="max-width:18rem;">
           </div>
           <button type="submit" class="btn btn-primary btn-sm px-4">
             <i class="bi bi-cloud-upload"></i> Apply Updates
           </button>
         </div>
-        <div style="font-size:var(--fs-body);color:#475569;margin-top:8px;line-height:1.6;">
+        <div style="font-size:var(--fs-body);color:var(--c-muted);margin-top:8px;line-height:1.6;">
           <i class="bi bi-info-circle text-primary"></i>
           <strong>Partial update:</strong> Emp Code is the matching key. For every other column, fill the new value to update it &mdash; or leave blank to keep the existing value.
           Example: to update designation for 10 promoted employees, fill their Emp Code + new Designation only; leave all other cells blank.
@@ -102,7 +102,7 @@
             <label class="form-label fw-semibold mb-1" style="font-size:var(--fs-md);">
               <i class="bi bi-file-earmark-excel text-success"></i> Upload Excel (.xlsx)
             </label>
-            <input type="file" name="bulk_file" class="form-control form-control-sm" accept=".xlsx" required style="width:280px;">
+            <input type="file" name="bulk_file" class="form-control form-control-sm" accept=".xlsx" required style="max-width:18rem;">
           </div>
           <button type="submit" class="btn btn-success btn-sm px-4">
             <i class="bi bi-cloud-upload"></i> Upload &amp; Validate

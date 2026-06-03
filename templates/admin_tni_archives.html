@@ -28,7 +28,7 @@
 {% else %}
 <div class="card">
   <div class="card-header d-flex align-items-center gap-2"
-       style="background:linear-gradient(135deg,#1a1f35,#252d45);color:#fff;font-size:14px;">
+       style="background:linear-gradient(135deg,var(--c-thead-dark),#252d45);color:var(--c-white);font-size:14px;">
     <i class="bi bi-archive-fill"></i>
     <span>{{ archives|length }} Snapshot(s) — most recent first</span>
   </div>
@@ -51,7 +51,7 @@
           <td style="padding:8px 14px;">{{ a.fy_year }}</td>
           <td style="padding:8px 14px;color:var(--c-muted-2);">{{ a.archived_at | fmt_dt }}</td>
           <td style="padding:8px 14px;">
-            <span style="background:var(--c-info-bg);color:var(--c-info);padding:2px 8px;border-radius:10px;font-weight:600;">{{ a.row_count }}</span>
+            <span style="background:var(--c-info-bg);color:var(--c-info);padding:2px 8px;border-radius:var(--radius-md);font-weight:600;">{{ a.row_count }}</span>
           </td>
           <td style="padding:8px 14px;font-family:monospace;color:var(--c-muted-2);font-size:var(--fs-sm);">{{ a.archive_token[:8] }}…</td>
           <td style="padding:8px 14px;">

@@ -28,14 +28,14 @@
         {% for p in programmes %}
         {% set cat = p.category or 'General' %}
         <tr>
-          <td style="padding:6px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:6px 14px;color:var(--c-muted);">{{ loop.index }}</td>
           <td style="padding:6px 14px;font-weight:500;">{{ p.name }}</td>
           <td style="padding:6px 14px;">{{ p.prog_type or '—' }}</td>
           <td style="padding:6px 14px;">
             {% if cat == 'Specialized' %}
-              <span style="font-size:var(--fs-sm);background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-weight:600;"><i class="bi bi-stars"></i> Specialized</span>
+              <span style="font-size:var(--fs-sm);background:var(--c-danger-bg);color:#991b1b;padding:2px 8px;border-radius:var(--radius-pill);font-weight:600;"><i class="bi bi-stars"></i> Specialized</span>
             {% else %}
-              <span style="font-size:var(--fs-sm);color:#6b7280;">General</span>
+              <span style="font-size:var(--fs-sm);color:var(--c-muted);">General</span>
             {% endif %}
           </td>
           <td style="padding:6px 14px;">

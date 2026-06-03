@@ -26,7 +26,7 @@
 
     {% for cat, items in config_by_category.items() %}
     <div class="card mb-3 cfg-cat" data-cat="{{ cat|lower }}">
-      <div class="card-header d-flex align-items-center gap-2 py-2" style="background:var(--c-surface-2);border-left:4px solid #2e6da4;">
+      <div class="card-header d-flex align-items-center gap-2 py-2" style="background:var(--c-surface-2);border-left:4px solid var(--c-primary);">
         <span class="badge" style="background:var(--c-primary);font-size:var(--fs-xs);letter-spacing:.05em;">{{ cat|upper }}</span>
         <span class="text-muted" style="font-size:var(--fs-sm);">{{ items|length }} key{{ 's' if items|length != 1 }}</span>
       </div>
@@ -66,7 +66,7 @@
     </div>
     {% endfor %}
 
-    <div id="cfg-drawer" class="shadow-lg" hidden style="position:sticky;bottom:0;background:#fff;border-top:2px solid #2e6da4;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:8px;">
+    <div id="cfg-drawer" class="shadow-lg" hidden style="position:sticky;bottom:0;background:var(--c-white);border-top:2px solid var(--c-primary);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:8px;">
       <div><strong id="cfg-pending-n">0</strong> pending change<span id="cfg-pending-s"></span></div>
       <div class="d-flex gap-2">
         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cfgDiscard()">Discard</button>

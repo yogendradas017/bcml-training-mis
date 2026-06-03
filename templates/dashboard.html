@@ -117,7 +117,7 @@
 </div>
 
 <!-- Sessions Month-by-Month panel — full-width row, pushes layout below when shown -->
-<div id="sess-drill-panel" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 16px 14px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,.06);">
+<div id="sess-drill-panel" style="display:none;background:var(--c-white);border:1px solid var(--c-border);border-radius:12px;padding:12px 16px 14px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,.06);">
   <div style="font-size:var(--fs-xs);font-weight:700;color:var(--c-muted-3);text-transform:uppercase;letter-spacing:.05em;padding:4px 0 6px;border-bottom:1px solid var(--c-surface-2);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
     <span><i class="bi bi-calendar3 me-1" style="color:var(--c-primary);"></i> Sessions — Month-by-Month</span>
     <button type="button" onclick="toggleSessDrill()" style="background:none;border:none;color:var(--c-muted-3);font-size:var(--fs-base);cursor:pointer;line-height:1;" title="Close">&times;</button>
@@ -238,7 +238,7 @@
   </div>
   <div class="analytics-body" style="padding:12px 16px 16px;">
     {%- set total = stats.tni_count if stats.tni_count else 1 -%}
-    {%- set colors = ['#2e6da4','#d97706','#059669','#0891b2','#7c3aed','#e11d48','#374151','#b45309'] -%}
+    {%- set colors = ['var(--c-primary)','var(--c-warn-strong)','#059669','var(--c-info)','var(--c-central)','#e11d48','#374151','#b45309'] -%}
     <div class="row g-2">
       {% for row in tni_by_type %}
       {%- set clr = colors[loop.index0 % colors|length] -%}
@@ -258,8 +258,8 @@
           </div>
           <div style="font-size:var(--fs-xs);color:var(--c-muted-2);margin-top:4px;">{{ pct }}% of total TNI &nbsp;·&nbsp; {{ progs|length }} programme{{ 's' if progs|length != 1 }}</div>
         </div>
-        <div id="tni-drill-{{ loop.index }}" class="tni-drill-panel" style="display:none;background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:4px 14px 8px;margin-top:-4px;max-height:260px;overflow-y:auto;">
-          <div class="tni-drill-head" style="position:sticky;top:0;background:#fff;padding:6px 0 4px;border-bottom:1px solid #f3f4f6;z-index:1;">
+        <div id="tni-drill-{{ loop.index }}" class="tni-drill-panel" style="display:none;background:var(--c-white);border:1px solid var(--c-border);border-top:none;border-radius:0 0 var(--radius-md) var(--radius-md);padding:4px 14px 8px;margin-top:-4px;max-height:260px;overflow-y:auto;">
+          <div class="tni-drill-head" style="position:sticky;top:0;background:var(--c-white);padding:6px 0 4px;border-bottom:1px solid #f3f4f6;z-index:1;">
             <div style="font-size:var(--fs-xs);font-weight:700;color:var(--c-muted-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">TNI — {{ row.prog_type }}</div>
             <div class="input-group input-group-sm">
               <span class="input-group-text" style="background:var(--c-surface-2);border-right:0;padding:2px 8px;"><i class="bi bi-search" style="font-size:var(--fs-sm);"></i></span>
@@ -288,14 +288,14 @@
 <div class="section-hd">Quick Actions</div>
 <div class="row g-3">
   {% set modules = [
-    ('employees',         'bi-people-fill',          'linear-gradient(135deg,#2e6da4,#2e6da4)', 'Employee Master',       'Add joiners, mark exits, view active employees'),
-    ('tni',               'bi-clipboard-check-fill', 'linear-gradient(135deg,#d97706,#f59e0b)', 'TNI Tracking',          'Record training needs for each employee'),
-    ('training_calendar', 'bi-calendar3',            'linear-gradient(135deg,#0891b2,#06b6d4)', 'Training Calendar',     'Plan sessions, track Plan vs Actual'),
-    ('emp_training',      'bi-person-check-fill',    'linear-gradient(135deg,#059669,#10b981)', 'Training Records (2A)', 'Log who attended which training programme'),
-    ('programme_details', 'bi-journal-richtext',     'linear-gradient(135deg,#1a5a8e,#2e6da4)', 'Programme Details (2C)','Faculty, feedback, cost per programme'),
+    ('employees',         'bi-people-fill',          'linear-gradient(135deg,var(--c-primary),var(--c-primary))', 'Employee Master',       'Add joiners, mark exits, view active employees'),
+    ('tni',               'bi-clipboard-check-fill', 'linear-gradient(135deg,var(--c-warn-strong),var(--c-warn))', 'TNI Tracking',          'Record training needs for each employee'),
+    ('training_calendar', 'bi-calendar3',            'linear-gradient(135deg,var(--c-info),#06b6d4)', 'Training Calendar',     'Plan sessions, track Plan vs Actual'),
+    ('emp_training',      'bi-person-check-fill',    'linear-gradient(135deg,#059669,var(--c-success))', 'Training Records (2A)', 'Log who attended which training programme'),
+    ('programme_details', 'bi-journal-richtext',     'linear-gradient(135deg,#1a5a8e,var(--c-primary))', 'Programme Details (2C)','Faculty, feedback, cost per programme'),
   ] %}
   {% if session.role in ('spoc','admin') and session.plant_id %}
-    {% set modules = modules + [('effectiveness', 'bi-clipboard-pulse', 'linear-gradient(135deg,#7c3aed,#a855f7)', 'Effectiveness Review', 'Post-training impact: file Kirkpatrick L2/L3 scores')] %}
+    {% set modules = modules + [('effectiveness', 'bi-clipboard-pulse', 'linear-gradient(135deg,var(--c-central),#a855f7)', 'Effectiveness Review', 'Post-training impact: file Kirkpatrick L2/L3 scores')] %}
   {% endif %}
   {% set modules = modules + [('monthly_summary', 'bi-bar-chart-fill', 'linear-gradient(135deg,#e11d48,#f43f5e)', 'Monthly Summary', 'Auto-calculated MIS by programme type')] %}
   {% for endpoint, icon, grad, title, desc in modules %}
@@ -304,7 +304,7 @@
       <div class="card card-lift" style="border-top:3px solid transparent;border-image:{{ grad }} 1;">
         <div class="card-body d-flex align-items-center gap-3 py-3">
           <div style="width:44px;height:44px;border-radius:12px;background:{{ grad }};display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15);">
-            <i class="bi {{ icon }}" style="font-size:var(--fs-xl);color:#fff;"></i>
+            <i class="bi {{ icon }}" style="font-size:var(--fs-xl);color:var(--c-white);"></i>
           </div>
           <div>
             <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);">{{ title }}</div>
@@ -322,7 +322,7 @@
       <div class="card card-lift" style="border-top:3px solid #22c55e;">
         <div class="card-body d-flex align-items-center gap-3 py-3">
           <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#16a34a,#22c55e);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(22,163,74,.25);">
-            <i class="bi bi-file-earmark-excel-fill" style="font-size:var(--fs-xl);color:#fff;"></i>
+            <i class="bi bi-file-earmark-excel-fill" style="font-size:var(--fs-xl);color:var(--c-white);"></i>
           </div>
           <div>
             <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);">Export to Excel</div>

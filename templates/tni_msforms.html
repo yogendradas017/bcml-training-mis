@@ -6,7 +6,7 @@
 
   <!-- LEFT: Setup Guide -->
   <div class="col-lg-7">
-    <div class="card h-100" style="border-left:5px solid #0078d4;">
+    <div class="card h-100" style="border-left:5px solid var(--c-brand-msforms);">
       <div class="card-header ch-dark d-flex align-items-center gap-2">
         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Microsoft_Forms_2019-present.svg/32px-Microsoft_Forms_2019-present.svg.png"
              style="width:22px;height:22px;" onerror="this.style.display='none'">
@@ -14,25 +14,25 @@
       </div>
       <div class="card-body" style="font-size:var(--fs-md);">
 
-        <div style="background:var(--c-info-bg-soft);border:1px solid var(--c-info-border);border-radius:10px;padding:12px 16px;margin-bottom:18px;">
+        <div style="background:var(--c-info-bg-soft);border:1px solid var(--c-info-border);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:18px;">
           <strong style="color:var(--c-info);">Go to</strong>
-          <code style="background:var(--c-info-bg);padding:2px 8px;border-radius:4px;margin:0 4px;">forms.office.com</code>
+          <code style="background:var(--c-info-bg);padding:2px 8px;border-radius:var(--radius-xs);margin:0 4px;">forms.office.com</code>
           → New Form → add the questions below <strong>in this exact order.</strong>
         </div>
 
         <!-- Question list -->
         {% set questions = [
-          ('1','Employee Code','Text','Required. SPOC types their 6-digit employee code. Example: BCM001','bi-person-badge','#dc2626'),
-          ('2','Programme Name','Text','Required. Name of the training programme needed. Example: Fire Safety Awareness','bi-book','#dc2626'),
-          ('3','Type of Programme','Choice','Add these 6 options: Behavioural/Leadership, Cane, Commercial, EHS/HR, IT, Technical','bi-tag','#0891b2'),
-          ('4','Mode','Choice','Add these 4 options: Classroom, OJT, SOP, Online','bi-display','#0891b2'),
-          ('5','Target Month','Choice','Add all 12 months: April, May, June … March (in FY order)','bi-calendar3','#0891b2'),
-          ('6','Planned Hours','Number','Optional. Training duration in hours. Set min = 0','bi-clock','#6b7280'),
+          ('1','Employee Code','Text','Required. SPOC types their 6-digit employee code. Example: BCM001','bi-person-badge','var(--c-danger)'),
+          ('2','Programme Name','Text','Required. Name of the training programme needed. Example: Fire Safety Awareness','bi-book','var(--c-danger)'),
+          ('3','Type of Programme','Choice','Add these 6 options: Behavioural/Leadership, Cane, Commercial, EHS/HR, IT, Technical','bi-tag','var(--c-info)'),
+          ('4','Mode','Choice','Add these 4 options: Classroom, OJT, SOP, Online','bi-display','var(--c-info)'),
+          ('5','Target Month','Choice','Add all 12 months: April, May, June … March (in FY order)','bi-calendar3','var(--c-info)'),
+          ('6','Planned Hours','Number','Optional. Training duration in hours. Set min = 0','bi-clock','var(--c-muted)'),
         ] %}
 
         {% for num, qname, qtype, hint, icon, color in questions %}
         <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--c-surface-slate-2);align-items:flex-start;">
-          <div style="width:28px;height:28px;border-radius:50%;background:{{ color }};color:#fff;
+          <div style="width:28px;height:28px;border-radius:50%;background:{{ color }};color:var(--c-white);
                display:flex;align-items:center;justify-content:center;font-weight:700;font-size:var(--fs-body);flex-shrink:0;margin-top:2px;">
             {{ num }}
           </div>
@@ -42,7 +42,7 @@
               {{ qname }}
               {% if num in ('1','2') %}<span style="color:var(--c-danger);font-size:var(--fs-sm);margin-left:4px;">★ Required</span>{% endif %}
             </div>
-            <div style="display:inline-block;background:var(--c-surface-2);color:var(--c-text-2);font-size:var(--fs-sm);padding:1px 8px;border-radius:99px;margin:3px 0;">
+            <div style="display:inline-block;background:var(--c-surface-2);color:var(--c-text-2);font-size:var(--fs-sm);padding:1px 8px;border-radius:var(--radius-pill);margin:3px 0;">
               Type: {{ qtype }}
             </div>
             <div style="color:var(--c-muted-2);font-size:var(--fs-body);margin-top:3px;">{{ hint }}</div>
@@ -50,7 +50,7 @@
         </div>
         {% endfor %}
 
-        <div style="background:var(--c-warn-bg);border:1px solid var(--c-warn-border);border-radius:10px;padding:12px 16px;margin-top:16px;font-size:var(--fs-body);">
+        <div style="background:var(--c-warn-bg);border:1px solid var(--c-warn-border);border-radius:var(--radius-md);padding:12px 16px;margin-top:16px;font-size:var(--fs-body);">
           <strong><i class="bi bi-lightbulb-fill text-warning me-1"></i> Pro tips:</strong>
           <ul class="mb-0 mt-2" style="padding-left:18px;">
             <li>Set the form title to: <strong>TNI — {{ plant_name }}</strong></li>
@@ -103,7 +103,7 @@
             <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
             <div class="form-text" style="font-size:var(--fs-sm);">Only <code>.xlsx</code> / <code>.xls</code> files from Microsoft Forms.</div>
           </div>
-          <button type="submit" class="btn w-100 fw-semibold" style="background:var(--c-primary);color:#fff;border:none;">
+          <button type="submit" class="btn w-100 fw-semibold" style="background:var(--c-primary);color:var(--c-white);border:none;">
             <i class="bi bi-upload me-1"></i> Import MS Forms Responses to TNI
           </button>
         </form>

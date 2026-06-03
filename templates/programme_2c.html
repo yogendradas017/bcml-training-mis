@@ -39,11 +39,11 @@
         </div>
         <div class="col-md-5">
           <label class="form-label" for="pc_prog_name">Programme Name</label>
-          <input type="text" id="pc_prog_name" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+          <input type="text" id="pc_prog_name" class="form-control" readonly style="background:var(--c-surface-slate);" placeholder="Auto-fill">
         </div>
         <div class="col-md-3">
           <label class="form-label" for="pc_prog_type">Type</label>
-          <input type="text" id="pc_prog_type" class="form-control" readonly style="background:#f8f9fa;" placeholder="Auto-fill">
+          <input type="text" id="pc_prog_type" class="form-control" readonly style="background:var(--c-surface-slate);" placeholder="Auto-fill">
         </div>
         <div class="col-md-2">
           <label class="form-label" for="pc_start_date">Actual Start Date <span class="required-star">*</span></label>
@@ -199,10 +199,10 @@
   </div>
 </div>
 {% if central_records %}
-<div class="card mt-4" style="border-left:4px solid #7c3aed;">
+<div class="card mt-4" style="border-left:4px solid var(--c-central);">
   <div class="card-header ch-dark d-flex justify-content-between align-items-center">
     <span><i class="bi bi-building"></i> Corporate L&amp;D — Centrally Conducted Sessions
-      <span class="badge ms-2" style="background:#7c3aed;font-size:var(--fs-sm);">{{ central_records|length }}</span>
+      <span class="badge ms-2" style="background:var(--c-central);font-size:var(--fs-sm);">{{ central_records|length }}</span>
     </span>
     <span style="font-size:var(--fs-sm);opacity:.75;">Read-only · Session code <code style="color:#c4b5fd;">CEN/…</code> identifies central sessions · Details entered by Corporate L&amp;D</span>
   </div>
@@ -220,7 +220,7 @@
           {% for rec in central_records %}
           <tr>
             <td>{{ loop.index }}</td>
-            <td><code style="font-size:var(--fs-sm);color:#7c3aed;">{{ rec.session_code }}</code></td>
+            <td><code style="font-size:var(--fs-sm);color:var(--c-central);">{{ rec.session_code }}</code></td>
             <td>
               <strong>{{ rec.programme_name or '—' }}</strong>
               {% if rec.category == 'Specialized' %}

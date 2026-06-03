@@ -5,18 +5,18 @@
 {# ── Row 1: Unique Progs | Needs Breakdown | Big Ticket ── #}
 <div class="row g-3 mb-3">
   <div class="col-md-4">
-    <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+    <div class="sc" style="background:var(--c-white);border-radius:var(--radius-lg);border:1px solid var(--c-border);padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
       <div style="font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--c-muted-2);margin-bottom:6px;">Unique Programmes — FY {{ fy }}</div>
-      <div class="sc-val" style="font-size:36px;font-weight:800;color:var(--c-primary);line-height:1;">{{ unique_progs }}</div>
+      <div class="sc-val" style="font-size:var(--icon-xl);font-weight:800;color:var(--c-primary);line-height:1;">{{ unique_progs }}</div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
-        <span style="background:var(--c-danger-bg);color:var(--c-danger);font-size:var(--fs-sm);font-weight:700;padding:3px 10px;border-radius:20px;">{{ progs_in_demand }} in demand</span>
+        <span style="background:var(--c-danger-bg);color:var(--c-danger);font-size:var(--fs-sm);font-weight:700;padding:3px 10px;border-radius:var(--radius-pill);">{{ progs_in_demand }} in demand</span>
         <span style="font-size:var(--fs-sm);color:var(--c-muted-3);">still uncovered</span>
       </div>
     </div>
   </div>
 
   <div class="col-md-5">
-    <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+    <div class="sc" style="background:var(--c-white);border-radius:var(--radius-lg);border:1px solid var(--c-border);padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
       <div style="font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--c-muted-2);margin-bottom:10px;">Employee Training Needs — FY {{ fy }}</div>
       <div style="display:flex;gap:16px;align-items:flex-end;">
         <div style="flex:1;text-align:center;">
@@ -35,8 +35,8 @@
         </div>
       </div>
       {% if total_needs > 0 %}
-      <div style="margin-top:12px;background:var(--c-surface-slate-2);border-radius:99px;height:6px;overflow:hidden;">
-        <div style="width:{{ (total_covered / total_needs * 100)|round|int }}%;height:100%;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);"></div>
+      <div style="margin-top:12px;background:var(--c-surface-slate-2);border-radius:var(--radius-pill);height:6px;overflow:hidden;">
+        <div style="width:{{ (total_covered / total_needs * 100)|round|int }}%;height:100%;border-radius:var(--radius-pill);background:linear-gradient(90deg,var(--c-success),#34d399);"></div>
       </div>
       <div style="font-size:var(--fs-xs);color:var(--c-muted-3);margin-top:3px;text-align:right;">{{ (total_covered / total_needs * 100)|round|int }}% overall coverage</div>
       {% endif %}
@@ -44,9 +44,9 @@
   </div>
 
   <div class="col-md-3">
-    <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+    <div class="sc" style="background:var(--c-white);border-radius:var(--radius-lg);border:1px solid var(--c-border);padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
       <div style="font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--c-muted-2);margin-bottom:6px;">Big Ticket Items</div>
-      <div class="sc-val" style="font-size:36px;font-weight:800;color:var(--c-warn-alt);line-height:1;">{{ big_tickets }}</div>
+      <div class="sc-val" style="font-size:var(--icon-xl);font-weight:800;color:var(--c-warn-alt);line-height:1;">{{ big_tickets }}</div>
       <div style="font-size:var(--fs-sm);color:var(--c-muted-3);margin-top:8px;">Demand ≥ 30 &amp; coverage &lt; 30%</div>
     </div>
   </div>
@@ -56,7 +56,7 @@
 {% if session_modes %}
 <div class="row g-3 mb-4">
   {% for sm in session_modes %}
-  {% set color = '#2e6da4' if sm.mode == 'Classroom' else '#10b981' if sm.mode == 'OJT' else '#3b82f6' if sm.mode == 'Online' else '#f59e0b' if sm.mode == 'SOP' else '#9ca3af' %}
+  {% set color = 'var(--c-primary)' if sm.mode == 'Classroom' else 'var(--c-success)' if sm.mode == 'OJT' else '#3b82f6' if sm.mode == 'Online' else 'var(--c-warn)' if sm.mode == 'SOP' else 'var(--c-muted)' %}
   <div class="col-6 col-sm-4 col-md-3 col-lg">
     <div style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:16px 18px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
       <div style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--c-muted-2);margin-bottom:6px;">{{ sm.mode }}</div>
@@ -64,8 +64,8 @@
         <span style="font-size:26px;font-weight:800;color:{{ color }};line-height:1;">{{ sm.conducted }}</span>
         <span style="font-size:var(--fs-md);color:var(--c-muted-3);">/ {{ sm.planned }}</span>
       </div>
-      <div style="margin-top:8px;background:var(--c-surface-slate-2);border-radius:99px;height:5px;overflow:hidden;">
-        <div style="width:{{ [sm.pct, 3]|max }}%;height:100%;border-radius:99px;background:{{ color }};"></div>
+      <div style="margin-top:8px;background:var(--c-surface-slate-2);border-radius:var(--radius-pill);height:5px;overflow:hidden;">
+        <div style="width:{{ [sm.pct, 3]|max }}%;height:100%;border-radius:var(--radius-pill);background:{{ color }};"></div>
       </div>
       <div style="font-size:var(--fs-xs);color:var(--c-muted-3);margin-top:3px;">{{ sm.pct }}% conducted</div>
     </div>
@@ -86,15 +86,15 @@
   <div class="card-header ch-dark d-flex flex-wrap justify-content-between align-items-center gap-2">
     <span><i class="bi bi-bar-chart-fill"></i> Programme Demand vs Delivery — FY {{ fy }}</span>
     <div class="d-flex flex-wrap gap-2" style="font-size:var(--fs-sm);">
-      <span style="background:var(--c-success-bg);color:var(--c-success-text);padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">On Track ≥80%</span>
-      <span style="background:var(--c-warn-bg);color:var(--c-warn-text);padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">In Progress 30–79%</span>
-      <span style="background:var(--c-danger-bg);color:var(--c-danger);padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">⚠ Big Ticket &lt;30%</span>
-      <span style="background:var(--c-surface-2);color:var(--c-muted-2);padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">Small Group &lt;30 pax</span>
+      <span style="background:var(--c-success-bg);color:var(--c-success-text);padding:3px 10px;border-radius:var(--radius-pill);font-weight:600;white-space:nowrap;">On Track ≥80%</span>
+      <span style="background:var(--c-warn-bg);color:var(--c-warn-text);padding:3px 10px;border-radius:var(--radius-pill);font-weight:600;white-space:nowrap;">In Progress 30–79%</span>
+      <span style="background:var(--c-danger-bg);color:var(--c-danger);padding:3px 10px;border-radius:var(--radius-pill);font-weight:600;white-space:nowrap;">⚠ Big Ticket &lt;30%</span>
+      <span style="background:var(--c-surface-2);color:var(--c-muted-2);padding:3px 10px;border-radius:var(--radius-pill);font-weight:600;white-space:nowrap;">Small Group &lt;30 pax</span>
     </div>
   </div>
   <div class="card-body pb-2 pt-3">
     <div class="d-flex gap-2">
-      <input type="text" id="intel-search" class="form-control" placeholder="Search programme..." style="max-width:280px;font-size:var(--fs-md);">
+      <input type="text" id="intel-search" class="form-control" placeholder="Search programme..." style="max-width:18rem;font-size:var(--fs-md);">
       <select id="intel-filter" class="form-select" style="width:160px;font-size:var(--fs-md);">
         <option value="">All Status</option>
         <option value="Big Ticket">⚠ Big Ticket</option>
@@ -156,13 +156,13 @@
           <strong style="color:var(--c-text-strong);">{{ p.demand }}</strong> need
         </div>
         <div class="ir-bar">
-          <div style="background:var(--c-surface-slate-2);border-radius:99px;height:10px;overflow:hidden;">
+          <div style="background:var(--c-surface-slate-2);border-radius:var(--radius-pill);height:10px;overflow:hidden;">
             {% if p.pct >= 80 %}
-              <div style="width:{{ p.pct }}%;height:100%;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);"></div>
+              <div style="width:{{ p.pct }}%;height:100%;border-radius:var(--radius-pill);background:linear-gradient(90deg,var(--c-success),#34d399);"></div>
             {% elif p.pct >= 30 %}
-              <div style="width:{{ p.pct }}%;height:100%;border-radius:99px;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div>
+              <div style="width:{{ p.pct }}%;height:100%;border-radius:var(--radius-pill);background:linear-gradient(90deg,var(--c-warn),#fbbf24);"></div>
             {% else %}
-              <div style="width:{{ [p.pct,3]|max }}%;height:100%;border-radius:99px;background:linear-gradient(90deg,#ef4444,#f87171);"></div>
+              <div style="width:{{ [p.pct,3]|max }}%;height:100%;border-radius:var(--radius-pill);background:linear-gradient(90deg,var(--c-danger),#f87171);"></div>
             {% endif %}
           </div>
           <div style="font-size:var(--fs-xs);color:var(--c-muted-3);margin-top:2px;">{{ p.pct }}% covered</div>
@@ -181,13 +181,13 @@
         </div>
         <div class="ir-status ir-right">
           {% if p.status == 'On Track' %}
-            <span style="background:var(--c-success-bg);color:var(--c-success-text);font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">On Track</span>
+            <span style="background:var(--c-success-bg);color:var(--c-success-text);font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:var(--radius-pill);white-space:nowrap;">On Track</span>
           {% elif p.status == 'In Progress' %}
-            <span style="background:var(--c-warn-bg);color:var(--c-warn-text);font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">In Progress</span>
+            <span style="background:var(--c-warn-bg);color:var(--c-warn-text);font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:var(--radius-pill);white-space:nowrap;">In Progress</span>
           {% elif p.status == 'Big Ticket' %}
-            <span style="background:var(--c-danger-bg);color:var(--c-danger);font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">⚠ Big Ticket</span>
+            <span style="background:var(--c-danger-bg);color:var(--c-danger);font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:var(--radius-pill);white-space:nowrap;">⚠ Big Ticket</span>
           {% else %}
-            <span style="background:var(--c-surface-2);color:var(--c-muted-2);font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">Small Group</span>
+            <span style="background:var(--c-surface-2);color:var(--c-muted-2);font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:var(--radius-pill);white-space:nowrap;">Small Group</span>
           {% endif %}
         </div>
       </div>
