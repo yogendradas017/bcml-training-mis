@@ -204,9 +204,18 @@
   <div class="ch-dark" style="justify-content:space-between;">
     <span><i class="bi bi-people"></i>
       {% if show_exited %}All Employees (including exited){% else %}Active Employees{% endif %}
-      — <strong>{{ employees|length }}</strong>
+      — <strong>{{ employees|length }}</strong>{% if truncated %} <span style="font-size:var(--fs-xs);background:rgba(255,255,255,.18);padding:2px 8px;border-radius:var(--radius-pill);margin-left:6px;font-weight:600;">of {{ total_count }}</span>{% endif %}
     </span>
     <div class="d-flex gap-2">
+      {% if truncated %}
+      <a href="{{ url_for('employees', show_exited=(1 if show_exited else 0), show_all=1) }}" class="btn btn-sm btn-warning" style="font-size:var(--fs-body);">
+        <i class="bi bi-list-ul me-1"></i>Show all {{ total_count }}
+      </a>
+      {% elif show_all and total_count > 200 %}
+      <a href="{{ url_for('employees', show_exited=(1 if show_exited else 0)) }}" class="btn btn-sm btn-outline-light" style="font-size:var(--fs-body);">
+        <i class="bi bi-arrow-left-circle me-1"></i>Show first 200
+      </a>
+      {% endif %}
       {% if show_exited %}
       <a href="{{ url_for('employees') }}" class="btn btn-sm btn-light" style="font-size:var(--fs-body);">Show Active Only</a>
       {% else %}
@@ -214,6 +223,11 @@
       {% endif %}
     </div>
   </div>
+  {% if truncated %}
+  <div style="background:var(--c-warn-bg);color:var(--c-warn-text);padding:8px 16px;font-size:var(--fs-sm);border-bottom:1px solid var(--c-warn-border);">
+    <i class="bi bi-info-circle me-1"></i> Showing first 200 of {{ total_count }} employees by name. Use Search + Filters above to find specific records, or click <strong>Show all {{ total_count }}</strong> to load full list (slower).
+  </div>
+  {% endif %}
   <div class="card-body pb-2 pt-3">
     <div class="d-flex gap-2 flex-wrap">
       <div class="position-relative flex-grow-1" style="max-width:300px;">

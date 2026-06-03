@@ -91,10 +91,24 @@ def _register(app):
         plant_id = session['plant_id']
         db = get_db()
         show_exited = request.args.get('show_exited', '0') == '1'
-        if show_exited:
-            emps = db.execute('SELECT * FROM employees WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()
+        show_all = request.args.get('show_all', '0') == '1'
+
+        base_sql = 'SELECT * FROM employees WHERE plant_id=?' + ('' if show_exited else ' AND is_active=1')
+        total_count = db.execute(
+            f'SELECT COUNT(*) FROM ({base_sql})', (plant_id,)).fetchone()[0]
+
+        # Default render cap: first 200 by name. SPOCs working with a specific
+        # dept use Search + Filter; full DOM only loads when explicitly requested.
+        # Prevents 2MB+ HTML payload on plants with 1000+ headcount.
+        LIMIT = 200
+        if show_all or total_count <= LIMIT:
+            emps = db.execute(f'{base_sql} ORDER BY name', (plant_id,)).fetchall()
+            truncated = False
         else:
-            emps = db.execute('SELECT * FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name', (plant_id,)).fetchall()
+            emps = db.execute(f'{base_sql} ORDER BY name LIMIT {LIMIT}',
+                              (plant_id,)).fetchall()
+            truncated = True
+
         recent_exited = db.execute(
             "SELECT * FROM employees WHERE plant_id=? AND is_active=0 AND exit_date >= date('now','-7 days') ORDER BY exit_date DESC",
             (plant_id,)).fetchall()
@@ -108,6 +122,8 @@ def _register(app):
                                collars=COLLARS, ph_options=PH_OPTIONS,
                                departments=departments, sections=sections,
                                designations=designations,
+                               total_count=total_count, truncated=truncated,
+                               show_all=show_all,
                                today=str(_today_ist()))
 
     @app.route('/employees/suggest-similar')
