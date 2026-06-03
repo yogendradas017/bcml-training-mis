@@ -14,7 +14,7 @@
 
 {% if pending %}
 <div class="card shadow-sm mb-4 border-warning">
-  <div class="card-header fw-semibold" style="background:#92400e;color:#fff;">
+  <div class="card-header ch-warn">
     <i class="bi bi-exclamation-triangle-fill me-2"></i>Pending Requests ({{ pending|length }})
   </div>
   <div class="table-responsive">
@@ -65,7 +65,7 @@
 
 {% if resolved %}
 <div class="card shadow-sm">
-  <div class="card-header fw-semibold" style="background:#1a1f35;color:#fff;">
+  <div class="card-header ch-dark">
     <i class="bi bi-archive me-2"></i>Resolved Requests
   </div>
   <div class="table-responsive">

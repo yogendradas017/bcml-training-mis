@@ -65,7 +65,7 @@
 
 {# ── Question-wise analysis ──────────────────────────────────────────────── #}
 <div class="card mb-4">
-  <div class="card-header" style="background:#1a1f35;color:#fff;font-size:13px;">
+  <div class="card-header ch-dark">
     <i class="bi bi-bar-chart-fill me-1"></i> Question-wise Analysis
   </div>
   <div class="table-responsive">
@@ -212,7 +212,7 @@
 
 {# ── Individual responses ────────────────────────────────────────────────── #}
 <div class="card mb-4">
-  <div class="card-header" style="background:#f3f4f6;font-size:13px;font-weight:600;">
+  <div class="card-header ch-light">
     <i class="bi bi-table me-1"></i> Individual Responses
     <span class="badge bg-secondary ms-1">{{ rows|length }}</span>
   </div>
@@ -264,7 +264,7 @@
 {# ── Key Learnings ───────────────────────────────────────────────────────── #}
 {% if learnings %}
 <div class="card mb-4">
-  <div class="card-header" style="background:#f3f4f6;font-size:13px;font-weight:600;">
+  <div class="card-header ch-light">
     <i class="bi bi-lightbulb me-1"></i> Key Learnings <span class="badge bg-secondary ms-1">{{ learnings|length }}</span>
   </div>
   <ul class="list-group list-group-flush">
@@ -278,7 +278,7 @@
 {# ── Suggestions ─────────────────────────────────────────────────────────── #}
 {% if suggestions %}
 <div class="card mb-4">
-  <div class="card-header" style="background:#f3f4f6;font-size:13px;font-weight:600;">
+  <div class="card-header ch-light">
     <i class="bi bi-chat-left-text me-1"></i> Suggestions for Improvement <span class="badge bg-secondary ms-1">{{ suggestions|length }}</span>
   </div>
   <ul class="list-group list-group-flush">

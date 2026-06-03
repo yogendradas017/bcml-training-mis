@@ -18,7 +18,32 @@
   --shadow-md:  0 4px 16px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.04);
   --shadow-lg:  0 10px 40px rgba(0,0,0,.12), 0 4px 12px rgba(0,0,0,.06);
   --transition: .18s cubic-bezier(.4,0,.2,1);
+
+  /* ── TYPOGRAPHY SCALE — single source of truth, use these everywhere ── */
+  --fs-xs:   10px;   /* tiny meta tags */
+  --fs-sm:   11px;   /* badge labels, captions */
+  --fs-body: 12px;   /* secondary text in cards */
+  --fs-md:   13px;   /* CARD HEADERS — protocol baseline */
+  --fs-base: 14px;   /* body default */
+  --fs-lg:   16px;   /* form labels emphasized */
+  --fs-xl:   18px;   /* page section titles */
+  --fs-2xl:  22px;   /* topbar / dashboard KPI */
+  --fs-3xl:  30px;   /* hero metrics */
+
+  --fw-reg:   500;
+  --fw-mid:   600;
+  --fw-bold:  700;
+  --fw-black: 800;
 }
+
+/* ── TYPOGRAPHY UTILITY CLASSES — use instead of inline font-size ── */
+.fs-xs   { font-size: var(--fs-xs); }
+.fs-sm   { font-size: var(--fs-sm); }
+.fs-body { font-size: var(--fs-body); }
+.fs-md   { font-size: var(--fs-md); }
+.fs-base { font-size: var(--fs-base); }
+.fs-lg   { font-size: var(--fs-lg); }
+.fs-xl   { font-size: var(--fs-xl); }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
 body {
@@ -853,21 +878,53 @@ th:has(.cb-all), td:has(.cb-row) { width: 36px; text-align: center; }
   background: #f5f5f7;
   color: var(--c-text);
   border-bottom: 1px solid var(--c-border);
-  font-size: 13px; font-weight: 700;
+  font-size: var(--fs-md); font-weight: var(--fw-bold);
   display: flex; align-items: center; gap: 8px;
   border-radius: 0;
 }
-.ch i { color: var(--c-primary); font-size: 14px; }
+.ch i { color: var(--c-primary); font-size: var(--fs-base); }
 
 .ch-dark {
   padding: 13px 20px;
   background: linear-gradient(135deg, #1e3a5f 0%, #2e6da4 100%);
   color: #fff;
-  font-size: 13px; font-weight: 700;
+  font-size: var(--fs-md); font-weight: var(--fw-bold);
   display: flex; align-items: center; gap: 8px;
   border-radius: 0;
 }
 .ch-dark i { color: rgba(255,255,255,.8); }
+
+/* Header variants — same size + weight as ch-dark, different theme */
+.ch-success {
+  padding: 13px 20px;
+  background: linear-gradient(135deg, #065f46 0%, #059669 100%);
+  color: #fff;
+  font-size: var(--fs-md); font-weight: var(--fw-bold);
+  display: flex; align-items: center; gap: 8px;
+  border-radius: 0;
+}
+.ch-success i { color: rgba(255,255,255,.85); }
+
+.ch-warn {
+  padding: 13px 20px;
+  background: linear-gradient(135deg, #92400e 0%, #d97706 100%);
+  color: #fff;
+  font-size: var(--fs-md); font-weight: var(--fw-bold);
+  display: flex; align-items: center; gap: 8px;
+  border-radius: 0;
+}
+.ch-warn i { color: rgba(255,255,255,.85); }
+
+.ch-light {
+  padding: 13px 20px;
+  background: #f3f4f6;
+  color: var(--c-text);
+  border-bottom: 1px solid var(--c-border);
+  font-size: var(--fs-md); font-weight: var(--fw-bold);
+  display: flex; align-items: center; gap: 8px;
+  border-radius: 0;
+}
+.ch-light i { color: var(--c-primary); }
 
 /* ══════════════════════════════════════════════════════════════
    UNIT CODE BADGE / PCT COLORS

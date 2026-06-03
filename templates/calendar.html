@@ -177,7 +177,7 @@
 <!-- Coverage Summary -->
 {% if cov_rows %}
 <div class="card mb-4">
-  <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#065f46,#059669);color:#fff;cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('d-none')">
+  <div class="card-header ch-success d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('d-none')">
     <span><i class="bi bi-bullseye me-1"></i> TNI Coverage Plan — Are all demand employees covered?</span>
     <div class="d-flex gap-2 align-items-center" style="font-size:12px;">
       {% set fully = cov_rows|selectattr('gap','equalto',0)|list|length %}
