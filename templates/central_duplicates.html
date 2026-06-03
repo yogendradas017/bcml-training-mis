@@ -7,7 +7,7 @@
     <h5 class="mb-0" style="font-weight:700;color:#1e3a5f;">
       <i class="bi bi-files me-1"></i> Programme Master — Duplicate Cleanup
     </h5>
-    <div style="font-size:12px;color:#6b7280;margin-top:2px;">
+    <div style="font-size:var(--fs-body);color:#6b7280;margin-top:2px;">
       Near-identical programme names detected via similarity {{ (threshold*100)|round|int }}%.
       Pick a winner per cluster, set canonical name, click <strong>Merge Selected</strong>.
       Cascade rename runs across TNI, Calendar, 2C and 2A.
@@ -15,7 +15,7 @@
   </div>
   <div class="ms-auto d-flex gap-2 align-items-center">
     <form method="GET" class="d-flex gap-2 align-items-center">
-      <select name="plant_id" class="form-select form-select-sm" style="font-size:12px;">
+      <select name="plant_id" class="form-select form-select-sm" style="font-size:var(--fs-body);">
         <option value="">All plants</option>
         {% for p in plants %}
         <option value="{{ p.id }}" {% if plant_filter == p.id %}selected{% endif %}>{{ p.name }}</option>
@@ -23,20 +23,20 @@
       </select>
       <input type="number" name="threshold" step="0.01" min="0.70" max="0.99"
              value="{{ threshold }}" class="form-control form-control-sm"
-             style="width:80px;font-size:12px;" title="Similarity threshold 0.70–0.99">
+             style="width:80px;font-size:var(--fs-body);" title="Similarity threshold 0.70–0.99">
       <button type="submit" class="btn btn-sm btn-primary">Re-scan</button>
     </form>
   </div>
 </div>
 
 {% if not plant_clusters %}
-<div class="alert alert-success" style="font-size:14px;">
+<div class="alert alert-success" style="font-size:var(--fs-base);">
   <i class="bi bi-check-circle-fill me-1"></i>
   <strong>No duplicate clusters found.</strong> Programme master is clean for the selected scope.
 </div>
 {% else %}
 
-<div class="alert alert-warning" style="font-size:13px;">
+<div class="alert alert-warning" style="font-size:var(--fs-md);">
   <i class="bi bi-exclamation-triangle-fill me-1"></i>
   <strong>{{ plant_clusters | sum(attribute='clusters') | length }} duplicate cluster(s)</strong>
   across {{ plant_clusters | length }} plant(s). Review carefully —
@@ -59,13 +59,13 @@
       <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:14px;background:#fafafa;">
         <input type="hidden" name="plant_{{ cidx }}" value="{{ pc.plant_id }}">
 
-        <div style="font-size:11px;color:#6b7280;margin-bottom:6px;">
+        <div style="font-size:var(--fs-sm);color:#6b7280;margin-bottom:6px;">
           Cluster {{ loop.index }} · {{ cluster | length }} rows ·
           total usage <strong>{{ cluster | sum(attribute='usage_count') }}</strong>
         </div>
 
         <div class="table-responsive">
-        <table class="table table-sm mb-2" style="font-size:12px;">
+        <table class="table table-sm mb-2" style="font-size:var(--fs-body);">
           <thead style="background:#1e3a5f;color:#fff;">
             <tr>
               <th style="width:60px;">Winner</th>
@@ -92,12 +92,12 @@
                 <input type="checkbox" class="loser-cb" data-cidx="{{ cidx }}" data-id="{{ it.id }}"
                        checked>
                 {% else %}
-                <span style="font-size:10px;color:#10b981;">(canonical)</span>
+                <span style="font-size:var(--fs-xs);color:#10b981;">(canonical)</span>
                 {% endif %}
               </td>
               <td>
                 {{ it.name }}
-                <span style="color:#9ca3af;font-size:10px;">#{{ it.id }}</span>
+                <span style="color:#9ca3af;font-size:var(--fs-xs);">#{{ it.id }}</span>
               </td>
               <td style="text-align:right;">{{ it.tni_count }}</td>
               <td style="text-align:right;">{{ it.cal_count }}</td>
@@ -110,14 +110,14 @@
         </table>
         </div>
 
-        <div class="d-flex gap-2 align-items-center flex-wrap" style="font-size:12px;">
+        <div class="d-flex gap-2 align-items-center flex-wrap" style="font-size:var(--fs-body);">
           <label class="mb-0">Canonical name:</label>
           <input type="text" name="canonical_{{ cidx }}" value="{{ winner.name }}"
                  class="form-control form-control-sm canonical-input"
-                 data-cidx="{{ cidx }}" style="flex:1;font-size:12px;">
+                 data-cidx="{{ cidx }}" style="flex:1;font-size:var(--fs-body);">
           <input type="hidden" name="losers_{{ cidx }}" value=""
                  class="losers-hidden" data-cidx="{{ cidx }}">
-          <span style="color:#9ca3af;font-size:11px;">↳ edit if neither winner is exactly right</span>
+          <span style="color:#9ca3af;font-size:var(--fs-sm);">↳ edit if neither winner is exactly right</span>
         </div>
       </div>
       {% endfor %}

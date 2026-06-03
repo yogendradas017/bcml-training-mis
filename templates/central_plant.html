@@ -19,7 +19,7 @@
       <div style="font-size:2rem;font-weight:800;color:#1a3a5c;">{{ plant.name }}</div>
       <span class="badge bg-secondary fs-6">{{ plant.unit_code }}</span>
     </div>
-    <div class="col text-muted" style="font-size:13px;">FY {{ fy_label_long }} | Balrampur Chini Mills Ltd.</div>
+    <div class="col text-muted" style="font-size:var(--fs-md);">FY {{ fy_label_long }} | Balrampur Chini Mills Ltd.</div>
   </div>
 </div>
 
@@ -27,9 +27,9 @@
 <div class="row g-3 mb-4">
   <div class="col-md-4">
     <div class="card p-3" style="border-left:5px solid #0d6efd;">
-      <div class="fw-bold text-primary" style="font-size:13px;">BLUE COLLAR COMPLIANCE</div>
+      <div class="fw-bold text-primary" style="font-size:var(--fs-md);">BLUE COLLAR COMPLIANCE</div>
       <div style="font-size:2rem;font-weight:800;color:#0d6efd;">{{ compliance.bc_pct }}%</div>
-      <div class="text-muted" style="font-size:12px;">
+      <div class="text-muted" style="font-size:var(--fs-body);">
         {{ compliance.bc_actual }} / {{ compliance.bc_mandate }} hrs
         ({{ compliance.bc_emp }} emp × {{ mh_target_bc }} hrs)
       </div>
@@ -40,9 +40,9 @@
   </div>
   <div class="col-md-4">
     <div class="card p-3" style="border-left:5px solid #198754;">
-      <div class="fw-bold text-success" style="font-size:13px;">WHITE COLLAR COMPLIANCE</div>
+      <div class="fw-bold text-success" style="font-size:var(--fs-md);">WHITE COLLAR COMPLIANCE</div>
       <div style="font-size:2rem;font-weight:800;color:#198754;">{{ compliance.wc_pct }}%</div>
-      <div class="text-muted" style="font-size:12px;">
+      <div class="text-muted" style="font-size:var(--fs-body);">
         {{ compliance.wc_actual }} / {{ compliance.wc_mandate }} hrs
         ({{ compliance.wc_emp }} emp × {{ mh_target_wc }} hrs)
       </div>
@@ -53,9 +53,9 @@
   </div>
   <div class="col-md-4">
     <div class="card p-3" style="border-left:5px solid #dc3545;">
-      <div class="fw-bold text-danger" style="font-size:13px;">OVERALL COMPLIANCE</div>
+      <div class="fw-bold text-danger" style="font-size:var(--fs-md);">OVERALL COMPLIANCE</div>
       <div style="font-size:2rem;font-weight:800;color:#dc3545;">{{ compliance.total_pct }}%</div>
-      <div class="text-muted" style="font-size:12px;">
+      <div class="text-muted" style="font-size:var(--fs-body);">
         {{ compliance.bc_actual + compliance.wc_actual }} /
         {{ compliance.bc_mandate + compliance.wc_mandate }} hrs total
       </div>
@@ -92,7 +92,7 @@
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-bordered mb-0" style="font-size:13px;">
+      <table class="table table-bordered mb-0" style="font-size:var(--fs-md);">
         <thead>
           <tr style="background:#2e6da4;color:#fff;">
             <th rowspan="2" class="align-middle">Programme Type</th>

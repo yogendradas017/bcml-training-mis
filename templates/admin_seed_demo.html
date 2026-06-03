@@ -8,13 +8,13 @@
         <i class="bi bi-database-fill-gear"></i> Seed Synthetic Demo Data
       </div>
       <div class="card-body p-4">
-        <div class="alert alert-danger py-2 px-3" style="font-size:13px;border-radius:8px;">
+        <div class="alert alert-danger py-2 px-3" style="font-size:var(--fs-md);border-radius:8px;">
           <strong><i class="bi bi-exclamation-triangle-fill me-1"></i> Destructive Action:</strong>
           Deletes <strong>all</strong> existing calendar, training attendance, and programme details records
           for <strong>all 10 plants</strong>, then re-seeds with 6 months of synthetic data.
           Plant&nbsp;1 TNI is preserved.
         </div>
-        <p style="font-size:13px;color:var(--c-muted);margin:16px 0;">
+        <p style="font-size:var(--fs-md);color:var(--c-muted);margin:16px 0;">
           Seeds Apr–Sep 2026 (Q1+Q2 FY 26-27): 41 programmes × 10 plants,
           ~4–5 sessions per month, realistic attendance (15–45 pax/session).
           May take 30–60 seconds — do not refresh.
@@ -25,7 +25,7 @@
             <button type="submit" class="btn btn-danger flex-grow-1" style="font-weight:700;">
               <i class="bi bi-database-fill-up me-1"></i> Confirm &amp; Seed All Plants
             </button>
-            <a href="{{ url_for('central_dashboard') }}" class="btn btn-outline-secondary" style="font-size:13px;">
+            <a href="{{ url_for('central_dashboard') }}" class="btn btn-outline-secondary" style="font-size:var(--fs-md);">
               Cancel
             </a>
           </div>

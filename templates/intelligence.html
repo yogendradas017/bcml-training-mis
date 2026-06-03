@@ -6,48 +6,48 @@
 <div class="row g-3 mb-3">
   <div class="col-md-4">
     <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Unique Programmes — FY {{ fy }}</div>
+      <div style="font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Unique Programmes — FY {{ fy }}</div>
       <div class="sc-val" style="font-size:36px;font-weight:800;color:#2e6da4;line-height:1;">{{ unique_progs }}</div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
-        <span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">{{ progs_in_demand }} in demand</span>
-        <span style="font-size:11px;color:#9ca3af;">still uncovered</span>
+        <span style="background:#fee2e2;color:#dc2626;font-size:var(--fs-sm);font-weight:700;padding:3px 10px;border-radius:20px;">{{ progs_in_demand }} in demand</span>
+        <span style="font-size:var(--fs-sm);color:#9ca3af;">still uncovered</span>
       </div>
     </div>
   </div>
 
   <div class="col-md-5">
     <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:10px;">Employee Training Needs — FY {{ fy }}</div>
+      <div style="font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:10px;">Employee Training Needs — FY {{ fy }}</div>
       <div style="display:flex;gap:16px;align-items:flex-end;">
         <div style="flex:1;text-align:center;">
           <div style="font-size:28px;font-weight:800;color:#111827;line-height:1;">{{ total_needs }}</div>
-          <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-top:3px;">Total Needs</div>
+          <div style="font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-top:3px;">Total Needs</div>
         </div>
         <div style="color:#d1d5db;font-size:24px;font-weight:200;align-self:center;">/</div>
         <div style="flex:1;text-align:center;">
           <div style="font-size:28px;font-weight:800;color:#10b981;line-height:1;">{{ total_covered }}</div>
-          <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-top:3px;">Covered</div>
+          <div style="font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-top:3px;">Covered</div>
         </div>
         <div style="color:#d1d5db;font-size:24px;font-weight:200;align-self:center;">/</div>
         <div style="flex:1;text-align:center;">
           <div style="font-size:28px;font-weight:800;color:#ef4444;line-height:1;">{{ total_uncovered }}</div>
-          <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-top:3px;">Uncovered</div>
+          <div style="font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-top:3px;">Uncovered</div>
         </div>
       </div>
       {% if total_needs > 0 %}
       <div style="margin-top:12px;background:#f1f5f9;border-radius:99px;height:6px;overflow:hidden;">
         <div style="width:{{ (total_covered / total_needs * 100)|round|int }}%;height:100%;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);"></div>
       </div>
-      <div style="font-size:10px;color:#9ca3af;margin-top:3px;text-align:right;">{{ (total_covered / total_needs * 100)|round|int }}% overall coverage</div>
+      <div style="font-size:var(--fs-xs);color:#9ca3af;margin-top:3px;text-align:right;">{{ (total_covered / total_needs * 100)|round|int }}% overall coverage</div>
       {% endif %}
     </div>
   </div>
 
   <div class="col-md-3">
     <div class="sc" style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Big Ticket Items</div>
+      <div style="font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Big Ticket Items</div>
       <div class="sc-val" style="font-size:36px;font-weight:800;color:#f59e0b;line-height:1;">{{ big_tickets }}</div>
-      <div style="font-size:11px;color:#9ca3af;margin-top:8px;">Demand ≥ 30 &amp; coverage &lt; 30%</div>
+      <div style="font-size:var(--fs-sm);color:#9ca3af;margin-top:8px;">Demand ≥ 30 &amp; coverage &lt; 30%</div>
     </div>
   </div>
 </div>
@@ -59,23 +59,23 @@
   {% set color = '#2e6da4' if sm.mode == 'Classroom' else '#10b981' if sm.mode == 'OJT' else '#3b82f6' if sm.mode == 'Online' else '#f59e0b' if sm.mode == 'SOP' else '#9ca3af' %}
   <div class="col-6 col-sm-4 col-md-3 col-lg">
     <div style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:16px 18px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">{{ sm.mode }}</div>
+      <div style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">{{ sm.mode }}</div>
       <div style="display:flex;align-items:baseline;gap:4px;">
         <span style="font-size:26px;font-weight:800;color:{{ color }};line-height:1;">{{ sm.conducted }}</span>
-        <span style="font-size:13px;color:#9ca3af;">/ {{ sm.planned }}</span>
+        <span style="font-size:var(--fs-md);color:#9ca3af;">/ {{ sm.planned }}</span>
       </div>
       <div style="margin-top:8px;background:#f1f5f9;border-radius:99px;height:5px;overflow:hidden;">
         <div style="width:{{ [sm.pct, 3]|max }}%;height:100%;border-radius:99px;background:{{ color }};"></div>
       </div>
-      <div style="font-size:10px;color:#9ca3af;margin-top:3px;">{{ sm.pct }}% conducted</div>
+      <div style="font-size:var(--fs-xs);color:#9ca3af;margin-top:3px;">{{ sm.pct }}% conducted</div>
     </div>
   </div>
   {% endfor %}
   <div class="col-6 col-sm-4 col-md-3 col-lg">
     <div style="background:#fff;border-radius:14px;border:1px solid #e5e9f2;padding:16px 18px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Total Sessions</div>
+      <div style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px;">Total Sessions</div>
       <div style="font-size:26px;font-weight:800;color:#111827;line-height:1;">{{ total_sessions }}</div>
-      <div style="margin-top:8px;font-size:11px;color:#9ca3af;">FY {{ fy }}</div>
+      <div style="margin-top:8px;font-size:var(--fs-sm);color:#9ca3af;">FY {{ fy }}</div>
     </div>
   </div>
 </div>
@@ -85,7 +85,7 @@
 <div class="card">
   <div class="card-header ch-dark d-flex flex-wrap justify-content-between align-items-center gap-2">
     <span><i class="bi bi-bar-chart-fill"></i> Programme Demand vs Delivery — FY {{ fy }}</span>
-    <div class="d-flex flex-wrap gap-2" style="font-size:11px;">
+    <div class="d-flex flex-wrap gap-2" style="font-size:var(--fs-sm);">
       <span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">On Track ≥80%</span>
       <span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">In Progress 30–79%</span>
       <span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">⚠ Big Ticket &lt;30%</span>
@@ -94,8 +94,8 @@
   </div>
   <div class="card-body pb-2 pt-3">
     <div class="d-flex gap-2">
-      <input type="text" id="intel-search" class="form-control" placeholder="Search programme..." style="max-width:280px;font-size:13px;">
-      <select id="intel-filter" class="form-select" style="width:160px;font-size:13px;">
+      <input type="text" id="intel-search" class="form-control" placeholder="Search programme..." style="max-width:280px;font-size:var(--fs-md);">
+      <select id="intel-filter" class="form-select" style="width:160px;font-size:var(--fs-md);">
         <option value="">All Status</option>
         <option value="Big Ticket">⚠ Big Ticket</option>
         <option value="In Progress">In Progress</option>
@@ -144,7 +144,7 @@
     <div style="padding:0 20px;">
       {% for p in programmes %}
       <div class="intel-row" data-name="{{ p.name|lower }}" data-status="{{ p.status }}">
-        <div class="ir-idx" style="text-align:center;font-size:11px;font-weight:700;color:#9ca3af;">
+        <div class="ir-idx" style="text-align:center;font-size:var(--fs-sm);font-weight:700;color:#9ca3af;">
           {{ loop.index }}
         </div>
         <div class="ir-namecell">
@@ -165,13 +165,13 @@
               <div style="width:{{ [p.pct,3]|max }}%;height:100%;border-radius:99px;background:linear-gradient(90deg,#ef4444,#f87171);"></div>
             {% endif %}
           </div>
-          <div style="font-size:10px;color:#9ca3af;margin-top:2px;">{{ p.pct }}% covered</div>
+          <div style="font-size:var(--fs-xs);color:#9ca3af;margin-top:2px;">{{ p.pct }}% covered</div>
         </div>
         <div class="ir-cov ir-num ir-right">
           <div class="ir-label">Covered</div>
           {{ p.covered }} covered
         </div>
-        <div class="ir-left ir-num ir-right" style="font-size:12px;">
+        <div class="ir-left ir-num ir-right" style="font-size:var(--fs-body);">
           <div class="ir-label">Remaining</div>
           {% if p.uncovered > 0 %}
           <span style="color:#ef4444;font-weight:600;">{{ p.uncovered }} left</span>
@@ -181,13 +181,13 @@
         </div>
         <div class="ir-status ir-right">
           {% if p.status == 'On Track' %}
-            <span style="background:#d1fae5;color:#065f46;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">On Track</span>
+            <span style="background:#d1fae5;color:#065f46;font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">On Track</span>
           {% elif p.status == 'In Progress' %}
-            <span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">In Progress</span>
+            <span style="background:#fef3c7;color:#92400e;font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">In Progress</span>
           {% elif p.status == 'Big Ticket' %}
-            <span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">⚠ Big Ticket</span>
+            <span style="background:#fee2e2;color:#dc2626;font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">⚠ Big Ticket</span>
           {% else %}
-            <span style="background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">Small Group</span>
+            <span style="background:#f3f4f6;color:#6b7280;font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">Small Group</span>
           {% endif %}
         </div>
       </div>

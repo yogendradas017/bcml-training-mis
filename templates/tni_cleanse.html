@@ -24,14 +24,14 @@
 <div class="card">
   <div class="card-body text-center py-5">
     <i class="bi bi-check-circle-fill" style="font-size:40px;color:#10b981;display:block;margin-bottom:12px;"></i>
-    <div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:6px;">All programme names look clean!</div>
-    <div style="font-size:13px;color:#6b7280;">Every entry in TNI matches the Programme Master list exactly.</div>
+    <div style="font-size:var(--fs-base);font-weight:600;color:#111827;margin-bottom:6px;">All programme names look clean!</div>
+    <div style="font-size:var(--fs-md);color:#6b7280;">Every entry in TNI matches the Programme Master list exactly.</div>
   </div>
 </div>
 
 {% else %}
 <div class="alert d-flex gap-2 align-items-start py-2 mb-3"
-     style="background:#fff7ed;border:1px solid #fed7aa;font-size:13px;color:#c2410c;">
+     style="background:#fff7ed;border:1px solid #fed7aa;font-size:var(--fs-md);color:#c2410c;">
   <i class="bi bi-exclamation-circle-fill mt-1" style="flex-shrink:0;"></i>
   <div>
     <strong>{{ preview|length }} programme name(s) will be corrected</strong> across TNI, Training Records, and Calendar.
@@ -45,7 +45,7 @@
     <i class="bi bi-pencil-fill me-1"></i> Corrections Preview
   </div>
   <div class="table-responsive">
-    <table class="table table-sm table-bordered mb-0" style="font-size:13px;">
+    <table class="table table-sm table-bordered mb-0" style="font-size:var(--fs-md);">
       <thead style="background:#f8fafc;">
         <tr>
           <th style="padding:10px 14px;width:44px;">#</th>
@@ -64,7 +64,7 @@
           <td style="padding:8px 14px;">
             <span style="background:#d1fae5;color:#065f46;font-weight:600;padding:2px 8px;border-radius:4px;">{{ p.fixed }}</span>
           </td>
-          <td style="padding:8px 14px;color:#6b7280;font-size:12px;">
+          <td style="padding:8px 14px;color:#6b7280;font-size:var(--fs-body);">
             <i class="bi bi-{% if p.how == 'Case correction' %}fonts{% else %}magic{% endif %} me-1"></i>{{ p.how }}
           </td>
         </tr>

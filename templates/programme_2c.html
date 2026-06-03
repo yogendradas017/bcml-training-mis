@@ -16,7 +16,7 @@
     <i class="bi bi-journal-plus"></i> Add Single Programme Record
   </div>
   <div class="card-body">
-    <div class="alert alert-info py-2" style="font-size:13px;">
+    <div class="alert alert-info py-2" style="font-size:var(--fs-md);">
       <i class="bi bi-info-circle"></i>
       Select a <strong>Session Code</strong> from the Calendar — details auto-fill. Participants count auto-calculated from 2A records.
     </div>
@@ -84,7 +84,7 @@
           <label class="form-label" for="auto_2c_venue">Venue</label>
           <input type="text" name="venue" id="auto_2c_venue" class="form-control" placeholder="e.g. Training Hall" autocomplete="off">
         </div>
-        <div class="col-12"><hr class="my-1"><strong style="font-size:13px;">Feedback Scores (1&#8211;5)</strong></div>
+        <div class="col-12"><hr class="my-1"><strong style="font-size:var(--fs-md);">Feedback Scores (1&#8211;5)</strong></div>
         <div class="col-md-3">
           <label class="form-label" for="auto_course_feedback">Course Feedback</label>
           <input type="number" name="course_feedback" id="auto_course_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
@@ -117,7 +117,7 @@
   <div class="card-body pb-2 pt-3">
     <div class="d-flex gap-2 flex-wrap">
       <div class="position-relative flex-grow-1" style="max-width:300px;">
-        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
+        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:var(--fs-md);"></i>
         <input type="text" class="form-control" placeholder="Search session, programme, faculty..." style="padding-left:34px;" oninput="TBL.search('prog2cTable',this.value)">
       </div>
       <select class="form-select" style="width:170px;" onchange="TBL.filter('prog2cTable','type',this.value)">
@@ -134,7 +134,7 @@
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0" id="prog2cTable" style="font-size:13px;">
+      <table class="table table-hover mb-0" id="prog2cTable" style="font-size:var(--fs-md);">
         <thead>
           <tr>
             <th><input type="checkbox" class="cb-all"></th>
@@ -151,22 +151,22 @@
             <td><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
             <td>
               {{ loop.index }}
-              {% if has_anom %}<i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:11px;margin-left:3px;" title="{{ rec.anomaly_flags }}"></i>{% endif %}
+              {% if has_anom %}<i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:var(--fs-sm);margin-left:3px;" title="{{ rec.anomaly_flags }}"></i>{% endif %}
             </td>
-            <td><code style="font-size:11px;">{{ rec.session_code }}</code></td>
+            <td><code style="font-size:var(--fs-sm);">{{ rec.session_code }}</code></td>
             <td>
               <strong>{{ rec.programme_name or '—' }}</strong>
               {% if rec.category == 'Specialized' %}
-              <span title="Specialized — 3-mo effectiveness review required" style="font-size:9px;font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
+              <span title="Specialized — 3-mo effectiveness review required" style="font-size:var(--fs-xs);font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
                 <i class="bi bi-stars"></i> SPL
               </span>
               {% endif %}
             </td>
-            <td><span class="badge-unit" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
+            <td><span class="badge-unit" style="font-size:var(--fs-sm);">{{ rec.prog_type or '—' }}</span></td>
             <td>
-              {% if rec.cal_source == 'New Requirement' %}<span class="badge bg-warning text-dark" style="font-size:11px;">New Req</span>
-              {% elif rec.cal_source == 'TNI Driven' %}<span class="badge bg-success" style="font-size:11px;">TNI</span>
-              {% else %}<span class="text-muted" style="font-size:11px;">—</span>{% endif %}
+              {% if rec.cal_source == 'New Requirement' %}<span class="badge bg-warning text-dark" style="font-size:var(--fs-sm);">New Req</span>
+              {% elif rec.cal_source == 'TNI Driven' %}<span class="badge bg-success" style="font-size:var(--fs-sm);">TNI</span>
+              {% else %}<span class="text-muted" style="font-size:var(--fs-sm);">—</span>{% endif %}
             </td>
             <td>{{ rec.start_date | fmt_date }}</td>
             <td>{{ rec.hours_actual }}</td>
@@ -202,13 +202,13 @@
 <div class="card mt-4" style="border-left:4px solid #7c3aed;">
   <div class="card-header ch-dark d-flex justify-content-between align-items-center">
     <span><i class="bi bi-building"></i> Corporate L&amp;D — Centrally Conducted Sessions
-      <span class="badge ms-2" style="background:#7c3aed;font-size:11px;">{{ central_records|length }}</span>
+      <span class="badge ms-2" style="background:#7c3aed;font-size:var(--fs-sm);">{{ central_records|length }}</span>
     </span>
-    <span style="font-size:11px;opacity:.75;">Read-only · Session code <code style="color:#c4b5fd;">CEN/…</code> identifies central sessions · Details entered by Corporate L&amp;D</span>
+    <span style="font-size:var(--fs-sm);opacity:.75;">Read-only · Session code <code style="color:#c4b5fd;">CEN/…</code> identifies central sessions · Details entered by Corporate L&amp;D</span>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0" id="prog2cCentralTable" style="font-size:13px;">
+      <table class="table table-hover mb-0" id="prog2cCentralTable" style="font-size:var(--fs-md);">
         <thead>
           <tr>
             <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th>
@@ -220,17 +220,17 @@
           {% for rec in central_records %}
           <tr>
             <td>{{ loop.index }}</td>
-            <td><code style="font-size:11px;color:#7c3aed;">{{ rec.session_code }}</code></td>
+            <td><code style="font-size:var(--fs-sm);color:#7c3aed;">{{ rec.session_code }}</code></td>
             <td>
               <strong>{{ rec.programme_name or '—' }}</strong>
               {% if rec.category == 'Specialized' %}
-              <span title="Specialized — 3-mo effectiveness review required" style="font-size:9px;font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
+              <span title="Specialized — 3-mo effectiveness review required" style="font-size:var(--fs-xs);font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
                 <i class="bi bi-stars"></i> SPL
               </span>
               {% endif %}
             </td>
-            <td><span class="badge-unit" style="font-size:11px;">{{ rec.prog_type or '—' }}</span></td>
-            <td><span class="badge bg-warning text-dark" style="font-size:11px;">New Req</span></td>
+            <td><span class="badge-unit" style="font-size:var(--fs-sm);">{{ rec.prog_type or '—' }}</span></td>
+            <td><span class="badge bg-warning text-dark" style="font-size:var(--fs-sm);">New Req</span></td>
             <td>{{ rec.start_date | fmt_date }}</td>
             <td>{{ rec.hours_actual }}</td>
             <td>{{ rec.faculty_name or '—' }}</td>

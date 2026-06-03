@@ -68,7 +68,7 @@
     <li><a href="{{ url_for('effectiveness') }}" class="{% if request.endpoint=='effectiveness' %}active{% endif %}">
       <i class="bi bi-stars"></i> Effectiveness Reviews
       {% if eff_open_count and eff_open_count > 0 %}
-      <span title="open reviews (pending + due + overdue)" style="background:{% if eff_overdue_count > 0 %}#dc2626{% else %}#6b7280{% endif %};color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ eff_open_count }}</span>
+      <span title="open reviews (pending + due + overdue)" style="background:{% if eff_overdue_count > 0 %}#dc2626{% else %}#6b7280{% endif %};color:#fff;font-size:var(--fs-xs);font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ eff_open_count }}</span>
       {% endif %}
     </a></li>
     <li><a href="{{ url_for('programme_intelligence') }}" class="{% if request.endpoint=='programme_intelligence' %}active{% endif %}">
@@ -107,19 +107,19 @@
     <li><a href="{{ url_for('verify_sessions') }}" class="{% if request.endpoint in ('verify_sessions','verify_trail') %}active{% endif %}" style="color:#fbbf24;">
       <i class="bi bi-patch-check-fill"></i> Verify Sessions
       {% if pending_verify_count and pending_verify_count > 0 %}
-      <span style="background:#dc2626;color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ pending_verify_count }}</span>
+      <span style="background:#dc2626;color:#fff;font-size:var(--fs-xs);font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ pending_verify_count }}</span>
       {% endif %}
     </a></li>
     <li><a href="{{ url_for('anomalies_review') }}" class="{% if request.endpoint=='anomalies_review' %}active{% endif %}" style="color:#fbbf24;">
       <i class="bi bi-exclamation-triangle-fill"></i> Anomalies Review
       {% if anomaly_count and anomaly_count > 0 %}
-      <span style="background:#d97706;color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ anomaly_count }}</span>
+      <span style="background:#d97706;color:#fff;font-size:var(--fs-xs);font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ anomaly_count }}</span>
       {% endif %}
     </a></li>
     <li><a href="{{ url_for('effectiveness') }}" class="{% if request.endpoint=='effectiveness' %}active{% endif %}" style="color:#fbbf24;">
       <i class="bi bi-stars"></i> Effectiveness Reviews
       {% if eff_open_count and eff_open_count > 0 %}
-      <span title="open reviews (pending + due + overdue)" style="background:{% if eff_overdue_count > 0 %}#dc2626{% else %}#6b7280{% endif %};color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ eff_open_count }}</span>
+      <span title="open reviews (pending + due + overdue)" style="background:{% if eff_overdue_count > 0 %}#dc2626{% else %}#6b7280{% endif %};color:#fff;font-size:var(--fs-xs);font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ eff_open_count }}</span>
       {% endif %}
     </a></li>
     <li><a href="{{ url_for('central_tni_errors') }}" class="{% if request.endpoint=='central_tni_errors' %}active{% endif %}">
@@ -170,9 +170,9 @@
 <!-- ═══════════════════════ MAIN ═══════════════════════════════ -->
 <div class="main-wrap">
   {% if session.role == 'admin' and session.plant_id %}
-  <div style="background:#92400e;color:#fef3c7;font-size:12.5px;font-weight:600;padding:7px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+  <div style="background:#92400e;color:#fef3c7;font-size:var(--fs-body);font-weight:600;padding:7px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
     <span><i class="bi bi-shield-lock-fill me-1"></i>Admin — viewing as SPOC for <strong>{{ session.plant_name }}</strong> ({{ session.unit_code }})</span>
-    <a href="{{ url_for('admin_clear_plant') }}" style="color:#fef3c7;background:rgba(0,0,0,0.25);border-radius:6px;padding:3px 12px;text-decoration:none;font-size:12px;white-space:nowrap;">
+    <a href="{{ url_for('admin_clear_plant') }}" style="color:#fef3c7;background:rgba(0,0,0,0.25);border-radius:6px;padding:3px 12px;text-decoration:none;font-size:var(--fs-body);white-space:nowrap;">
       <i class="bi bi-arrow-left me-1"></i>Exit &amp; Return to Central
     </a>
   </div>
@@ -185,7 +185,7 @@
     </div>
     <div class="topbar-right">
       {% if session.plant_name %}
-      <span class="t-plant"><i class="bi bi-building" style="font-size:11px;"></i> <span class="plant-text">{{ session.plant_name }}</span></span>
+      <span class="t-plant"><i class="bi bi-building" style="font-size:var(--fs-sm);"></i> <span class="plant-text">{{ session.plant_name }}</span></span>
       {% endif %}
       <div class="user-menu" id="userMenu">
         <button type="button" class="user-btn" id="userMenuBtn"
@@ -194,7 +194,7 @@
                 onclick="(function(b){var m=document.getElementById('userMenu');var o=m.classList.toggle('open');b.setAttribute('aria-expanded',o?'true':'false');})(this)">
           <div class="user-avatar">{{ (session.username or 'U')[0]|upper }}</div>
           <span class="uname user-text">{{ session.username or 'User' }}</span>
-          <i class="bi bi-chevron-down" style="font-size:10px;color:#9ca3af;" aria-hidden="true"></i>
+          <i class="bi bi-chevron-down" style="font-size:var(--fs-xs);color:#9ca3af;" aria-hidden="true"></i>
         </button>
         <div class="user-dropdown" id="userMenuDropdown" role="menu" aria-labelledby="userMenuBtn">
           <div class="ud-header">
@@ -294,12 +294,12 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border:0;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
       <div class="modal-header" style="border-bottom:1px solid #fee2e2;background:#fef2f2;border-radius:14px 14px 0 0;">
-        <h5 class="modal-title" id="tmsConfirmTitle" style="font-size:15px;font-weight:700;color:#991b1b;">
+        <h5 class="modal-title" id="tmsConfirmTitle" style="font-size:var(--fs-base);font-weight:700;color:#991b1b;">
           <i class="bi bi-exclamation-triangle-fill me-1"></i><span id="tmsConfirmTitleText">Confirm</span>
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body" id="tmsConfirmBody" style="font-size:13.5px;color:#374151;line-height:1.55;padding:18px 20px;">
+      <div class="modal-body" id="tmsConfirmBody" style="font-size:var(--fs-md);color:#374151;line-height:1.55;padding:18px 20px;">
         Are you sure?
       </div>
       <div class="modal-footer" style="border-top:1px solid #f1f5f9;padding:12px 18px;">

@@ -6,15 +6,15 @@
 <!-- Undo Exit — Dedicated Section at Top -->
 <div class="card mb-4" style="border:2px solid #f59e0b;">
   <div class="ch" style="gap:12px;">
-    <i class="bi bi-arrow-counterclockwise" style="font-size:16px;color:#d97706;"></i>
+    <i class="bi bi-arrow-counterclockwise" style="font-size:var(--fs-lg);color:#d97706;"></i>
     <div>
       <strong>Undo Exit</strong> &nbsp;—&nbsp; {{ recent_exited|length }} employee(s) exited recently
-      <div style="font-size:11px;color:var(--c-muted);margin-top:1px;">Available within 7 days of exit date</div>
+      <div style="font-size:var(--fs-sm);color:var(--c-muted);margin-top:1px;">Available within 7 days of exit date</div>
     </div>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-    <table class="table table-sm mb-0" style="font-size:13px;">
+    <table class="table table-sm mb-0" style="font-size:var(--fs-md);">
       <thead>
         <tr style="background:#fef3c7;">
           <th>#</th><th>Emp Code</th><th>Name</th><th>Exit Date</th><th>Reason</th><th>Action</th>
@@ -51,13 +51,13 @@
   <div class="ch" style="justify-content:space-between;">
     <span><i class="bi bi-person-plus"></i> Add New Employee</span>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('emp_bulk_template') }}" class="btn btn-sm btn-outline-secondary" style="font-size:12px;">
+      <a href="{{ url_for('emp_bulk_template') }}" class="btn btn-sm btn-outline-secondary" style="font-size:var(--fs-body);">
         <i class="bi bi-file-earmark-arrow-down"></i> Template
       </a>
-      <button class="btn btn-sm btn-outline-secondary" style="font-size:12px;" type="button" data-bs-toggle="collapse" data-bs-target="#bulkUploadSection">
+      <button class="btn btn-sm btn-outline-secondary" style="font-size:var(--fs-body);" type="button" data-bs-toggle="collapse" data-bs-target="#bulkUploadSection">
         <i class="bi bi-upload"></i> Bulk Upload
       </button>
-      <button class="btn btn-sm btn-outline-primary" style="font-size:12px;" type="button" data-bs-toggle="collapse" data-bs-target="#bulkUpdateSection">
+      <button class="btn btn-sm btn-outline-primary" style="font-size:var(--fs-body);" type="button" data-bs-toggle="collapse" data-bs-target="#bulkUpdateSection">
         <i class="bi bi-pencil-square"></i> Bulk Update
       </button>
     </div>
@@ -73,7 +73,7 @@
             <i class="bi bi-file-earmark-arrow-down"></i> Download Update Template
           </a>
           <div>
-            <label class="form-label fw-semibold mb-1" style="font-size:13px;">
+            <label class="form-label fw-semibold mb-1" style="font-size:var(--fs-md);">
               <i class="bi bi-file-earmark-excel text-primary"></i> Upload Excel (.xlsx)
             </label>
             <input type="file" name="bulk_update_file" class="form-control form-control-sm" accept=".xlsx" required style="width:280px;">
@@ -82,7 +82,7 @@
             <i class="bi bi-cloud-upload"></i> Apply Updates
           </button>
         </div>
-        <div style="font-size:12px;color:#475569;margin-top:8px;line-height:1.6;">
+        <div style="font-size:var(--fs-body);color:#475569;margin-top:8px;line-height:1.6;">
           <i class="bi bi-info-circle text-primary"></i>
           <strong>Partial update:</strong> Emp Code is the matching key. For every other column, fill the new value to update it &mdash; or leave blank to keep the existing value.
           Example: to update designation for 10 promoted employees, fill their Emp Code + new Designation only; leave all other cells blank.
@@ -99,7 +99,7 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="d-flex align-items-end gap-3 flex-wrap">
           <div>
-            <label class="form-label fw-semibold mb-1" style="font-size:13px;">
+            <label class="form-label fw-semibold mb-1" style="font-size:var(--fs-md);">
               <i class="bi bi-file-earmark-excel text-success"></i> Upload Excel (.xlsx)
             </label>
             <input type="file" name="bulk_file" class="form-control form-control-sm" accept=".xlsx" required style="width:280px;">
@@ -107,7 +107,7 @@
           <button type="submit" class="btn btn-success btn-sm px-4">
             <i class="bi bi-cloud-upload"></i> Upload &amp; Validate
           </button>
-          <div style="font-size:12px;color:#6b7280;">
+          <div style="font-size:var(--fs-body);color:#6b7280;">
             <i class="bi bi-info-circle"></i>
             Use the template above. Grade, Collar, Gender and PH must match the Reference sheet values.
           </div>
@@ -208,16 +208,16 @@
     </span>
     <div class="d-flex gap-2">
       {% if show_exited %}
-      <a href="{{ url_for('employees') }}" class="btn btn-sm btn-light" style="font-size:12px;">Show Active Only</a>
+      <a href="{{ url_for('employees') }}" class="btn btn-sm btn-light" style="font-size:var(--fs-body);">Show Active Only</a>
       {% else %}
-      <a href="{{ url_for('employees') }}?show_exited=1" class="btn btn-sm btn-outline-light" style="font-size:12px;">Show Exited Too</a>
+      <a href="{{ url_for('employees') }}?show_exited=1" class="btn btn-sm btn-outline-light" style="font-size:var(--fs-body);">Show Exited Too</a>
       {% endif %}
     </div>
   </div>
   <div class="card-body pb-2 pt-3">
     <div class="d-flex gap-2 flex-wrap">
       <div class="position-relative flex-grow-1" style="max-width:300px;">
-        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;"></i>
+        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:var(--fs-md);"></i>
         <input type="text" class="form-control" placeholder="Search name, emp code..." style="padding-left:34px;" oninput="TBL.search('empTable',this.value)">
       </div>
       <select class="form-select" style="width:150px;" onchange="TBL.filter('empTable','collar',this.value)">
@@ -256,8 +256,8 @@
             <td>{{ loop.index }}</td>
             <td><span class="emp-code">{{ emp.emp_code }}</span></td>
             <td><strong>{{ emp.name }}</strong></td>
-            <td style="font-size:13px;">{{ emp.designation or '—' }}</td>
-            <td style="font-size:12px;">{{ emp.grade or '—' }}</td>
+            <td style="font-size:var(--fs-md);">{{ emp.designation or '—' }}</td>
+            <td style="font-size:var(--fs-body);">{{ emp.grade or '—' }}</td>
             <td>
               {% if emp.collar == 'Blue Collared' %}
               <span class="badge badge-bc">Blue</span>
@@ -267,14 +267,14 @@
               <span class="badge-unit">{{ emp.collar or '—' }}</span>
               {% endif %}
             </td>
-            <td style="font-size:13px;">{{ emp.department or '—' }}</td>
-            <td style="font-size:13px;">{{ emp.gender or '—' }}</td>
+            <td style="font-size:var(--fs-md);">{{ emp.department or '—' }}</td>
+            <td style="font-size:var(--fs-md);">{{ emp.gender or '—' }}</td>
             <td>
               {% if emp.is_active %}
               <span class="badge badge-active">Active</span>
               {% else %}
               <span class="badge badge-exited">Exited</span>
-              {% if emp.exit_date %}<br><small class="text-muted" style="font-size:11px;">{{ emp.exit_date | fmt_date }}</small>{% endif %}
+              {% if emp.exit_date %}<br><small class="text-muted" style="font-size:var(--fs-sm);">{{ emp.exit_date | fmt_date }}</small>{% endif %}
               {% endif %}
             </td>
             <td>
@@ -351,12 +351,12 @@
               <option>Other</option>
             </select>
           </div>
-          <div class="form-check" style="font-size:12px;">
+          <div class="form-check" style="font-size:var(--fs-body);">
             <input class="form-check-input" type="checkbox" name="confirm_pending" value="1" id="confirmPendingChk">
             <label class="form-check-label" for="confirmPendingChk">
               Force exit even if pending Effectiveness Reviews exist
             </label>
-            <div class="text-muted" style="font-size:11px;margin-top:2px;">
+            <div class="text-muted" style="font-size:var(--fs-sm);margin-top:2px;">
               Tick only if server rejected the exit. Open reviews stay open against this emp.
             </div>
           </div>
@@ -422,7 +422,7 @@
             <div class="col-md-4"><label class="form-label">Remarks</label>
               <input type="text" name="remarks" id="edit_remarks" class="form-control"></div>
           </div>
-          <div class="text-muted mt-3" style="font-size:11.5px;">
+          <div class="text-muted mt-3" style="font-size:var(--fs-sm);">
             <i class="bi bi-info-circle"></i> Emp Code is immutable. To change it, exit + re-add as new employee.
           </div>
         </div>

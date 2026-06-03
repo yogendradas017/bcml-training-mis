@@ -8,7 +8,7 @@
   <span class="badge bg-warning text-dark">{{ rows_2c|length }} 2C flagged</span>
 </div>
 
-<div class="alert alert-info" style="font-size:12.5px;">
+<div class="alert alert-info" style="font-size:var(--fs-body);">
   <i class="bi bi-info-circle me-1"></i> Records that passed save but failed integrity checks. Saved with anomaly flags for review. Investigate and decide: keep, edit, or delete.
 </div>
 
@@ -52,7 +52,7 @@
   <!-- 2A -->
   <div class="tab-pane fade show active" id="tab-2a">
     <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle" style="font-size:12px;">
+      <table class="table table-sm table-hover align-middle" style="font-size:var(--fs-body);">
         <thead style="background:#1a3a5c;color:#fff;">
           <tr>
             <th style="padding:8px 10px;">Plant</th>
@@ -70,7 +70,7 @@
         <tbody>
           {% for r in rows_2a %}
           <tr style="background:#fff7ed;">
-            <td style="padding:7px 10px;"><strong>{{ r.plant_name }}</strong> <span class="badge-unit" style="font-size:10px;">{{ r.unit_code }}</span></td>
+            <td style="padding:7px 10px;"><strong>{{ r.plant_name }}</strong> <span class="badge-unit" style="font-size:var(--fs-xs);">{{ r.unit_code }}</span></td>
             <td style="padding:7px 10px;font-family:monospace;">{{ r.emp_code }}</td>
             <td style="padding:7px 10px;font-weight:600;">{{ r.emp_name or '—' }}</td>
             <td style="padding:7px 10px;">
@@ -78,18 +78,18 @@
               {% elif r.collar == 'White Collared' %}<span class="badge" style="background:#dcfce7;color:#15803d;">WC</span>
               {% else %}<span class="text-muted">—</span>{% endif %}
             </td>
-            <td style="padding:7px 10px;font-family:monospace;font-size:11px;">{{ r.session_code or '—' }}</td>
+            <td style="padding:7px 10px;font-family:monospace;font-size:var(--fs-sm);">{{ r.session_code or '—' }}</td>
             <td style="padding:7px 10px;max-width:200px;">{{ r.programme_name }}</td>
             <td style="padding:7px 10px;">{{ r.start_date | fmt_date }}</td>
             <td style="padding:7px 10px;text-align:right;font-weight:600;">{{ r.hrs }}</td>
             <td style="padding:7px 10px;">
               {% for fl in r.anomaly_flags.split(',') %}
-              <span style="background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
-                <i class="bi bi-exclamation-triangle-fill" style="font-size:9px;"></i> {{ fl.strip() }}
+              <span style="background:#fef3c7;color:#92400e;font-size:var(--fs-xs);font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size:var(--fs-xs);"></i> {{ fl.strip() }}
               </span>
               {% endfor %}
             </td>
-            <td style="padding:7px 10px;color:#6b7280;font-size:11px;">{{ r.created_at | fmt_dt }}</td>
+            <td style="padding:7px 10px;color:#6b7280;font-size:var(--fs-sm);">{{ r.created_at | fmt_dt }}</td>
           </tr>
           {% else %}
           <tr><td colspan="10" class="text-center text-muted py-4">No 2A anomalies found.</td></tr>
@@ -102,7 +102,7 @@
   <!-- 2C -->
   <div class="tab-pane fade" id="tab-2c">
     <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle" style="font-size:12px;">
+      <table class="table table-sm table-hover align-middle" style="font-size:var(--fs-body);">
         <thead style="background:#1a3a5c;color:#fff;">
           <tr>
             <th style="padding:8px 10px;">Plant</th>
@@ -120,22 +120,22 @@
         <tbody>
           {% for r in rows_2c %}
           <tr style="background:#fff7ed;">
-            <td style="padding:7px 10px;"><strong>{{ r.plant_name }}</strong> <span class="badge-unit" style="font-size:10px;">{{ r.unit_code }}</span></td>
-            <td style="padding:7px 10px;font-family:monospace;font-size:11px;">{{ r.session_code }}</td>
+            <td style="padding:7px 10px;"><strong>{{ r.plant_name }}</strong> <span class="badge-unit" style="font-size:var(--fs-xs);">{{ r.unit_code }}</span></td>
+            <td style="padding:7px 10px;font-family:monospace;font-size:var(--fs-sm);">{{ r.session_code }}</td>
             <td style="padding:7px 10px;max-width:200px;">{{ r.programme_name }}</td>
             <td style="padding:7px 10px;">{{ r.start_date | fmt_date }}</td>
-            <td style="padding:7px 10px;text-align:right;">{{ r.actual_pax or 0 }}<span style="color:#9ca3af;font-size:10px;">/{{ r.planned_pax or 0 }}</span></td>
+            <td style="padding:7px 10px;text-align:right;">{{ r.actual_pax or 0 }}<span style="color:#9ca3af;font-size:var(--fs-xs);">/{{ r.planned_pax or 0 }}</span></td>
             <td style="padding:7px 10px;text-align:right;font-weight:600;">{{ r.hours_actual }}</td>
             <td style="padding:7px 10px;">{{ r.target_audience or '—' }}</td>
             <td style="padding:7px 10px;">{{ r.faculty_name or '—' }}</td>
             <td style="padding:7px 10px;">
               {% for fl in r.anomaly_flags.split(',') %}
-              <span style="background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
-                <i class="bi bi-exclamation-triangle-fill" style="font-size:9px;"></i> {{ fl.strip() }}
+              <span style="background:#fef3c7;color:#92400e;font-size:var(--fs-xs);font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size:var(--fs-xs);"></i> {{ fl.strip() }}
               </span>
               {% endfor %}
             </td>
-            <td style="padding:7px 10px;color:#6b7280;font-size:11px;">{{ r.created_at | fmt_dt }}</td>
+            <td style="padding:7px 10px;color:#6b7280;font-size:var(--fs-sm);">{{ r.created_at | fmt_dt }}</td>
           </tr>
           {% else %}
           <tr><td colspan="10" class="text-center text-muted py-4">No 2C anomalies found.</td></tr>

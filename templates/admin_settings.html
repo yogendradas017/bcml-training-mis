@@ -5,7 +5,7 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <h5 class="mb-0"><i class="bi bi-sliders" style="color:#2e6da4;"></i> Organisation Settings</h5>
-      <div class="text-muted" style="font-size:12px;">Tenant-wide configuration · admin only · every change written to hash-chain audit log</div>
+      <div class="text-muted" style="font-size:var(--fs-body);">Tenant-wide configuration · admin only · every change written to hash-chain audit log</div>
     </div>
     <div class="input-group input-group-sm" style="max-width:260px;">
       <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -14,7 +14,7 @@
   </div>
 
   {% if ephemeral_warning %}
-  <div class="alert alert-warning py-2 mb-3" style="font-size:12.5px;">
+  <div class="alert alert-warning py-2 mb-3" style="font-size:var(--fs-body);">
     <i class="bi bi-exclamation-triangle-fill"></i>
     <strong>Ephemeral storage detected.</strong> Edits made here may be lost on the next deploy unless a persistent disk is mounted at <code>/app/data</code>.
   </div>
@@ -27,12 +27,12 @@
     {% for cat, items in config_by_category.items() %}
     <div class="card mb-3 cfg-cat" data-cat="{{ cat|lower }}">
       <div class="card-header d-flex align-items-center gap-2 py-2" style="background:#f3f4f6;border-left:4px solid #2e6da4;">
-        <span class="badge" style="background:#2e6da4;font-size:10px;letter-spacing:.05em;">{{ cat|upper }}</span>
-        <span class="text-muted" style="font-size:11.5px;">{{ items|length }} key{{ 's' if items|length != 1 }}</span>
+        <span class="badge" style="background:#2e6da4;font-size:var(--fs-xs);letter-spacing:.05em;">{{ cat|upper }}</span>
+        <span class="text-muted" style="font-size:var(--fs-sm);">{{ items|length }} key{{ 's' if items|length != 1 }}</span>
       </div>
       <div class="table-responsive">
-        <table class="table table-sm mb-0 align-middle" style="font-size:12.5px;">
-          <thead style="background:#f9fafb;font-size:11px;color:#6b7280;text-transform:uppercase;">
+        <table class="table table-sm mb-0 align-middle" style="font-size:var(--fs-body);">
+          <thead style="background:#f9fafb;font-size:var(--fs-sm);color:#6b7280;text-transform:uppercase;">
             <tr><th style="width:36%;">Setting</th><th style="width:30%;">Value</th><th style="width:14%;">Type</th><th style="width:20%;">Last Updated</th></tr>
           </thead>
           <tbody>
@@ -40,7 +40,7 @@
             <tr class="cfg-row" data-key="{{ it.key }}" data-original="{{ it.value }}" data-type="{{ it.value_type }}">
               <td>
                 <div class="cfg-label" style="font-weight:600;color:#111827;">{{ it.label or it.key }}</div>
-                <div class="text-muted" style="font-size:11px;"><code>{{ it.key }}</code></div>
+                <div class="text-muted" style="font-size:var(--fs-sm);"><code>{{ it.key }}</code></div>
               </td>
               <td>
                 {% if it.value_type == 'bool' %}
@@ -56,8 +56,8 @@
                   <input type="text" value="{{ it.value }}" class="form-control form-control-sm cfg-input">
                 {% endif %}
               </td>
-              <td><span class="badge bg-secondary" style="font-size:10px;">{{ it.value_type }}</span></td>
-              <td class="text-muted" style="font-size:11px;">{{ it.updated_at or '—' }}{% if it.updated_by %}<br><span style="font-size:10px;">{{ it.updated_by }}</span>{% endif %}</td>
+              <td><span class="badge bg-secondary" style="font-size:var(--fs-xs);">{{ it.value_type }}</span></td>
+              <td class="text-muted" style="font-size:var(--fs-sm);">{{ it.updated_at or '—' }}{% if it.updated_by %}<br><span style="font-size:var(--fs-xs);">{{ it.updated_by }}</span>{% endif %}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -81,8 +81,8 @@
     <div class="modal-content">
       <div class="modal-header py-2"><h6 class="modal-title" id="cfg-diff-title">Confirm changes</h6><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
       <div class="modal-body">
-        <table class="table table-sm" style="font-size:12.5px;"><thead><tr><th>Setting</th><th>Before</th><th></th><th>After</th></tr></thead><tbody id="cfg-diff-body"></tbody></table>
-        <div class="alert alert-warning py-2 mb-0" style="font-size:12px;"><i class="bi bi-shield-exclamation"></i> Each change is recorded in the hash-chain audit log with your username.</div>
+        <table class="table table-sm" style="font-size:var(--fs-body);"><thead><tr><th>Setting</th><th>Before</th><th></th><th>After</th></tr></thead><tbody id="cfg-diff-body"></tbody></table>
+        <div class="alert alert-warning py-2 mb-0" style="font-size:var(--fs-body);"><i class="bi bi-shield-exclamation"></i> Each change is recorded in the hash-chain audit log with your username.</div>
       </div>
       <div class="modal-footer py-2">
         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>

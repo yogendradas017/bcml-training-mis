@@ -66,26 +66,26 @@
             <tbody>
               {% for r in my_requests %}
               <tr>
-                <td style="font-size:12px;white-space:nowrap;">{{ r.ts | fmt_dt }}</td>
-                <td style="font-size:12px;">
+                <td style="font-size:var(--fs-body);white-space:nowrap;">{{ r.ts | fmt_dt }}</td>
+                <td style="font-size:var(--fs-body);">
                   {% if r.request_type == 'TNI_ADD' %}TNI Add
                   {% elif r.request_type == 'MARK_CONDUCTED' %}Mark Conducted
                   {% elif r.request_type == 'MANUAL_ATTENDANCE' %}Manual Attendance
                   {% else %}Other{% endif %}
                 </td>
                 <td>
-                  <span class="badge {% if r.status == 'Approved' %}bg-success{% elif r.status == 'Rejected' %}bg-danger{% else %}bg-warning text-dark{% endif %}" style="font-size:11px;">
+                  <span class="badge {% if r.status == 'Approved' %}bg-success{% elif r.status == 'Rejected' %}bg-danger{% else %}bg-warning text-dark{% endif %}" style="font-size:var(--fs-sm);">
                     {{ r.status }}
                   </span>
                 </td>
-                <td style="font-size:12px;color:#6b7280;">{{ r.review_note or '—' }}</td>
+                <td style="font-size:var(--fs-body);color:#6b7280;">{{ r.review_note or '—' }}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-        <div class="text-center text-muted py-4" style="font-size:13px;">No requests submitted yet.</div>
+        <div class="text-center text-muted py-4" style="font-size:var(--fs-md);">No requests submitted yet.</div>
         {% endif %}
       </div>
     </div>

@@ -5,7 +5,7 @@
 {# ── Filter bar ── #}
 <div style="background:#fff;border-radius:12px;border:1px solid #e5e9f2;padding:14px 20px;margin-bottom:20px;box-shadow:0 1px 6px rgba(0,0,0,.05);">
   <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
-    <span style="font-size:13px;font-weight:700;color:#374151;">Filter by Month:</span>
+    <span style="font-size:var(--fs-md);font-weight:700;color:#374151;">Filter by Month:</span>
     <select name="month" class="form-select form-select-sm" style="width:180px;" onchange="this.form.submit()">
       <option value="">— Cumulative (All) —</option>
       {% for mo in months %}
@@ -15,7 +15,7 @@
     {% if selected_month %}
     <a href="{{ url_for('monthly_summary') }}" class="btn btn-outline-secondary btn-sm">✕ Clear</a>
     {% endif %}
-    <span style="font-size:12px;color:#9ca3af;margin-left:auto;">
+    <span style="font-size:var(--fs-body);color:#9ca3af;margin-left:auto;">
       FY {{ fy_label_long }} · {{ session.plant_name }}
     </span>
   </form>
@@ -31,14 +31,14 @@
   {% for label, pct, actual, mandate, emp, hrs, c1, c2 in cards %}
   <div class="col-md-4">
     <div style="background:linear-gradient(135deg,{{ c1 }},{{ c2 }});border-radius:14px;padding:20px 22px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.8;margin-bottom:6px;">
+      <div style="font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.8;margin-bottom:6px;">
         {{ label }} Compliance
       </div>
       <div style="font-size:42px;font-weight:900;line-height:1;">{{ pct }}%</div>
       <div style="margin-top:10px;background:rgba(255,255,255,.2);border-radius:99px;height:6px;overflow:hidden;">
         <div style="width:{{ [pct,100]|min }}%;height:100%;border-radius:99px;background:#fff;"></div>
       </div>
-      <div style="font-size:11px;opacity:.85;margin-top:6px;">
+      <div style="font-size:var(--fs-sm);opacity:.85;margin-top:6px;">
         {{ actual }} hrs actual &nbsp;/&nbsp; {{ mandate }} hrs mandate
         {% if hrs != '—' %}&nbsp;·&nbsp; {{ emp }} emp × {{ hrs }} hrs{% endif %}
       </div>
@@ -63,13 +63,13 @@
   {% if not has_data %}
   <div style="padding:40px;text-align:center;color:#9ca3af;">
     <i class="bi bi-clipboard-data" style="font-size:40px;display:block;margin-bottom:12px;color:#d1d5db;"></i>
-    <div style="font-size:15px;font-weight:600;color:#6b7280;margin-bottom:6px;">No training records yet</div>
-    <div style="font-size:13px;">Data populates from <strong>Training Records (2A)</strong>.
+    <div style="font-size:var(--fs-base);font-weight:600;color:#6b7280;margin-bottom:6px;">No training records yet</div>
+    <div style="font-size:var(--fs-md);">Data populates from <strong>Training Records (2A)</strong>.
       Once sessions are conducted and records are uploaded, this summary will fill automatically.</div>
   </div>
   {% else %}
   <div style="overflow-x:auto;width:100%;">
-    <table class="table table-bordered mb-0" style="font-size:11px;min-width:100%;table-layout:fixed;width:100%;">
+    <table class="table table-bordered mb-0" style="font-size:var(--fs-sm);min-width:100%;table-layout:fixed;width:100%;">
       <colgroup>
         <col style="width:13%">
         <col style="width:4.5%"><col style="width:4.5%"><col style="width:4.5%"><col style="width:4.5%"><col style="width:4.5%"><col style="width:4.5%">
@@ -78,14 +78,14 @@
         <col style="width:5.5%"><col style="width:5.5%"><col style="width:5.5%">
       </colgroup>
       <thead>
-        <tr style="background:#1e3a5f;color:#fff;text-align:center;font-size:10px;font-weight:700;letter-spacing:.3px;">
+        <tr style="background:#1e3a5f;color:#fff;text-align:center;font-size:var(--fs-xs);font-weight:700;letter-spacing:.3px;">
           <th rowspan="2" class="align-middle text-start" style="padding:8px 10px;">Programme Type</th>
           <th colspan="6" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;">No. of Programmes</th>
           <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;">Person Seats Trained</th>
           <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;">Man-Hours</th>
           <th colspan="3" style="border-bottom:1px solid rgba(255,255,255,.2);padding:6px 4px;background:#1e4c7a;">% Covered (TNI) — YTD Cumulative</th>
         </tr>
-        <tr style="background:#2e5585;color:#fff;text-align:center;font-size:10px;">
+        <tr style="background:#2e5585;color:#fff;text-align:center;font-size:var(--fs-xs);">
           <th style="padding:5px 2px;">BC</th><th style="padding:5px 2px;">WC</th><th style="padding:5px 2px;">Cmn</th><th style="padding:5px 2px;">Tot</th><th style="padding:5px 2px;">Int</th><th style="padding:5px 2px;">Ext</th>
           <th style="padding:5px 2px;">BC</th><th style="padding:5px 2px;">WC</th><th style="padding:5px 2px;">Tot</th>
           <th style="padding:5px 2px;">BC</th><th style="padding:5px 2px;">WC</th><th style="padding:5px 2px;">Tot</th>
@@ -97,7 +97,7 @@
       <tbody>
         {% for row in summary_rows %}
         <tr>
-          <td style="padding:7px 10px;font-weight:600;color:#1e3a5f;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ row.prog_type }}">{{ row.prog_type }}</td>
+          <td style="padding:7px 10px;font-weight:600;color:#1e3a5f;font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ row.prog_type }}">{{ row.prog_type }}</td>
           {% for val in [row.bc_progs, row.wc_progs, row.common_progs, row.total_progs,
                          row.int_prog, row.ext_prog,
                          row.bc_seats, row.wc_seats, row.total_seats,
@@ -115,7 +115,7 @@
         {% endfor %}
       </tbody>
       <tfoot>
-        <tr style="background:#1a1f35;color:#fff;font-weight:700;text-align:center;font-size:11px;">
+        <tr style="background:#1a1f35;color:#fff;font-weight:700;text-align:center;font-size:var(--fs-sm);">
           <td style="padding:8px 10px;text-align:left;">TOTAL</td>
           <td style="padding:7px 3px;">{{ totals.bc_progs or 0 }}</td>
           <td style="padding:7px 3px;">{{ totals.wc_progs or 0 }}</td>

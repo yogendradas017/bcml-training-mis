@@ -20,21 +20,21 @@
 <div style="max-width:440px;margin:0 auto;">
   <div class="text-center mb-3">
     <img src="{{ url_for('static', filename='bcml_logo.png') }}" height="48" onerror="this.style.display='none'">
-    <div class="fw-bold mt-1" style="color:#1a1f35;font-size:15px;">BCML Training Management</div>
+    <div class="fw-bold mt-1" style="color:#1a1f35;font-size:var(--fs-base);">BCML Training Management</div>
   </div>
 
   <div class="card p-4">
     <div class="prog-badge mb-3">
-      <div style="font-size:11px;opacity:.7;margin-bottom:2px;">Session</div>
+      <div style="font-size:var(--fs-sm);opacity:.7;margin-bottom:2px;">Session</div>
       <div class="fw-bold">{{ qr.programme_name }}</div>
-      <div style="font-size:11px;margin-top:4px;opacity:.8;">
+      <div style="font-size:var(--fs-sm);margin-top:4px;opacity:.8;">
         {{ qr.plan_start | fmt_date }}{% if qr.plan_end and qr.plan_end != qr.plan_start %} – {{ qr.plan_end | fmt_date }}{% endif %}
         {% if qr.venue %} &nbsp;·&nbsp; {{ qr.venue }}{% endif %}
       </div>
     </div>
 
     {% if error %}
-    <div class="alert alert-danger py-2" style="font-size:13px;">{{ error }}</div>
+    <div class="alert alert-danger py-2" style="font-size:var(--fs-md);">{{ error }}</div>
     {% endif %}
 
     <form method="POST" action="/q/{{ token }}/attend" id="attendForm">
@@ -57,18 +57,18 @@
         <input type="hidden" name="attendee_plant_id" id="attendeePlantId" value="">
       </div>
 
-      <div id="empPreview" class="alert alert-success py-2 mb-3" style="display:none;font-size:13px;">
+      <div id="empPreview" class="alert alert-success py-2 mb-3" style="display:none;font-size:var(--fs-md);">
         <strong id="empName"></strong><br>
         <span id="empMeta" style="color:#374151;"></span>
       </div>
 
-      <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-3 fw-bold" style="font-size:16px;" disabled>
+      <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-3 fw-bold" style="font-size:var(--fs-lg);" disabled>
         ✅ Mark My Attendance
       </button>
     </form>
   </div>
 
-  <div class="text-center mt-3" style="font-size:11px;color:#9ca3af;">
+  <div class="text-center mt-3" style="font-size:var(--fs-sm);color:#9ca3af;">
     {{ qr.plant_name }} &nbsp;·&nbsp; {{ qr.session_code }}
   </div>
 </div>

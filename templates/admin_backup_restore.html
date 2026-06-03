@@ -24,11 +24,11 @@
     <div class="card h-100">
       <div class="ch-dark"><i class="bi bi-download"></i> Download Backup</div>
       <div class="card-body">
-        <p class="text-muted" style="font-size:13px;">Downloads the current live database as a <code>.db</code> file. Save this to your Google Drive or SharePoint after any major data entry.</p>
+        <p class="text-muted" style="font-size:var(--fs-md);">Downloads the current live database as a <code>.db</code> file. Save this to your Google Drive or SharePoint after any major data entry.</p>
         <a href="{{ url_for('admin_backup_download') }}" class="btn btn-success w-100">
           <i class="bi bi-file-earmark-arrow-down-fill"></i> Download training.db
         </a>
-        <div class="mt-3 p-2 rounded" style="background:#f8fafc;font-size:12px;color:#6b7280;">
+        <div class="mt-3 p-2 rounded" style="background:#f8fafc;font-size:var(--fs-body);color:#6b7280;">
           <strong>When to backup:</strong><br>
           &bull; Every Friday<br>
           &bull; Before any bulk upload<br>
@@ -43,14 +43,14 @@
     <div class="card h-100">
       <div class="ch-dark" style="background:linear-gradient(90deg,#dc2626,#991b1b);"><i class="bi bi-arrow-counterclockwise"></i> Restore from Backup</div>
       <div class="card-body">
-        <div class="alert alert-warning py-2 mb-3" style="font-size:13px;">
+        <div class="alert alert-warning py-2 mb-3" style="font-size:var(--fs-md);">
           <i class="bi bi-exclamation-triangle-fill"></i>
           <strong>This overwrites the live database.</strong> All current data will be replaced with the uploaded file. The current DB is auto-saved as an emergency copy before overwrite.
         </div>
         <form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Replace the live database with this backup? All current data will be overwritten.');">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
-            <label class="form-label fw-semibold" style="font-size:13px;">Upload backup file (.db)</label>
+            <label class="form-label fw-semibold" style="font-size:var(--fs-md);">Upload backup file (.db)</label>
             <input type="file" name="backup_file" accept=".db" class="form-control form-control-sm" required>
             <div class="form-text">Only SQLite <code>.db</code> files accepted. File is validated before restore.</div>
           </div>
@@ -66,7 +66,7 @@
 
 <div class="card mt-3">
   <div class="ch-dark"><i class="bi bi-info-circle-fill"></i> Restore Procedure</div>
-  <div class="card-body" style="font-size:13px;">
+  <div class="card-body" style="font-size:var(--fs-md);">
     <ol class="mb-0" style="line-height:2;">
       <li>Go to your Google Drive / SharePoint → <strong>TMS Backups</strong> folder</li>
       <li>Download the most recent <code>training_YYYY-MM-DD.db</code> file</li>

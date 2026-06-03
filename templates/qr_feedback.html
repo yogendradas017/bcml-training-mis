@@ -32,14 +32,14 @@
 <div style="max-width:480px;margin:0 auto;">
   <div class="text-center mb-3">
     <img src="{{ url_for('static', filename='bcml_logo.png') }}" height="48" onerror="this.style.display='none'">
-    <div class="fw-bold mt-1" style="color:#1a1f35;font-size:15px;">Training Feedback</div>
+    <div class="fw-bold mt-1" style="color:#1a1f35;font-size:var(--fs-base);">Training Feedback</div>
   </div>
 
   <div class="card p-4">
     <div class="prog-badge mb-3">
-      <div style="font-size:11px;opacity:.7;margin-bottom:2px;">Programme</div>
+      <div style="font-size:var(--fs-sm);opacity:.7;margin-bottom:2px;">Programme</div>
       <div class="fw-bold">{{ qr.programme_name }}</div>
-      <div style="font-size:11px;margin-top:4px;opacity:.8;">
+      <div style="font-size:var(--fs-sm);margin-top:4px;opacity:.8;">
         {{ qr.plan_start | fmt_date }}{% if qr.venue %} &nbsp;·&nbsp; {{ qr.venue }}{% endif %}
       </div>
     </div>
@@ -50,7 +50,7 @@
     </div>
 
     {% if error %}
-    <div class="alert alert-danger py-2" style="font-size:13px;">{{ error }}</div>
+    <div class="alert alert-danger py-2" style="font-size:var(--fs-md);">{{ error }}</div>
     {% endif %}
 
     <form method="POST" action="{{ url_for('qr_feedback', token=token) }}" id="fbForm">
@@ -58,10 +58,10 @@
 
       {# Employee code (optional) #}
       <div class="mb-4">
-        <label class="form-label fw-semibold" style="font-size:13px;">
+        <label class="form-label fw-semibold" style="font-size:var(--fs-md);">
           {% if lang=='hi' %}कर्मचारी कोड (वैकल्पिक){% else %}Employee Code (optional){% endif %}
         </label>
-        <input type="text" name="emp_code" class="form-control" style="font-size:13px;"
+        <input type="text" name="emp_code" class="form-control" style="font-size:var(--fs-md);"
                placeholder="{% if lang=='hi' %}खाली छोड़ें यदि अनाम{% else %}Leave blank for anonymous{% endif %}">
       </div>
 
@@ -133,31 +133,31 @@
       </div>
       {% endfor %}
 
-      <div class="mt-3" style="font-size:11px;color:#9ca3af;margin-bottom:12px;">
+      <div class="mt-3" style="font-size:var(--fs-sm);color:#9ca3af;margin-bottom:12px;">
         SD = Strongly Disagree &nbsp;·&nbsp; D = Disagree &nbsp;·&nbsp; A = Agree &nbsp;·&nbsp; SA = Strongly Agree
       </div>
 
       {# Free text #}
       <div class="mb-3">
-        <label class="form-label fw-semibold" style="font-size:13px;">
+        <label class="form-label fw-semibold" style="font-size:var(--fs-md);">
           {% if lang=='hi' %}मुख्य सीख{% else %}Key Learnings{% endif %}
         </label>
-        <textarea name="key_learnings" class="form-control" rows="2" style="font-size:13px;" maxlength="1000"></textarea>
+        <textarea name="key_learnings" class="form-control" rows="2" style="font-size:var(--fs-md);" maxlength="1000"></textarea>
       </div>
       <div class="mb-4">
-        <label class="form-label fw-semibold" style="font-size:13px;">
+        <label class="form-label fw-semibold" style="font-size:var(--fs-md);">
           {% if lang=='hi' %}सुझाव{% else %}Suggestions for Improvement{% endif %}
         </label>
-        <textarea name="suggestions" class="form-control" rows="2" style="font-size:13px;" maxlength="1000"></textarea>
+        <textarea name="suggestions" class="form-control" rows="2" style="font-size:var(--fs-md);" maxlength="1000"></textarea>
       </div>
 
-      <button type="submit" id="submitBtn" class="btn btn-success w-100 py-3 fw-bold" style="font-size:16px;">
+      <button type="submit" id="submitBtn" class="btn btn-success w-100 py-3 fw-bold" style="font-size:var(--fs-lg);">
         {% if lang=='hi' %}प्रतिक्रिया जमा करें{% else %}Submit Feedback{% endif %}
       </button>
     </form>
   </div>
 
-  <div class="text-center mt-3" style="font-size:11px;color:#9ca3af;">
+  <div class="text-center mt-3" style="font-size:var(--fs-sm);color:#9ca3af;">
     {{ qr.plant_name }} &nbsp;·&nbsp; {{ qr.session_code }}
   </div>
 </div>

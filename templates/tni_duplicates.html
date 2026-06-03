@@ -33,7 +33,7 @@
 <div class="card">
   <div class="card-body p-0">
     <div class="table-responsive">
-    <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+    <table class="table table-sm table-hover mb-0" style="font-size:var(--fs-md);">
       <thead style="background:#f8fafc;">
         <tr>
           <th style="width:40px;padding:10px 12px;">#</th>
@@ -52,9 +52,9 @@
           <td style="padding:9px 12px;font-weight:600;">{{ r.emp_name or '—' }}</td>
           <td style="padding:9px 12px;">{{ r.programme_name }}</td>
           <td style="padding:9px 12px;text-align:center;">
-            <span style="background:#fee2e2;color:#dc2626;font-weight:700;font-size:12px;padding:2px 10px;border-radius:20px;">{{ r.cnt }}×</span>
+            <span style="background:#fee2e2;color:#dc2626;font-weight:700;font-size:var(--fs-body);padding:2px 10px;border-radius:20px;">{{ r.cnt }}×</span>
           </td>
-          <td style="padding:9px 12px;color:#6b7280;font-size:11px;">{{ r.modes }}</td>
+          <td style="padding:9px 12px;color:#6b7280;font-size:var(--fs-sm);">{{ r.modes }}</td>
         </tr>
         {% endfor %}
       </tbody>

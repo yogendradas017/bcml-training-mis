@@ -23,7 +23,7 @@
     <div class="card text-center h-100" style="border-top:4px solid #2e6da4;">
       <div class="card-body py-3">
         <div id="countDisplay" style="font-size:36px;font-weight:700;color:#2e6da4;">{{ attendees|length }}</div>
-        <div style="font-size:12px;color:#6b7280;">Scanned</div>
+        <div style="font-size:var(--fs-body);color:#6b7280;">Scanned</div>
       </div>
     </div>
   </div>
@@ -31,7 +31,7 @@
     <div class="card text-center h-100" style="border-top:4px solid #d1d5db;">
       <div class="card-body py-3">
         <div style="font-size:36px;font-weight:700;color:#9ca3af;">{{ cal.planned_pax or 0 }}</div>
-        <div style="font-size:12px;color:#6b7280;">Planned</div>
+        <div style="font-size:var(--fs-body);color:#6b7280;">Planned</div>
       </div>
     </div>
   </div>
@@ -39,17 +39,17 @@
     <div class="card text-center h-100" style="border-top:4px solid #10b981;">
       <div class="card-body py-3">
         <div id="fbDisplay" style="font-size:36px;font-weight:700;color:#10b981;">{{ fb_count }}</div>
-        <div style="font-size:12px;color:#6b7280;">Feedback</div>
+        <div style="font-size:var(--fs-body);color:#6b7280;">Feedback</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="card text-center h-100" style="border-top:4px solid #f59e0b;">
       <div class="card-body py-3">
-        <div style="font-size:14px;font-weight:600;color:#d97706;padding-top:6px;" id="lastScan">
+        <div style="font-size:var(--fs-base);font-weight:600;color:#d97706;padding-top:6px;" id="lastScan">
           {% if attendees %}{{ attendees[0].created_at | fmt_dt }}{% else %}—{% endif %}
         </div>
-        <div style="font-size:12px;color:#6b7280;">Last Scan</div>
+        <div style="font-size:var(--fs-body);color:#6b7280;">Last Scan</div>
       </div>
     </div>
   </div>
@@ -61,7 +61,7 @@
 {% set qr_unlocked = (cal.status == 'To Be Planned') %}
 
 {% if not qr_unlocked %}
-<div class="alert alert-warning d-flex align-items-center gap-2" style="font-size:13px;">
+<div class="alert alert-warning d-flex align-items-center gap-2" style="font-size:var(--fs-md);">
   <i class="bi bi-lock-fill"></i>
   <div>
     <strong>QR controls locked.</strong> Session status is <strong>{{ cal.status }}</strong>.
@@ -75,19 +75,19 @@
 <div class="card mb-4" style="border-left:4px solid {% if cal.session_pin %}#f59e0b{% else %}#d1d5db{% endif %};">
   <div class="card-body py-3 d-flex flex-wrap align-items-center gap-3">
     <div>
-      <div style="font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Session PIN</div>
+      <div style="font-size:var(--fs-body);color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Session PIN</div>
       {% if cal.session_pin %}
       <div style="font-size:36px;font-weight:800;color:#d97706;letter-spacing:8px;">{{ cal.session_pin }}</div>
-      <div style="font-size:11px;color:#6b7280;">Announce this code to participants</div>
+      <div style="font-size:var(--fs-sm);color:#6b7280;">Announce this code to participants</div>
       {% else %}
-      <div style="font-size:14px;color:#9ca3af;margin-top:4px;">No PIN set — anyone can scan</div>
+      <div style="font-size:var(--fs-base);color:#9ca3af;margin-top:4px;">No PIN set — anyone can scan</div>
       {% endif %}
     </div>
     <div class="ms-auto d-flex gap-2 align-items-center flex-wrap">
       <form method="POST" action="{{ url_for('qr_set_pin', cal_id=cal.id) }}" class="d-flex gap-2">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="pin" maxlength="4" inputmode="numeric" pattern="\d{4}"
-               placeholder="4-digit" style="width:90px;font-size:18px;font-weight:700;text-align:center;letter-spacing:4px;"
+               placeholder="4-digit" style="width:90px;font-size:var(--fs-xl);font-weight:700;text-align:center;letter-spacing:4px;"
                class="form-control" value="{{ cal.session_pin or '' }}">
         <button type="submit" class="btn btn-warning btn-sm fw-bold">
           <i class="bi bi-lock-fill"></i> Set PIN
@@ -108,7 +108,7 @@
 
 {# QR codes — only when unlocked #}
 <div class="card mb-4">
-  <div class="card-header" style="background:#1a1f35;color:#fff;font-size:13px;">
+  <div class="card-header ch-dark">
     <i class="bi bi-qr-code me-1"></i> QR Codes for this Session
   </div>
   <div class="card-body d-flex flex-wrap gap-3 py-3">
@@ -116,17 +116,17 @@
     <div class="text-center">
       {% if q.is_active %}
       <img src="{{ url_for('qr_image', token=q.token) }}" style="width:120px;height:120px;">
-      <div style="font-size:11px;font-weight:600;margin-top:4px;">
+      <div style="font-size:var(--fs-sm);font-weight:600;margin-top:4px;">
         {{ q.stage|title }}
       </div>
       <div class="d-flex gap-1 mt-1 justify-content-center">
         <a href="{{ url_for('qr_poster', token=q.token) }}" target="_blank"
-           class="btn btn-outline-secondary btn-sm" style="font-size:10px;">
+           class="btn btn-outline-secondary btn-sm" style="font-size:var(--fs-xs);">
           <i class="bi bi-printer"></i> Print
         </a>
         <form method="POST" action="{{ url_for('qr_revoke', qr_id=q.id) }}" style="display:inline;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="button" class="btn btn-outline-danger btn-sm" style="font-size:10px;"
+          <button type="button" class="btn btn-outline-danger btn-sm" style="font-size:var(--fs-xs);"
                   onclick="if(confirm('Revoke this QR?'))this.closest('form').submit()">
             <i class="bi bi-x-circle"></i>
           </button>
@@ -134,10 +134,10 @@
       </div>
       {% else %}
       <div style="width:120px;height:120px;background:#f3f4f6;border-radius:8px;
-                  display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:11px;">
+                  display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:var(--fs-sm);">
         Revoked
       </div>
-      <div style="font-size:11px;color:#9ca3af;margin-top:4px;">{{ q.stage|title }}</div>
+      <div style="font-size:var(--fs-sm);color:#9ca3af;margin-top:4px;">{{ q.stage|title }}</div>
       {% endif %}
     </div>
     {% endfor %}
@@ -167,12 +167,12 @@
 {# Attendee list #}
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center"
-       style="background:#f3f4f6;font-size:13px;">
+       style="background:#f3f4f6;font-size:var(--fs-md);">
     <span><i class="bi bi-people-fill me-1"></i> Attendees <span id="countBadge" class="badge bg-primary ms-1">{{ attendees|length }}</span></span>
-    <span style="font-size:11px;color:#9ca3af;" id="refreshStatus">Live · refreshes every 5s</span>
+    <span style="font-size:var(--fs-sm);color:#9ca3af;" id="refreshStatus">Live · refreshes every 5s</span>
   </div>
   <div class="table-responsive">
-    <table class="table table-sm table-hover mb-0" style="font-size:13px;" id="attendeeTable">
+    <table class="table table-sm table-hover mb-0" style="font-size:var(--fs-md);" id="attendeeTable">
       <thead style="background:#f9fafb;">
         <tr>
           <th style="padding:8px 14px;">#</th>

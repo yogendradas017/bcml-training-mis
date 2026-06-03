@@ -17,7 +17,7 @@
   <div class="card-body py-2">
     <form method="GET" action="{{ url_for('central_tni_errors') }}" class="row g-2 align-items-end">
       <div class="col-md-2">
-        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Financial Year</label>
+        <label class="form-label mb-1" style="font-size:var(--fs-body);font-weight:600;">Financial Year</label>
         <select name="fy" class="form-select form-select-sm">
           {% for f in fy_options %}
           <option value="{{ f.value }}" {% if filters.fy == f.value %}selected{% endif %}>{{ f.label }}</option>
@@ -25,7 +25,7 @@
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Unit</label>
+        <label class="form-label mb-1" style="font-size:var(--fs-body);font-weight:600;">Unit</label>
         <select name="plant" class="form-select form-select-sm">
           <option value="">All units</option>
           {% for p in active_plants %}
@@ -34,7 +34,7 @@
         </select>
       </div>
       <div class="col-md-2">
-        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Status</label>
+        <label class="form-label mb-1" style="font-size:var(--fs-body);font-weight:600;">Status</label>
         <select name="status" class="form-select form-select-sm">
           <option value="">Both</option>
           <option value="error" {% if filters.status=='error' %}selected{% endif %}>Errors only</option>
@@ -42,7 +42,7 @@
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label mb-1" style="font-size:12px;font-weight:600;">Category</label>
+        <label class="form-label mb-1" style="font-size:var(--fs-body);font-weight:600;">Category</label>
         <select name="cat" class="form-select form-select-sm">
           <option value="">All categories</option>
           {% for cid, lbl, _d in error_categories %}
@@ -64,33 +64,33 @@
   <div class="col-6 col-md-3">
     <div class="card text-center" style="border-left:4px solid #dc2626;">
       <div class="card-body py-3">
-        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Total Errors ({{ fy_label }})</div>
-        <div style="font-size:30px;font-weight:800;color:#dc2626;">{{ total_errors }}</div>
+        <div style="font-size:var(--fs-sm);color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Total Errors ({{ fy_label }})</div>
+        <div style="font-size:var(--fs-3xl);font-weight:800;color:#dc2626;">{{ total_errors }}</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="card text-center" style="border-left:4px solid #059669;">
       <div class="card-body py-3">
-        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Best Unit</div>
-        <div style="font-size:18px;font-weight:800;color:#059669;margin-top:4px;">{{ best_unit.name }}</div>
-        <div style="font-size:11px;color:#6b7280;">{{ best_unit.cnt }} error{{ 's' if best_unit.cnt != 1 }}</div>
+        <div style="font-size:var(--fs-sm);color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Best Unit</div>
+        <div style="font-size:var(--fs-xl);font-weight:800;color:#059669;margin-top:4px;">{{ best_unit.name }}</div>
+        <div style="font-size:var(--fs-sm);color:#6b7280;">{{ best_unit.cnt }} error{{ 's' if best_unit.cnt != 1 }}</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="card text-center" style="border-left:4px solid #d97706;">
       <div class="card-body py-3">
-        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Needs Training</div>
-        <div style="font-size:18px;font-weight:800;color:#d97706;margin-top:4px;">{{ worst_unit.name }}</div>
-        <div style="font-size:11px;color:#6b7280;">{{ worst_unit.cnt }} error{{ 's' if worst_unit.cnt != 1 }}</div>
+        <div style="font-size:var(--fs-sm);color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Needs Training</div>
+        <div style="font-size:var(--fs-xl);font-weight:800;color:#d97706;margin-top:4px;">{{ worst_unit.name }}</div>
+        <div style="font-size:var(--fs-sm);color:#6b7280;">{{ worst_unit.cnt }} error{{ 's' if worst_unit.cnt != 1 }}</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="card text-center" style="border-left:4px solid #2563eb;">
       <div class="card-body py-3">
-        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">{{ this_month_label }} vs Avg</div>
+        <div style="font-size:var(--fs-sm);color:#6b7280;text-transform:uppercase;letter-spacing:1px;">{{ this_month_label }} vs Avg</div>
         <div style="font-size:24px;font-weight:800;margin-top:4px;
           color:{% if trend_dir=='up' %}#dc2626{% elif trend_dir=='down' %}#059669{% else %}#6b7280{% endif %};">
           {% if trend_dir == 'up' %}↑ {{ trend_pct }}%
@@ -98,7 +98,7 @@
           {% else %}— flat
           {% endif %}
         </div>
-        <div style="font-size:11px;color:#6b7280;">{{ this_month_cnt }} this month · {{ fy_avg }} avg</div>
+        <div style="font-size:var(--fs-sm);color:#6b7280;">{{ this_month_cnt }} this month · {{ fy_avg }} avg</div>
       </div>
     </div>
   </div>
@@ -107,11 +107,11 @@
 <!-- ─── Auto Insights ─── -->
 <div class="card mb-3" style="border-left:4px solid #6366f1;background:#eef2ff;">
   <div class="card-body py-3">
-    <div style="font-size:12px;font-weight:700;color:#4338ca;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">
+    <div style="font-size:var(--fs-body);font-weight:700;color:#4338ca;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">
       <i class="bi bi-lightbulb-fill"></i> Insights for Next Training Cycle
     </div>
     {% for i in insights %}
-    <div style="font-size:13px;color:#1e293b;margin-bottom:4px;line-height:1.5;">&middot; {{ i|safe }}</div>
+    <div style="font-size:var(--fs-md);color:#1e293b;margin-bottom:4px;line-height:1.5;">&middot; {{ i|safe }}</div>
     {% endfor %}
   </div>
 </div>
@@ -121,7 +121,7 @@
   <div class="card-body text-center py-5">
     <i class="bi bi-emoji-smile" style="font-size:48px;color:#10b981;"></i>
     <h6 class="mt-3 mb-1">No errors recorded in {{ fy_label }}</h6>
-    <p class="text-muted mb-0" style="font-size:13px;">Either no uploads happened yet, or every upload was clean — both good news.</p>
+    <p class="text-muted mb-0" style="font-size:var(--fs-md);">Either no uploads happened yet, or every upload was clean — both good news.</p>
   </div>
 </div>
 {% else %}
@@ -131,12 +131,12 @@
   <div class="ch-dark"><i class="bi bi-grid-3x3"></i> Month × Unit Heatmap — Errors per Month per Unit</div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-sm mb-0" style="font-size:12px;">
+      <table class="table table-sm mb-0" style="font-size:var(--fs-body);">
         <thead style="background:#1e3a5f;color:#fff;">
           <tr>
             <th style="white-space:nowrap;">Month</th>
             {% for p in active_plants %}
-            <th class="text-center" style="white-space:nowrap;font-size:11px;">{{ p.name }}</th>
+            <th class="text-center" style="white-space:nowrap;font-size:var(--fs-sm);">{{ p.name }}</th>
             {% endfor %}
             <th class="text-center" style="background:#374151;">Total</th>
           </tr>
@@ -172,7 +172,7 @@
       </table>
     </div>
   </div>
-  <div class="card-footer text-muted" style="font-size:11px;">
+  <div class="card-footer text-muted" style="font-size:var(--fs-sm);">
     <span style="background:#d1fae5;padding:1px 8px;border-radius:4px;color:#065f46;">Green = below avg</span>
     &nbsp;
     <span style="background:#fef3c7;padding:1px 8px;border-radius:4px;color:#92400e;">Amber = around avg</span>
@@ -190,7 +190,7 @@
       <div class="card-body">
         <canvas id="catChart" style="max-height:340px;"></canvas>
       </div>
-      <div class="card-footer text-muted" style="font-size:11px;">
+      <div class="card-footer text-muted" style="font-size:var(--fs-sm);">
         Identify WHICH error category spikes in WHICH month — drives focused training topic per cycle.
       </div>
     </div>
@@ -202,9 +202,9 @@
       <div class="ch-dark"><i class="bi bi-tags-fill"></i> Error Categories — Fleet-wide</div>
       <div class="card-body p-0">
         {% if not category_summary %}
-        <div class="text-center text-muted py-4" style="font-size:13px;">No categorised errors</div>
+        <div class="text-center text-muted py-4" style="font-size:var(--fs-md);">No categorised errors</div>
         {% else %}
-        <table class="table table-sm mb-0" style="font-size:12.5px;">
+        <table class="table table-sm mb-0" style="font-size:var(--fs-body);">
           <thead style="background:#f8fafc;">
             <tr><th>Category</th><th class="text-end">Count</th><th class="text-end">%</th></tr>
           </thead>
@@ -213,11 +213,11 @@
             <tr>
               <td>
                 <div style="font-weight:600;">{{ c.label }}</div>
-                <div style="font-size:11px;color:#6b7280;">{{ c.desc }}</div>
+                <div style="font-size:var(--fs-sm);color:#6b7280;">{{ c.desc }}</div>
               </td>
               <td class="text-end fw-bold">{{ c.cnt }}</td>
               <td class="text-end">
-                <span style="background:#eef2ff;color:#4338ca;padding:2px 8px;border-radius:99px;font-weight:600;font-size:11px;">{{ c.pct }}%</span>
+                <span style="background:#eef2ff;color:#4338ca;padding:2px 8px;border-radius:99px;font-weight:600;font-size:var(--fs-sm);">{{ c.pct }}%</span>
               </td>
             </tr>
             {% endfor %}
@@ -234,10 +234,10 @@
   <div class="ch-dark"><i class="bi bi-trophy-fill"></i> Unit Comparison — Sorted by Training Priority</div>
   <div class="card-body p-0">
     {% if not unit_comparison %}
-    <div class="text-center text-muted py-4" style="font-size:13px;">No errors recorded for any unit yet</div>
+    <div class="text-center text-muted py-4" style="font-size:var(--fs-md);">No errors recorded for any unit yet</div>
     {% else %}
     <div class="table-responsive">
-      <table class="table table-sm mb-0" style="font-size:12.5px;">
+      <table class="table table-sm mb-0" style="font-size:var(--fs-body);">
         <thead style="background:#f8fafc;">
           <tr>
             <th style="width:40px;">Rank</th>
@@ -253,18 +253,18 @@
           <tr>
             <td>
               {% if loop.index == 1 %}
-              <span style="background:#fee2e2;color:#dc2626;font-weight:800;padding:2px 8px;border-radius:6px;font-size:11px;">#1</span>
+              <span style="background:#fee2e2;color:#dc2626;font-weight:800;padding:2px 8px;border-radius:6px;font-size:var(--fs-sm);">#1</span>
               {% elif loop.index <= 3 %}
-              <span style="background:#fef3c7;color:#92400e;font-weight:700;padding:2px 8px;border-radius:6px;font-size:11px;">#{{ loop.index }}</span>
+              <span style="background:#fef3c7;color:#92400e;font-weight:700;padding:2px 8px;border-radius:6px;font-size:var(--fs-sm);">#{{ loop.index }}</span>
               {% else %}
-              <span style="color:#9ca3af;font-size:11px;">#{{ loop.index }}</span>
+              <span style="color:#9ca3af;font-size:var(--fs-sm);">#{{ loop.index }}</span>
               {% endif %}
             </td>
             <td style="font-weight:600;">{{ u.plant_name }}</td>
             <td class="text-end fw-bold">{{ u.total }}</td>
             <td>
               <div>{{ u.top_cat }}</div>
-              <div style="font-size:11px;color:#6b7280;">{{ u.top_cat_pct }}% of unit's errors</div>
+              <div style="font-size:var(--fs-sm);color:#6b7280;">{{ u.top_cat_pct }}% of unit's errors</div>
             </td>
             <td>{{ u.top_user }}</td>
             <td class="text-center">
@@ -285,7 +285,7 @@
     </div>
     {% endif %}
   </div>
-  <div class="card-footer text-muted" style="font-size:11px;">
+  <div class="card-footer text-muted" style="font-size:var(--fs-sm);">
     Sorted by total errors (worst first). Focus training resources on top-ranked units.
   </div>
 </div>

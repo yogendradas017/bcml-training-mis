@@ -18,9 +18,9 @@
     <div style="font-size:64px;margin-bottom:12px;">✅</div>
     <h5 class="fw-bold text-success">Attendance Marked!</h5>
     {% if emp_name %}
-    <div class="mt-2" style="font-size:15px;">Hello, <strong>{{ emp_name }}</strong></div>
+    <div class="mt-2" style="font-size:var(--fs-base);">Hello, <strong>{{ emp_name }}</strong></div>
     {% endif %}
-    <div class="mt-2 text-muted" style="font-size:13px;">
+    <div class="mt-2 text-muted" style="font-size:var(--fs-md);">
       Your attendance for <strong>{{ qr.programme_name }}</strong> has been recorded.
     </div>
 
@@ -28,22 +28,22 @@
     <div style="font-size:64px;margin-bottom:12px;">👍</div>
     <h5 class="fw-bold" style="color:#d97706;">Already Marked</h5>
     {% if emp_name %}
-    <div class="mt-2" style="font-size:15px;"><strong>{{ emp_name }}</strong></div>
+    <div class="mt-2" style="font-size:var(--fs-base);"><strong>{{ emp_name }}</strong></div>
     {% endif %}
-    <div class="mt-2 text-muted" style="font-size:13px;">
+    <div class="mt-2 text-muted" style="font-size:var(--fs-md);">
       Your attendance was already recorded for this session.
     </div>
 
     {% elif msg == 'feedback_ok' %}
     <div style="font-size:64px;margin-bottom:12px;">🙏</div>
     <h5 class="fw-bold text-success">Feedback Submitted!</h5>
-    <div class="mt-2 text-muted" style="font-size:13px;">
+    <div class="mt-2 text-muted" style="font-size:var(--fs-md);">
       Thank you for your feedback on <strong>{{ qr.programme_name }}</strong>.
       Your response helps us improve.
     </div>
     {% endif %}
 
-    <div class="mt-4 p-3" style="background:#f3f4f6;border-radius:10px;font-size:12px;color:#6b7280;">
+    <div class="mt-4 p-3" style="background:#f3f4f6;border-radius:10px;font-size:var(--fs-body);color:#6b7280;">
       {{ qr.plant_name }} &nbsp;·&nbsp; {{ qr.session_code }}
     </div>
 

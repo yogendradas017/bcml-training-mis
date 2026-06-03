@@ -27,7 +27,7 @@
     <div class="card text-center h-100" style="border-top:4px solid #2e6da4;">
       <div class="card-body py-3">
         <div style="font-size:32px;font-weight:700;color:#2e6da4;">{{ rows|length }}</div>
-        <div style="font-size:12px;color:#6b7280;">Responses</div>
+        <div style="font-size:var(--fs-body);color:#6b7280;">Responses</div>
       </div>
     </div>
   </div>
@@ -35,9 +35,9 @@
     <div class="card text-center h-100" style="border-top:4px solid #3b82f6;">
       <div class="card-body py-3">
         <div style="font-size:32px;font-weight:700;color:#3b82f6;">
-          {{ prog_pct|round(1) if prog_pct else '—' }}{% if prog_pct %}<span style="font-size:16px;">%</span>{% endif %}
+          {{ prog_pct|round(1) if prog_pct else '—' }}{% if prog_pct %}<span style="font-size:var(--fs-lg);">%</span>{% endif %}
         </div>
-        <div style="font-size:12px;color:#6b7280;">Programme Score</div>
+        <div style="font-size:var(--fs-body);color:#6b7280;">Programme Score</div>
       </div>
     </div>
   </div>
@@ -45,9 +45,9 @@
     <div class="card text-center h-100" style="border-top:4px solid #10b981;">
       <div class="card-body py-3">
         <div style="font-size:32px;font-weight:700;color:#10b981;">
-          {{ trainer_pct|round(1) if trainer_pct else '—' }}{% if trainer_pct %}<span style="font-size:16px;">%</span>{% endif %}
+          {{ trainer_pct|round(1) if trainer_pct else '—' }}{% if trainer_pct %}<span style="font-size:var(--fs-lg);">%</span>{% endif %}
         </div>
-        <div style="font-size:12px;color:#6b7280;">Trainer Score</div>
+        <div style="font-size:var(--fs-body);color:#6b7280;">Trainer Score</div>
       </div>
     </div>
   </div>
@@ -55,9 +55,9 @@
     <div class="card text-center h-100" style="border-top:4px solid #f59e0b;">
       <div class="card-body py-3">
         <div style="font-size:32px;font-weight:700;color:#d97706;">
-          {{ overall_pct|round(1) if overall_pct else '—' }}{% if overall_pct %}<span style="font-size:16px;">%</span>{% endif %}
+          {{ overall_pct|round(1) if overall_pct else '—' }}{% if overall_pct %}<span style="font-size:var(--fs-lg);">%</span>{% endif %}
         </div>
-        <div style="font-size:12px;color:#6b7280;">Overall Satisfaction</div>
+        <div style="font-size:var(--fs-body);color:#6b7280;">Overall Satisfaction</div>
       </div>
     </div>
   </div>
@@ -69,7 +69,7 @@
     <i class="bi bi-bar-chart-fill me-1"></i> Question-wise Analysis
   </div>
   <div class="table-responsive">
-    <table class="table table-sm table-hover mb-0" style="font-size:12px;">
+    <table class="table table-sm table-hover mb-0" style="font-size:var(--fs-body);">
       <thead style="background:#f9fafb;">
         <tr>
           <th style="padding:8px 12px;width:30px;">#</th>
@@ -81,7 +81,7 @@
           <th class="text-center" style="padding:8px 8px;width:60px;">Avg</th>
           <th class="text-center" style="padding:8px 8px;width:70px;">Score %</th>
           <th style="padding:8px 12px;min-width:160px;">
-            <span style="font-size:11px;font-weight:400;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:var(--fs-sm);font-weight:400;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <span style="display:inline-flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;background:#ef4444;border-radius:2px;display:inline-block;"></span>SD</span>
               <span style="display:inline-flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;background:#f97316;border-radius:2px;display:inline-block;"></span>D</span>
               <span style="display:inline-flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;background:#818cf8;border-radius:2px;display:inline-block;"></span>A</span>
@@ -93,7 +93,7 @@
       <tbody>
         {# Programme section header #}
         <tr style="background:#eff6ff;">
-          <td colspan="9" style="padding:6px 12px;font-weight:600;font-size:12px;color:#1d4ed8;">
+          <td colspan="9" style="padding:6px 12px;font-weight:600;font-size:var(--fs-body);color:#1d4ed8;">
             Programme Feedback (Q1–Q5)
           </td>
         </tr>
@@ -129,7 +129,7 @@
         {% endfor %}
         {# Programme subtotal #}
         <tr style="background:#f0fdf4;font-weight:600;">
-          <td colspan="6" style="padding:6px 12px;font-size:12px;color:#065f46;">Programme Sub-total</td>
+          <td colspan="6" style="padding:6px 12px;font-size:var(--fs-body);color:#065f46;">Programme Sub-total</td>
           <td class="text-center" style="padding:6px 8px;color:#065f46;">{{ prog_avg or '—' }}</td>
           <td class="text-center" style="padding:6px 8px;color:#065f46;">{{ prog_pct|round(1) if prog_pct else '—' }}{% if prog_pct %}%{% endif %}</td>
           <td style="padding:6px 12px;min-width:160px;">
@@ -143,7 +143,7 @@
 
         {# Trainer section header #}
         <tr style="background:#f0fdf4;">
-          <td colspan="9" style="padding:6px 12px;font-weight:600;font-size:12px;color:#065f46;">
+          <td colspan="9" style="padding:6px 12px;font-weight:600;font-size:var(--fs-body);color:#065f46;">
             Trainer Feedback (Q6–Q9)
           </td>
         </tr>
@@ -179,7 +179,7 @@
         {% endfor %}
         {# Trainer subtotal #}
         <tr style="background:#ecfdf5;font-weight:600;">
-          <td colspan="6" style="padding:6px 12px;font-size:12px;color:#065f46;">Trainer Sub-total</td>
+          <td colspan="6" style="padding:6px 12px;font-size:var(--fs-body);color:#065f46;">Trainer Sub-total</td>
           <td class="text-center" style="padding:6px 8px;color:#065f46;">{{ trainer_avg or '—' }}</td>
           <td class="text-center" style="padding:6px 8px;color:#065f46;">{{ trainer_pct|round(1) if trainer_pct else '—' }}{% if trainer_pct %}%{% endif %}</td>
           <td style="padding:6px 12px;min-width:160px;">
@@ -193,14 +193,14 @@
 
         {# Overall #}
         <tr style="background:#1a1f35;color:#fff;font-weight:700;">
-          <td colspan="6" style="padding:8px 12px;font-size:13px;">Overall Satisfaction</td>
+          <td colspan="6" style="padding:8px 12px;font-size:var(--fs-md);">Overall Satisfaction</td>
           <td class="text-center" style="padding:8px 8px;">{{ overall_avg or '—' }}</td>
           <td class="text-center" style="padding:8px 8px;">{{ overall_pct|round(1) if overall_pct else '—' }}{% if overall_pct %}%{% endif %}</td>
           <td style="padding:8px 12px;min-width:160px;">
             {% if overall_pct %}
             <div style="background:#374151;border-radius:6px;height:16px;overflow:hidden;position:relative;">
               <div style="background:linear-gradient(90deg,#fbbf24,#f59e0b);width:{{ overall_pct }}%;height:100%;border-radius:6px;"></div>
-              <div style="position:absolute;right:6px;top:0;height:100%;display:flex;align-items:center;font-size:10px;font-weight:700;color:#fff;opacity:.8;">{{ overall_pct|round(1) }}%</div>
+              <div style="position:absolute;right:6px;top:0;height:100%;display:flex;align-items:center;font-size:var(--fs-xs);font-weight:700;color:#fff;opacity:.8;">{{ overall_pct|round(1) }}%</div>
             </div>
             {% endif %}
           </td>
@@ -217,7 +217,7 @@
     <span class="badge bg-secondary ms-1">{{ rows|length }}</span>
   </div>
   <div class="table-responsive">
-    <table class="table table-sm table-hover mb-0" style="font-size:11px;">
+    <table class="table table-sm table-hover mb-0" style="font-size:var(--fs-sm);">
       <thead style="background:#f9fafb;">
         <tr>
           <th style="padding:7px 10px;">#</th>
@@ -256,7 +256,7 @@
       </tbody>
     </table>
   </div>
-  <div class="card-footer" style="font-size:10px;color:#9ca3af;">
+  <div class="card-footer" style="font-size:var(--fs-xs);color:#9ca3af;">
     1=Strongly Disagree &nbsp;·&nbsp; 2=Disagree &nbsp;·&nbsp; 3=Agree &nbsp;·&nbsp; 4=Strongly Agree
   </div>
 </div>
@@ -269,7 +269,7 @@
   </div>
   <ul class="list-group list-group-flush">
     {% for l in learnings %}
-    <li class="list-group-item" style="font-size:13px;">{{ loop.index }}. {{ l }}</li>
+    <li class="list-group-item" style="font-size:var(--fs-md);">{{ loop.index }}. {{ l }}</li>
     {% endfor %}
   </ul>
 </div>
@@ -283,7 +283,7 @@
   </div>
   <ul class="list-group list-group-flush">
     {% for s in suggestions %}
-    <li class="list-group-item" style="font-size:13px;">{{ loop.index }}. {{ s }}</li>
+    <li class="list-group-item" style="font-size:var(--fs-md);">{{ loop.index }}. {{ s }}</li>
     {% endfor %}
   </ul>
 </div>

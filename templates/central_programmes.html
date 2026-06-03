@@ -14,7 +14,7 @@
 
 <div class="card">
   <div class="table-responsive">
-    <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+    <table class="table table-sm table-hover mb-0" style="font-size:var(--fs-md);">
       <thead style="background:#f9fafb;">
         <tr>
           <th style="padding:8px 14px;">#</th>
@@ -33,16 +33,16 @@
           <td style="padding:6px 14px;">{{ p.prog_type or '—' }}</td>
           <td style="padding:6px 14px;">
             {% if cat == 'Specialized' %}
-              <span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-weight:600;"><i class="bi bi-stars"></i> Specialized</span>
+              <span style="font-size:var(--fs-sm);background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-weight:600;"><i class="bi bi-stars"></i> Specialized</span>
             {% else %}
-              <span style="font-size:11px;color:#6b7280;">General</span>
+              <span style="font-size:var(--fs-sm);color:#6b7280;">General</span>
             {% endif %}
           </td>
           <td style="padding:6px 14px;">
             <form method="POST" action="{{ url_for('central_programme_delete', prog_id=p.id) }}"
                   style="display:inline;" onsubmit="return confirm('Delete ' + {{ p.name|tojson }} + '?')">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size:11px;">
+              <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size:var(--fs-sm);">
                 <i class="bi bi-trash"></i>
               </button>
             </form>

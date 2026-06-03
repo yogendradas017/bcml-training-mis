@@ -11,7 +11,7 @@
 {% else %}
 <div class="card">
   <div class="table-responsive">
-    <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+    <table class="table table-sm table-hover mb-0" style="font-size:var(--fs-md);">
       <thead style="background:#1a1f35;color:#fff;">
         <tr>
           <th style="padding:10px 14px;">Programme</th>
@@ -28,7 +28,7 @@
         {% set pct = (r.avg_score / 4 * 100) if r.avg_score else None %}
         <tr>
           <td style="padding:8px 14px;font-weight:500;">{{ r.programme_name }}</td>
-          <td style="padding:8px 14px;font-family:monospace;font-size:12px;">{{ r.session_code }}</td>
+          <td style="padding:8px 14px;font-family:monospace;font-size:var(--fs-body);">{{ r.session_code }}</td>
           <td style="padding:8px 14px;color:#6b7280;">
             {{ r.plan_start | fmt_date }}{% if r.plan_end and r.plan_end != r.plan_start %} – {{ r.plan_end | fmt_date }}{% endif %}
           </td>
@@ -49,7 +49,7 @@
           </td>
           <td style="padding:8px 14px;">
             <a href="{{ url_for('qr_feedback_report', cal_id=r.cal_id) }}"
-               class="btn btn-sm btn-outline-success" style="font-size:12px;">
+               class="btn btn-sm btn-outline-success" style="font-size:var(--fs-body);">
               <i class="bi bi-bar-chart-fill"></i> View Report
             </a>
           </td>

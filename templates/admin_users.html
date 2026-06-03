@@ -4,7 +4,7 @@
 
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% for cat, msg in messages %}
-  <div class="alert alert-{{ 'danger' if cat=='danger' else ('warning' if cat=='warning' else 'success') }} alert-dismissible fade show py-2" style="font-size:13px;border-radius:8px;">
+  <div class="alert alert-{{ 'danger' if cat=='danger' else ('warning' if cat=='warning' else 'success') }} alert-dismissible fade show py-2" style="font-size:var(--fs-md);border-radius:8px;">
     {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
   </div>
   {% endfor %}
@@ -14,7 +14,7 @@
   <div class="ch-dark"><i class="bi bi-people-fill"></i> User Accounts &mdash; Password Management</div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0" style="font-size:13px;white-space:nowrap;">
+      <table class="table table-hover mb-0" style="font-size:var(--fs-md);white-space:nowrap;">
         <thead>
           <tr>
             <th>#</th>
@@ -33,37 +33,37 @@
             <td>
               <strong>{{ u.username }}</strong>
               {% if u.username == session.username %}
-              <span style="font-size:10px;color:var(--c-primary);margin-left:5px;">(you)</span>
+              <span style="font-size:var(--fs-xs);color:var(--c-primary);margin-left:5px;">(you)</span>
               {% endif %}
             </td>
             <td>
               {% if u.role == 'admin' %}
-              <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:10.5px;font-weight:700;">Admin</span>
+              <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:var(--fs-xs);font-weight:700;">Admin</span>
               {% elif u.role == 'central' %}
-              <span class="badge" style="background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:700;">Central</span>
+              <span class="badge" style="background:#fef3c7;color:#92400e;font-size:var(--fs-xs);font-weight:700;">Central</span>
               {% else %}
-              <span class="badge" style="background:#dbeafe;color:#1e40af;font-size:10.5px;font-weight:700;">SPOC</span>
+              <span class="badge" style="background:#dbeafe;color:#1e40af;font-size:var(--fs-xs);font-weight:700;">SPOC</span>
               {% endif %}
             </td>
             <td style="color:var(--c-muted);">{{ u.plant_name or '—' }}</td>
             <td>
               {% if u.must_change_password %}
-              <span style="font-size:11.5px;color:#d97706;font-weight:700;">
+              <span style="font-size:var(--fs-sm);color:#d97706;font-weight:700;">
                 <i class="bi bi-exclamation-triangle-fill me-1"></i>Must set new password
               </span>
               {% else %}
-              <span style="font-size:11.5px;color:#059669;font-weight:600;">
+              <span style="font-size:var(--fs-sm);color:#059669;font-weight:600;">
                 <i class="bi bi-shield-check me-1"></i>OK
               </span>
               {% endif %}
             </td>
             <td>
               {% if u.totp_enabled %}
-              <span style="font-size:11.5px;color:#059669;font-weight:700;">
+              <span style="font-size:var(--fs-sm);color:#059669;font-weight:700;">
                 <i class="bi bi-shield-lock-fill me-1"></i>ON
               </span>
               {% else %}
-              <span style="font-size:11.5px;color:#9ca3af;">
+              <span style="font-size:var(--fs-sm);color:#9ca3af;">
                 <i class="bi bi-shield me-1"></i>Off
               </span>
               {% endif %}
@@ -73,12 +73,12 @@
                     style="display:inline;"
                     onsubmit="return confirm('{% if u.username == session.username %}Reset YOUR OWN password to default (bcml@1234)?\nYou will be forced to set a new password immediately.{% else %}Reset password for {{ u.username }} to default?\nThey will be forced to create a new password on next login.{% endif %}')">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn-action btn-action-danger" style="font-size:11.5px;">
+                <button type="submit" class="btn-action btn-action-danger" style="font-size:var(--fs-sm);">
                   <i class="bi bi-arrow-counterclockwise"></i> Reset PW
                 </button>
               </form>
               {% if u.username == session.username %}
-              <a href="{{ url_for('change_password') }}" class="btn-action btn-action-success" style="font-size:11.5px;">
+              <a href="{{ url_for('change_password') }}" class="btn-action btn-action-success" style="font-size:var(--fs-sm);">
                 <i class="bi bi-key-fill"></i> Change Mine
               </a>
               {% endif %}
@@ -87,12 +87,12 @@
                     style="display:inline;"
                     onsubmit="return confirm('Disable 2FA for {{ u.username }}?')">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn-action btn-action-danger" style="font-size:11.5px;">
+                <button type="submit" class="btn-action btn-action-danger" style="font-size:var(--fs-sm);">
                   <i class="bi bi-shield-x"></i> Disable 2FA
                 </button>
               </form>
               {% else %}
-              <a href="{{ url_for('admin_2fa_setup', user_id=u.id) }}" class="btn-action btn-action-success" style="font-size:11.5px;">
+              <a href="{{ url_for('admin_2fa_setup', user_id=u.id) }}" class="btn-action btn-action-success" style="font-size:var(--fs-sm);">
                 <i class="bi bi-shield-lock-fill"></i> Enable 2FA
               </a>
               {% endif %}
@@ -107,12 +107,12 @@
 
 <div class="card">
   <div class="ch"><i class="bi bi-info-circle" style="color:var(--c-primary);"></i> How it works</div>
-  <div class="card-body" style="font-size:13px;color:var(--c-muted);line-height:1.9;">
+  <div class="card-body" style="font-size:var(--fs-md);color:var(--c-muted);line-height:1.9;">
     <div class="row g-3">
       <div class="col-12 col-md-6">
         <div style="font-weight:700;color:var(--c-text);margin-bottom:4px;"><i class="bi bi-1-circle-fill me-2" style="color:var(--c-primary);"></i>SPOC forgets password</div>
         SPOC contacts Corporate L&amp;D. Admin clicks <strong>Reset to Default</strong> here.
-        Default password is set to <code style="font-size:12px;">bcml@1234</code>.
+        Default password is set to <code style="font-size:var(--fs-body);">bcml@1234</code>.
       </div>
       <div class="col-12 col-md-6">
         <div style="font-weight:700;color:var(--c-text);margin-bottom:4px;"><i class="bi bi-2-circle-fill me-2" style="color:var(--c-primary);"></i>SPOC logs in next time</div>

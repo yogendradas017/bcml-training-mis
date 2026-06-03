@@ -16,7 +16,7 @@
     <i class="bi bi-person-check"></i> Add Single Training Record
   </div>
   <div class="card-body">
-    <div class="alert alert-info py-2" style="font-size:13px;">
+    <div class="alert alert-info py-2" style="font-size:var(--fs-md);">
       <i class="bi bi-info-circle"></i>
       Select a <strong>Session Code</strong> — programme details will auto-fill. Or enter manually for ad-hoc trainings.
     </div>
@@ -120,14 +120,14 @@
 <div class="card">
   <div class="card-header ch-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
     <span><i class="bi bi-table me-1"></i> Training Records — <strong>{{ records|length }}</strong> entries</span>
-    <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:12.5px;padding:5px 14px;border-radius:8px;font-weight:700;">
-      <i class="bi bi-clock-fill me-1" style="font-size:11px;"></i>Total Hours: {{ records|sum(attribute='hrs')|round(1) }}
+    <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:var(--fs-body);padding:5px 14px;border-radius:8px;font-weight:700;">
+      <i class="bi bi-clock-fill me-1" style="font-size:var(--fs-sm);"></i>Total Hours: {{ records|sum(attribute='hrs')|round(1) }}
     </span>
   </div>
   <div class="card-body py-3">
     <div class="d-flex gap-2 flex-wrap align-items-center">
       <div class="position-relative flex-grow-1" style="max-width:300px;">
-        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;pointer-events:none;"></i>
+        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:var(--fs-md);pointer-events:none;"></i>
         <input type="text" class="form-control" placeholder="Search name, code, programme…" style="padding-left:36px;height:38px;" oninput="TBL.search('training2aTable',this.value)">
       </div>
       <select class="form-select" style="width:140px;height:38px;" onchange="TBL.filter('training2aTable','collar',this.value)">
@@ -179,9 +179,9 @@
             data-month="{{ rec.month or '' }}" data-source="{{ src }}"
             {% if has_anom %}style="background:#fff7ed;" title="Anomaly: {{ rec.anomaly_flags }}"{% endif %}>
           <td style="width:40px;"><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
-          <td style="color:#9ca3af;font-size:12px;">
+          <td style="color:#9ca3af;font-size:var(--fs-body);">
             {{ loop.index }}
-            {% if has_anom %}<i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:11px;margin-left:3px;" title="{{ rec.anomaly_flags }}"></i>{% endif %}
+            {% if has_anom %}<i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:var(--fs-sm);margin-left:3px;" title="{{ rec.anomaly_flags }}"></i>{% endif %}
           </td>
           <td>
             <div class="cell-emp-name">{{ rec.emp_name or rec.emp_code }}</div>
@@ -196,7 +196,7 @@
           <td style="font-weight:600;color:#111827;">
             {{ rec.programme_name }}
             {% if rec.category == 'Specialized' %}
-            <span title="Specialized — 3-mo effectiveness review required" style="font-size:9px;font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
+            <span title="Specialized — 3-mo effectiveness review required" style="font-size:var(--fs-xs);font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
               <i class="bi bi-stars"></i> SPL
             </span>
             {% endif %}
@@ -210,7 +210,7 @@
             {% elif rec.session_code %}
               <span class="badge-unit">Linked</span>
             {% else %}
-              <span class="text-muted" style="font-size:12px;">Manual</span>
+              <span class="text-muted" style="font-size:var(--fs-body);">Manual</span>
             {% endif %}
           </td>
           <td style="white-space:nowrap;">{{ rec.start_date | fmt_date }}</td>
@@ -218,7 +218,7 @@
           <td class="cell-rating">{{ rec.pre_rating or '—' }}</td>
           <td class="cell-rating">{{ rec.post_rating or '—' }}</td>
           <td style="color:#6b7280;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ rec.venue or '' }}">{{ rec.venue or '—' }}</td>
-          <td style="white-space:nowrap;color:#6b7280;font-size:12.5px;">{{ rec.month or '—' }}</td>
+          <td style="white-space:nowrap;color:#6b7280;font-size:var(--fs-body);">{{ rec.month or '—' }}</td>
           <td>
             <form method="POST" action="{{ url_for('delete_emp_training', rec_id=rec.id) }}" style="display:inline;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -230,7 +230,7 @@
           </td>
         </tr>
         {% else %}
-        <tr data-empty="1"><td colspan="15" class="text-center text-muted py-5" style="font-size:14px;">No training records yet. Add one above.</td></tr>
+        <tr data-empty="1"><td colspan="15" class="text-center text-muted py-5" style="font-size:var(--fs-base);">No training records yet. Add one above.</td></tr>
         {% endfor %}
       </tbody>
     </table>
