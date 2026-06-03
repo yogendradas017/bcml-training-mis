@@ -276,6 +276,21 @@
             </td>
             <td>
               {% if emp.is_active %}
+              <button class="btn-action btn-action-primary edit-btn me-1"
+                      data-emp-id="{{ emp.id }}"
+                      data-emp-name="{{ emp.name }}"
+                      data-emp-desig="{{ emp.designation or '' }}"
+                      data-emp-grade="{{ emp.grade or '' }}"
+                      data-emp-collar="{{ emp.collar or '' }}"
+                      data-emp-dept="{{ emp.department or '' }}"
+                      data-emp-sect="{{ emp.section or '' }}"
+                      data-emp-cat="{{ emp.category or '' }}"
+                      data-emp-gender="{{ emp.gender or '' }}"
+                      data-emp-ph="{{ emp.physically_handicapped or 'No' }}"
+                      data-emp-remarks="{{ emp.remarks or '' }}"
+                      data-edit-url="{{ url_for('edit_employee', emp_id=emp.id) }}">
+                <i class="bi bi-pencil-square"></i> Edit
+              </button>
               <button class="btn-action btn-action-danger exit-btn"
                       data-emp-id="{{ emp.id }}"
                       data-emp-name="{{ emp.name }}"
@@ -284,10 +299,10 @@
               </button>
               {% else %}
               <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}"
-                    style="display:inline;">
+                    style="display:inline;"
+                    data-tms-confirm="Reactivate {{ emp.name }}?">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn-action btn-action-success"
-                        onclick="return confirm('Reactivate {{ emp.name }}?')">
+                <button type="submit" class="btn-action btn-action-success">
                   <i class="bi bi-arrow-counterclockwise"></i> Reactivate
                 </button>
               </form>
@@ -333,10 +348,81 @@
               <option>Other</option>
             </select>
           </div>
+          <div class="form-check" style="font-size:12px;">
+            <input class="form-check-input" type="checkbox" name="confirm_pending" value="1" id="confirmPendingChk">
+            <label class="form-check-label" for="confirmPendingChk">
+              Force exit even if pending Effectiveness Reviews exist
+            </label>
+            <div class="text-muted" style="font-size:11px;margin-top:2px;">
+              Tick only if server rejected the exit. Open reviews stay open against this emp.
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-danger btn-sm">Confirm Exit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Employee Modal ── -->
+<div class="modal fade" id="editEmpModal" tabindex="-1" aria-labelledby="editEmpLabel">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="editEmpLabel">Edit Employee</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="editEmpForm" action="">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Full Name <span class="required-star">*</span></label>
+              <input type="text" name="name" id="edit_name" class="form-control" required></div>
+            <div class="col-md-6"><label class="form-label">Designation <span class="required-star">*</span></label>
+              <input type="text" name="designation" id="edit_designation" class="form-control" required></div>
+            <div class="col-md-4"><label class="form-label">Grade <span class="required-star">*</span></label>
+              <select name="grade" id="edit_grade" class="form-select" required>
+                {% for g in grades %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+              </select></div>
+            <div class="col-md-4"><label class="form-label">Collar <span class="required-star">*</span></label>
+              <select name="collar" id="edit_collar" class="form-select" required>
+                {% for c in collars %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+              </select></div>
+            <div class="col-md-4"><label class="form-label">Category <span class="required-star">*</span></label>
+              <select name="category" id="edit_category" class="form-select" required>
+                {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+              </select></div>
+            <div class="col-md-6"><label class="form-label">Department <span class="required-star">*</span></label>
+              <input type="text" name="department" id="edit_department" class="form-control" required list="editDeptList">
+              <datalist id="editDeptList">
+                {% for d in departments %}<option value="{{ d }}">{% endfor %}
+              </datalist></div>
+            <div class="col-md-6"><label class="form-label">Section <span class="required-star">*</span></label>
+              <input type="text" name="section" id="edit_section" class="form-control" required list="editSectList">
+              <datalist id="editSectList">
+                {% for s in sections %}<option value="{{ s }}">{% endfor %}
+              </datalist></div>
+            <div class="col-md-4"><label class="form-label">Gender <span class="required-star">*</span></label>
+              <select name="gender" id="edit_gender" class="form-select" required>
+                {% for g in genders %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+              </select></div>
+            <div class="col-md-4"><label class="form-label">Physically Handicapped <span class="required-star">*</span></label>
+              <select name="physically_handicapped" id="edit_ph" class="form-select" required>
+                {% for p in ph_options %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+              </select></div>
+            <div class="col-md-4"><label class="form-label">Remarks</label>
+              <input type="text" name="remarks" id="edit_remarks" class="form-control"></div>
+          </div>
+          <div class="text-muted mt-3" style="font-size:11.5px;">
+            <i class="bi bi-info-circle"></i> Emp Code is immutable. To change it, exit + re-add as new employee.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
         </div>
       </form>
     </div>
@@ -373,9 +459,33 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('exitModalLabel').textContent = 'Mark Exit — ' + this.dataset.empName;
       document.getElementById('exitModalForm').action = this.dataset.exitUrl;
       document.getElementById('exitDateInput').value = today;
+      document.getElementById('confirmPendingChk').checked = false;
       _exitModal.show();
     });
   });
+
+  // ── Edit Employee modal ──
+  const _editModalEl = document.getElementById('editEmpModal');
+  if (_editModalEl) {
+    const _editModal = new bootstrap.Modal(_editModalEl, {backdrop: true, keyboard: true});
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.getElementById('editEmpLabel').textContent = 'Edit Employee — ' + this.dataset.empName;
+        document.getElementById('editEmpForm').action     = this.dataset.editUrl;
+        document.getElementById('edit_name').value        = this.dataset.empName || '';
+        document.getElementById('edit_designation').value = this.dataset.empDesig || '';
+        document.getElementById('edit_grade').value       = this.dataset.empGrade || '';
+        document.getElementById('edit_collar').value      = this.dataset.empCollar || '';
+        document.getElementById('edit_department').value  = this.dataset.empDept || '';
+        document.getElementById('edit_section').value     = this.dataset.empSect || '';
+        document.getElementById('edit_category').value    = this.dataset.empCat || '';
+        document.getElementById('edit_gender').value      = this.dataset.empGender || '';
+        document.getElementById('edit_ph').value          = this.dataset.empPh || 'No';
+        document.getElementById('edit_remarks').value     = this.dataset.empRemarks || '';
+        _editModal.show();
+      });
+    });
+  }
 });
 </script>
 {% endblock %}

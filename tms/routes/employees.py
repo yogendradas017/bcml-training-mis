@@ -135,6 +135,48 @@ def _register(app):
             flash(f"Employee code {f['emp_code'].strip()} already exists.", 'danger')
         return redirect(url_for('employees'))
 
+    @app.route('/employees/<int:emp_id>/edit', methods=['POST'])
+    @spoc_required
+    def edit_employee(emp_id):
+        plant_id = session['plant_id']
+        db = get_db()
+        before = db.execute('SELECT * FROM employees WHERE id=? AND plant_id=?',
+                            (emp_id, plant_id)).fetchone()
+        if not before:
+            flash('Employee not found.', 'danger')
+            return redirect(url_for('employees'))
+        f = request.form
+        departments = _plant_depts(db, plant_id)
+        sections    = _plant_sections(db, plant_id)
+        # emp_code is immutable — replay current value through validator so it passes.
+        f_with_code = dict(f); f_with_code['emp_code'] = before['emp_code']
+        errs = _validate_emp_fields(f_with_code, departments, sections)
+        if errs:
+            for e in errs:
+                flash(e, 'danger')
+            return redirect(url_for('employees'))
+        collar = normalise_collar(f.get('collar', ''))
+        grade  = (f.get('grade') or '').strip().upper()
+        dept   = (f.get('department') or '').strip().upper()
+        sect   = (f.get('section') or '').strip().upper()
+        cat    = (f.get('category') or '').strip().upper()
+        db.execute('''UPDATE employees SET
+            name=?, designation=?, grade=?, collar=?, department=?, section=?,
+            category=?, gender=?, physically_handicapped=?, remarks=?
+            WHERE id=? AND plant_id=?''',
+            (f['name'].strip(), f.get('designation','').strip(), grade, collar,
+             dept, sect, cat, f.get('gender',''),
+             f.get('physically_handicapped','No'), f.get('remarks',''),
+             emp_id, plant_id))
+        db.commit()
+        after = db.execute('SELECT * FROM employees WHERE id=? AND plant_id=?',
+                           (emp_id, plant_id)).fetchone()
+        log_record_change('RECORD_EDIT', emp_id, 'employees',
+                          before=dict(before), after=dict(after),
+                          extra_detail=f"emp_edit:{before['emp_code']}")
+        flash(f"Employee {after['name']} updated.", 'success')
+        return redirect(url_for('employees'))
+
     @app.route('/employees/<int:emp_id>/exit', methods=['POST'])
     @spoc_required
     def exit_employee(emp_id):
