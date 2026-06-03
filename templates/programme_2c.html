@@ -200,6 +200,21 @@
             <td><strong>{{ rec.participants }}</strong></td>
             <td><strong>{{ "%.1f"|format(rec.man_hours or 0) }}</strong></td>
             <td>
+              <button type="button" class="btn btn-sm btn-outline-primary edit-2c-btn me-1"
+                      data-id="{{ rec.id }}"
+                      data-session="{{ rec.session_code }}"
+                      data-faculty="{{ rec.faculty_name or '' }}"
+                      data-intext="{{ rec.int_ext or '' }}"
+                      data-venue="{{ rec.venue or '' }}"
+                      data-cost="{{ rec.cost or 0 }}"
+                      data-cf="{{ rec.course_feedback or '' }}"
+                      data-ff="{{ rec.faculty_feedback or '' }}"
+                      data-trp="{{ rec.trainer_fb_participants or '' }}"
+                      data-trf="{{ rec.trainer_fb_facilities or '' }}"
+                      data-edit-url="{{ url_for('edit_programme', rec_id=rec.id) }}"
+                      title="Edit faculty / cost / venue / feedback only">
+                <i class="bi bi-pencil"></i>
+              </button>
               <form method="POST" action="{{ url_for('delete_programme', rec_id=rec.id) }}" style="display:inline;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="button" class="btn btn-sm btn-outline-danger"
@@ -270,11 +285,80 @@
   </div>
 </div>
 {% endif %}
+
+<!-- Edit 2C Modal -->
+<div class="modal fade" id="edit2cModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fs-6">Edit Programme Record — <code id="edit_2c_sess"></code></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="edit2cForm" action="">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div class="alert alert-info py-2" style="font-size:var(--fs-sm);">
+            <i class="bi bi-info-circle"></i>
+            Only faculty / cost / venue / int-ext / feedback can be edited. Dates and hours are locked to preserve calendar + 2A linkage. To change those, delete + re-add.
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Faculty Name</label>
+              <input type="text" name="faculty_name" id="edit_2c_faculty" class="form-control" maxlength="200"></div>
+            <div class="col-md-3"><label class="form-label">Internal / External</label>
+              <select name="int_ext" id="edit_2c_intext" class="form-select">
+                <option value="">— Select —</option>
+                {% for ie in int_ext %}<option>{{ ie }}</option>{% endfor %}
+              </select></div>
+            <div class="col-md-3"><label class="form-label">Cost (₹)</label>
+              <input type="number" name="cost" id="edit_2c_cost" class="form-control" step="0.01" min="0"></div>
+            <div class="col-md-12"><label class="form-label">Venue</label>
+              <input type="text" name="venue" id="edit_2c_venue" class="form-control" maxlength="200"></div>
+            <div class="col-12"><hr class="my-1"><strong style="font-size:var(--fs-md);">Feedback Scores (1–5, blank = not collected)</strong></div>
+            <div class="col-md-3"><label class="form-label">Course Feedback</label>
+              <input type="number" name="course_feedback" id="edit_2c_cf" class="form-control" min="1" max="5" step="0.1"></div>
+            <div class="col-md-3"><label class="form-label">Faculty Feedback</label>
+              <input type="number" name="faculty_feedback" id="edit_2c_ff" class="form-control" min="1" max="5" step="0.1"></div>
+            <div class="col-md-3"><label class="form-label">Trainer FB — Participants</label>
+              <input type="number" name="trainer_fb_participants" id="edit_2c_trp" class="form-control" min="1" max="5" step="0.1"></div>
+            <div class="col-md-3"><label class="form-label">Trainer FB — Facilities</label>
+              <input type="number" name="trainer_fb_facilities" id="edit_2c_trf" class="form-control" min="1" max="5" step="0.1"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
 TBL.init('prog2cTable', 30);
 BulkSelect.init('prog2cTable', '{{ url_for("programme_bulk_delete") }}');
+
+// Edit 2C modal — wire data-* attributes
+document.addEventListener('DOMContentLoaded', function(){
+  var modalEl = document.getElementById('edit2cModal');
+  if (!modalEl) return;
+  var modal = new bootstrap.Modal(modalEl);
+  document.querySelectorAll('.edit-2c-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.getElementById('edit2cForm').action = btn.dataset.editUrl;
+      document.getElementById('edit_2c_sess').textContent = btn.dataset.session || '';
+      document.getElementById('edit_2c_faculty').value = btn.dataset.faculty || '';
+      document.getElementById('edit_2c_intext').value  = btn.dataset.intext  || '';
+      document.getElementById('edit_2c_cost').value    = btn.dataset.cost    || '';
+      document.getElementById('edit_2c_venue').value   = btn.dataset.venue   || '';
+      document.getElementById('edit_2c_cf').value      = btn.dataset.cf      || '';
+      document.getElementById('edit_2c_ff').value      = btn.dataset.ff      || '';
+      document.getElementById('edit_2c_trp').value     = btn.dataset.trp     || '';
+      document.getElementById('edit_2c_trf').value     = btn.dataset.trf     || '';
+      modal.show();
+    });
+  });
+});
 
 // Session data embedded at render time — no DOM traversal, no fetch
 const _SESS2C = {

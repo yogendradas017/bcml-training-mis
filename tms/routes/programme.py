@@ -644,6 +644,54 @@ def _register(app):
             flash(f'Programme {session_code} saved → Awaiting Verification by Central L&D{anom_str}.', 'warning')
         return redirect(url_for('programme_details'))
 
+    @app.route('/programme/<int:rec_id>/edit', methods=['POST'])
+    @spoc_required
+    def edit_programme(rec_id):
+        """Edit safe-to-mutate 2C fields only — faculty/cost/int_ext/venue + feedback scores.
+        Date / hours / session_code / programme_name NOT editable (would invalidate
+        downstream calendar + 2A linkage). For those, delete + re-add."""
+        plant_id = session['plant_id']
+        db = get_db()
+        before = db.execute('SELECT * FROM programme_details WHERE id=? AND plant_id=?',
+                            (rec_id, plant_id)).fetchone()
+        if not before:
+            flash('Programme record not found.', 'danger')
+            return redirect(url_for('programme_details'))
+        f = request.form
+        faculty = (f.get('faculty_name') or '').strip()[:200]
+        int_ext = (f.get('int_ext') or '').strip()
+        venue   = (f.get('venue') or '').strip()[:200]
+        try:
+            cost = float(f.get('cost') or 0)
+        except (ValueError, TypeError):
+            cost = 0.0
+        def _fb(name):
+            try:
+                v = float(f.get(name) or 0)
+                if v < 0 or v > 5: return None
+                return v if v > 0 else None
+            except (ValueError, TypeError):
+                return None
+        course_fb = _fb('course_feedback')
+        faculty_fb = _fb('faculty_feedback')
+        tr_p = _fb('trainer_fb_participants')
+        tr_f = _fb('trainer_fb_facilities')
+        db.execute('''UPDATE programme_details SET
+            faculty_name=?, int_ext=?, venue=?, cost=?,
+            course_feedback=?, faculty_feedback=?,
+            trainer_fb_participants=?, trainer_fb_facilities=?
+            WHERE id=? AND plant_id=?''',
+            (faculty, int_ext, venue, cost,
+             course_fb, faculty_fb, tr_p, tr_f,
+             rec_id, plant_id))
+        db.commit()
+        after = db.execute('SELECT * FROM programme_details WHERE id=? AND plant_id=?',
+                           (rec_id, plant_id)).fetchone()
+        log_record_change('RECORD_EDIT', rec_id, 'programme_details',
+                          before=dict(before), after=dict(after))
+        flash(f'2C record {before["session_code"]} updated.', 'success')
+        return redirect(url_for('programme_details'))
+
     @app.route('/programme/<int:rec_id>/delete', methods=['POST'])
     @spoc_required
     def delete_programme(rec_id):
