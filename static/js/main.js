@@ -144,15 +144,28 @@ document.querySelectorAll('input[required], select[required], textarea[required]
    if value is not in master list.
 ═══════════════════════════════════════════════════ */
 const PROG_AC = (() => {
-  let _list = null;
+  let _list = null;       // cached only on non-empty successful response
+  let _inflight = null;   // single-flight promise — avoids double-fetch when user types fast
   async function _load() {
-    if (_list) return _list;
-    try {
-      const r = await fetch('/api/programme-list');
-      _list = await r.json();
-    } catch(e) { _list = []; }
-    return _list;
+    if (Array.isArray(_list) && _list.length) return _list;
+    if (_inflight) return _inflight;
+    _inflight = (async () => {
+      try {
+        const r = await fetch('/api/programme-list', {credentials: 'same-origin'});
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        if (Array.isArray(data) && data.length) _list = data;   // cache only useful payload
+        return Array.isArray(data) ? data : [];
+      } catch (e) {
+        console.warn('PROG_AC load failed (will retry next keystroke):', e);
+        return [];
+      } finally {
+        _inflight = null;
+      }
+    })();
+    return _inflight;
   }
+  function _invalidate() { _list = null; _inflight = null; }
 
   function _sim(a, b) {
     a = a.toLowerCase(); b = b.toLowerCase();
@@ -314,7 +327,7 @@ const PROG_AC = (() => {
     });
   }
 
-  return { setup };
+  return { setup, invalidate: _invalidate };
 })();
 
 /* ═══════════════════════════════════════════════════
