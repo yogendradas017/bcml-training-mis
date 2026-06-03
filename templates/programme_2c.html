@@ -130,6 +130,15 @@
         <option value="External">External</option>
         <option value="Online">Online</option>
       </select>
+      <select class="form-select" style="width:170px;" onchange="TBL.filter('prog2cTable','status',this.value)">
+        <option value="">All Status</option>
+        <option>To Be Planned</option>
+        <option>Awaiting Verification</option>
+        <option>Conducted</option>
+        <option>Re-Scheduled</option>
+        <option>Cancelled</option>
+        <option>Lapsed</option>
+      </select>
     </div>
   </div>
   <div class="card-body p-0">
@@ -138,7 +147,7 @@
         <thead>
           <tr>
             <th><input type="checkbox" class="cb-all"></th>
-            <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th>
+            <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th><th>Status</th>
             <th>Source</th><th>Start Date</th><th>Hrs</th><th>Faculty</th><th>Int/Ext</th>
             <th>Cost (&#8377;)</th><th>Course FB</th><th>Participants</th><th>Man-Hrs</th><th>Action</th>
           </tr>
@@ -146,7 +155,8 @@
         <tbody>
           {% for rec in records %}
           {% set has_anom = rec.anomaly_flags and rec.anomaly_flags|length > 0 %}
-          <tr data-type="{{ rec.prog_type or '' }}" data-intext="{{ rec.int_ext or '' }}"
+          {% set _st = rec.cal_status or 'Conducted' %}
+          <tr data-type="{{ rec.prog_type or '' }}" data-intext="{{ rec.int_ext or '' }}" data-status="{{ _st }}"
               {% if has_anom %}style="background:var(--c-warn-bg-alt);" title="Anomaly: {{ rec.anomaly_flags }}"{% endif %}>
             <td><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
             <td>
@@ -163,6 +173,15 @@
               {% endif %}
             </td>
             <td><span class="badge-unit" style="font-size:var(--fs-sm);">{{ rec.prog_type or '—' }}</span></td>
+            <td>
+              {% if _st == 'Conducted' %}<span class="badge" style="background:var(--c-success-bg);color:var(--c-success-text);">Conducted</span>
+              {% elif _st == 'Awaiting Verification' %}<span class="badge" style="background:var(--c-warn-bg);color:var(--c-warn-text);">Awaiting Verif.</span>
+              {% elif _st == 'To Be Planned' %}<span class="badge" style="background:var(--c-info-bg);color:var(--c-info-strong);">To Be Planned</span>
+              {% elif _st == 'Re-Scheduled' %}<span class="badge" style="background:var(--c-info-bg);color:var(--c-info-strong);">Re-Scheduled</span>
+              {% elif _st == 'Cancelled' %}<span class="badge" style="background:var(--c-danger-bg);color:var(--c-danger);">Cancelled</span>
+              {% elif _st == 'Lapsed' %}<span class="badge" style="background:var(--c-danger-bg);color:var(--c-danger);">Lapsed</span>
+              {% else %}<span class="badge-unit">{{ _st }}</span>{% endif %}
+            </td>
             <td>
               {% if rec.cal_source == 'New Requirement' %}<span class="badge bg-warning text-dark" style="font-size:var(--fs-sm);">New Req</span>
               {% elif rec.cal_source == 'TNI Driven' %}<span class="badge bg-success" style="font-size:var(--fs-sm);">TNI</span>

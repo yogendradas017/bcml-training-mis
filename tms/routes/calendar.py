@@ -9,7 +9,7 @@ from tms.helpers import (
     _is_ajax, _canonical_prog, _get_or_create_prog_code, _new_session_code,
     _derive_audience, _sync_calendar_from_2c,
     _read_upload_file, _clean, _safe_float, _error_excel_response,
-    _current_fy, _in_current_fy, _parse_date_strict,
+    _current_fy, _in_current_fy, _parse_date_strict, _fy_label,
     validate_calendar_row, flash_validation,
 )
 
@@ -98,6 +98,7 @@ def _register(app):
         for q in qr_rows:
             qr_map.setdefault(q['session_code'], {})[q['stage']] = dict(q)
 
+        fy_y0, fy_y1 = _current_fy()
         return render_template('calendar.html', sessions=sessions, demand_map=demand_map,
                                tni_programmes=tni_programmes,
                                all_cal_programmes=all_cal_programmes, cov_rows=cov_rows,
@@ -105,7 +106,10 @@ def _register(app):
                                audiences=AUDIENCES, months=MONTHS_FY, statuses=STATUSES,
                                qr_map=qr_map,
                                lapsed_count=lapsed_count,
-                               show_lapsed=show_lapsed)
+                               show_lapsed=show_lapsed,
+                               fy_label=_fy_label(),
+                               fy_start=f'{fy_y0}-04-01',
+                               fy_end=f'{fy_y1}-03-31')
 
     @app.route('/calendar/add', methods=['POST'])
     @spoc_required

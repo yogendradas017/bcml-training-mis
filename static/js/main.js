@@ -226,9 +226,9 @@ const PROG_AC = (() => {
         _lockSourceToNewRequirement(form, true);
         warn.style.color = '#92400e';
         warn.innerHTML =
-          '<i class="bi bi-exclamation-triangle me-1"></i>Not in Programme Master — source locked to <strong>New Requirement</strong>. ' +
+          '<i class="bi bi-exclamation-triangle me-1"></i>Not in Programme Master — source auto-set to <strong>New Requirement</strong>. ' +
           '<a href="#" id="prog-ac-add-master-btn" style="color:#1d4ed8;font-weight:600;text-decoration:underline;">' +
-          '➕ Add to Programme Master &amp; Continue</a>';
+          'Add to Programme Master on save</a>';
         warn.style.display = 'block';
         const addBtn = warn.querySelector('#prog-ac-add-master-btn');
         if (addBtn) {
@@ -242,14 +242,14 @@ const PROG_AC = (() => {
               form.appendChild(_autoAddInput);
             }
             warn.style.color = '#065f46';
-            warn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Will be added to Programme Master as <strong>New Requirement</strong> on save.';
+            warn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Confirmed — will be added to Programme Master as <strong>New Requirement</strong> on save.';
             input.style.borderColor = '#10b981';
             _setSubmitBlocked(false);
           };
         }
       } else {
         warn.style.color = '#c2410c';
-        warn.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Not in Programme Master — check spelling or add to master list first.';
+        warn.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Not in Programme Master. Either correct the spelling, or visit Programme Master to add it first.';
         warn.style.display = 'block';
       }
     }

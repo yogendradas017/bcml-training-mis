@@ -176,7 +176,7 @@
 {% set _cell = 'padding:10px 14px;vertical-align:middle;' %}
 <div class="card mb-4">
   <div class="card-header ch-success d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('d-none')">
-    <span><i class="bi bi-bullseye me-1"></i> TNI Coverage Plan — Are all demand employees covered?</span>
+    <span><i class="bi bi-bullseye me-1"></i> TNI Plan vs Demand — Seats Planned vs Employees Needing Training</span>
     <div class="d-flex gap-2 align-items-center">
       <span style="{{ _pill }}background:var(--c-success-bg);color:var(--c-success-text);">{{ fully }} Fully Planned</span>
       <span style="{{ _pill }}background:var(--c-warn-bg);color:var(--c-warn-text);">{{ partial }} Have Gap</span>
@@ -250,7 +250,7 @@
 <!-- Calendar Table -->
 <div class="card">
   <div class="card-header ch-dark d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-calendar3"></i> Training Calendar — <strong>{{ sessions|length }}</strong> sessions</span>
+    <span><i class="bi bi-calendar3"></i> Training Calendar — <strong>{{ sessions|length }}</strong> sessions <span style="font-size:var(--fs-xs);background:rgba(255,255,255,.18);padding:2px 8px;border-radius:var(--radius-pill);margin-left:8px;font-weight:600;letter-spacing:.3px;">FY {{ fy_label }}</span></span>
     <div class="d-flex gap-2">
       <span class="badge" style="background:var(--c-warn-bg);color:var(--c-warn-text);">To Be Planned: {{ sessions|selectattr('status','equalto','To Be Planned')|list|length }}</span>
       <span class="badge" style="background:var(--c-success-bg);color:var(--c-success-text);">Conducted: {{ sessions|selectattr('status','equalto','Conducted')|list|length }}</span>
@@ -933,11 +933,9 @@ PROG_AC.setup(document.getElementById('e_prog'));
   check();
 })();
 
-// FY date bounds + enforce min hours > 0
+// FY date bounds (server-authoritative, IST-correct) + enforce min hours > 0
 (function(){
-  const today = new Date();
-  const yr = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
-  const fyStart = `${yr}-04-01`, fyEnd = `${yr+1}-03-31`;
+  const fyStart = '{{ fy_start }}', fyEnd = '{{ fy_end }}';
   document.querySelectorAll('input[type=date][name=plan_start], input[type=date][name=plan_end]').forEach(el => {
     el.min = fyStart; el.max = fyEnd;
   });

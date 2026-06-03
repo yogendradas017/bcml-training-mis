@@ -367,6 +367,7 @@ def _register(app):
         records = db.execute('''
             SELECT p.*,
                    c.source as cal_source,
+                   c.status as cal_status,
                    COALESCE(c.category, pm.category, 'General') as category,
                    COALESCE(agg.participants, 0) as participants,
                    COALESCE(agg.man_hours, 0)   as man_hours
@@ -408,7 +409,7 @@ def _register(app):
         return render_template('programme_2c.html', records=records,
                                central_records=central_records,
                                cal_sessions=cal_sessions,
-                               int_ext=INT_EXT, audiences=AUDIENCES, months=MONTHS_FY)
+                               int_ext=INT_EXT, audiences=AUDIENCES, months=MONTHS_FY, prog_types=PROG_TYPES)
 
     @app.route('/programme/add', methods=['POST'])
     @spoc_required
