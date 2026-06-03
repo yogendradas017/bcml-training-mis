@@ -28,7 +28,7 @@
   </div>
   <div class="col-auto">
     <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Filter</button>
-    <a href="{{ url_for('admin_audit_log') }}" class="btn btn-outline-secondary ms-1">Clear</a>
+    <button type="button" class="btn btn-outline-secondary ms-1" onclick="(function(f){f.querySelectorAll('input[name=q],select[name=action]').forEach(function(el){el.value='';});window.location='{{ url_for('admin_audit_log') }}';})(this.form);">Clear</button>
   </div>
 </form>
 
