@@ -30,7 +30,7 @@
   <div class="card-body">
 
     <div class="alert mb-3 d-flex gap-2 align-items-start py-2"
-         style="background:#fff7ed;border:1px solid #fed7aa;font-size:var(--fs-md);color:#c2410c;">
+         style="background:var(--c-warn-bg-alt);border:1px solid #fed7aa;font-size:var(--fs-md);color:#c2410c;">
       <i class="bi bi-exclamation-triangle-fill mt-1" style="flex-shrink:0;"></i>
       <div>
         <strong>Replaces existing TNI &amp; Master List for {{ session.plant_name }}.</strong><br>
@@ -38,7 +38,7 @@
       </div>
     </div>
 
-    <ul style="font-size:var(--fs-md);color:#374151;padding-left:18px;margin-bottom:18px;">
+    <ul style="font-size:var(--fs-md);color:var(--c-text-2);padding-left:18px;margin-bottom:18px;">
       <li>Programme names auto-normalized (casing, spaces, special chars)</li>
       <li>Duplicate rows (same employee + programme) automatically removed</li>
       <li>Rows with unknown employee codes shown as errors — <strong>not saved</strong></li>
@@ -66,20 +66,20 @@
 {# Summary scorecard #}
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
-    <div class="card text-center h-100" style="border-top:4px solid #2e6da4;">
+    <div class="card text-center h-100" style="border-top:4px solid var(--c-primary);">
       <div class="card-body py-3">
-        <div style="font-size:var(--fs-3xl);font-weight:700;color:#2e6da4;">{{ valid_rows|length }}</div>
-        <div style="font-size:var(--fs-body);color:#6b7280;font-weight:500;">Valid Rows</div>
-        <div style="font-size:var(--fs-sm);color:#9ca3af;">will be saved</div>
+        <div style="font-size:var(--fs-3xl);font-weight:700;color:var(--c-primary);">{{ valid_rows|length }}</div>
+        <div style="font-size:var(--fs-body);color:var(--c-muted-2);font-weight:500;">Valid Rows</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-3);">will be saved</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card text-center h-100" style="border-top:4px solid #10b981;">
+    <div class="card text-center h-100" style="border-top:4px solid var(--c-success);">
       <div class="card-body py-3">
-        <div style="font-size:var(--fs-3xl);font-weight:700;color:#10b981;">{{ unique_progs|length }}</div>
-        <div style="font-size:var(--fs-body);color:#6b7280;font-weight:500;">Unique Programmes</div>
-        <div style="font-size:var(--fs-sm);color:#9ca3af;">→ new master list</div>
+        <div style="font-size:var(--fs-3xl);font-weight:700;color:var(--c-success);">{{ unique_progs|length }}</div>
+        <div style="font-size:var(--fs-body);color:var(--c-muted-2);font-weight:500;">Unique Programmes</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-3);">→ new master list</div>
       </div>
     </div>
   </div>
@@ -87,8 +87,8 @@
     <div class="card text-center h-100" style="border-top:4px solid {% if name_corrections %}#f59e0b{% else %}#d1d5db{% endif %};">
       <div class="card-body py-3">
         <div style="font-size:var(--fs-3xl);font-weight:700;color:{% if name_corrections %}#d97706{% else %}#9ca3af{% endif %};">{{ name_corrections|length }}</div>
-        <div style="font-size:var(--fs-body);color:#6b7280;font-weight:500;">Names Cleaned</div>
-        <div style="font-size:var(--fs-sm);color:#9ca3af;">auto-corrected</div>
+        <div style="font-size:var(--fs-body);color:var(--c-muted-2);font-weight:500;">Names Cleaned</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-3);">auto-corrected</div>
       </div>
     </div>
   </div>
@@ -96,8 +96,8 @@
     <div class="card text-center h-100" style="border-top:4px solid {% if error_rows %}#dc2626{% else %}#d1d5db{% endif %};">
       <div class="card-body py-3">
         <div style="font-size:var(--fs-3xl);font-weight:700;color:{% if error_rows %}#dc2626{% else %}#9ca3af{% endif %};">{{ error_rows|length }}</div>
-        <div style="font-size:var(--fs-body);color:#6b7280;font-weight:500;">Rejected Rows</div>
-        <div style="font-size:var(--fs-sm);color:#9ca3af;">not saved</div>
+        <div style="font-size:var(--fs-body);color:var(--c-muted-2);font-weight:500;">Rejected Rows</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-3);">not saved</div>
       </div>
     </div>
   </div>
@@ -105,7 +105,7 @@
 
 {% if duplicate_count > 0 %}
 <div class="alert d-flex gap-2 align-items-center py-2 mb-3"
-     style="background:#eff6ff;border:1px solid #bfdbfe;font-size:var(--fs-md);color:#1d4ed8;">
+     style="background:var(--c-info-bg-soft);border:1px solid var(--c-info-border);font-size:var(--fs-md);color:var(--c-info);">
   <i class="bi bi-arrow-repeat"></i>
   <span><strong>{{ duplicate_count }} duplicate row(s)</strong> detected (same employee + programme) — automatically removed.</span>
 </div>
@@ -121,7 +121,7 @@
   <div class="card-body" style="padding:14px 16px;">
     <div style="display:flex;flex-wrap:wrap;gap:6px;">
       {% for p in unique_progs %}
-      <span style="background:#d1fae5;color:#065f46;font-size:var(--fs-body);font-weight:500;
+      <span style="background:var(--c-success-bg);color:var(--c-success-text);font-size:var(--fs-body);font-weight:500;
                    padding:3px 10px;border-radius:12px;border:1px solid #a7f3d0;">{{ p }}</span>
       {% endfor %}
     </div>
@@ -132,7 +132,7 @@
 {% if name_corrections %}
 <div class="card mb-4">
   <div class="card-header d-flex align-items-center gap-2"
-       style="background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e;font-size:var(--fs-base);">
+       style="background:var(--c-warn-bg-soft);border-bottom:1px solid var(--c-warn-border);color:var(--c-warn-text);font-size:var(--fs-base);">
     <i class="bi bi-magic"></i>
     <span>{{ name_corrections|length }} Programme Name(s) Auto-Cleaned</span>
   </div>
@@ -148,12 +148,12 @@
       <tbody>
         {% for orig, cleaned in name_corrections.items() %}
         <tr>
-          <td style="padding:6px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:6px 14px;color:var(--c-muted-3);">{{ loop.index }}</td>
           <td style="padding:6px 14px;">
-            <span style="background:#fee2e2;color:#dc2626;font-weight:600;padding:2px 8px;border-radius:4px;">{{ orig }}</span>
+            <span style="background:var(--c-danger-bg);color:var(--c-danger);font-weight:600;padding:2px 8px;border-radius:4px;">{{ orig }}</span>
           </td>
           <td style="padding:6px 14px;">
-            <span style="background:#d1fae5;color:#065f46;font-weight:600;padding:2px 8px;border-radius:4px;">{{ cleaned }}</span>
+            <span style="background:var(--c-success-bg);color:var(--c-success-text);font-weight:600;padding:2px 8px;border-radius:4px;">{{ cleaned }}</span>
           </td>
         </tr>
         {% endfor %}
@@ -167,13 +167,13 @@
 {% if error_rows %}
 <div class="card mb-4">
   <div class="card-header d-flex align-items-center gap-2"
-       style="background:#fef2f2;border-bottom:1px solid #fecaca;color:#dc2626;font-size:var(--fs-base);">
+       style="background:var(--c-danger-bg-soft);border-bottom:1px solid #fecaca;color:var(--c-danger);font-size:var(--fs-base);">
     <i class="bi bi-x-circle-fill"></i>
     <span>{{ error_rows|length }} Row(s) Rejected — will NOT be saved</span>
   </div>
   <div class="table-responsive">
     <table class="table table-sm table-bordered mb-0" style="font-size:var(--fs-md);">
-      <thead style="background:#fef2f2;">
+      <thead style="background:var(--c-danger-bg-soft);">
         <tr>
           <th style="padding:8px 14px;">File Row</th>
           <th style="padding:8px 14px;">Employee Code</th>
@@ -184,10 +184,10 @@
       <tbody>
         {% for r in error_rows %}
         <tr>
-          <td style="padding:6px 14px;color:#9ca3af;">{{ r.row }}</td>
+          <td style="padding:6px 14px;color:var(--c-muted-3);">{{ r.row }}</td>
           <td style="padding:6px 14px;">{{ r.emp_code or '—' }}</td>
           <td style="padding:6px 14px;">{{ r.prog_name or '—' }}</td>
-          <td style="padding:6px 14px;color:#dc2626;">{{ r.reason }}</td>
+          <td style="padding:6px 14px;color:var(--c-danger);">{{ r.reason }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -199,7 +199,7 @@
 {# Confirm / Cancel #}
 {% if valid_rows %}
 <div class="alert d-flex gap-2 align-items-start py-2 mb-3"
-     style="background:#fff7ed;border:1px solid #fed7aa;font-size:var(--fs-md);color:#c2410c;">
+     style="background:var(--c-warn-bg-alt);border:1px solid #fed7aa;font-size:var(--fs-md);color:#c2410c;">
   <i class="bi bi-exclamation-triangle-fill mt-1" style="flex-shrink:0;"></i>
   <div>
     <strong>Confirming will permanently replace</strong> all existing TNI data and programme master list for
@@ -223,9 +223,9 @@
 {% else %}
 <div class="card">
   <div class="card-body text-center py-4">
-    <i class="bi bi-exclamation-circle" style="font-size:36px;color:#dc2626;display:block;margin-bottom:10px;"></i>
-    <div style="font-weight:600;color:#111827;margin-bottom:6px;">No valid rows found</div>
-    <div style="font-size:var(--fs-md);color:#6b7280;margin-bottom:16px;">
+    <i class="bi bi-exclamation-circle" style="font-size:36px;color:var(--c-danger);display:block;margin-bottom:10px;"></i>
+    <div style="font-weight:600;color:var(--c-text-strong);margin-bottom:6px;">No valid rows found</div>
+    <div style="font-size:var(--fs-md);color:var(--c-muted-2);margin-bottom:16px;">
       Every row was either rejected or a duplicate. Fix the issues above and re-upload.
     </div>
     <a href="{{ url_for('tni_fresh_upload') }}" class="btn btn-primary btn-sm">

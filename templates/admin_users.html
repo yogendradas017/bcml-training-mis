@@ -40,30 +40,30 @@
               {% if u.role == 'admin' %}
               <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:var(--fs-xs);font-weight:700;">Admin</span>
               {% elif u.role == 'central' %}
-              <span class="badge" style="background:#fef3c7;color:#92400e;font-size:var(--fs-xs);font-weight:700;">Central</span>
+              <span class="badge" style="background:var(--c-warn-bg);color:var(--c-warn-text);font-size:var(--fs-xs);font-weight:700;">Central</span>
               {% else %}
-              <span class="badge" style="background:#dbeafe;color:#1e40af;font-size:var(--fs-xs);font-weight:700;">SPOC</span>
+              <span class="badge" style="background:var(--c-info-bg);color:var(--c-info-strong);font-size:var(--fs-xs);font-weight:700;">SPOC</span>
               {% endif %}
             </td>
             <td style="color:var(--c-muted);">{{ u.plant_name or '—' }}</td>
             <td>
               {% if u.must_change_password %}
-              <span style="font-size:var(--fs-sm);color:#d97706;font-weight:700;">
+              <span style="font-size:var(--fs-sm);color:var(--c-warn);font-weight:700;">
                 <i class="bi bi-exclamation-triangle-fill me-1"></i>Must set new password
               </span>
               {% else %}
-              <span style="font-size:var(--fs-sm);color:#059669;font-weight:600;">
+              <span style="font-size:var(--fs-sm);color:var(--c-success-strong);font-weight:600;">
                 <i class="bi bi-shield-check me-1"></i>OK
               </span>
               {% endif %}
             </td>
             <td>
               {% if u.totp_enabled %}
-              <span style="font-size:var(--fs-sm);color:#059669;font-weight:700;">
+              <span style="font-size:var(--fs-sm);color:var(--c-success-strong);font-weight:700;">
                 <i class="bi bi-shield-lock-fill me-1"></i>ON
               </span>
               {% else %}
-              <span style="font-size:var(--fs-sm);color:#9ca3af;">
+              <span style="font-size:var(--fs-sm);color:var(--c-muted-3);">
                 <i class="bi bi-shield me-1"></i>Off
               </span>
               {% endif %}

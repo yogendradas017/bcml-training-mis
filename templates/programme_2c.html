@@ -117,7 +117,7 @@
   <div class="card-body pb-2 pt-3">
     <div class="d-flex gap-2 flex-wrap">
       <div class="position-relative flex-grow-1" style="max-width:300px;">
-        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:var(--fs-md);"></i>
+        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted-3);font-size:var(--fs-md);"></i>
         <input type="text" class="form-control" placeholder="Search session, programme, faculty..." style="padding-left:34px;" oninput="TBL.search('prog2cTable',this.value)">
       </div>
       <select class="form-select" style="width:170px;" onchange="TBL.filter('prog2cTable','type',this.value)">
@@ -147,17 +147,17 @@
           {% for rec in records %}
           {% set has_anom = rec.anomaly_flags and rec.anomaly_flags|length > 0 %}
           <tr data-type="{{ rec.prog_type or '' }}" data-intext="{{ rec.int_ext or '' }}"
-              {% if has_anom %}style="background:#fff7ed;" title="Anomaly: {{ rec.anomaly_flags }}"{% endif %}>
+              {% if has_anom %}style="background:var(--c-warn-bg-alt);" title="Anomaly: {{ rec.anomaly_flags }}"{% endif %}>
             <td><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
             <td>
               {{ loop.index }}
-              {% if has_anom %}<i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:var(--fs-sm);margin-left:3px;" title="{{ rec.anomaly_flags }}"></i>{% endif %}
+              {% if has_anom %}<i class="bi bi-exclamation-triangle-fill" style="color:var(--c-warn);font-size:var(--fs-sm);margin-left:3px;" title="{{ rec.anomaly_flags }}"></i>{% endif %}
             </td>
             <td><code style="font-size:var(--fs-sm);">{{ rec.session_code }}</code></td>
             <td>
               <strong>{{ rec.programme_name or '—' }}</strong>
               {% if rec.category == 'Specialized' %}
-              <span title="Specialized — 3-mo effectiveness review required" style="font-size:var(--fs-xs);font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
+              <span title="Specialized — 3-mo effectiveness review required" style="font-size:var(--fs-xs);font-weight:700;background:var(--c-danger-bg);color:var(--c-danger-text);padding:1px 6px;border-radius:8px;margin-left:4px;">
                 <i class="bi bi-stars"></i> SPL
               </span>
               {% endif %}
@@ -172,8 +172,8 @@
             <td>{{ rec.hours_actual }}</td>
             <td>{{ rec.faculty_name or '—' }}</td>
             <td>
-              {% if rec.int_ext == 'Internal' %}<span class="badge" style="background:#dbeafe;color:#1d4ed8;">Internal</span>
-              {% elif rec.int_ext == 'External' %}<span class="badge" style="background:#fef3c7;color:#92400e;">External</span>
+              {% if rec.int_ext == 'Internal' %}<span class="badge" style="background:var(--c-info-bg);color:var(--c-info);">Internal</span>
+              {% elif rec.int_ext == 'External' %}<span class="badge" style="background:var(--c-warn-bg);color:var(--c-warn-text);">External</span>
               {% else %}<span class="badge-unit">{{ rec.int_ext or '—' }}</span>{% endif %}
             </td>
             <td>{{ "%.0f"|format(rec.cost or 0) }}</td>
@@ -224,7 +224,7 @@
             <td>
               <strong>{{ rec.programme_name or '—' }}</strong>
               {% if rec.category == 'Specialized' %}
-              <span title="Specialized — 3-mo effectiveness review required" style="font-size:var(--fs-xs);font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:4px;">
+              <span title="Specialized — 3-mo effectiveness review required" style="font-size:var(--fs-xs);font-weight:700;background:var(--c-danger-bg);color:var(--c-danger-text);padding:1px 6px;border-radius:8px;margin-left:4px;">
                 <i class="bi bi-stars"></i> SPL
               </span>
               {% endif %}
@@ -235,8 +235,8 @@
             <td>{{ rec.hours_actual }}</td>
             <td>{{ rec.faculty_name or '—' }}</td>
             <td>
-              {% if rec.int_ext == 'Internal' %}<span class="badge" style="background:#dbeafe;color:#1d4ed8;">Internal</span>
-              {% elif rec.int_ext == 'External' %}<span class="badge" style="background:#fef3c7;color:#92400e;">External</span>
+              {% if rec.int_ext == 'Internal' %}<span class="badge" style="background:var(--c-info-bg);color:var(--c-info);">Internal</span>
+              {% elif rec.int_ext == 'External' %}<span class="badge" style="background:var(--c-warn-bg);color:var(--c-warn-text);">External</span>
               {% else %}<span class="badge-unit">{{ rec.int_ext or '—' }}</span>{% endif %}
             </td>
             <td>{{ "%.0f"|format(rec.cost or 0) }}</td>

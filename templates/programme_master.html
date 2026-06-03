@@ -26,8 +26,8 @@
 {% set spl_count = progs | selectattr('category', 'equalto', 'Specialized') | list | length %}
 {% set spl_target = ((progs|length * 0.25) | round(0, 'ceil')) | int %}
 <div class="alert d-flex align-items-start gap-2 mb-3"
-     style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:var(--fs-body);border-left:4px solid #f59e0b;">
-  <i class="bi bi-stars" style="font-size:var(--fs-lg);color:#dc2626;margin-top:1px;"></i>
+     style="background:var(--c-warn-bg-alt);border:1px solid #fed7aa;color:#9a3412;font-size:var(--fs-body);border-left:4px solid #f59e0b;">
+  <i class="bi bi-stars" style="font-size:var(--fs-lg);color:var(--c-danger);margin-top:1px;"></i>
   <div style="flex:1;">
     <strong>Category</strong> — For programmes identified as <strong>Specialized</strong>,
     effectiveness of the training will be gauged <strong>post 3 months from the date the training is commenced</strong>.
@@ -35,7 +35,7 @@
     Target: ~25% of yearly TNI programmes.
     <span id="spl-pill" data-count="{{ spl_count }}" data-total="{{ progs|length }}" data-target="{{ spl_target }}"
           style="margin-left:8px;padding:2px 8px;border-radius:12px;font-weight:700;
-                 background:{% if progs|length and spl_count >= spl_target %}#d1fae5;color:#065f46{% else %}#fee2e2;color:#991b1b{% endif %};">
+                 background:{% if progs|length and spl_count >= spl_target %}#d1fae5;color:var(--c-success-text){% else %}#fee2e2;color:var(--c-danger-text){% endif %};">
       <span id="spl-pill-text">{{ spl_count }} / {{ progs|length }} Specialized ({{ ((spl_count / (progs|length or 1)) * 100) | round(0) | int }}%)</span>
     </span>
   </div>
@@ -44,9 +44,9 @@
 {% if not progs %}
 <div class="card mb-3" style="border:2px dashed #bdd6f5;background:#f0f6ff;">
   <div class="card-body text-center py-5">
-    <i class="bi bi-database-add" style="font-size:42px;display:block;margin-bottom:12px;color:#2e6da4;"></i>
+    <i class="bi bi-database-add" style="font-size:42px;display:block;margin-bottom:12px;color:var(--c-primary);"></i>
     <div style="font-size:var(--fs-lg);font-weight:700;color:#1e1b4b;margin-bottom:6px;">Master list is empty</div>
-    <div style="font-size:var(--fs-md);color:#6b7280;max-width:480px;margin:0 auto 20px;">
+    <div style="font-size:var(--fs-md);color:var(--c-muted-2);max-width:480px;margin:0 auto 20px;">
       Your Programme Master list will be built automatically when you upload TNI data for
       <strong>{{ session.plant_name }}</strong>. Every unique, clean programme name in your TNI becomes your master.
     </div>
@@ -74,7 +74,7 @@
       <option>TNI Requirement</option>
       <option>New Requirement</option>
     </select>
-    <span id="pm-count" style="font-size:var(--fs-body);color:#6b7280;margin-left:4px;"></span>
+    <span id="pm-count" style="font-size:var(--fs-body);color:var(--c-muted-2);margin-left:4px;"></span>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
@@ -82,9 +82,9 @@
       <thead style="background:#1a1f35;color:#fff;border-bottom:2px solid #2e6da4;">
         <tr>
           <th style="width:38px;padding:10px 14px;">
-            <input type="checkbox" class="cb-all" style="cursor:pointer;width:16px;height:16px;accent-color:#2e6da4;">
+            <input type="checkbox" class="cb-all" style="cursor:pointer;width:16px;height:16px;accent-color:var(--c-primary);">
           </th>
-          <th style="padding:10px 14px;width:44px;color:#9ca3af;">#</th>
+          <th style="padding:10px 14px;width:44px;color:var(--c-muted-3);">#</th>
           <th style="padding:10px 14px;">Programme Name</th>
           <th style="padding:10px 16px;min-width:160px;">Type of Programme</th>
           <th style="padding:10px 16px;width:170px;">Source</th>
@@ -104,10 +104,10 @@
             style="cursor:default;transition:background .12s;">
           <td style="padding:9px 14px;">
             <input type="checkbox" class="cb-row" value="{{ p.id }}" data-id="{{ p.id }}"
-                   style="cursor:pointer;width:15px;height:15px;accent-color:#2e6da4;">
+                   style="cursor:pointer;width:15px;height:15px;accent-color:var(--c-primary);">
           </td>
-          <td style="padding:9px 14px;color:#9ca3af;font-size:var(--fs-sm);font-weight:500;">{{ loop.index }}</td>
-          <td style="padding:9px 16px;font-weight:600;color:#111827;font-size:var(--fs-md);">{{ p.name }}</td>
+          <td style="padding:9px 14px;color:var(--c-muted-3);font-size:var(--fs-sm);font-weight:500;">{{ loop.index }}</td>
+          <td style="padding:9px 16px;font-weight:600;color:var(--c-text-strong);font-size:var(--fs-md);">{{ p.name }}</td>
           <td style="padding:9px 16px;">
             {% if typ %}
               {% set tc = {'Behavioural/Leadership':'#2e6da4','Technical':'#0369a1','EHS/HR':'#065f46','IT':'#0f766e','Cane':'#92400e','Commercial':'#9a3412'} %}
@@ -115,7 +115,7 @@
               <span style="font-size:var(--fs-sm);font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;
                            background:{{ bg.get(typ,'#f3f4f6') }};color:{{ tc.get(typ,'#374151') }};">{{ typ }}</span>
             {% else %}
-              <span style="font-size:var(--fs-sm);color:#9ca3af;font-style:italic;">— not set —</span>
+              <span style="font-size:var(--fs-sm);color:var(--c-muted-3);font-style:italic;">— not set —</span>
             {% endif %}
           </td>
           <td style="padding:9px 16px;">
@@ -126,7 +126,7 @@
               </span>
             {% else %}
               <span class="pm-src-badge" data-id="{{ p.id }}"
-                    style="font-size:var(--fs-sm);background:#eff6ff;color:#1d4ed8;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #bfdbfe;">
+                    style="font-size:var(--fs-sm);background:var(--c-info-bg-soft);color:var(--c-info);padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #bfdbfe;">
                 <i class="bi bi-diagram-3 me-1"></i>TNI Req.
               </span>
             {% endif %}
@@ -134,12 +134,12 @@
           <td style="padding:9px 16px;">
             {% if cat == 'Specialized' %}
               <span class="pm-cat-badge" data-id="{{ p.id }}"
-                    style="font-size:var(--fs-sm);background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #fca5a5;">
+                    style="font-size:var(--fs-sm);background:var(--c-danger-bg);color:var(--c-danger-text);padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #fca5a5;">
                 <i class="bi bi-stars me-1"></i>Specialized
               </span>
             {% else %}
               <span class="pm-cat-badge" data-id="{{ p.id }}"
-                    style="font-size:var(--fs-sm);background:#f3f4f6;color:#374151;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #d1d5db;">
+                    style="font-size:var(--fs-sm);background:var(--c-surface-2);color:var(--c-text-2);padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;border:1px solid #d1d5db;">
                 <i class="bi bi-book me-1"></i>General
               </span>
             {% endif %}
@@ -151,7 +151,7 @@
                   data-tms-confirm-ok="Delete"
                   style="display:inline;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="btn btn-link p-0" style="color:#d1d5db;font-size:var(--fs-base);" title="Delete"
+              <button class="btn btn-link p-0" style="color:var(--c-border-3);font-size:var(--fs-base);" title="Delete"
                       onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='#d1d5db'">
                 <i class="bi bi-trash3"></i>
               </button>
@@ -167,16 +167,16 @@
 
 {# ── Right-click context menu ── #}
 <div id="pm-ctx-menu" style="display:none;position:fixed;z-index:9999;background:#fff;border:1px solid #e5e9f2;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.14);min-width:230px;padding:6px 0;font-size:var(--fs-md);">
-  <div style="padding:8px 16px 4px;font-size:var(--fs-xs);color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="pm-ctx-title"></div>
-  <hr style="margin:4px 0;border-color:#f1f5f9;">
+  <div style="padding:8px 16px 4px;font-size:var(--fs-xs);color:var(--c-muted-3);font-weight:700;text-transform:uppercase;letter-spacing:.8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="pm-ctx-title"></div>
+  <hr style="margin:4px 0;border-color:var(--c-surface-slate-2);">
   {# Change Type + Switch Source intentionally removed — both drive compliance grouping;
      mid-life change silently shifts 2A/2C inheritance + reports. SPOC must delete + re-add. #}
-  <a href="#" class="pm-ctx-item" id="pm-ctx-toggle-cat" style="display:flex;align-items:center;gap:10px;padding:9px 16px;color:#374151;text-decoration:none;">
-    <i class="bi bi-stars" style="color:#dc2626;width:14px;"></i>
+  <a href="#" class="pm-ctx-item" id="pm-ctx-toggle-cat" style="display:flex;align-items:center;gap:10px;padding:9px 16px;color:var(--c-text-2);text-decoration:none;">
+    <i class="bi bi-stars" style="color:var(--c-danger);width:14px;"></i>
     <span id="pm-ctx-toggle-cat-label">Switch Category</span>
   </a>
-  <hr style="margin:4px 0;border-color:#f1f5f9;">
-  <a href="#" class="pm-ctx-item" id="pm-ctx-delete" style="display:flex;align-items:center;gap:10px;padding:9px 16px;color:#ef4444;text-decoration:none;">
+  <hr style="margin:4px 0;border-color:var(--c-surface-slate-2);">
+  <a href="#" class="pm-ctx-item" id="pm-ctx-delete" style="display:flex;align-items:center;gap:10px;padding:9px 16px;color:var(--c-danger-alt);text-decoration:none;">
     <i class="bi bi-trash3" style="width:14px;"></i> Delete Programme
   </a>
 </div>
@@ -400,7 +400,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
                 <i class="bi bi-plus-circle me-1"></i>New Requirement
               </label>
             </div>
-            <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:5px;">TNI Requirement = part of annual TNI plan. New Requirement = mid-year addition.</div>
+            <div style="font-size:var(--fs-sm);color:var(--c-muted-2);margin-top:5px;">TNI Requirement = part of annual TNI plan. New Requirement = mid-year addition.</div>
           </div>
           <div class="mb-3">
             <label class="form-label fw-semibold" style="font-size:var(--fs-md);">Category <span class="text-danger">*</span></label>
@@ -414,7 +414,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
                 <i class="bi bi-stars me-1"></i>Specialized
               </label>
             </div>
-            <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:5px;">Specialized = 3-month post-training effectiveness review required (SOP: 25% of yearly programmes).</div>
+            <div style="font-size:var(--fs-sm);color:var(--c-muted-2);margin-top:5px;">Specialized = 3-month post-training effectiveness review required (SOP: 25% of yearly programmes).</div>
           </div>
         </div>
         <div class="modal-footer">
@@ -437,7 +437,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') _hideAll(); });
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <p style="font-size:var(--fs-md);color:#6b7280;">Upload an Excel/CSV with a <strong>Programme Name</strong> column. Type and Mode columns are optional.</p>
+          <p style="font-size:var(--fs-md);color:var(--c-muted-2);">Upload an Excel/CSV with a <strong>Programme Name</strong> column. Type and Mode columns are optional.</p>
           <div class="mb-2">
             <label class="form-label fw-semibold" style="font-size:var(--fs-md);">File <span class="text-danger">*</span></label>
             <input type="file" name="file" class="form-control form-control-sm" accept=".xlsx,.xls,.csv" required>

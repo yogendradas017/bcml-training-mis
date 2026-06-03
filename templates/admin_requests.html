@@ -92,7 +92,7 @@
             <span class="badge {% if r.status == 'Approved' %}bg-success{% else %}bg-danger{% endif %}" style="font-size:var(--fs-sm);">{{ r.status }}</span>
           </td>
           <td style="font-size:var(--fs-body);">{{ r.reviewed_by or '—' }}</td>
-          <td style="font-size:var(--fs-body);color:#6b7280;">{{ r.review_note or '—' }}</td>
+          <td style="font-size:var(--fs-body);color:var(--c-muted-2);">{{ r.review_note or '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>

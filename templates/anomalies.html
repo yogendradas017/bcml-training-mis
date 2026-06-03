@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="d-flex align-items-center gap-3 mb-3">
-  <h4 class="mb-0 fw-semibold"><i class="bi bi-exclamation-triangle-fill me-2" style="color:#d97706;"></i>Anomalies Review</h4>
+  <h4 class="mb-0 fw-semibold"><i class="bi bi-exclamation-triangle-fill me-2" style="color:var(--c-warn);"></i>Anomalies Review</h4>
   <span class="badge bg-warning text-dark">{{ rows_2a|length }} 2A flagged</span>
   <span class="badge bg-warning text-dark">{{ rows_2c|length }} 2C flagged</span>
 </div>
@@ -69,12 +69,12 @@
         </thead>
         <tbody>
           {% for r in rows_2a %}
-          <tr style="background:#fff7ed;">
+          <tr style="background:var(--c-warn-bg-alt);">
             <td style="padding:7px 10px;"><strong>{{ r.plant_name }}</strong> <span class="badge-unit" style="font-size:var(--fs-xs);">{{ r.unit_code }}</span></td>
             <td style="padding:7px 10px;font-family:monospace;">{{ r.emp_code }}</td>
             <td style="padding:7px 10px;font-weight:600;">{{ r.emp_name or '—' }}</td>
             <td style="padding:7px 10px;">
-              {% if r.collar == 'Blue Collared' %}<span class="badge" style="background:#dbeafe;color:#1e40af;">BC</span>
+              {% if r.collar == 'Blue Collared' %}<span class="badge" style="background:var(--c-info-bg);color:var(--c-info-strong);">BC</span>
               {% elif r.collar == 'White Collared' %}<span class="badge" style="background:#dcfce7;color:#15803d;">WC</span>
               {% else %}<span class="text-muted">—</span>{% endif %}
             </td>
@@ -84,12 +84,12 @@
             <td style="padding:7px 10px;text-align:right;font-weight:600;">{{ r.hrs }}</td>
             <td style="padding:7px 10px;">
               {% for fl in r.anomaly_flags.split(',') %}
-              <span style="background:#fef3c7;color:#92400e;font-size:var(--fs-xs);font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
+              <span style="background:var(--c-warn-bg);color:var(--c-warn-text);font-size:var(--fs-xs);font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
                 <i class="bi bi-exclamation-triangle-fill" style="font-size:var(--fs-xs);"></i> {{ fl.strip() }}
               </span>
               {% endfor %}
             </td>
-            <td style="padding:7px 10px;color:#6b7280;font-size:var(--fs-sm);">{{ r.created_at | fmt_dt }}</td>
+            <td style="padding:7px 10px;color:var(--c-muted-2);font-size:var(--fs-sm);">{{ r.created_at | fmt_dt }}</td>
           </tr>
           {% else %}
           <tr><td colspan="10" class="text-center text-muted py-4">No 2A anomalies found.</td></tr>
@@ -119,23 +119,23 @@
         </thead>
         <tbody>
           {% for r in rows_2c %}
-          <tr style="background:#fff7ed;">
+          <tr style="background:var(--c-warn-bg-alt);">
             <td style="padding:7px 10px;"><strong>{{ r.plant_name }}</strong> <span class="badge-unit" style="font-size:var(--fs-xs);">{{ r.unit_code }}</span></td>
             <td style="padding:7px 10px;font-family:monospace;font-size:var(--fs-sm);">{{ r.session_code }}</td>
             <td style="padding:7px 10px;max-width:200px;">{{ r.programme_name }}</td>
             <td style="padding:7px 10px;">{{ r.start_date | fmt_date }}</td>
-            <td style="padding:7px 10px;text-align:right;">{{ r.actual_pax or 0 }}<span style="color:#9ca3af;font-size:var(--fs-xs);">/{{ r.planned_pax or 0 }}</span></td>
+            <td style="padding:7px 10px;text-align:right;">{{ r.actual_pax or 0 }}<span style="color:var(--c-muted-3);font-size:var(--fs-xs);">/{{ r.planned_pax or 0 }}</span></td>
             <td style="padding:7px 10px;text-align:right;font-weight:600;">{{ r.hours_actual }}</td>
             <td style="padding:7px 10px;">{{ r.target_audience or '—' }}</td>
             <td style="padding:7px 10px;">{{ r.faculty_name or '—' }}</td>
             <td style="padding:7px 10px;">
               {% for fl in r.anomaly_flags.split(',') %}
-              <span style="background:#fef3c7;color:#92400e;font-size:var(--fs-xs);font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
+              <span style="background:var(--c-warn-bg);color:var(--c-warn-text);font-size:var(--fs-xs);font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;margin:1px;">
                 <i class="bi bi-exclamation-triangle-fill" style="font-size:var(--fs-xs);"></i> {{ fl.strip() }}
               </span>
               {% endfor %}
             </td>
-            <td style="padding:7px 10px;color:#6b7280;font-size:var(--fs-sm);">{{ r.created_at | fmt_dt }}</td>
+            <td style="padding:7px 10px;color:var(--c-muted-2);font-size:var(--fs-sm);">{{ r.created_at | fmt_dt }}</td>
           </tr>
           {% else %}
           <tr><td colspan="10" class="text-center text-muted py-4">No 2C anomalies found.</td></tr>

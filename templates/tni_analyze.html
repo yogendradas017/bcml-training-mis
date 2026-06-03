@@ -12,28 +12,28 @@
       <div class="card-body">
         <div class="row g-2 mb-4 text-center" style="font-size:var(--fs-body);">
           <div class="col">
-            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;">
+            <div style="background:var(--c-success-bg-soft);border:1px solid #bbf7d0;border-radius:10px;padding:10px;">
               <i class="bi bi-check-circle-fill text-success" style="font-size:var(--fs-xl);"></i>
-              <div style="font-weight:700;color:#065f46;margin-top:4px;">Green</div>
-              <div style="color:#6b7280;">100% correct</div>
+              <div style="font-weight:700;color:var(--c-success-text);margin-top:4px;">Green</div>
+              <div style="color:var(--c-muted-2);">100% correct</div>
             </div>
           </div>
           <div class="col">
-            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px;">
-              <i class="bi bi-magic" style="font-size:var(--fs-xl);color:#d97706;"></i>
-              <div style="font-weight:700;color:#92400e;margin-top:4px;">Amber</div>
-              <div style="color:#6b7280;">Auto-fixed</div>
+            <div style="background:var(--c-warn-bg-soft);border:1px solid #fde68a;border-radius:10px;padding:10px;">
+              <i class="bi bi-magic" style="font-size:var(--fs-xl);color:var(--c-warn);"></i>
+              <div style="font-weight:700;color:var(--c-warn-text);margin-top:4px;">Amber</div>
+              <div style="color:var(--c-muted-2);">Auto-fixed</div>
             </div>
           </div>
           <div class="col">
-            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px;">
+            <div style="background:var(--c-danger-bg-soft);border:1px solid #fecaca;border-radius:10px;padding:10px;">
               <i class="bi bi-x-circle-fill text-danger" style="font-size:var(--fs-xl);"></i>
-              <div style="font-weight:700;color:#dc2626;margin-top:4px;">Red</div>
-              <div style="color:#6b7280;">Error</div>
+              <div style="font-weight:700;color:var(--c-danger);margin-top:4px;">Red</div>
+              <div style="color:var(--c-muted-2);">Error</div>
             </div>
           </div>
         </div>
-        <div style="font-size:var(--fs-body);color:#1e293b;margin-bottom:14px;background:#f8fafc;border-radius:8px;padding:14px 18px;line-height:1.55;">
+        <div style="font-size:var(--fs-body);color:#1e293b;margin-bottom:14px;background:var(--c-surface-slate);border-radius:8px;padding:14px 18px;line-height:1.55;">
           <div style="font-weight:700;font-size:var(--fs-base);color:#1e3a5f;margin-bottom:6px;letter-spacing:-.2px;">
             One upload. Clean data. Confident reporting.
           </div>
@@ -52,7 +52,7 @@
             <div><strong>Master match</strong> — every name reconciled against your Programme Master.</div>
           </div>
         </div>
-        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:var(--fs-body);color:#1d4ed8;">
+        <div style="background:var(--c-info-bg-soft);border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:var(--fs-body);color:var(--c-info);">
           <i class="bi bi-info-circle me-1"></i>
           <strong>Upload any file</strong> — TMS template, Balrampur format, any headers, any column order. TMS auto-detects everything.
         </div>
@@ -72,9 +72,9 @@
               <option value="4">Skip 4 rows</option>
               <option value="5">Skip 5 rows</option>
             </select>
-            <span style="color:#9ca3af;">Use if file has a title/logo above headers</span>
+            <span style="color:var(--c-muted-3);">Use if file has a title/logo above headers</span>
           </div>
-          <button type="submit" class="btn px-4 fw-semibold" style="background:#2e6da4;color:#fff;border:none;">
+          <button type="submit" class="btn px-4 fw-semibold" style="background:var(--c-primary);color:#fff;border:none;">
             <i class="bi bi-stars me-1"></i> Analyze File
           </button>
         </form>
@@ -141,7 +141,7 @@
 </div>
 
 {% if err_count > 0 %}
-<div class="alert d-flex gap-2 align-items-start py-2 mb-3" style="background:#fef2f2;border:1px solid #fecaca;font-size:var(--fs-md);color:#dc2626;">
+<div class="alert d-flex gap-2 align-items-start py-2 mb-3" style="background:var(--c-danger-bg-soft);border:1px solid #fecaca;font-size:var(--fs-md);color:var(--c-danger);">
   <i class="bi bi-exclamation-triangle-fill mt-1" style="flex-shrink:0;"></i>
   <div>
     <strong>{{ err_count }} rows could not be auto-fixed</strong> — skipped from import, downloaded in correction Excel.
@@ -153,7 +153,7 @@
 <!-- OK rows summary (not rendered in DOM — browser would hang on 6000+ rows) -->
 {% if ok_count > 0 %}
 <div class="alert d-flex gap-2 align-items-center py-2 mb-3"
-     style="background:#f0fdf4;border:1px solid #bbf7d0;font-size:var(--fs-md);color:#065f46;">
+     style="background:var(--c-success-bg-soft);border:1px solid #bbf7d0;font-size:var(--fs-md);color:var(--c-success-text);">
   <i class="bi bi-check-circle-fill" style="flex-shrink:0;"></i>
   <div>
     <strong>{{ ok_count }} rows are perfectly clean</strong> — no issues, no changes. Will import automatically. Not shown below to keep this page fast.
@@ -165,13 +165,13 @@
 <div class="card mb-3">
   <div class="card-body p-0">
     {% if not review_data %}
-    <div style="padding:32px;text-align:center;color:#10b981;">
+    <div style="padding:32px;text-align:center;color:var(--c-success);">
       <i class="bi bi-check-circle-fill" style="font-size:36px;display:block;margin-bottom:10px;"></i>
       <strong>All rows are clean — nothing to review.</strong>
     </div>
     {% else %}
     <!-- Filter + page controls -->
-    <div class="d-flex align-items-center gap-2 flex-wrap" style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e5e9f2;">
+    <div class="d-flex align-items-center gap-2 flex-wrap" style="padding:10px 14px;background:var(--c-surface-slate);border-bottom:1px solid #e5e9f2;">
       <div class="input-group input-group-sm" style="max-width:340px;">
         <span class="input-group-text" style="background:#fff;font-size:var(--fs-body);"><i class="bi bi-search"></i></span>
         <input type="text" id="an-filter" class="form-control" placeholder="Filter by emp code / name / programme / issue..." style="font-size:var(--fs-body);">
@@ -181,7 +181,7 @@
         <button type="button" class="btn btn-outline-warning" data-status-filter="fixed" style="font-size:var(--fs-sm);">Fixed</button>
         <button type="button" class="btn btn-outline-danger" data-status-filter="error" style="font-size:var(--fs-sm);">Errors</button>
       </div>
-      <span id="an-count" style="font-size:var(--fs-sm);color:#6b7280;margin-left:auto;"></span>
+      <span id="an-count" style="font-size:var(--fs-sm);color:var(--c-muted-2);margin-left:auto;"></span>
     </div>
     <div class="table-responsive" style="max-height:62vh;overflow-y:auto;">
       <table class="table table-sm mb-0" style="font-size:var(--fs-body);" id="an-table">
@@ -193,14 +193,14 @@
           </tr>
         </thead>
         <tbody id="an-tbody">
-          <tr><td colspan="9" style="text-align:center;padding:20px;color:#6b7280;">Loading…</td></tr>
+          <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--c-muted-2);">Loading…</td></tr>
         </tbody>
       </table>
     </div>
     <!-- Pager -->
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2"
-         style="padding:10px 14px;background:#f8fafc;border-top:1px solid #e5e9f2;font-size:var(--fs-body);">
-      <span id="an-page-info" style="color:#6b7280;"></span>
+         style="padding:10px 14px;background:var(--c-surface-slate);border-top:1px solid #e5e9f2;font-size:var(--fs-body);">
+      <span id="an-page-info" style="color:var(--c-muted-2);"></span>
       <div class="btn-group btn-group-sm" role="group">
         <button type="button" class="btn btn-outline-secondary" id="an-prev">&laquo; Prev</button>
         <button type="button" class="btn btn-outline-secondary disabled" id="an-page-label" style="font-weight:600;min-width:120px;">Page 1</button>
@@ -218,10 +218,10 @@
 {% set matched_count = master_progs | selectattr('lower' , 'defined') | list | length %}
 <div class="card mb-4" style="border-left:4px solid #2e6da4;">
   <div class="card-header d-flex align-items-center gap-2"
-       style="background:#f8fafc;font-size:var(--fs-md);font-weight:600;color:#1e293b;">
-    <i class="bi bi-list-check" style="color:#2e6da4;"></i>
+       style="background:var(--c-surface-slate);font-size:var(--fs-md);font-weight:600;color:#1e293b;">
+    <i class="bi bi-list-check" style="color:var(--c-primary);"></i>
     Programme Master vs This Upload
-    <span style="font-weight:400;color:#6b7280;font-size:var(--fs-body);margin-left:4px;">
+    <span style="font-weight:400;color:var(--c-muted-2);font-size:var(--fs-body);margin-left:4px;">
       — green = found in upload &nbsp;|&nbsp; orange = NOT in this upload
     </span>
   </div>
@@ -229,13 +229,13 @@
     <div style="display:flex;flex-wrap:wrap;gap:6px;">
       {% for p in master_progs %}
         {% if p.lower() in upload_progs_lower %}
-        <span style="background:#d1fae5;color:#065f46;font-size:var(--fs-sm);font-weight:500;
+        <span style="background:var(--c-success-bg);color:var(--c-success-text);font-size:var(--fs-sm);font-weight:500;
                      padding:3px 10px;border-radius:12px;border:1px solid #a7f3d0;
                      display:inline-flex;align-items:center;gap:4px;">
           <i class="bi bi-check2"></i>{{ p }}
         </span>
         {% else %}
-        <span style="background:#fff7ed;color:#c2410c;font-size:var(--fs-sm);font-weight:500;
+        <span style="background:var(--c-warn-bg-alt);color:#c2410c;font-size:var(--fs-sm);font-weight:500;
                      padding:3px 10px;border-radius:12px;border:1px solid #fed7aa;
                      display:inline-flex;align-items:center;gap:4px;">
           <i class="bi bi-dash"></i>{{ p }}
@@ -243,7 +243,7 @@
         {% endif %}
       {% endfor %}
     </div>
-    <div style="font-size:var(--fs-sm);color:#9ca3af;margin-top:10px;">
+    <div style="font-size:var(--fs-sm);color:var(--c-muted-3);margin-top:10px;">
       {{ master_progs | length }} programmes in master.
       Green = demand exists in this TNI upload. Orange = no demand recorded yet for this programme.
     </div>
@@ -255,7 +255,7 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="aid" value="{{ aid }}">
   <div class="d-flex gap-3 align-items-center flex-wrap">
-    <button type="submit" class="btn px-5 py-2 fw-semibold" style="background:#10b981;color:#fff;border:none;font-size:var(--fs-base);">
+    <button type="submit" class="btn px-5 py-2 fw-semibold" style="background:var(--c-success);color:#fff;border:none;font-size:var(--fs-base);">
       <i class="bi bi-check2-all me-1"></i>
       Confirm &amp; Import
       {% if blocked_count > 0 %}
@@ -266,7 +266,7 @@
       <i class="bi bi-arrow-left"></i> Upload Different File
     </a>
   </div>
-  <div style="font-size:var(--fs-body);color:#6b7280;margin-top:8px;">
+  <div style="font-size:var(--fs-body);color:var(--c-muted-2);margin-top:8px;">
     <i class="bi bi-info-circle me-1"></i>
     Green and amber rows import directly. New programme names are added to Programme Master automatically. Red rows (bad employee code / type / mode) download as Excel for re-upload.
   </div>

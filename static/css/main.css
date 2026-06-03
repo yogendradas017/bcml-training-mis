@@ -9,6 +9,40 @@
   --c-muted:    #6e6e73;
   --c-primary:  #2e6da4;
   --c-primary2: #1a7a3c;
+  /* Semantic status colors — added by color-sweep workflow */
+  --c-success: #10b981; /* Primary success/positive accent (badges, dots, icons) */
+  --c-success-bg: #d1fae5; /* Success badge/pill background */
+  --c-success-bg-soft: #f0fdf4; /* Subtle success surface (cards, banners) */
+  --c-success-text: #065f46; /* Success text on light success backgrounds */
+  --c-success-strong: #059669; /* Stronger success accent (buttons, emphasis) */
+  --c-danger: #dc2626; /* Primary danger/destructive accent (buttons, badges) */
+  --c-danger-alt: #ef4444; /* Alternate danger accent (charts, highlights) */
+  --c-danger-bg: #fee2e2; /* Danger badge/pill background */
+  --c-danger-bg-soft: #fef2f2; /* Subtle danger surface (alerts, banners) */
+  --c-danger-text: #991b1b; /* Danger text on light danger backgrounds */
+  --c-warn: #d97706; /* Primary warning accent (text/icons) */
+  --c-warn-alt: #f59e0b; /* Warning accent variant (charts, borders) */
+  --c-warn-bg: #fef3c7; /* Warning badge/pill background */
+  --c-warn-bg-soft: #fffbeb; /* Subtle warning surface */
+  --c-warn-bg-alt: #fff7ed; /* Alternate subtle warning surface (orange tint) */
+  --c-warn-text: #92400e; /* Warning text on light warning backgrounds */
+  --c-warn-border: #fde68a; /* Warning border (yellow) */
+  --c-info: #1d4ed8; /* Info accent text (links, badges) */
+  --c-info-strong: #1e40af; /* Strong info text */
+  --c-info-bg: #dbeafe; /* Info badge/pill background */
+  --c-info-bg-soft: #eff6ff; /* Subtle info surface */
+  --c-info-border: #bfdbfe; /* Info border */
+  --c-text-strong: #111827; /* Strongest body/heading text */
+  --c-text-2: #374151; /* Secondary body text */
+  --c-muted-2: #6b7280; /* Muted text (most common gray) */
+  --c-muted-3: #9ca3af; /* Lighter muted text/placeholder */
+  --c-slate: #64748b; /* Slate-tinted muted text */
+  --c-border-2: #e5e7eb; /* Standard divider/border (gray-200) */
+  --c-border-3: #d1d5db; /* Stronger divider/border (gray-300) */
+  --c-surface-1: #f9fafb; /* Lightest surface tint (gray-50) */
+  --c-surface-2: #f3f4f6; /* Light surface tint (gray-100) */
+  --c-surface-slate: #f8fafc; /* Slate-tinted surface */
+  --c-surface-slate-2: #f1f5f9; /* Slate-tinted surface variant */
   --sb-w:       200px;
   --topbar-h:   54px;
   --radius-sm:  8px;

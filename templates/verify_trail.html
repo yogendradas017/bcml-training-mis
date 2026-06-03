@@ -7,8 +7,8 @@
 </a>
 
 {% if cal and cal.status == 'Awaiting Verification' %}
-<div class="card mb-3" style="border-left:4px solid #d97706;">
-  <div class="card-header ch-light" style="color:#92400e;border-left:3px solid #d97706;">
+<div class="card mb-3" style="border-left:4px solid var(--c-warn);">
+  <div class="card-header ch-light" style="color:var(--c-warn-text);border-left:3px solid var(--c-warn);">
     <i class="bi bi-shield-check me-1"></i> Approve / Reject — Mandatory Checklist
   </div>
   <div class="card-body">
@@ -25,13 +25,13 @@
       {% endfor %}
       <div class="mb-2 mt-3">
         <label class="form-label" style="font-size:var(--fs-body);font-weight:600;">
-          Approval Note <span style="color:#dc2626;">*</span>
-          <span style="color:#6b7280;font-weight:400;">(min {{ verify_note_min_len }} chars — state what was reviewed + any caveats)</span>
+          Approval Note <span style="color:var(--c-danger);">*</span>
+          <span style="color:var(--c-muted-2);font-weight:400;">(min {{ verify_note_min_len }} chars — state what was reviewed + any caveats)</span>
         </label>
         <textarea name="note" id="approval-note" class="form-control form-control-sm" rows="2" maxlength="500"
                   minlength="{{ verify_note_min_len }}" required
                   placeholder="e.g. Verified 22 attendees match plant employee master. Feedback scores plausible (avg 4.2). Faculty Mr Rao matches calendar entry. No anomalies."></textarea>
-        <small id="note-counter" style="font-size:var(--fs-sm);color:#6b7280;"></small>
+        <small id="note-counter" style="font-size:var(--fs-sm);color:var(--c-muted-2);"></small>
       </div>
       <div class="d-flex gap-2 justify-content-end">
         <button type="submit" class="btn btn-success btn-sm">
@@ -41,14 +41,14 @@
     </form>
     <hr style="margin:14px 0;">
     <form method="POST" action="{{ url_for('verify_reject', session_code=cal.session_code, plant_id=cal.plant_id) }}" id="verify-reject-form"
-          data-tms-confirm="Reject this session?<br><span style='color:#6b7280;font-size:var(--fs-body);'>The 2C entry will be removed and the SPOC must redo it.</span>"
+          data-tms-confirm="Reject this session?<br><span style='color:var(--c-muted-2);font-size:var(--fs-body);'>The 2C entry will be removed and the SPOC must redo it.</span>"
           data-tms-confirm-title="Reject Session"
           data-tms-confirm-ok="Reject &amp; Send Back">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="mb-2">
-        <label class="form-label" style="font-size:var(--fs-body);font-weight:600;color:#dc2626;">
+        <label class="form-label" style="font-size:var(--fs-body);font-weight:600;color:var(--c-danger);">
           Rejection Note <span>*</span>
-          <span style="color:#6b7280;font-weight:400;">(required — explain why SPOC must redo)</span>
+          <span style="color:var(--c-muted-2);font-weight:400;">(required — explain why SPOC must redo)</span>
         </label>
         <textarea name="note" class="form-control form-control-sm" rows="2" maxlength="500" required
                   placeholder="e.g. Attendance list does not match — only 8 of 22 emp codes belong to this plant."></textarea>
@@ -81,7 +81,7 @@
 <div class="card mb-3">
   <div class="card-body">
     <h5 class="mb-1">{{ cal.programme_name }}</h5>
-    <div style="font-size:var(--fs-body);color:#6b7280;">
+    <div style="font-size:var(--fs-body);color:var(--c-muted-2);">
       <span class="badge bg-secondary">{{ cal.session_code }}</span>
       &nbsp;·&nbsp; <strong>{{ cal.plant_name }}</strong>
       &nbsp;·&nbsp; {{ cal.plan_start | fmt_date }}{% if cal.plan_end and cal.plan_end != cal.plan_start %} – {{ cal.plan_end | fmt_date }}{% endif %}
@@ -91,7 +91,7 @@
         {% elif cal.status == 'To Be Planned' %}bg-secondary
         {% else %}bg-danger{% endif %}">{{ cal.status }}</span>
     </div>
-    <div style="font-size:var(--fs-sm);color:#9ca3af;margin-top:4px;">
+    <div style="font-size:var(--fs-sm);color:var(--c-muted-3);margin-top:4px;">
       Target: {{ cal.target_audience or '—' }} ·
       Planned pax: {{ cal.planned_pax or 0 }} ·
       Actual pax: {{ cal.actual_pax or 0 }} ·
@@ -111,7 +111,7 @@
       <div class="card-body p-0">
         <div class="table-responsive">
         <table class="table table-sm mb-0" style="font-size:var(--fs-body);">
-          <thead style="background:#f1f5f9;">
+          <thead style="background:var(--c-surface-slate-2);">
             <tr>
               <th style="padding:8px 10px;">Emp Code</th>
               <th style="padding:8px 10px;">Name</th>
@@ -127,13 +127,13 @@
               <td style="padding:7px 10px;font-family:monospace;">{{ a.emp_code }}</td>
               <td style="padding:7px 10px;font-weight:600;">{{ a.name or '—' }}</td>
               <td style="padding:7px 10px;">
-                {% if a.collar == 'Blue Collared' %}<span class="badge" style="background:#dbeafe;color:#1e40af;">BC</span>
+                {% if a.collar == 'Blue Collared' %}<span class="badge" style="background:var(--c-info-bg);color:var(--c-info-strong);">BC</span>
                 {% elif a.collar == 'White Collared' %}<span class="badge" style="background:#dcfce7;color:#15803d;">WC</span>
                 {% else %}<span class="text-muted">—</span>{% endif %}
               </td>
               <td style="padding:7px 10px;">{{ a.department or '—' }}</td>
               <td style="padding:7px 10px;text-align:right;font-weight:600;">{{ a.hrs }}</td>
-              <td style="padding:7px 10px;font-size:var(--fs-sm);color:#6b7280;">{{ a.created_at | fmt_dt }}</td>
+              <td style="padding:7px 10px;font-size:var(--fs-sm);color:var(--c-muted-2);">{{ a.created_at | fmt_dt }}</td>
             </tr>
             {% else %}
             <tr><td colspan="6" class="text-center text-muted py-3">No attendees recorded.</td></tr>
@@ -153,7 +153,7 @@
       <div class="card-body p-0">
         <ul style="list-style:none;padding:0;margin:0;">
           {% for t in trail %}
-          <li style="padding:10px 14px;border-bottom:1px solid #f3f4f6;">
+          <li style="padding:10px 14px;border-bottom:1px solid var(--c-surface-2);">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
               <div>
                 <span style="font-weight:700;font-size:var(--fs-body);color:
@@ -163,12 +163,12 @@
                   {% else %}#374151{% endif %};">
                   {{ t.stage }}
                 </span>
-                <div style="font-size:var(--fs-sm);color:#6b7280;">{{ t.actor_name or t.actor or '—' }}</div>
+                <div style="font-size:var(--fs-sm);color:var(--c-muted-2);">{{ t.actor_name or t.actor or '—' }}</div>
               </div>
-              <span style="font-size:var(--fs-xs);color:#9ca3af;white-space:nowrap;">{{ t.ts | fmt_dt }}</span>
+              <span style="font-size:var(--fs-xs);color:var(--c-muted-3);white-space:nowrap;">{{ t.ts | fmt_dt }}</span>
             </div>
             {% if t.detail %}
-            <div style="font-size:var(--fs-sm);color:#374151;margin-top:4px;background:#f9fafb;padding:6px 8px;border-radius:4px;">
+            <div style="font-size:var(--fs-sm);color:var(--c-text-2);margin-top:4px;background:var(--c-surface-1);padding:6px 8px;border-radius:4px;">
               {{ t.detail }}
             </div>
             {% endif %}

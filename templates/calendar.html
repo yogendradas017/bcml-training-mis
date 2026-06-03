@@ -8,7 +8,7 @@
 
   <!-- Header -->
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-    <i class="bi bi-shield-lock-fill" style="font-size:20px;color:#2e6da4;flex-shrink:0;"></i>
+    <i class="bi bi-shield-lock-fill" style="font-size:20px;color:var(--c-primary);flex-shrink:0;"></i>
     <div style="font-weight:700;font-size:var(--fs-base);color:#1a3a5c;">
       Only approved programmes from Programme Master can be scheduled
     </div>
@@ -17,22 +17,22 @@
   <!-- Two source pills -->
   <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
     <div style="background:#fff;border:1.5px solid #bdd6f5;border-radius:8px;padding:8px 14px;flex:1;min-width:220px;">
-      <div style="font-size:var(--fs-sm);font-weight:700;color:#2e6da4;margin-bottom:3px;">
+      <div style="font-size:var(--fs-sm);font-weight:700;color:var(--c-primary);margin-bottom:3px;">
         <i class="bi bi-clipboard-check-fill me-1"></i>TNI Driven
       </div>
-      <div style="font-size:var(--fs-body);color:#374151;line-height:1.5;">Programmes identified in <strong>Yearly TNI</strong> and synced to Programme Master. System auto-links attendance to TNI nominations for coverage tracking.</div>
+      <div style="font-size:var(--fs-body);color:var(--c-text-2);line-height:1.5;">Programmes identified in <strong>Yearly TNI</strong> and synced to Programme Master. System auto-links attendance to TNI nominations for coverage tracking.</div>
     </div>
     <div style="background:#fff;border:1.5px solid #bdd6f5;border-radius:8px;padding:8px 14px;flex:1;min-width:220px;">
-      <div style="font-size:var(--fs-sm);font-weight:700;color:#2e6da4;margin-bottom:3px;">
+      <div style="font-size:var(--fs-sm);font-weight:700;color:var(--c-primary);margin-bottom:3px;">
         <i class="bi bi-plus-circle-fill me-1"></i>New Requirement
       </div>
-      <div style="font-size:var(--fs-body);color:#374151;line-height:1.5;">Programmes approved and manually added to master for emerging needs not captured in TNI. Attendance counts toward man-hours but not TNI coverage %.</div>
+      <div style="font-size:var(--fs-body);color:var(--c-text-2);line-height:1.5;">Programmes approved and manually added to master for emerging needs not captured in TNI. Attendance counts toward man-hours but not TNI coverage %.</div>
     </div>
   </div>
 
   <!-- Warning line -->
-  <div style="font-size:var(--fs-body);color:#7f1d1d;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:8px 13px;display:flex;align-items:flex-start;gap:9px;">
-    <i class="bi bi-x-octagon-fill" style="color:#dc2626;font-size:var(--fs-base);flex-shrink:0;margin-top:1px;"></i>
+  <div style="font-size:var(--fs-body);color:#7f1d1d;background:var(--c-danger-bg-soft);border:1px solid #fca5a5;border-radius:6px;padding:8px 13px;display:flex;align-items:flex-start;gap:9px;">
+    <i class="bi bi-x-octagon-fill" style="color:var(--c-danger);font-size:var(--fs-base);flex-shrink:0;margin-top:1px;"></i>
     <span><strong>Programmes not in Programme Master are blocked</strong> — the system will reject them at entry. They will not appear in any report or compliance calculation.
     To add a new programme, visit <a href="{{ url_for('programme_master') }}" style="color:#b91c1c;font-weight:700;">Programme Master</a> first.</span>
   </div>
@@ -70,8 +70,8 @@
 
         <!-- TNI Coverage Panel — shown when programme name matches TNI -->
         <div class="col-12" id="tni-coverage-panel" style="display:none;">
-          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;">
-            <div style="font-size:var(--fs-body);font-weight:700;color:#92400e;margin-bottom:10px;">
+          <div style="background:var(--c-warn-bg-soft);border:1px solid #fde68a;border-radius:10px;padding:14px 16px;">
+            <div style="font-size:var(--fs-body);font-weight:700;color:var(--c-warn-text);margin-bottom:10px;">
               <i class="bi bi-bar-chart-fill me-1"></i> TNI Demand — "<span id="tni-cp-name"></span>"
             </div>
             <div class="row g-2" style="font-size:var(--fs-md);">
@@ -80,15 +80,15 @@
               <div class="col-md-3"><i class="bi bi-person-check-fill text-success me-1"></i> <strong id="tni-cp-covered">0</strong> covered</div>
               <div class="col-md-3"><i class="bi bi-exclamation-circle-fill text-warning me-1"></i> <strong id="tni-cp-uncovered">0</strong> still uncovered</div>
             </div>
-            <div style="background:#e5e7eb;border-radius:99px;height:8px;overflow:hidden;margin-top:10px;">
+            <div style="background:var(--c-border-2);border-radius:99px;height:8px;overflow:hidden;margin-top:10px;">
               <div id="tni-cp-bar" style="height:100%;border-radius:99px;width:0%;transition:width .5s ease;"></div>
             </div>
-            <div id="tni-cp-hint" style="font-size:var(--fs-sm);color:#92400e;margin-top:5px;"></div>
+            <div id="tni-cp-hint" style="font-size:var(--fs-sm);color:var(--c-warn-text);margin-top:5px;"></div>
           </div>
         </div>
         <div class="col-md-3">
           <label class="form-label d-flex align-items-center gap-1" for="add_type">Type of Programme <span class="required-star">*</span>
-            <span id="type-lock-badge" style="display:none;font-size:var(--fs-xs);background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:10px;font-weight:600;"><i class="bi bi-lock-fill"></i> Master</span>
+            <span id="type-lock-badge" style="display:none;font-size:var(--fs-xs);background:var(--c-info-bg);color:var(--c-info);padding:1px 7px;border-radius:10px;font-weight:600;"><i class="bi bi-lock-fill"></i> Master</span>
           </label>
           <select name="prog_type" id="add_type" class="form-select" required>
             <option value="">-- Select --</option>
@@ -149,7 +149,7 @@
         </div>
         <div class="col-md-3">
           <label class="form-label d-flex align-items-center gap-1" for="add_audience">Target Audience
-            <span id="audience-lock-badge" style="display:none;font-size:var(--fs-xs);background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:10px;font-weight:600;"><i class="bi bi-lock-fill"></i> TNI</span>
+            <span id="audience-lock-badge" style="display:none;font-size:var(--fs-xs);background:var(--c-info-bg);color:var(--c-info);padding:1px 7px;border-radius:10px;font-weight:600;"><i class="bi bi-lock-fill"></i> TNI</span>
           </label>
           <select name="target_audience" id="add_audience" class="form-select">
             <option value="">-- Select --</option>
@@ -182,15 +182,15 @@
     <div class="d-flex gap-2 align-items-center" style="font-size:var(--fs-body);">
       {% set fully = cov_rows|selectattr('gap','equalto',0)|list|length %}
       {% set partial = cov_rows|selectattr('gap','greaterthan',0)|list|length %}
-      <span style="background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:20px;font-weight:700;">{{ fully }} Fully Covered</span>
-      <span style="background:#fee2e2;color:#dc2626;padding:2px 10px;border-radius:20px;font-weight:700;">{{ partial }} Have Gap</span>
+      <span style="background:var(--c-success-bg);color:var(--c-success-text);padding:2px 10px;border-radius:20px;font-weight:700;">{{ fully }} Fully Covered</span>
+      <span style="background:var(--c-danger-bg);color:var(--c-danger);padding:2px 10px;border-radius:20px;font-weight:700;">{{ partial }} Have Gap</span>
       <i class="bi bi-chevron-down"></i>
     </div>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
     <table class="table table-sm mb-0" style="font-size:var(--fs-body);">
-      <thead style="background:#f8fafc;">
+      <thead style="background:var(--c-surface-slate);">
         <tr>
           <th style="padding:9px 14px;">#</th>
           <th style="padding:9px 14px;">Programme</th>
@@ -205,36 +205,36 @@
       <tbody>
         {% for r in cov_rows %}
         <tr>
-          <td style="padding:8px 14px;color:#9ca3af;">{{ loop.index }}</td>
-          <td style="padding:8px 14px;font-weight:600;color:#111827;">{{ r.name }}</td>
+          <td style="padding:8px 14px;color:var(--c-muted-3);">{{ loop.index }}</td>
+          <td style="padding:8px 14px;font-weight:600;color:var(--c-text-strong);">{{ r.name }}</td>
           <td style="padding:8px 14px;text-align:center;font-weight:700;">{{ r.demand }}</td>
-          <td style="padding:8px 14px;text-align:center;color:#6b7280;">{{ r.sessions }}</td>
+          <td style="padding:8px 14px;text-align:center;color:var(--c-muted-2);">{{ r.sessions }}</td>
           <td style="padding:8px 14px;text-align:center;font-weight:600;
               color:{% if r.planned_pax >= r.demand %}#059669{% elif r.planned_pax > 0 %}#d97706{% else %}#dc2626{% endif %};">
             {{ r.planned_pax }}
-            {% if r.over > 0 %}<span style="font-size:var(--fs-xs);color:#059669;"> (+{{ r.over }} extra)</span>{% endif %}
+            {% if r.over > 0 %}<span style="font-size:var(--fs-xs);color:var(--c-success-strong);"> (+{{ r.over }} extra)</span>{% endif %}
           </td>
           <td style="padding:8px 14px;">
-            <div style="background:#f1f5f9;border-radius:99px;height:8px;overflow:hidden;">
+            <div style="background:var(--c-surface-slate-2);border-radius:99px;height:8px;overflow:hidden;">
               <div style="width:{{ r.pct }}%;height:100%;border-radius:99px;
                 background:{% if r.pct >= 100 %}linear-gradient(90deg,#10b981,#34d399){% elif r.pct >= 50 %}linear-gradient(90deg,#f59e0b,#fbbf24){% else %}linear-gradient(90deg,#ef4444,#f87171){% endif %};"></div>
             </div>
-            <div style="font-size:var(--fs-xs);color:#9ca3af;margin-top:2px;">{{ r.pct }}% planned</div>
+            <div style="font-size:var(--fs-xs);color:var(--c-muted-3);margin-top:2px;">{{ r.pct }}% planned</div>
           </td>
           <td style="padding:8px 14px;text-align:center;">
             {% if r.gap > 0 %}
-            <span style="color:#dc2626;font-weight:700;">{{ r.gap }} short</span>
+            <span style="color:var(--c-danger);font-weight:700;">{{ r.gap }} short</span>
             {% else %}
-            <span style="color:#059669;font-weight:700;">✓ OK</span>
+            <span style="color:var(--c-success-strong);font-weight:700;">✓ OK</span>
             {% endif %}
           </td>
           <td style="padding:8px 14px;text-align:center;">
             {% if r.sessions == 0 %}
-              <span style="background:#fee2e2;color:#dc2626;font-size:var(--fs-sm);font-weight:600;padding:2px 8px;border-radius:20px;">Not Planned</span>
+              <span style="background:var(--c-danger-bg);color:var(--c-danger);font-size:var(--fs-sm);font-weight:600;padding:2px 8px;border-radius:20px;">Not Planned</span>
             {% elif r.gap > 0 %}
-              <span style="background:#fef3c7;color:#92400e;font-size:var(--fs-sm);font-weight:600;padding:2px 8px;border-radius:20px;">Under Planned</span>
+              <span style="background:var(--c-warn-bg);color:var(--c-warn-text);font-size:var(--fs-sm);font-weight:600;padding:2px 8px;border-radius:20px;">Under Planned</span>
             {% else %}
-              <span style="background:#d1fae5;color:#065f46;font-size:var(--fs-sm);font-weight:600;padding:2px 8px;border-radius:20px;">Fully Covered</span>
+              <span style="background:var(--c-success-bg);color:var(--c-success-text);font-size:var(--fs-sm);font-weight:600;padding:2px 8px;border-radius:20px;">Fully Covered</span>
             {% endif %}
           </td>
         </tr>
@@ -252,13 +252,13 @@
     <span><i class="bi bi-calendar3"></i> Training Calendar — <strong>{{ sessions|length }}</strong> sessions</span>
     <div class="d-flex gap-2">
       <span class="badge" style="background:#fef9c3;color:#854d0e;">To Be Planned: {{ sessions|selectattr('status','equalto','To Be Planned')|list|length }}</span>
-      <span class="badge" style="background:#d1fae5;color:#065f46;">Conducted: {{ sessions|selectattr('status','equalto','Conducted')|list|length }}</span>
+      <span class="badge" style="background:var(--c-success-bg);color:var(--c-success-text);">Conducted: {{ sessions|selectattr('status','equalto','Conducted')|list|length }}</span>
     </div>
   </div>
   <div class="card-body pb-2 pt-3">
     <div class="d-flex gap-2 flex-wrap">
       <div class="position-relative flex-grow-1" style="max-width:280px;">
-        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:var(--fs-md);"></i>
+        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted-3);font-size:var(--fs-md);"></i>
         <input type="text" class="form-control" placeholder="Search session, programme, trainer..." style="padding-left:34px;" oninput="TBL.search('calTable',this.value)">
       </div>
       <select class="form-select" style="width:155px;" onchange="TBL.filter('calTable','status',this.value)">
@@ -326,7 +326,7 @@
             <td style="max-width:180px;">
               <span title="{{ s.programme_name }}" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;">{{ s.programme_name }}</span>
               {% if s.category == 'Specialized' %}
-              <span title="Specialized — 3-mo effectiveness review required" style="font-size:var(--fs-xs);font-weight:700;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-top:2px;display:inline-block;">
+              <span title="Specialized — 3-mo effectiveness review required" style="font-size:var(--fs-xs);font-weight:700;background:var(--c-danger-bg);color:var(--c-danger-text);padding:1px 6px;border-radius:8px;margin-top:2px;display:inline-block;">
                 <i class="bi bi-stars"></i> SPL
               </span>
               {% endif %}
@@ -418,13 +418,13 @@
                   {% endif %}
                   <li><hr class="dropdown-divider"></li>
                   {% else %}
-                  <li><span class="dropdown-item-text" style="font-size:var(--fs-sm);color:#92400e;background:#fef3c7;padding:6px 10px;">
+                  <li><span class="dropdown-item-text" style="font-size:var(--fs-sm);color:var(--c-warn-text);background:var(--c-warn-bg);padding:6px 10px;">
                     <i class="bi bi-lock-fill me-1"></i> QR locked — session is <strong>{{ s.status }}</strong>
                   </span></li>
                   <li><hr class="dropdown-divider"></li>
                   {% endif %}
                   <li><a class="dropdown-item" href="{{ url_for('qr_live', cal_id=s.id) }}">
-                    <i class="bi bi-broadcast me-1 text-danger"></i> Live Attendance{% if s.status != 'To Be Planned' %} <span style="font-size:var(--fs-xs);color:#6b7280;">(read-only)</span>{% endif %}
+                    <i class="bi bi-broadcast me-1 text-danger"></i> Live Attendance{% if s.status != 'To Be Planned' %} <span style="font-size:var(--fs-xs);color:var(--c-muted-2);">(read-only)</span>{% endif %}
                   </a></li>
                 </ul>
               </div>
@@ -525,7 +525,7 @@
             </div>
             <div class="col-md-3">
               <label class="form-label fw-semibold d-flex align-items-center gap-1" style="font-size:var(--fs-md);">Audience
-                <span id="e-audience-lock-badge" style="display:none;font-size:var(--fs-xs);background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:10px;font-weight:600;"><i class="bi bi-lock-fill"></i> TNI</span>
+                <span id="e-audience-lock-badge" style="display:none;font-size:var(--fs-xs);background:var(--c-info-bg);color:var(--c-info);padding:1px 7px;border-radius:10px;font-weight:600;"><i class="bi bi-lock-fill"></i> TNI</span>
               </label>
               <select name="target_audience" id="e_audience" class="form-select form-select-sm">
                 <option value="">— Select —</option>

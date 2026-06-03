@@ -5,38 +5,38 @@
 <div class="d-flex align-items-center gap-3 mb-1">
   <div>
     <h5 class="fw-bold mb-0" style="color:#1e293b;">Training Hours — Employee Report</h5>
-    <div style="font-size:var(--fs-body);color:#64748b;">FY {{ fy_label_long }} · Actual vs Target per Employee · Dept → Employee drill-down</div>
+    <div style="font-size:var(--fs-body);color:var(--c-slate);">FY {{ fy_label_long }} · Actual vs Target per Employee · Dept → Employee drill-down</div>
   </div>
 </div>
 
 <!-- SUMMARY CHIPS -->
 <div class="d-flex gap-3 flex-wrap my-3">
   <div class="card px-3 py-2 text-center" style="min-width:110px;border-top:3px solid #2e6da4;">
-    <div style="font-size:var(--fs-2xl);font-weight:800;color:#2e6da4;">{{ total_bc }}</div>
-    <div style="font-size:var(--fs-xs);color:#64748b;text-transform:uppercase;letter-spacing:.5px;">BC Employees</div>
+    <div style="font-size:var(--fs-2xl);font-weight:800;color:var(--c-primary);">{{ total_bc }}</div>
+    <div style="font-size:var(--fs-xs);color:var(--c-slate);text-transform:uppercase;letter-spacing:.5px;">BC Employees</div>
   </div>
   <div class="card px-3 py-2 text-center" style="min-width:110px;border-top:3px solid #059669;">
-    <div style="font-size:var(--fs-2xl);font-weight:800;color:#059669;">{{ total_wc }}</div>
-    <div style="font-size:var(--fs-xs);color:#64748b;text-transform:uppercase;letter-spacing:.5px;">WC Employees</div>
+    <div style="font-size:var(--fs-2xl);font-weight:800;color:var(--c-success-strong);">{{ total_wc }}</div>
+    <div style="font-size:var(--fs-xs);color:var(--c-slate);text-transform:uppercase;letter-spacing:.5px;">WC Employees</div>
   </div>
   <div class="card px-3 py-2 text-center" style="min-width:110px;border-top:3px solid #dc2626;">
-    <div style="font-size:var(--fs-2xl);font-weight:800;color:#dc2626;">{{ zero_count }}</div>
-    <div style="font-size:var(--fs-xs);color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Zero Training</div>
+    <div style="font-size:var(--fs-2xl);font-weight:800;color:var(--c-danger);">{{ zero_count }}</div>
+    <div style="font-size:var(--fs-xs);color:var(--c-slate);text-transform:uppercase;letter-spacing:.5px;">Zero Training</div>
   </div>
   <div class="card px-3 py-2 text-center" style="min-width:110px;border-top:3px solid #d97706;">
-    <div style="font-size:var(--fs-2xl);font-weight:800;color:#d97706;">{{ low_count }}</div>
-    <div style="font-size:var(--fs-xs);color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Below Target</div>
+    <div style="font-size:var(--fs-2xl);font-weight:800;color:var(--c-warn);">{{ low_count }}</div>
+    <div style="font-size:var(--fs-xs);color:var(--c-slate);text-transform:uppercase;letter-spacing:.5px;">Below Target</div>
   </div>
   <div class="card px-3 py-2 text-center" style="min-width:110px;border-top:3px solid #059669;">
-    <div style="font-size:var(--fs-2xl);font-weight:800;color:#059669;">{{ ok_count }}</div>
-    <div style="font-size:var(--fs-xs);color:#64748b;text-transform:uppercase;letter-spacing:.5px;">On / Above Target</div>
+    <div style="font-size:var(--fs-2xl);font-weight:800;color:var(--c-success-strong);">{{ ok_count }}</div>
+    <div style="font-size:var(--fs-xs);color:var(--c-slate);text-transform:uppercase;letter-spacing:.5px;">On / Above Target</div>
   </div>
 </div>
 
 <!-- FILTERS -->
 <form method="GET" class="card p-3 mb-3 d-flex flex-wrap gap-3 align-items-end flex-row">
   <div>
-    <label class="form-label mb-1" style="font-size:var(--fs-sm);font-weight:600;color:#64748b;">Department</label>
+    <label class="form-label mb-1" style="font-size:var(--fs-sm);font-weight:600;color:var(--c-slate);">Department</label>
     <select name="dept" class="form-select form-select-sm" style="min-width:160px;">
       <option value="">All Departments</option>
       {% for d in all_depts %}
@@ -45,7 +45,7 @@
     </select>
   </div>
   <div>
-    <label class="form-label mb-1" style="font-size:var(--fs-sm);font-weight:600;color:#64748b;">Collar</label>
+    <label class="form-label mb-1" style="font-size:var(--fs-sm);font-weight:600;color:var(--c-slate);">Collar</label>
     <select name="collar" class="form-select form-select-sm">
       <option value="">All</option>
       <option value="Blue Collared"  {% if collar_filter=='Blue Collared' %}selected{% endif %}>Blue Collared</option>
@@ -53,7 +53,7 @@
     </select>
   </div>
   <div>
-    <label class="form-label mb-1" style="font-size:var(--fs-sm);font-weight:600;color:#64748b;">Status</label>
+    <label class="form-label mb-1" style="font-size:var(--fs-sm);font-weight:600;color:var(--c-slate);">Status</label>
     <select name="status" class="form-select form-select-sm">
       <option value="">All</option>
       <option value="zero" {% if status_filter=='zero' %}selected{% endif %}>Zero Training</option>
@@ -62,7 +62,7 @@
     </select>
   </div>
   <div>
-    <label class="form-label mb-1" style="font-size:var(--fs-sm);font-weight:600;color:#64748b;">Search</label>
+    <label class="form-label mb-1" style="font-size:var(--fs-sm);font-weight:600;color:var(--c-slate);">Search</label>
     <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Emp code or name…" style="min-width:180px;">
   </div>
   <button type="submit" class="btn btn-sm btn-primary">Filter</button>
@@ -79,13 +79,13 @@
     </div>
 
     <!-- DEPT SUMMARY BAR -->
-    <div style="background:#f1f5f9;font-size:var(--fs-sm);color:#475569;padding:5px 14px;border-bottom:1px solid #e2e8f0;display:flex;gap:20px;flex-wrap:wrap;">
+    <div style="background:var(--c-surface-slate-2);font-size:var(--fs-sm);color:#475569;padding:5px 14px;border-bottom:1px solid #e2e8f0;display:flex;gap:20px;flex-wrap:wrap;">
       <span>{{ dept.employees|length }} employee{{ 's' if dept.employees|length != 1 }}</span>
       <span>BC: <strong>{{ dept.bc_count }}</strong> &nbsp;·&nbsp; WC: <strong>{{ dept.wc_count }}</strong></span>
       {% if dept.zero_count > 0 %}
-      <span>Zero training: <strong style="color:#dc2626;">{{ dept.zero_count }}</strong></span>
+      <span>Zero training: <strong style="color:var(--c-danger);">{{ dept.zero_count }}</strong></span>
       {% else %}
-      <span>Zero training: <strong style="color:#059669;">0</strong></span>
+      <span>Zero training: <strong style="color:var(--c-success-strong);">0</strong></span>
       {% endif %}
       <span>Avg achievement: <strong>{{ dept.avg_pct }}%</strong></span>
       <span>{{ dept.total_act }} hrs / {{ dept.total_tgt }} hrs target</span>
@@ -113,12 +113,12 @@
             <td style="font-size:var(--fs-body);padding:6px 10px;color:#94a3b8;">{{ loop.index }}</td>
             <td style="font-size:var(--fs-body);padding:6px 10px;font-family:monospace;">{{ emp.emp_code }}</td>
             <td style="font-size:var(--fs-body);padding:6px 10px;font-weight:600;">{{ emp.name }}</td>
-            <td style="font-size:var(--fs-body);padding:6px 10px;color:#64748b;">{{ emp.designation or '—' }}</td>
+            <td style="font-size:var(--fs-body);padding:6px 10px;color:var(--c-slate);">{{ emp.designation or '—' }}</td>
             <td style="padding:6px 10px;">
               {% if emp.collar == 'Blue Collared' %}
-              <span style="background:#dbeafe;color:#1e40af;border-radius:99px;padding:1px 8px;font-size:var(--fs-xs);font-weight:700;">BC</span>
+              <span style="background:var(--c-info-bg);color:var(--c-info-strong);border-radius:99px;padding:1px 8px;font-size:var(--fs-xs);font-weight:700;">BC</span>
               {% else %}
-              <span style="background:#d1fae5;color:#065f46;border-radius:99px;padding:1px 8px;font-size:var(--fs-xs);font-weight:700;">WC</span>
+              <span style="background:var(--c-success-bg);color:var(--c-success-text);border-radius:99px;padding:1px 8px;font-size:var(--fs-xs);font-weight:700;">WC</span>
               {% endif %}
             </td>
             <td style="font-size:var(--fs-body);padding:6px 10px;text-align:center;">{{ emp.target_hrs }}</td>
@@ -134,11 +134,11 @@
             </td>
             <td style="padding:6px 10px;text-align:center;">
               {% if emp.status == 'zero' %}
-              <span style="background:#fee2e2;color:#991b1b;border-radius:6px;padding:1px 7px;font-size:var(--fs-xs);font-weight:700;">Zero</span>
+              <span style="background:var(--c-danger-bg);color:var(--c-danger-text);border-radius:6px;padding:1px 7px;font-size:var(--fs-xs);font-weight:700;">Zero</span>
               {% elif emp.status == 'low' %}
-              <span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 7px;font-size:var(--fs-xs);font-weight:700;">Below Target</span>
+              <span style="background:var(--c-warn-bg);color:var(--c-warn-text);border-radius:6px;padding:1px 7px;font-size:var(--fs-xs);font-weight:700;">Below Target</span>
               {% else %}
-              <span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:var(--fs-xs);font-weight:700;">Met</span>
+              <span style="background:var(--c-success-bg);color:var(--c-success-text);border-radius:6px;padding:1px 7px;font-size:var(--fs-xs);font-weight:700;">Met</span>
               {% endif %}
             </td>
           </tr>

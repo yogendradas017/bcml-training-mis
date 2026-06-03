@@ -7,7 +7,7 @@
     <h5 class="mb-0" style="font-weight:700;color:#1e3a5f;">
       <i class="bi bi-files me-1"></i> Programme Master — Duplicate Cleanup
     </h5>
-    <div style="font-size:var(--fs-body);color:#6b7280;margin-top:2px;">
+    <div style="font-size:var(--fs-body);color:var(--c-muted-2);margin-top:2px;">
       Near-identical programme names detected via similarity {{ (threshold*100)|round|int }}%.
       Pick a winner per cluster, set canonical name, click <strong>Merge Selected</strong>.
       Cascade rename runs across TNI, Calendar, 2C and 2A.
@@ -59,7 +59,7 @@
       <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:14px;background:#fafafa;">
         <input type="hidden" name="plant_{{ cidx }}" value="{{ pc.plant_id }}">
 
-        <div style="font-size:var(--fs-sm);color:#6b7280;margin-bottom:6px;">
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-2);margin-bottom:6px;">
           Cluster {{ loop.index }} · {{ cluster | length }} rows ·
           total usage <strong>{{ cluster | sum(attribute='usage_count') }}</strong>
         </div>
@@ -92,12 +92,12 @@
                 <input type="checkbox" class="loser-cb" data-cidx="{{ cidx }}" data-id="{{ it.id }}"
                        checked>
                 {% else %}
-                <span style="font-size:var(--fs-xs);color:#10b981;">(canonical)</span>
+                <span style="font-size:var(--fs-xs);color:var(--c-success);">(canonical)</span>
                 {% endif %}
               </td>
               <td>
                 {{ it.name }}
-                <span style="color:#9ca3af;font-size:var(--fs-xs);">#{{ it.id }}</span>
+                <span style="color:var(--c-muted-3);font-size:var(--fs-xs);">#{{ it.id }}</span>
               </td>
               <td style="text-align:right;">{{ it.tni_count }}</td>
               <td style="text-align:right;">{{ it.cal_count }}</td>
@@ -117,7 +117,7 @@
                  data-cidx="{{ cidx }}" style="flex:1;font-size:var(--fs-body);">
           <input type="hidden" name="losers_{{ cidx }}" value=""
                  class="losers-hidden" data-cidx="{{ cidx }}">
-          <span style="color:#9ca3af;font-size:var(--fs-sm);">↳ edit if neither winner is exactly right</span>
+          <span style="color:var(--c-muted-3);font-size:var(--fs-sm);">↳ edit if neither winner is exactly right</span>
         </div>
       </div>
       {% endfor %}

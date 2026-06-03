@@ -5,7 +5,7 @@
 {# ── Filter bar ── #}
 <div style="background:#fff;border-radius:12px;border:1px solid #e5e9f2;padding:14px 20px;margin-bottom:20px;box-shadow:0 1px 6px rgba(0,0,0,.05);">
   <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
-    <span style="font-size:var(--fs-md);font-weight:700;color:#374151;">Filter by Month:</span>
+    <span style="font-size:var(--fs-md);font-weight:700;color:var(--c-text-2);">Filter by Month:</span>
     <select name="month" class="form-select form-select-sm" style="width:180px;" onchange="this.form.submit()">
       <option value="">— Cumulative (All) —</option>
       {% for mo in months %}
@@ -15,7 +15,7 @@
     {% if selected_month %}
     <a href="{{ url_for('monthly_summary') }}" class="btn btn-outline-secondary btn-sm">✕ Clear</a>
     {% endif %}
-    <span style="font-size:var(--fs-body);color:#9ca3af;margin-left:auto;">
+    <span style="font-size:var(--fs-body);color:var(--c-muted-3);margin-left:auto;">
       FY {{ fy_label_long }} · {{ session.plant_name }}
     </span>
   </form>
@@ -55,15 +55,15 @@
       <strong>{% if selected_month %}{{ selected_month }}{% else %}Cumulative FY {{ fy_label_long }}{% endif %}</strong>
     </span>
     <a href="{{ url_for('export_excel', plant_id=session.plant_id) }}" class="btn btn-sm btn-light">
-      <i class="bi bi-file-earmark-excel" style="color:#059669;"></i> Export Excel
+      <i class="bi bi-file-earmark-excel" style="color:var(--c-success-strong);"></i> Export Excel
     </a>
   </div>
 
   {% set has_data = totals.total_seats > 0 %}
   {% if not has_data %}
-  <div style="padding:40px;text-align:center;color:#9ca3af;">
-    <i class="bi bi-clipboard-data" style="font-size:40px;display:block;margin-bottom:12px;color:#d1d5db;"></i>
-    <div style="font-size:var(--fs-base);font-weight:600;color:#6b7280;margin-bottom:6px;">No training records yet</div>
+  <div style="padding:40px;text-align:center;color:var(--c-muted-3);">
+    <i class="bi bi-clipboard-data" style="font-size:40px;display:block;margin-bottom:12px;color:var(--c-border-3);"></i>
+    <div style="font-size:var(--fs-base);font-weight:600;color:var(--c-muted-2);margin-bottom:6px;">No training records yet</div>
     <div style="font-size:var(--fs-md);">Data populates from <strong>Training Records (2A)</strong>.
       Once sessions are conducted and records are uploaded, this summary will fill automatically.</div>
   </div>

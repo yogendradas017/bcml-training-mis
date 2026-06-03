@@ -39,7 +39,7 @@
     {% endif %}
   {% endfor %}
   {% if unit_counts %}
-  <div class="card-body py-2 border-bottom" style="background:#f9fafb;">
+  <div class="card-body py-2 border-bottom" style="background:var(--c-surface-1);">
     <div class="d-flex flex-wrap gap-2">
       {% for uc, cnt in unit_counts.items() %}
       <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:var(--fs-body);padding:4px 10px;">
@@ -52,7 +52,7 @@
 
   <div class="table-responsive">
     <table class="table table-sm mb-0" style="font-size:var(--fs-body);">
-      <thead style="background:#f3f4f6;">
+      <thead style="background:var(--c-surface-2);">
         <tr>
           <th style="padding:6px 14px;">#</th>
           <th style="padding:6px 14px;">Emp Code</th>
@@ -66,7 +66,7 @@
       <tbody>
         {% for r in rows %}
         <tr>
-          <td style="padding:5px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:5px 14px;color:var(--c-muted-3);">{{ loop.index }}</td>
           <td style="padding:5px 14px;font-family:monospace;">{{ r.emp_code }}</td>
           <td style="padding:5px 14px;font-weight:500;">{{ r.emp_name or '—' }}</td>
           <td style="padding:5px 14px;"><span class="badge-unit">{{ r.unit_code or '—' }}</span></td>

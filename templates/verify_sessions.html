@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="d-flex align-items-center gap-3 mb-3">
-  <h4 class="mb-0 fw-semibold"><i class="bi bi-patch-check-fill me-2" style="color:#d97706;"></i>Sessions Awaiting Verification</h4>
+  <h4 class="mb-0 fw-semibold"><i class="bi bi-patch-check-fill me-2" style="color:var(--c-warn);"></i>Sessions Awaiting Verification</h4>
   <span class="badge bg-warning text-dark">{{ pending|length }} pending</span>
 </div>
 
@@ -15,7 +15,7 @@
 <div class="card">
   <div class="card-body text-center py-5">
     <i class="bi bi-check2-circle" style="font-size:48px;color:#16a34a;"></i>
-    <div class="mt-3" style="font-size:var(--fs-base);color:#374151;">All clear — no sessions awaiting verification.</div>
+    <div class="mt-3" style="font-size:var(--fs-base);color:var(--c-text-2);">All clear — no sessions awaiting verification.</div>
   </div>
 </div>
 {% else %}
@@ -38,7 +38,7 @@
   <tbody>
     {% for p in pending %}
     {%- set has_anom = p.anomalies and p.anomalies != 'clean' -%}
-    <tr style="border-bottom:1px solid #e5e7eb;{% if has_anom %}background:#fff7ed;{% endif %}">
+    <tr style="border-bottom:1px solid var(--c-border-2);{% if has_anom %}background:var(--c-warn-bg-alt);{% endif %}">
       <td style="padding:10px 12px;">
         <strong>{{ p.plant_name }}</strong>
         <span class="badge-unit" style="font-size:var(--fs-xs);margin-left:4px;">{{ p.unit_code }}</span>
@@ -46,22 +46,22 @@
       <td style="padding:10px 12px;font-family:monospace;font-size:var(--fs-sm);">{{ p.session_code }}</td>
       <td style="padding:10px 12px;max-width:240px;">
         <div style="font-weight:600;">{{ p.programme_name }}</div>
-        <div style="font-size:var(--fs-xs);color:#6b7280;">{{ p.prog_type or '—' }} · {{ p.target_audience or '—' }}</div>
+        <div style="font-size:var(--fs-xs);color:var(--c-muted-2);">{{ p.prog_type or '—' }} · {{ p.target_audience or '—' }}</div>
       </td>
       <td style="padding:10px 12px;white-space:nowrap;font-size:var(--fs-sm);">
         {{ p.plan_start | fmt_date }}{% if p.plan_end and p.plan_end != p.plan_start %} – {{ p.plan_end | fmt_date }}{% endif %}
       </td>
       <td style="padding:10px 12px;text-align:right;">
-        <strong>{{ p.actual_pax or 0 }}</strong><span style="color:#9ca3af;font-size:var(--fs-xs);"> / {{ p.planned_pax or 0 }}</span>
+        <strong>{{ p.actual_pax or 0 }}</strong><span style="color:var(--c-muted-3);font-size:var(--fs-xs);"> / {{ p.planned_pax or 0 }}</span>
       </td>
       <td style="padding:10px 12px;text-align:right;font-weight:600;">{{ (p.actual_hrs or 0)|round(1) }}</td>
       <td style="padding:10px 12px;font-size:var(--fs-sm);">
         {{ p.conducted_by_name or '—' }}<br>
-        <span style="color:#9ca3af;font-size:var(--fs-xs);">{{ p.conducted_at | fmt_dt }}</span>
+        <span style="color:var(--c-muted-3);font-size:var(--fs-xs);">{{ p.conducted_at | fmt_dt }}</span>
       </td>
       <td style="padding:10px 12px;">
         {% if has_anom %}
-          <span style="background:#fef3c7;color:#92400e;font-size:var(--fs-sm);font-weight:600;padding:2px 8px;border-radius:4px;display:inline-block;">
+          <span style="background:var(--c-warn-bg);color:var(--c-warn-text);font-size:var(--fs-sm);font-weight:600;padding:2px 8px;border-radius:4px;display:inline-block;">
             <i class="bi bi-exclamation-triangle-fill" style="font-size:var(--fs-xs);"></i> {{ p.anomalies }}
           </span>
         {% else %}

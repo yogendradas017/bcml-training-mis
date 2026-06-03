@@ -8,10 +8,10 @@
 {%- set avg_hrs  = (stats.manhours / stats.trainings)|round(1) if stats.trainings else 0 -%}
 
 {% if pending_verify_count and pending_verify_count > 0 %}
-<div style="background:#fff7ed;border:1.5px solid #fcd34d;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:14px;">
-  <i class="bi bi-hourglass-split" style="font-size:24px;color:#d97706;"></i>
+<div style="background:var(--c-warn-bg-alt);border:1.5px solid #fcd34d;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:14px;">
+  <i class="bi bi-hourglass-split" style="font-size:24px;color:var(--c-warn);"></i>
   <div style="flex:1;">
-    <div style="font-size:var(--fs-md);font-weight:700;color:#92400e;">
+    <div style="font-size:var(--fs-md);font-weight:700;color:var(--c-warn-text);">
       {{ pending_verify_count }} session{{ 's' if pending_verify_count != 1 else '' }} awaiting Central L&amp;D verification
     </div>
     <div style="font-size:var(--fs-sm);color:#78350f;">
@@ -57,7 +57,7 @@
 
   <!-- Sessions -->
   <div class="col-12 col-sm-6 col-lg-4">
-    <div class="kpi-card" id="sess-kpi-card" onclick="toggleSessDrill()" style="--kpi-color:#2e6da4;--kpi-bg:#ebf4ff;cursor:pointer;user-select:none;">
+    <div class="kpi-card" id="sess-kpi-card" onclick="toggleSessDrill()" style="--kpi-color:var(--c-primary);--kpi-bg:#ebf4ff;cursor:pointer;user-select:none;">
       <div class="kpi-accent"></div>
       <div class="kpi-body">
         <div class="kpi-header">
@@ -69,7 +69,7 @@
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="kpi-icon-wrap"><i class="bi bi-calendar3"></i></div>
-            <i class="bi bi-chevron-down" id="sess-drill-chevron" style="font-size:var(--fs-body);color:#9ca3af;transition:transform .2s;"></i>
+            <i class="bi bi-chevron-down" id="sess-drill-chevron" style="font-size:var(--fs-body);color:var(--c-muted-3);transition:transform .2s;"></i>
           </div>
         </div>
         <div class="kpi-prog-wrap">
@@ -118,12 +118,12 @@
 
 <!-- Sessions Month-by-Month panel — full-width row, pushes layout below when shown -->
 <div id="sess-drill-panel" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 16px 14px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,.06);">
-  <div style="font-size:var(--fs-xs);font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;padding:4px 0 6px;border-bottom:1px solid #f3f4f6;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
-    <span><i class="bi bi-calendar3 me-1" style="color:#2e6da4;"></i> Sessions — Month-by-Month</span>
-    <button type="button" onclick="toggleSessDrill()" style="background:none;border:none;color:#9ca3af;font-size:var(--fs-base);cursor:pointer;line-height:1;" title="Close">&times;</button>
+  <div style="font-size:var(--fs-xs);font-weight:700;color:var(--c-muted-3);text-transform:uppercase;letter-spacing:.05em;padding:4px 0 6px;border-bottom:1px solid var(--c-surface-2);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+    <span><i class="bi bi-calendar3 me-1" style="color:var(--c-primary);"></i> Sessions — Month-by-Month</span>
+    <button type="button" onclick="toggleSessDrill()" style="background:none;border:none;color:var(--c-muted-3);font-size:var(--fs-base);cursor:pointer;line-height:1;" title="Close">&times;</button>
   </div>
   <div id="sess-drill-body" style="font-size:var(--fs-body);">
-    <span style="color:#9ca3af;">Loading…</span>
+    <span style="color:var(--c-muted-3);">Loading…</span>
   </div>
 </div>
 
@@ -233,7 +233,7 @@
 <div class="section-hd">TNI by Programme Type</div>
 <div class="analytics-card mb-4">
   <div class="analytics-hd">
-    <span class="analytics-title"><i class="bi bi-clipboard-data-fill me-1" style="color:#d97706;"></i>Training Need Identification — Breakdown</span>
+    <span class="analytics-title"><i class="bi bi-clipboard-data-fill me-1" style="color:var(--c-warn);"></i>Training Need Identification — Breakdown</span>
     <span class="analytics-badge">{{ stats.tni_count }} total nominations</span>
   </div>
   <div class="analytics-body" style="padding:12px 16px 16px;">
@@ -245,37 +245,37 @@
       {%- set pct = (row.cnt / total * 100)|round(1) -%}
       {%- set progs = tni_drill.get(row.prog_type, []) -%}
       <div class="col-12 col-sm-6 col-lg-4">
-        <div class="tni-type-card" role="button" tabindex="0" aria-expanded="false" aria-controls="tni-drill-{{ loop.index }}" onclick="toggleTniDrill(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTniDrill(this);}" style="background:#f9fafb;border-radius:10px;padding:10px 14px;border-left:4px solid {{ clr }};cursor:pointer;user-select:none;">
+        <div class="tni-type-card" role="button" tabindex="0" aria-expanded="false" aria-controls="tni-drill-{{ loop.index }}" onclick="toggleTniDrill(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTniDrill(this);}" style="background:var(--c-surface-1);border-radius:10px;padding:10px 14px;border-left:4px solid {{ clr }};cursor:pointer;user-select:none;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-size:var(--fs-body);font-weight:600;color:#111827;">{{ row.prog_type }}</span>
+            <span style="font-size:var(--fs-body);font-weight:600;color:var(--c-text-strong);">{{ row.prog_type }}</span>
             <div style="display:flex;align-items:center;gap:8px;">
               <span style="font-size:var(--fs-base);font-weight:800;color:{{ clr }};">{{ row.cnt }}</span>
-              <i class="bi bi-chevron-down tni-chevron" style="font-size:var(--fs-sm);color:#9ca3af;transition:transform .2s;"></i>
+              <i class="bi bi-chevron-down tni-chevron" style="font-size:var(--fs-sm);color:var(--c-muted-3);transition:transform .2s;"></i>
             </div>
           </div>
-          <div style="background:#e5e7eb;border-radius:4px;height:5px;overflow:hidden;">
+          <div style="background:var(--c-border-2);border-radius:4px;height:5px;overflow:hidden;">
             <div style="width:{{ pct }}%;background:{{ clr }};height:100%;border-radius:4px;transition:width .4s;"></div>
           </div>
-          <div style="font-size:var(--fs-xs);color:#6b7280;margin-top:4px;">{{ pct }}% of total TNI &nbsp;·&nbsp; {{ progs|length }} programme{{ 's' if progs|length != 1 }}</div>
+          <div style="font-size:var(--fs-xs);color:var(--c-muted-2);margin-top:4px;">{{ pct }}% of total TNI &nbsp;·&nbsp; {{ progs|length }} programme{{ 's' if progs|length != 1 }}</div>
         </div>
         <div id="tni-drill-{{ loop.index }}" class="tni-drill-panel" style="display:none;background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:4px 14px 8px;margin-top:-4px;max-height:260px;overflow-y:auto;">
           <div class="tni-drill-head" style="position:sticky;top:0;background:#fff;padding:6px 0 4px;border-bottom:1px solid #f3f4f6;z-index:1;">
-            <div style="font-size:var(--fs-xs);font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">TNI — {{ row.prog_type }}</div>
+            <div style="font-size:var(--fs-xs);font-weight:700;color:var(--c-muted-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">TNI — {{ row.prog_type }}</div>
             <div class="input-group input-group-sm">
-              <span class="input-group-text" style="background:#f3f4f6;border-right:0;padding:2px 8px;"><i class="bi bi-search" style="font-size:var(--fs-sm);"></i></span>
+              <span class="input-group-text" style="background:var(--c-surface-2);border-right:0;padding:2px 8px;"><i class="bi bi-search" style="font-size:var(--fs-sm);"></i></span>
               <input type="text" class="form-control tni-drill-q" aria-label="Filter {{ row.prog_type }} programmes" placeholder="Filter programmes…" oninput="tniDrillFilter(this)" style="border-left:0;font-size:var(--fs-sm);padding:2px 8px;">
             </div>
             <div class="tni-drill-count visually-hidden" aria-live="polite"></div>
           </div>
           {% for prog_name, emp_cnt in progs %}
           <div class="tni-drill-row" data-name="{{ prog_name|lower }}" style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #f9fafb;font-size:var(--fs-sm);">
-            <span style="color:#374151;flex:1;padding-right:8px;">{{ prog_name }}</span>
+            <span style="color:var(--c-text-2);flex:1;padding-right:8px;">{{ prog_name }}</span>
             <span style="font-weight:700;color:{{ clr }};white-space:nowrap;">{{ emp_cnt }} nominated</span>
           </div>
           {% else %}
-          <div style="font-size:var(--fs-sm);color:#9ca3af;padding:8px 0;">No data</div>
+          <div style="font-size:var(--fs-sm);color:var(--c-muted-3);padding:8px 0;">No data</div>
           {% endfor %}
-          <div class="tni-drill-empty" hidden style="font-size:var(--fs-sm);color:#9ca3af;padding:12px 0;text-align:center;"><i class="bi bi-search" style="opacity:.5;"></i> No programmes match</div>
+          <div class="tni-drill-empty" hidden style="font-size:var(--fs-sm);color:var(--c-muted-3);padding:12px 0;text-align:center;"><i class="bi bi-search" style="opacity:.5;"></i> No programmes match</div>
         </div>
       </div>
       {% endfor %}
@@ -307,10 +307,10 @@
             <i class="bi {{ icon }}" style="font-size:var(--fs-xl);color:#fff;"></i>
           </div>
           <div>
-            <div style="font-weight:700;font-size:var(--fs-md);color:#111827;">{{ title }}</div>
-            <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">{{ desc }}</div>
+            <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);">{{ title }}</div>
+            <div style="font-size:var(--fs-sm);color:var(--c-muted-2);margin-top:2px;">{{ desc }}</div>
           </div>
-          <i class="bi bi-chevron-right ms-auto" style="color:#d1d5db;font-size:var(--fs-md);"></i>
+          <i class="bi bi-chevron-right ms-auto" style="color:var(--c-border-3);font-size:var(--fs-md);"></i>
         </div>
       </div>
     </a>
@@ -325,10 +325,10 @@
             <i class="bi bi-file-earmark-excel-fill" style="font-size:var(--fs-xl);color:#fff;"></i>
           </div>
           <div>
-            <div style="font-weight:700;font-size:var(--fs-md);color:#111827;">Export to Excel</div>
-            <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">Download full MIS in BCML format</div>
+            <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);">Export to Excel</div>
+            <div style="font-size:var(--fs-sm);color:var(--c-muted-2);margin-top:2px;">Download full MIS in BCML format</div>
           </div>
-          <i class="bi bi-chevron-right ms-auto" style="color:#d1d5db;font-size:var(--fs-md);"></i>
+          <i class="bi bi-chevron-right ms-auto" style="color:var(--c-border-3);font-size:var(--fs-md);"></i>
         </div>
       </div>
     </a>

@@ -64,33 +64,33 @@
   <div class="col-6 col-md-3">
     <div class="card text-center" style="border-left:4px solid #dc2626;">
       <div class="card-body py-3">
-        <div style="font-size:var(--fs-sm);color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Total Errors ({{ fy_label }})</div>
-        <div style="font-size:var(--fs-3xl);font-weight:800;color:#dc2626;">{{ total_errors }}</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-2);text-transform:uppercase;letter-spacing:1px;">Total Errors ({{ fy_label }})</div>
+        <div style="font-size:var(--fs-3xl);font-weight:800;color:var(--c-danger);">{{ total_errors }}</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="card text-center" style="border-left:4px solid #059669;">
       <div class="card-body py-3">
-        <div style="font-size:var(--fs-sm);color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Best Unit</div>
-        <div style="font-size:var(--fs-xl);font-weight:800;color:#059669;margin-top:4px;">{{ best_unit.name }}</div>
-        <div style="font-size:var(--fs-sm);color:#6b7280;">{{ best_unit.cnt }} error{{ 's' if best_unit.cnt != 1 }}</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-2);text-transform:uppercase;letter-spacing:1px;">Best Unit</div>
+        <div style="font-size:var(--fs-xl);font-weight:800;color:var(--c-success-strong);margin-top:4px;">{{ best_unit.name }}</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-2);">{{ best_unit.cnt }} error{{ 's' if best_unit.cnt != 1 }}</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="card text-center" style="border-left:4px solid #d97706;">
       <div class="card-body py-3">
-        <div style="font-size:var(--fs-sm);color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Needs Training</div>
-        <div style="font-size:var(--fs-xl);font-weight:800;color:#d97706;margin-top:4px;">{{ worst_unit.name }}</div>
-        <div style="font-size:var(--fs-sm);color:#6b7280;">{{ worst_unit.cnt }} error{{ 's' if worst_unit.cnt != 1 }}</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-2);text-transform:uppercase;letter-spacing:1px;">Needs Training</div>
+        <div style="font-size:var(--fs-xl);font-weight:800;color:var(--c-warn);margin-top:4px;">{{ worst_unit.name }}</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-2);">{{ worst_unit.cnt }} error{{ 's' if worst_unit.cnt != 1 }}</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="card text-center" style="border-left:4px solid #2563eb;">
       <div class="card-body py-3">
-        <div style="font-size:var(--fs-sm);color:#6b7280;text-transform:uppercase;letter-spacing:1px;">{{ this_month_label }} vs Avg</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-2);text-transform:uppercase;letter-spacing:1px;">{{ this_month_label }} vs Avg</div>
         <div style="font-size:24px;font-weight:800;margin-top:4px;
           color:{% if trend_dir=='up' %}#dc2626{% elif trend_dir=='down' %}#059669{% else %}#6b7280{% endif %};">
           {% if trend_dir == 'up' %}↑ {{ trend_pct }}%
@@ -98,7 +98,7 @@
           {% else %}— flat
           {% endif %}
         </div>
-        <div style="font-size:var(--fs-sm);color:#6b7280;">{{ this_month_cnt }} this month · {{ fy_avg }} avg</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-muted-2);">{{ this_month_cnt }} this month · {{ fy_avg }} avg</div>
       </div>
     </div>
   </div>
@@ -119,7 +119,7 @@
 {% if total_errors == 0 %}
 <div class="card">
   <div class="card-body text-center py-5">
-    <i class="bi bi-emoji-smile" style="font-size:48px;color:#10b981;"></i>
+    <i class="bi bi-emoji-smile" style="font-size:48px;color:var(--c-success);"></i>
     <h6 class="mt-3 mb-1">No errors recorded in {{ fy_label }}</h6>
     <p class="text-muted mb-0" style="font-size:var(--fs-md);">Either no uploads happened yet, or every upload was clean — both good news.</p>
   </div>
@@ -138,7 +138,7 @@
             {% for p in active_plants %}
             <th class="text-center" style="white-space:nowrap;font-size:var(--fs-sm);">{{ p.name }}</th>
             {% endfor %}
-            <th class="text-center" style="background:#374151;">Total</th>
+            <th class="text-center" style="background:var(--c-text-2);">Total</th>
           </tr>
         </thead>
         <tbody>
@@ -149,16 +149,16 @@
             {% for p in active_plants %}
               {% set v = month_unit_matrix[m][p.id] %}
               {% if v == 0 %}
-                <td class="text-center" style="color:#d1d5db;">—</td>
+                <td class="text-center" style="color:var(--c-border-3);">—</td>
               {% elif fleet_cell_avg > 0 and v >= fleet_cell_avg * 1.5 %}
-                <td class="text-center fw-bold" style="background:#fee2e2;color:#dc2626;">{{ v }}</td>
+                <td class="text-center fw-bold" style="background:var(--c-danger-bg);color:var(--c-danger);">{{ v }}</td>
               {% elif fleet_cell_avg > 0 and v >= fleet_cell_avg * 0.8 %}
-                <td class="text-center fw-bold" style="background:#fef3c7;color:#92400e;">{{ v }}</td>
+                <td class="text-center fw-bold" style="background:var(--c-warn-bg);color:var(--c-warn-text);">{{ v }}</td>
               {% else %}
-                <td class="text-center" style="background:#d1fae5;color:#065f46;">{{ v }}</td>
+                <td class="text-center" style="background:var(--c-success-bg);color:var(--c-success-text);">{{ v }}</td>
               {% endif %}
             {% endfor %}
-            <td class="text-center fw-bold" style="background:#f3f4f6;">{{ month_total }}</td>
+            <td class="text-center fw-bold" style="background:var(--c-surface-2);">{{ month_total }}</td>
           </tr>
           {% endfor %}
           <tr style="background:#1e3a5f;color:#fff;">
@@ -173,11 +173,11 @@
     </div>
   </div>
   <div class="card-footer text-muted" style="font-size:var(--fs-sm);">
-    <span style="background:#d1fae5;padding:1px 8px;border-radius:4px;color:#065f46;">Green = below avg</span>
+    <span style="background:var(--c-success-bg);padding:1px 8px;border-radius:4px;color:var(--c-success-text);">Green = below avg</span>
     &nbsp;
-    <span style="background:#fef3c7;padding:1px 8px;border-radius:4px;color:#92400e;">Amber = around avg</span>
+    <span style="background:var(--c-warn-bg);padding:1px 8px;border-radius:4px;color:var(--c-warn-text);">Amber = around avg</span>
     &nbsp;
-    <span style="background:#fee2e2;padding:1px 8px;border-radius:4px;color:#dc2626;">Red = above avg (training target)</span>
+    <span style="background:var(--c-danger-bg);padding:1px 8px;border-radius:4px;color:var(--c-danger);">Red = above avg (training target)</span>
     &nbsp;&middot;&nbsp; Fleet avg per cell: <strong>{{ "%.1f"|format(fleet_cell_avg) }}</strong>
   </div>
 </div>
@@ -205,7 +205,7 @@
         <div class="text-center text-muted py-4" style="font-size:var(--fs-md);">No categorised errors</div>
         {% else %}
         <table class="table table-sm mb-0" style="font-size:var(--fs-body);">
-          <thead style="background:#f8fafc;">
+          <thead style="background:var(--c-surface-slate);">
             <tr><th>Category</th><th class="text-end">Count</th><th class="text-end">%</th></tr>
           </thead>
           <tbody>
@@ -213,7 +213,7 @@
             <tr>
               <td>
                 <div style="font-weight:600;">{{ c.label }}</div>
-                <div style="font-size:var(--fs-sm);color:#6b7280;">{{ c.desc }}</div>
+                <div style="font-size:var(--fs-sm);color:var(--c-muted-2);">{{ c.desc }}</div>
               </td>
               <td class="text-end fw-bold">{{ c.cnt }}</td>
               <td class="text-end">
@@ -238,7 +238,7 @@
     {% else %}
     <div class="table-responsive">
       <table class="table table-sm mb-0" style="font-size:var(--fs-body);">
-        <thead style="background:#f8fafc;">
+        <thead style="background:var(--c-surface-slate);">
           <tr>
             <th style="width:40px;">Rank</th>
             <th>Unit</th>
@@ -253,29 +253,29 @@
           <tr>
             <td>
               {% if loop.index == 1 %}
-              <span style="background:#fee2e2;color:#dc2626;font-weight:800;padding:2px 8px;border-radius:6px;font-size:var(--fs-sm);">#1</span>
+              <span style="background:var(--c-danger-bg);color:var(--c-danger);font-weight:800;padding:2px 8px;border-radius:6px;font-size:var(--fs-sm);">#1</span>
               {% elif loop.index <= 3 %}
-              <span style="background:#fef3c7;color:#92400e;font-weight:700;padding:2px 8px;border-radius:6px;font-size:var(--fs-sm);">#{{ loop.index }}</span>
+              <span style="background:var(--c-warn-bg);color:var(--c-warn-text);font-weight:700;padding:2px 8px;border-radius:6px;font-size:var(--fs-sm);">#{{ loop.index }}</span>
               {% else %}
-              <span style="color:#9ca3af;font-size:var(--fs-sm);">#{{ loop.index }}</span>
+              <span style="color:var(--c-muted-3);font-size:var(--fs-sm);">#{{ loop.index }}</span>
               {% endif %}
             </td>
             <td style="font-weight:600;">{{ u.plant_name }}</td>
             <td class="text-end fw-bold">{{ u.total }}</td>
             <td>
               <div>{{ u.top_cat }}</div>
-              <div style="font-size:var(--fs-sm);color:#6b7280;">{{ u.top_cat_pct }}% of unit's errors</div>
+              <div style="font-size:var(--fs-sm);color:var(--c-muted-2);">{{ u.top_cat_pct }}% of unit's errors</div>
             </td>
             <td>{{ u.top_user }}</td>
             <td class="text-center">
               {% if u.trend == 'up' %}
-              <span style="color:#dc2626;font-weight:700;" title="Errors increasing">↑ Worsening</span>
+              <span style="color:var(--c-danger);font-weight:700;" title="Errors increasing">↑ Worsening</span>
               {% elif u.trend == 'down' %}
-              <span style="color:#059669;font-weight:700;" title="Errors decreasing">↓ Improving</span>
+              <span style="color:var(--c-success-strong);font-weight:700;" title="Errors decreasing">↓ Improving</span>
               {% elif u.trend == 'new' %}
-              <span style="color:#d97706;font-weight:700;" title="Errors started this period">● New</span>
+              <span style="color:var(--c-warn);font-weight:700;" title="Errors started this period">● New</span>
               {% else %}
-              <span style="color:#6b7280;">— Flat</span>
+              <span style="color:var(--c-muted-2);">— Flat</span>
               {% endif %}
             </td>
           </tr>

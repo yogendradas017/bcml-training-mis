@@ -23,15 +23,15 @@
 {% if not preview %}
 <div class="card">
   <div class="card-body text-center py-5">
-    <i class="bi bi-check-circle-fill" style="font-size:40px;color:#10b981;display:block;margin-bottom:12px;"></i>
-    <div style="font-size:var(--fs-base);font-weight:600;color:#111827;margin-bottom:6px;">All programme names look clean!</div>
-    <div style="font-size:var(--fs-md);color:#6b7280;">Every entry in TNI matches the Programme Master list exactly.</div>
+    <i class="bi bi-check-circle-fill" style="font-size:40px;color:var(--c-success);display:block;margin-bottom:12px;"></i>
+    <div style="font-size:var(--fs-base);font-weight:600;color:var(--c-text-strong);margin-bottom:6px;">All programme names look clean!</div>
+    <div style="font-size:var(--fs-md);color:var(--c-muted-2);">Every entry in TNI matches the Programme Master list exactly.</div>
   </div>
 </div>
 
 {% else %}
 <div class="alert d-flex gap-2 align-items-start py-2 mb-3"
-     style="background:#fff7ed;border:1px solid #fed7aa;font-size:var(--fs-md);color:#c2410c;">
+     style="background:var(--c-warn-bg-alt);border:1px solid #fed7aa;font-size:var(--fs-md);color:#c2410c;">
   <i class="bi bi-exclamation-circle-fill mt-1" style="flex-shrink:0;"></i>
   <div>
     <strong>{{ preview|length }} programme name(s) will be corrected</strong> across TNI, Training Records, and Calendar.
@@ -46,7 +46,7 @@
   </div>
   <div class="table-responsive">
     <table class="table table-sm table-bordered mb-0" style="font-size:var(--fs-md);">
-      <thead style="background:#f8fafc;">
+      <thead style="background:var(--c-surface-slate);">
         <tr>
           <th style="padding:10px 14px;width:44px;">#</th>
           <th style="padding:10px 14px;">Current (Wrong)</th>
@@ -57,14 +57,14 @@
       <tbody>
         {% for p in preview %}
         <tr>
-          <td style="padding:8px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:8px 14px;color:var(--c-muted-3);">{{ loop.index }}</td>
           <td style="padding:8px 14px;">
-            <span style="background:#fee2e2;color:#dc2626;font-weight:600;padding:2px 8px;border-radius:4px;">{{ p.original }}</span>
+            <span style="background:var(--c-danger-bg);color:var(--c-danger);font-weight:600;padding:2px 8px;border-radius:4px;">{{ p.original }}</span>
           </td>
           <td style="padding:8px 14px;">
-            <span style="background:#d1fae5;color:#065f46;font-weight:600;padding:2px 8px;border-radius:4px;">{{ p.fixed }}</span>
+            <span style="background:var(--c-success-bg);color:var(--c-success-text);font-weight:600;padding:2px 8px;border-radius:4px;">{{ p.fixed }}</span>
           </td>
-          <td style="padding:8px 14px;color:#6b7280;font-size:var(--fs-body);">
+          <td style="padding:8px 14px;color:var(--c-muted-2);font-size:var(--fs-body);">
             <i class="bi bi-{% if p.how == 'Case correction' %}fonts{% else %}magic{% endif %} me-1"></i>{{ p.how }}
           </td>
         </tr>

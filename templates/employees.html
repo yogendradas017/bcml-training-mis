@@ -6,7 +6,7 @@
 <!-- Undo Exit — Dedicated Section at Top -->
 <div class="card mb-4" style="border:2px solid #f59e0b;">
   <div class="ch" style="gap:12px;">
-    <i class="bi bi-arrow-counterclockwise" style="font-size:var(--fs-lg);color:#d97706;"></i>
+    <i class="bi bi-arrow-counterclockwise" style="font-size:var(--fs-lg);color:var(--c-warn);"></i>
     <div>
       <strong>Undo Exit</strong> &nbsp;—&nbsp; {{ recent_exited|length }} employee(s) exited recently
       <div style="font-size:var(--fs-sm);color:var(--c-muted);margin-top:1px;">Available within 7 days of exit date</div>
@@ -16,7 +16,7 @@
     <div class="table-responsive">
     <table class="table table-sm mb-0" style="font-size:var(--fs-md);">
       <thead>
-        <tr style="background:#fef3c7;">
+        <tr style="background:var(--c-warn-bg);">
           <th>#</th><th>Emp Code</th><th>Name</th><th>Exit Date</th><th>Reason</th><th>Action</th>
         </tr>
       </thead>
@@ -27,7 +27,7 @@
           <td><span class="emp-code">{{ emp.emp_code }}</span></td>
           <td><strong>{{ emp.name }}</strong></td>
           <td><span class="badge bg-warning text-dark">{{ emp.exit_date | fmt_date }}</span></td>
-          <td style="color:#6b7280;">{{ emp.exit_reason or '—' }}</td>
+          <td style="color:var(--c-muted-2);">{{ emp.exit_reason or '—' }}</td>
           <td>
             <form method="POST" action="{{ url_for('reactivate_employee', emp_id=emp.id) }}"
                   onsubmit="return confirm('Undo exit for this employee?')">
@@ -65,7 +65,7 @@
 
   <!-- Bulk Update Panel (partial column updates by Emp Code) -->
   <div class="collapse" id="bulkUpdateSection">
-    <div class="card-body border-bottom" style="background:#eff6ff;">
+    <div class="card-body border-bottom" style="background:var(--c-info-bg-soft);">
       <form method="POST" action="{{ url_for('emp_bulk_update') }}" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="d-flex align-items-end gap-3 flex-wrap">
@@ -94,7 +94,7 @@
 
   <!-- Bulk Upload Panel -->
   <div class="collapse" id="bulkUploadSection">
-    <div class="card-body border-bottom" style="background:#f0fdf4;">
+    <div class="card-body border-bottom" style="background:var(--c-success-bg-soft);">
       <form method="POST" action="{{ url_for('emp_bulk_upload') }}" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="d-flex align-items-end gap-3 flex-wrap">
@@ -107,7 +107,7 @@
           <button type="submit" class="btn btn-success btn-sm px-4">
             <i class="bi bi-cloud-upload"></i> Upload &amp; Validate
           </button>
-          <div style="font-size:var(--fs-body);color:#6b7280;">
+          <div style="font-size:var(--fs-body);color:var(--c-muted-2);">
             <i class="bi bi-info-circle"></i>
             Use the template above. Grade, Collar, Gender and PH must match the Reference sheet values.
           </div>
@@ -217,7 +217,7 @@
   <div class="card-body pb-2 pt-3">
     <div class="d-flex gap-2 flex-wrap">
       <div class="position-relative flex-grow-1" style="max-width:300px;">
-        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:var(--fs-md);"></i>
+        <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted-3);font-size:var(--fs-md);"></i>
         <input type="text" class="form-control" placeholder="Search name, emp code..." style="padding-left:34px;" oninput="TBL.search('empTable',this.value)">
       </div>
       <select class="form-select" style="width:150px;" onchange="TBL.filter('empTable','collar',this.value)">

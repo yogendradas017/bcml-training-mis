@@ -107,13 +107,13 @@
     <li><a href="{{ url_for('verify_sessions') }}" class="{% if request.endpoint in ('verify_sessions','verify_trail') %}active{% endif %}" style="color:#fbbf24;">
       <i class="bi bi-patch-check-fill"></i> Verify Sessions
       {% if pending_verify_count and pending_verify_count > 0 %}
-      <span style="background:#dc2626;color:#fff;font-size:var(--fs-xs);font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ pending_verify_count }}</span>
+      <span style="background:var(--c-danger);color:#fff;font-size:var(--fs-xs);font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ pending_verify_count }}</span>
       {% endif %}
     </a></li>
     <li><a href="{{ url_for('anomalies_review') }}" class="{% if request.endpoint=='anomalies_review' %}active{% endif %}" style="color:#fbbf24;">
       <i class="bi bi-exclamation-triangle-fill"></i> Anomalies Review
       {% if anomaly_count and anomaly_count > 0 %}
-      <span style="background:#d97706;color:#fff;font-size:var(--fs-xs);font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ anomaly_count }}</span>
+      <span style="background:var(--c-warn);color:#fff;font-size:var(--fs-xs);font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ anomaly_count }}</span>
       {% endif %}
     </a></li>
     <li><a href="{{ url_for('effectiveness') }}" class="{% if request.endpoint=='effectiveness' %}active{% endif %}" style="color:#fbbf24;">
@@ -170,9 +170,9 @@
 <!-- ═══════════════════════ MAIN ═══════════════════════════════ -->
 <div class="main-wrap">
   {% if session.role == 'admin' and session.plant_id %}
-  <div style="background:#92400e;color:#fef3c7;font-size:var(--fs-body);font-weight:600;padding:7px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+  <div style="background:var(--c-warn-text);color:var(--c-warn-bg);font-size:var(--fs-body);font-weight:600;padding:7px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
     <span><i class="bi bi-shield-lock-fill me-1"></i>Admin — viewing as SPOC for <strong>{{ session.plant_name }}</strong> ({{ session.unit_code }})</span>
-    <a href="{{ url_for('admin_clear_plant') }}" style="color:#fef3c7;background:rgba(0,0,0,0.25);border-radius:6px;padding:3px 12px;text-decoration:none;font-size:var(--fs-body);white-space:nowrap;">
+    <a href="{{ url_for('admin_clear_plant') }}" style="color:var(--c-warn-bg);background:rgba(0,0,0,0.25);border-radius:6px;padding:3px 12px;text-decoration:none;font-size:var(--fs-body);white-space:nowrap;">
       <i class="bi bi-arrow-left me-1"></i>Exit &amp; Return to Central
     </a>
   </div>
@@ -194,7 +194,7 @@
                 onclick="(function(b){var m=document.getElementById('userMenu');var o=m.classList.toggle('open');b.setAttribute('aria-expanded',o?'true':'false');})(this)">
           <div class="user-avatar">{{ (session.username or 'U')[0]|upper }}</div>
           <span class="uname user-text">{{ session.username or 'User' }}</span>
-          <i class="bi bi-chevron-down" style="font-size:var(--fs-xs);color:#9ca3af;" aria-hidden="true"></i>
+          <i class="bi bi-chevron-down" style="font-size:var(--fs-xs);color:var(--c-muted-3);" aria-hidden="true"></i>
         </button>
         <div class="user-dropdown" id="userMenuDropdown" role="menu" aria-labelledby="userMenuBtn">
           <div class="ud-header">
@@ -293,13 +293,13 @@
 <div class="modal fade" id="tmsConfirmModal" tabindex="-1" aria-labelledby="tmsConfirmTitle" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border:0;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-      <div class="modal-header" style="border-bottom:1px solid #fee2e2;background:#fef2f2;border-radius:14px 14px 0 0;">
-        <h5 class="modal-title" id="tmsConfirmTitle" style="font-size:var(--fs-base);font-weight:700;color:#991b1b;">
+      <div class="modal-header" style="border-bottom:1px solid #fee2e2;background:var(--c-danger-bg-soft);border-radius:14px 14px 0 0;">
+        <h5 class="modal-title" id="tmsConfirmTitle" style="font-size:var(--fs-base);font-weight:700;color:var(--c-danger-text);">
           <i class="bi bi-exclamation-triangle-fill me-1"></i><span id="tmsConfirmTitleText">Confirm</span>
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body" id="tmsConfirmBody" style="font-size:var(--fs-md);color:#374151;line-height:1.55;padding:18px 20px;">
+      <div class="modal-body" id="tmsConfirmBody" style="font-size:var(--fs-md);color:var(--c-text-2);line-height:1.55;padding:18px 20px;">
         Are you sure?
       </div>
       <div class="modal-footer" style="border-top:1px solid #f1f5f9;padding:12px 18px;">

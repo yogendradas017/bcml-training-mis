@@ -34,7 +34,7 @@
         {% for s in sessions %}
         {% set qr = qr_map.get(s.session_code, {}) %}
         <tr>
-          <td style="padding:6px 14px;color:#9ca3af;">{{ loop.index }}</td>
+          <td style="padding:6px 14px;color:var(--c-muted-3);">{{ loop.index }}</td>
           <td style="padding:6px 14px;font-family:monospace;font-size:var(--fs-sm);">{{ s.session_code }}</td>
           <td style="padding:6px 14px;font-weight:500;max-width:200px;">{{ s.programme_name }}</td>
           <td style="padding:6px 14px;">{{ s.prog_type or '—' }}</td>
@@ -52,7 +52,7 @@
             {% if fb_cnt > 0 %}
             <span class="badge bg-success" title="{{ fb_cnt }} feedback responses">{{ fb_cnt }}</span>
             {% else %}
-            <span style="color:#d1d5db;font-size:var(--fs-sm);">—</span>
+            <span style="color:var(--c-border-3);font-size:var(--fs-sm);">—</span>
             {% endif %}
           </td>
           <td style="padding:6px 14px;">
@@ -230,7 +230,7 @@
             <div class="col-12">
               <label class="form-label fw-semibold">Programme Name</label>
               <input type="text" name="programme_name" id="editProgName" class="form-control" readonly
-                     style="background:#f9fafb;">
+                     style="background:var(--c-surface-1);">
             </div>
             <div class="col-md-4">
               <label class="form-label">Programme Type</label>
