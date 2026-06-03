@@ -122,12 +122,7 @@
       </div>
       <select class="form-select" style="width:170px;" onchange="TBL.filter('prog2cTable','type',this.value)">
         <option value="">All Types</option>
-        <option>Behavioural/Leadership</option>
-        <option>Cane</option>
-        <option>Commercial</option>
-        <option>EHS/HR</option>
-        <option>IT</option>
-        <option>Technical</option>
+        {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
       </select>
       <select class="form-select" style="width:140px;" onchange="TBL.filter('prog2cTable','intext',this.value)">
         <option value="">Internal / External</option>
@@ -282,14 +277,16 @@ function _fill2C(val) {
 }
 (function(){
   var sel = document.getElementById('pc_session_code');
-  // Fallback: native select (no TomSelect)
+  if (!sel) return;
   sel.addEventListener('change', function(){ _fill2C(this.value); });
   if (typeof TomSelect !== 'undefined') {
-    new TomSelect(sel, {
-      allowEmptyOption: true,
-      placeholder: 'Type session code or programme name...',
-      onChange: function(val){ _fill2C(val); }
-    });
+    try {
+      new TomSelect(sel, {
+        allowEmptyOption: true,
+        placeholder: 'Type session code or programme name...',
+        onChange: function(val){ _fill2C(val); }
+      });
+    } catch(e) { console.error('pc_session_code TomSelect init:', e); }
   }
 })();
 

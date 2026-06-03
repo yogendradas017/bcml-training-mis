@@ -313,41 +313,45 @@
 </div>
 
 <script>
-// Programme name autocomplete for add modal
+// Programme name autocomplete for add modal — guarded against missing elements + fetch failure
 const addProgName = document.getElementById('addProgName');
 const addProgSugg = document.getElementById('addProgSugg');
 const addProgType = document.getElementById('addProgType');
 let addDebounce;
-addProgName.addEventListener('input', () => {
-  clearTimeout(addDebounce);
-  const q = addProgName.value.trim();
-  if (q.length < 1) { addProgSugg.style.display = 'none'; return; }
-  addDebounce = setTimeout(() => {
-    fetch(`/central/prog-search?q=${encodeURIComponent(q)}`)
-      .then(r => r.json()).then(data => {
-        addProgSugg.innerHTML = '';
-        if (!data.length) { addProgSugg.style.display = 'none'; return; }
-        data.forEach(d => {
-          const el = document.createElement('div');
-          el.style.cssText = 'cursor:pointer;padding:8px 14px;font-size:13px;border-bottom:1px solid #f0f0f0;';
-          el.innerHTML = `<strong>${d.name}</strong> <small style="color:#9ca3af;">${d.prog_type||''}</small>`;
-          el.onmouseenter = () => el.style.background = '#eff6ff';
-          el.onmouseleave = () => el.style.background = '';
-          el.onclick = () => {
-            addProgName.value = d.name;
-            if (d.prog_type) addProgType.value = d.prog_type;
-            addProgSugg.style.display = 'none';
-          };
-          addProgSugg.appendChild(el);
-        });
-        addProgSugg.style.display = 'block';
-      });
-  }, 250);
-});
-document.addEventListener('click', e => {
-  if (!addProgSugg.contains(e.target) && e.target !== addProgName)
-    addProgSugg.style.display = 'none';
-});
+if (addProgName && addProgSugg) {
+  addProgName.addEventListener('input', () => {
+    clearTimeout(addDebounce);
+    const q = addProgName.value.trim();
+    if (q.length < 1) { addProgSugg.style.display = 'none'; return; }
+    addDebounce = setTimeout(() => {
+      fetch(`/central/prog-search?q=${encodeURIComponent(q)}`, {credentials: 'same-origin'})
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(data => {
+          addProgSugg.innerHTML = '';
+          if (!Array.isArray(data) || !data.length) { addProgSugg.style.display = 'none'; return; }
+          data.forEach(d => {
+            const el = document.createElement('div');
+            el.style.cssText = 'cursor:pointer;padding:8px 14px;font-size:13px;border-bottom:1px solid #f0f0f0;';
+            el.innerHTML = `<strong>${d.name}</strong> <small style="color:#9ca3af;">${d.prog_type||''}</small>`;
+            el.onmouseenter = () => el.style.background = '#eff6ff';
+            el.onmouseleave = () => el.style.background = '';
+            el.onclick = () => {
+              addProgName.value = d.name;
+              if (d.prog_type && addProgType) addProgType.value = d.prog_type;
+              addProgSugg.style.display = 'none';
+            };
+            addProgSugg.appendChild(el);
+          });
+          addProgSugg.style.display = 'block';
+        })
+        .catch(e => { addProgSugg.style.display = 'none'; console.warn('prog-search:', e); });
+    }, 250);
+  });
+  document.addEventListener('click', e => {
+    if (!addProgSugg.contains(e.target) && e.target !== addProgName)
+      addProgSugg.style.display = 'none';
+  });
+}
 
 function setSelect(id, val) {
   const el = document.getElementById(id);

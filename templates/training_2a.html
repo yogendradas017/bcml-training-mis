@@ -137,12 +137,7 @@
       </select>
       <select class="form-select" style="width:170px;height:38px;" onchange="TBL.filter('training2aTable','type',this.value)">
         <option value="">All Types</option>
-        <option>Behavioural/Leadership</option>
-        <option>Cane</option>
-        <option>Commercial</option>
-        <option>EHS/HR</option>
-        <option>IT</option>
-        <option>Technical</option>
+        {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
       </select>
       <select class="form-select" style="width:145px;height:38px;" onchange="TBL.filter('training2aTable','source',this.value)">
         <option value="">All Sources</option>
@@ -151,10 +146,7 @@
       </select>
       <select class="form-select" style="width:135px;height:38px;" onchange="TBL.filter('training2aTable','month',this.value)">
         <option value="">All Months</option>
-        <option>April</option><option>May</option><option>June</option>
-        <option>July</option><option>August</option><option>September</option>
-        <option>October</option><option>November</option><option>December</option>
-        <option>January</option><option>February</option><option>March</option>
+        {% for mo in months %}<option>{{ mo }}</option>{% endfor %}
       </select>
     </div>
   </div>
@@ -272,18 +264,23 @@ function _fill2A(val) {
 }
 (function(){
   var sel = document.getElementById('tr_session_code');
-  // Fallback: native select (no TomSelect)
+  if (!sel) return;
   sel.addEventListener('change', function(){ _fill2A(this.value); });
   if (typeof TomSelect !== 'undefined') {
-    new TomSelect(sel, {
-      allowEmptyOption: true,
-      placeholder: 'Type session code or programme name...',
-      onChange: function(val){ _fill2A(val); }
-    });
+    try {
+      new TomSelect(sel, {
+        allowEmptyOption: true,
+        placeholder: 'Type session code or programme name...',
+        onChange: function(val){ _fill2A(val); }
+      });
+    } catch(e) { console.error('tr_session_code TomSelect init:', e); }
   }
 })();
 
-PROG_AC.setup(document.getElementById('tr_prog_name'));
+(function(){
+  var pn = document.getElementById('tr_prog_name');
+  if (pn) PROG_AC.setup(pn);
+})();
 
 (function(){
   const today = new Date();

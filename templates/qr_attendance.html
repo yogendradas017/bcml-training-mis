@@ -90,9 +90,10 @@ searchBox.addEventListener('input', () => {
   if (q.length < 2) { suggestions.style.display = 'none'; return; }
   debounce = setTimeout(() => {
     fetch(`/q/${TOKEN}/emp-search?q=${encodeURIComponent(q)}`)
-      .then(r => r.json()).then(data => {
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(data => {
         suggestions.innerHTML = '';
-        if (!data.length) {
+        if (!Array.isArray(data) || !data.length) {
           suggestions.innerHTML = '<div class="search-item text-muted">No match found</div>';
         } else {
           data.forEach(d => {
@@ -106,6 +107,11 @@ searchBox.addEventListener('input', () => {
           });
         }
         suggestions.style.display = 'block';
+      })
+      .catch(e => {
+        suggestions.innerHTML = '<div class="search-item text-muted">Search unavailable — try again</div>';
+        suggestions.style.display = 'block';
+        console.warn('emp-search:', e);
       });
   }, 300);
 });

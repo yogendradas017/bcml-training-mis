@@ -3,7 +3,7 @@ from datetime import datetime as _dt, date as _d, timedelta as _td
 
 from flask import render_template, request, redirect, url_for, session, flash, send_file
 
-from tms.constants import MONTHS_FY
+from tms.constants import MONTHS_FY, PROG_TYPES, MODES
 from tms.db import get_db
 from tms.decorators import spoc_required
 from tms.helpers import (
@@ -57,7 +57,8 @@ def _register(app):
         ).fetchall()
         sessions_list = list(own_sessions) + list(central_sessions)
         return render_template('training_2a.html', records=records, employees=emps,
-                               sessions=sessions_list, months=MONTHS_FY)
+                               sessions=sessions_list, months=MONTHS_FY,
+                               prog_types=PROG_TYPES, modes=MODES)
 
     @app.route('/training/add', methods=['POST'])
     @spoc_required

@@ -270,26 +270,15 @@
       </select>
       <select class="form-select" style="width:170px;" onchange="TBL.filter('calTable','type',this.value)">
         <option value="">All Types</option>
-        <option>Behavioural/Leadership</option>
-        <option>Cane</option>
-        <option>Commercial</option>
-        <option>EHS/HR</option>
-        <option>IT</option>
-        <option>Technical</option>
+        {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
       </select>
       <select class="form-select" style="width:130px;" onchange="TBL.filter('calTable','mode',this.value)">
         <option value="">All Modes</option>
-        <option>Classroom</option>
-        <option>OJT</option>
-        <option>SOP</option>
-        <option>Online</option>
+        {% for m in modes %}<option>{{ m }}</option>{% endfor %}
       </select>
       <select class="form-select" style="width:140px;" onchange="TBL.filter('calTable','month',this.value)">
         <option value="">All Months</option>
-        <option>April</option><option>May</option><option>June</option>
-        <option>July</option><option>August</option><option>September</option>
-        <option>October</option><option>November</option><option>December</option>
-        <option>January</option><option>February</option><option>March</option>
+        {% for mo in months %}<option>{{ mo }}</option>{% endfor %}
       </select>
       <select class="form-select" style="width:145px;" onchange="TBL.filter('calTable','audience',this.value)">
         <option value="">All Audience</option>
@@ -776,11 +765,24 @@ const _calProgTs = new TomSelect('#cal_prog_name', {
 });
 
 /* TNI Coverage Panel */
+let _covToken = 0;
+function _resetAddLocks() {
+  // Always reset prog_type + audience locks before fetching — prevents stale lock
+  // from previous TNI programme leaking into a non-TNI / different selection.
+  const typeEl = document.getElementById('add_type');
+  const typeBadge = document.getElementById('type-lock-badge');
+  if (typeEl) typeEl.disabled = false;
+  if (typeBadge) typeBadge.style.display = 'none';
+  _unlockAddAudience();
+}
 function _fetchCoverage(val) {
+  _resetAddLocks();
   if (!val) { document.getElementById('tni-coverage-panel').style.display='none'; return; }
+  const myToken = ++_covToken;
     fetch('/api/tni-coverage?q=' + encodeURIComponent(val))
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(d => {
+        if (myToken !== _covToken) return;   // stale response — newer fetch in flight
         if (!d.demand) { document.getElementById('tni-coverage-panel').style.display='none'; return; }
         document.getElementById('tni-cp-name').textContent      = val;
         document.getElementById('tni-cp-demand').textContent    = d.demand;
@@ -843,7 +845,10 @@ function _fetchCoverage(val) {
         window._addTniDemand = d.demand || 0;
         AddLiveValidate.run();
       })
-      .catch(() => { document.getElementById('tni-coverage-panel').style.display='none'; });
+      .catch((e) => {
+        document.getElementById('tni-coverage-panel').style.display='none';
+        console.warn('tni-coverage:', e);
+      });
 }
 
 function _unlockAddAudience() {

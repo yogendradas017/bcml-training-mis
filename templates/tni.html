@@ -197,19 +197,11 @@
       </select>
       <select id="tni-type" class="form-select" style="width:170px;">
         <option value="">All Types</option>
-        <option>Behavioural/Leadership</option>
-        <option>Cane</option>
-        <option>Commercial</option>
-        <option>EHS/HR</option>
-        <option>IT</option>
-        <option>Technical</option>
+        {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
       </select>
       <select id="tni-mode" class="form-select" style="width:130px;">
         <option value="">All Modes</option>
-        <option>Classroom</option>
-        <option>OJT</option>
-        <option>SOP</option>
-        <option>Online</option>
+        {% for m in modes %}<option>{{ m }}</option>{% endfor %}
       </select>
       <select id="tni-completed" class="form-select" style="width:130px;">
         <option value="">All Status</option>
@@ -263,14 +255,15 @@ const TNI = {
   },
 
   init() {
-    document.getElementById('tni-q').addEventListener('input', () => {
+    var $ = (id) => document.getElementById(id);
+    if ($('tni-q')) $('tni-q').addEventListener('input', () => {
       clearTimeout(this._timer); this._timer = setTimeout(() => this.load(true), 320);
     });
-    ['tni-collar','tni-dept','tni-type','tni-mode','tni-completed']
-      .forEach(id => document.getElementById(id).addEventListener('change', () => this.load(true)));
-    document.getElementById('tni-cb-all').addEventListener('change', e => this._togglePageAll(e.target.checked));
-    // hijack bulk-delete-btn for TNI
-    document.getElementById('bulk-delete-btn').addEventListener('click', () => this._bulkDelete());
+    ['tni-collar','tni-dept','tni-type','tni-mode','tni-completed'].forEach(id => {
+      const el = $(id); if (el) el.addEventListener('change', () => this.load(true));
+    });
+    if ($('tni-cb-all')) $('tni-cb-all').addEventListener('change', e => this._togglePageAll(e.target.checked));
+    if ($('bulk-delete-btn')) $('bulk-delete-btn').addEventListener('click', () => this._bulkDelete());
     // hijack cancel button
     document.querySelector('#bulk-bar [onclick="BulkSelect.clear()"]')
       ?.setAttribute('onclick','TNI.clear()');
@@ -509,7 +502,10 @@ const TNI = {
 };
 
 TNI.init();
-PROG_AC.setup(document.getElementById('tni_prog_input'));
+(function(){
+  var pn = document.getElementById('tni_prog_input');
+  if (pn) PROG_AC.setup(pn);
+})();
 
 function toggleTniProgField(src) {
   const hint = document.getElementById('tni-new-prog-hint');
