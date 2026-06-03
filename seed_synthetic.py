@@ -109,7 +109,7 @@ def seed(db):
             db.execute(
                 "INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, mode, source) "
                 "VALUES(?,?,?,?,?)",
-                (plant['id'], pname, ptype, 'Offline', 'TNI Driven')
+                (plant['id'], pname, ptype, 'Classroom', 'TNI Driven')
             )
     db.commit()
     print(f"  Done: {len(PROGRAMMES)} programmes × 10 plants")
@@ -229,7 +229,7 @@ def seed(db):
                 ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (pid, prog_code, session_code, 'TNI Driven', s['pname'], s['ptype'],
                  s['month'], str(s['start']), str(s['end']),
-                 s['dur'], 'Basic', 'Offline',
+                 s['dur'], 'Basic', 'Classroom',
                  s['audience'], pax, 'Internal Faculty', status, 0)
             )
             cal_total += 1
@@ -247,7 +247,7 @@ def seed(db):
                 "cost, venue, course_feedback, faculty_feedback"
                 ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (pid, session_code, s['pname'], s['ptype'], 'Basic', 'Calendar Program',
-                 'Offline', str(s['start']), str(s['end']),
+                 'Classroom', str(s['start']), str(s['end']),
                  s['audience'], s['dur'],
                  random.choice(['Internal Faculty', 'External Trainer']),
                  random.choice(['Internal', 'External']),
@@ -282,7 +282,7 @@ def seed(db):
                     ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (pid, emp, session_code, s['pname'],
                      str(s['start']), str(s['end']),
-                     s['dur'], s['ptype'], 'Basic', 'Offline', 'Calendar Program',
+                     s['dur'], s['ptype'], 'Basic', 'Classroom', 'Calendar Program',
                      pre, post,
                      f"{plant['name']} Training Hall",
                      s['month'], pid)

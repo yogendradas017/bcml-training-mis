@@ -278,6 +278,30 @@ def _migrate_central_plant(db):
         logging.warning(f'_migrate_central_plant failed: {e}')
 
 
+def _migrate_mode_offline_to_classroom(db):
+    """One-time data hygiene: collapse legacy 'Offline' mode to canonical 'Classroom'.
+    Per tms.constants.MODES (Classroom/OJT/SOP/Online), 'Offline' is not a valid value —
+    it was emitted by older seed_synthetic.py. Hygiene engine in helpers maps the same
+    direction (Offline -> Classroom)."""
+    import logging
+    try:
+        n_cal = db.execute(
+            "UPDATE calendar SET mode='Classroom' WHERE mode='Offline'").rowcount
+        n_pd = db.execute(
+            "UPDATE programme_details SET mode='Classroom' WHERE mode='Offline'").rowcount
+        n_pm = db.execute(
+            "UPDATE programme_master SET mode='Classroom' WHERE mode='Offline'").rowcount
+        n_tni = db.execute(
+            "UPDATE tni SET mode='Classroom' WHERE mode='Offline'").rowcount
+        if (n_cal + n_pd + n_pm + n_tni) > 0:
+            db.commit()
+            logging.info(
+                f"_migrate_mode_offline_to_classroom: calendar={n_cal} "
+                f"programme_details={n_pd} programme_master={n_pm} tni={n_tni}")
+    except Exception as e:
+        logging.warning(f'_migrate_mode_offline_to_classroom failed: {e}')
+
+
 def _migrate_calendar_is_central(db):
     import logging
     try:
@@ -694,6 +718,7 @@ def init_db():
     _migrate_session_pin(db)
     _migrate_central_plant(db)
     _migrate_calendar_is_central(db)
+    _migrate_mode_offline_to_classroom(db)
     _migrate_emp_training_host(db)
     _migrate_corp_members(db)
     _migrate_central_user_plant(db)
