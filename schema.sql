@@ -251,6 +251,7 @@ CREATE TABLE IF NOT EXISTS spoc_requests (
     requested_by TEXT    NOT NULL,
     request_type TEXT    NOT NULL CHECK(request_type IN ('TNI_ADD','MARK_CONDUCTED','MANUAL_ATTENDANCE','OTHER')),
     details      TEXT    NOT NULL,
+    payload_json TEXT,
     status       TEXT    DEFAULT 'Pending' CHECK(status IN ('Pending','Approved','Rejected')),
     reviewed_by  TEXT,
     reviewed_at  TEXT,
@@ -258,6 +259,8 @@ CREATE TABLE IF NOT EXISTS spoc_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_spoc_req_plant  ON spoc_requests(plant_id, status);
 CREATE INDEX IF NOT EXISTS idx_spoc_req_status ON spoc_requests(status);
+CREATE INDEX IF NOT EXISTS idx_cal_session ON calendar(plant_id, session_code);
+CREATE INDEX IF NOT EXISTS idx_pd_session  ON programme_details(plant_id, session_code);
 
 CREATE TABLE IF NOT EXISTS verification_log (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,

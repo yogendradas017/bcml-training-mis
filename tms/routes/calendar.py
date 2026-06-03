@@ -29,12 +29,15 @@ def _register(app):
         _sync_calendar_from_2c(plant_id, db)
 
         # Tier 5: auto-archive (Lapsed) sessions from prior FY that are still
-        # 'To Be Planned' or 'Awaiting Verification' — they will never be conducted.
+        # 'To Be Planned' — they will never be conducted.
+        # Awaiting Verification rows are NOT lapsed at FY rollover — they
+        # represent conducted sessions still pending SPOC confirmation and
+        # must survive the cycle boundary until verified or rejected.
         # Idempotent — runs cheap UPDATE, no-op if nothing matches.
         fy_start, _fy_end = _current_fy()
         lapsed_rows = db.execute(
             "UPDATE calendar SET status='Lapsed' "
-            "WHERE plant_id=? AND status IN ('To Be Planned','Awaiting Verification') "
+            "WHERE plant_id=? AND status IN ('To Be Planned') "
             "AND plan_start IS NOT NULL AND plan_start != '' AND plan_start < ?",
             (plant_id, fy_start)
         ).rowcount

@@ -1,5 +1,5 @@
 import io
-from datetime import datetime as _dt
+from datetime import datetime as _dt, date as _d, timedelta as _td
 
 from flask import render_template, request, redirect, url_for, session, flash, send_file
 
@@ -176,7 +176,6 @@ def _register(app):
             if tgt in ('Blue Collared', 'White Collared') and emp_row['collar'] and emp_row['collar'] != tgt:
                 anomaly_flags.append(f'collar_mismatch({emp_row["collar"]} vs {tgt})')
             if start_date and cal['plan_start'] and cal['plan_end']:
-                from datetime import timedelta as _td
                 try:
                     d_start = _d.fromisoformat(start_date)
                     win_lo  = _d.fromisoformat(cal['plan_start']) - _td(days=1)
@@ -382,7 +381,6 @@ def _register(app):
                 if tgt in ('Blue Collared', 'White Collared') and emp['collar'] and emp['collar'] != tgt:
                     row_anom.append(f'collar_mismatch({emp["collar"]} vs {tgt})')
                 if start_date and cal['plan_start'] and cal['plan_end']:
-                    from datetime import timedelta as _td
                     try:
                         d_start = _d.fromisoformat(start_date)
                         win_lo  = _d.fromisoformat(cal['plan_start']) - _td(days=1)

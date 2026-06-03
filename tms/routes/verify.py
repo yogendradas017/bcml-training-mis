@@ -1,10 +1,42 @@
-from datetime import datetime as _dt
+import logging
 
 from flask import render_template, request, redirect, url_for, session, flash
 
 from tms.db import get_db
 from tms.decorators import central_required
 from tms.audit import log_action, log_record_change
+from tms.helpers import _now_ist
+
+
+def seed_effectiveness_reviews(plant_id, session_code, after_snap, db):
+    """SOP: Specialized programmes trigger 3-month post-training effectiveness
+    review for every attendee. Seeds pending review rows so SPOC can track and
+    central/admin sees pending count. Caller owns db.commit().
+
+    Returns (seeded_count, due_date_iso). Returns (0, None) when programme is
+    not Specialized or after_snap is missing. Set-based INSERT...SELECT keeps
+    SQLite write-lock hold time at single-statement latency.
+    """
+    if not after_snap:
+        return 0, None
+    if (after_snap['category'] or 'General') != 'Specialized':
+        return 0, None
+    from datetime import date as _d, timedelta as _td
+    conducted_date = (after_snap['plan_end'] or after_snap['plan_start'] or
+                      _now_ist().isoformat(timespec='seconds')[:10])
+    try:
+        due_date = (_d.fromisoformat(conducted_date) + _td(days=90)).isoformat()
+    except (ValueError, TypeError):
+        due_date = conducted_date  # degenerate fallback
+    cur = db.execute(
+        'INSERT OR IGNORE INTO effectiveness_review '
+        '(plant_id, session_code, emp_code, conducted_date, due_date) '
+        'SELECT ?, ?, emp_code, ?, ? '
+        'FROM (SELECT DISTINCT emp_code FROM emp_training '
+        '      WHERE plant_id=? AND session_code=?)',
+        (plant_id, session_code, conducted_date, due_date,
+         plant_id, session_code))
+    return cur.rowcount or 0, due_date
 
 
 # Tier 6: verification checklist items — all must be ticked before approve.
@@ -76,56 +108,50 @@ def _register(app):
                                      plant_id=plant_id))
         note = note[:500]
 
-        now_iso  = _dt.now().isoformat(timespec='seconds')
+        now_iso  = _now_ist().isoformat(timespec='seconds')
         user_id  = session.get('user_id')
         username = session.get('username', '')
         before_snap_dict = dict(cal)
-        db.execute(
-            "UPDATE calendar SET status='Conducted', verified_at=?, verified_by=? "
-            "WHERE session_code=? AND plant_id=?",
-            (now_iso, user_id, session_code, plant_id))
-        after_snap = db.execute(
-            'SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
-            (session_code, plant_id)).fetchone()
-        db.execute(
-            'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail) '
-            'VALUES (?,?,?,?,?,?)',
-            (session_code, plant_id, 'verified', username, user_id,
-             f'approved; checklist=all; note: {note}'))
-        db.commit()
+
+        # Atomic block: calendar flip + verification_log + effectiveness seeding
+        # must all succeed or all roll back. Mid-loop failure that committed
+        # 'Conducted' without seeding would leave the session stuck — the state
+        # guard above would then block any retry.
+        seeded = 0
+        due_date = None
+        after_snap = None
+        try:
+            db.execute(
+                "UPDATE calendar SET status='Conducted', verified_at=?, verified_by=? "
+                "WHERE session_code=? AND plant_id=?",
+                (now_iso, user_id, session_code, plant_id))
+            after_snap = db.execute(
+                'SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
+                (session_code, plant_id)).fetchone()
+            db.execute(
+                'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail) '
+                'VALUES (?,?,?,?,?,?)',
+                (session_code, plant_id, 'verified', username, user_id,
+                 f'approved; checklist=all; note: {note}'))
+            seeded, due_date = seed_effectiveness_reviews(
+                plant_id, session_code, after_snap, db)
+            db.commit()
+        except Exception:
+            db.rollback()
+            logging.exception('verify_approve atomic block failed for %s/%s',
+                              session_code, plant_id)
+            flash('Approve failed — transaction rolled back. Try again or contact admin.',
+                  'danger')
+            return redirect(url_for('verify_trail', session_code=session_code,
+                                     plant_id=plant_id))
+
+        # Audit log AFTER the atomic commit (log_record_change commits its own
+        # tx for the hash chain; inside the try it would prematurely flush a
+        # partial write before seeding completes).
         log_record_change('VERIFY_APPROVE', cal['id'], 'calendar',
                           before=before_snap_dict,
                           after=dict(after_snap) if after_snap else None,
                           extra_detail=f'note:{note[:200]}')
-
-        # SOP: Specialized programmes trigger 3-month post-training effectiveness
-        # review for every attendee. Seed pending review rows now so SPOC can
-        # track + central/admin sees pending count.
-        seeded = 0
-        if after_snap and (after_snap['category'] or 'General') == 'Specialized':
-            conducted_date = (after_snap['plan_end'] or after_snap['plan_start'] or
-                              now_iso[:10])
-            from datetime import date as _d, timedelta as _td
-            try:
-                due_date = (_d.fromisoformat(conducted_date) +
-                             _td(days=90)).isoformat()
-            except (ValueError, TypeError):
-                due_date = conducted_date  # degenerate fallback
-            attendees = db.execute(
-                'SELECT DISTINCT emp_code FROM emp_training '
-                'WHERE plant_id=? AND session_code=?',
-                (plant_id, session_code)).fetchall()
-            for a in attendees:
-                cur = db.execute(
-                    'INSERT OR IGNORE INTO effectiveness_review '
-                    '(plant_id, session_code, emp_code, conducted_date, due_date) '
-                    'VALUES (?,?,?,?,?)',
-                    (plant_id, session_code, a['emp_code'],
-                     conducted_date, due_date))
-                if cur.rowcount:
-                    seeded += 1
-            if seeded:
-                db.commit()
 
         msg = f'Session {session_code} verified — now counted as Conducted.'
         if seeded:

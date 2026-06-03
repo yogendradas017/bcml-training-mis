@@ -321,9 +321,17 @@ def _new_session_code(plant_id, prog_code, db):
 # ── Calendar sync ─────────────────────────────────────────────────────────────
 
 def _sync_calendar_from_2c(plant_id, db):
+    # Guard: never overwrite verify-queue / terminal states. Only promote
+    # in-flight statuses (e.g. 'To Be Planned', 'Planned') to 'Conducted'.
+    # Without this guard, a session sitting in 'Awaiting Verification' would
+    # be silently flipped to 'Conducted' on any calendar page load, bypassing
+    # the SPOC verification step. Lapsed / Cancelled / Re-Scheduled are
+    # terminal and must also be preserved.
     db.execute('''UPDATE calendar SET status='Conducted'
         WHERE plant_id=? AND session_code IN
-        (SELECT session_code FROM programme_details WHERE plant_id=?)''', (plant_id, plant_id))
+        (SELECT session_code FROM programme_details WHERE plant_id=?)
+        AND status NOT IN ('Awaiting Verification','Conducted','Lapsed','Cancelled','Re-Scheduled')''',
+        (plant_id, plant_id))
     programmes = db.execute(
         'SELECT DISTINCT programme_name FROM calendar WHERE plant_id=?', (plant_id,)).fetchall()
     for row in programmes:
@@ -711,6 +719,110 @@ def _cleanse_programme_names(db, plant_id=None):
             merged += 1
         db.commit()
         report[pid] = {'fixed': fixed, 'merged': merged}
+    return report
+
+
+_EMP_FIELD_NORM = {'designation': 'title', 'department': 'upper', 'section': 'upper'}
+
+
+def _canonical_emp_field(raw, plant_id, db, column, cutoff=0.88, _existing=None):
+    """Normalize + fuzzy-snap an employee field (designation/department/section)
+    to an existing canonical value for this plant. Returns the canonical string,
+    or the normalized raw if no fuzzy hit. Case-insensitive comparison."""
+    if not raw or not str(raw).strip():
+        return ''
+    s = str(raw).strip()
+    mode = _EMP_FIELD_NORM.get(column, 'title')
+    if mode == 'upper':
+        s = s.upper()
+    else:
+        s = _smart_title(s)
+    if column not in _EMP_FIELD_NORM:
+        return s
+    if _existing is None:
+        rows = db.execute(
+            f"SELECT DISTINCT TRIM({column}) FROM employees "
+            f"WHERE plant_id=? AND {column} IS NOT NULL AND {column}!=''",
+            (plant_id,)).fetchall()
+        _existing = [r[0] for r in rows if r[0]]
+    if not _existing:
+        return s
+    from difflib import get_close_matches as gcm
+    lower_map = {e.lower(): e for e in _existing}
+    if s.lower() in lower_map:
+        return lower_map[s.lower()]
+    m = gcm(s.lower(), list(lower_map.keys()), n=1, cutoff=cutoff)
+    if m:
+        return lower_map[m[0]]
+    return s
+
+
+def _cleanse_emp_fields(db, plant_id=None):
+    """One-time normalize designation (smart-title) + fuzzy-collapse drift across
+    designation/department/section for each plant. Picks the most-common
+    cluster representative as canonical. Idempotent — safe to run on startup."""
+    from difflib import get_close_matches as gcm
+    report = {}
+    plants = [plant_id] if plant_id else [
+        r[0] for r in db.execute('SELECT DISTINCT plant_id FROM employees').fetchall()]
+    for pid in plants:
+        plant_report = {}
+        for column in ('designation', 'department', 'section'):
+            mode = _EMP_FIELD_NORM[column]
+            rows = db.execute(
+                f"SELECT id, {column} FROM employees "
+                f"WHERE plant_id=? AND {column} IS NOT NULL AND {column}!=''",
+                (pid,)).fetchall()
+            if not rows:
+                continue
+            normed = []
+            for r in rows:
+                v = (r[column] or '').strip()
+                if not v:
+                    normed.append((r['id'], '', ''))
+                    continue
+                if mode == 'upper':
+                    v_norm = v.upper()
+                else:
+                    v_norm = _smart_title(v)
+                normed.append((r['id'], v, v_norm))
+            freq = {}
+            for _, _, vn in normed:
+                if vn:
+                    freq[vn] = freq.get(vn, 0) + 1
+            distinct = sorted(freq.keys(), key=lambda k: (-freq[k], -len(k)))
+            canonical_map = {}
+            for v in distinct:
+                if v in canonical_map:
+                    continue
+                vl = v.lower()
+                hit = None
+                for c in canonical_map.values():
+                    if c.lower() == vl:
+                        hit = c
+                        break
+                if hit is None:
+                    cand_lowers = list({c.lower(): c for c in canonical_map.values()}.keys())
+                    if cand_lowers:
+                        m = gcm(vl, cand_lowers, n=1, cutoff=0.88)
+                        if m:
+                            hit = {c.lower(): c for c in canonical_map.values()}[m[0]]
+                canonical_map[v] = hit if hit else v
+            updated = 0
+            for rid, orig, vn in normed:
+                if not vn:
+                    continue
+                canonical = canonical_map.get(vn, vn)
+                if canonical != orig:
+                    db.execute(
+                        f'UPDATE employees SET {column}=? WHERE id=?',
+                        (canonical, rid))
+                    updated += 1
+            if updated:
+                plant_report[column] = updated
+        db.commit()
+        if plant_report:
+            report[pid] = plant_report
     return report
 
 

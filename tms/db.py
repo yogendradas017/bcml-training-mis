@@ -1,3 +1,4 @@
+import logging
 import os
 import sqlite3
 from flask import g
@@ -26,6 +27,8 @@ def _ensure_indexes(db):
         CREATE INDEX IF NOT EXISTS idx_et_plant_date ON emp_training(plant_id, start_date);
         CREATE INDEX IF NOT EXISTS idx_et_session ON emp_training(plant_id, session_code);
         CREATE INDEX IF NOT EXISTS idx_cal_plant_plan ON calendar(plant_id, plan_start);
+        CREATE INDEX IF NOT EXISTS idx_cal_session ON calendar(plant_id, session_code);
+        CREATE INDEX IF NOT EXISTS idx_pd_session  ON programme_details(plant_id, session_code);
     ''')
     db.commit()
 
@@ -660,10 +663,20 @@ def _migrate_spoc_requests(db):
     except Exception as e:
         logging.warning(f'_migrate_spoc_requests failed: {e}')
 
+    # Phase 2: payload_json column for typed request executor (idempotent ALTER).
+    try:
+        cols = {r[1] for r in db.execute('PRAGMA table_info(spoc_requests)').fetchall()}
+        if 'payload_json' not in cols:
+            db.execute('ALTER TABLE spoc_requests ADD COLUMN payload_json TEXT')
+            db.commit()
+    except Exception as e:
+        logging.warning(f'_migrate_spoc_requests payload_json failed: {e}')
+
 
 def init_db():
     from tms.helpers import (
-        _cleanse_master_spelling, _cleanse_programme_names, _cleanup_stale_analyze_files
+        _cleanse_master_spelling, _cleanse_programme_names,
+        _cleanse_emp_fields, _cleanup_stale_analyze_files
     )
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     db = sqlite3.connect(DB_PATH)
@@ -708,6 +721,10 @@ def init_db():
     db.commit()
     _cleanse_master_spelling(db)
     _cleanse_programme_names(db)
+    try:
+        _cleanse_emp_fields(db)
+    except Exception as e:
+        logging.warning(f'_cleanse_emp_fields failed: {e}')
     db.commit()
     db.close()
     _cleanup_stale_analyze_files()

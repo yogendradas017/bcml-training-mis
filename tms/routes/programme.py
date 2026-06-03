@@ -10,13 +10,14 @@ from tms.helpers import (
     _is_ajax, _smart_title, _prog_in_use, _canonical_prog,
     _read_upload_file, _clean, _safe_float, _error_excel_response,
     _sync_master_from_tni, _current_fy, _in_current_fy, _parse_date_strict,
-    _validate_time_vs_duration, _today_ist,
+    _validate_time_vs_duration, _today_ist, _now_ist,
 )
 
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from tms.audit import log_action, log_record_change
+from tms.routes.verify import seed_effectiveness_reviews
 
 
 def _register(app):
@@ -500,7 +501,6 @@ def _register(app):
             flash(f'Note: 2C hours ({hours}) differ from average 2A hours ({avg_2a:.1f}) by >25%. Saved — please verify.', 'warning')
 
         # Phase 5: compute extended anomalies for verification path
-        from datetime import datetime as _dt
         sum_hrs = db.execute(
             'SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND session_code=?',
             (plant_id, session_code)).fetchone()[0]
@@ -572,7 +572,7 @@ def _register(app):
                  anom_pd))
         db.commit()
 
-        now_iso  = _dt.now().isoformat(timespec='seconds')
+        now_iso  = _now_ist().isoformat(timespec='seconds')
         user_id  = session.get('user_id')
         username = session.get('username', '')
         user_role = session.get('role')
@@ -598,6 +598,18 @@ def _register(app):
              '; '.join(anomalies) if anomalies else 'clean'))
         db.commit()
 
+        # Admin/Central 2C save bypasses verify_approve, so seed effectiveness
+        # reviews here for Specialized programmes (parity with verify_approve).
+        eff_seeded, eff_due = 0, None
+        if new_status == 'Conducted':
+            cal_after = db.execute(
+                'SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
+                (session_code, plant_id)).fetchone()
+            eff_seeded, eff_due = seed_effectiveness_reviews(
+                plant_id, session_code, cal_after, db)
+            if eff_seeded:
+                db.commit()
+
         # Audit Tier 3: snapshot the 2C row in payload (INSERT or UPDATE-of-stub)
         new_pd = db.execute(
             'SELECT * FROM programme_details WHERE plant_id=? AND session_code=? LIMIT 1',
@@ -609,7 +621,11 @@ def _register(app):
             after=dict(new_pd) if new_pd else None,
             extra_detail=f'status:{new_status}')
         if new_status == 'Conducted':
-            flash(f'Programme {session_code} saved and verified.', 'success')
+            extra = ''
+            if eff_seeded:
+                extra = (f' {eff_seeded} effectiveness review(s) seeded — '
+                         f'manager input due by {eff_due}.')
+            flash(f'Programme {session_code} saved and verified.{extra}', 'success')
         else:
             n_anom = len(anomalies)
             anom_str = f' ({n_anom} anomal{"y" if n_anom == 1 else "ies"} flagged)' if anomalies else ''
@@ -795,7 +811,6 @@ def _register(app):
                 continue
 
             # Phase 5: anomaly check + status routing (25% standard)
-            from datetime import datetime as _dt2
             sum_hrs = db.execute(
                 'SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND session_code=?',
                 (plant_id, sc)).fetchone()[0]
@@ -839,7 +854,7 @@ def _register(app):
                  cal['target_audience'], hrs, faculty, int_ext, cost, venue, cfb, ffb, tfbp, tfbf,
                  anom_pd_bulk))
 
-            now_iso  = _dt2.now().isoformat(timespec='seconds')
+            now_iso  = _now_ist().isoformat(timespec='seconds')
             user_id  = session.get('user_id')
             username = session.get('username', '')
             user_role = session.get('role')
@@ -862,6 +877,15 @@ def _register(app):
                 'VALUES (?,?,?,?,?,?)',
                 (sc, plant_id, stage, username, user_id,
                  '; '.join(row_anomalies) if row_anomalies else 'clean'))
+
+            # Admin/Central bulk save bypasses verify_approve — seed effectiveness
+            # reviews for Specialized programmes (parity with verify_approve).
+            if new_status == 'Conducted':
+                cal_after_bulk = db.execute(
+                    'SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
+                    (sc, plant_id)).fetchone()
+                seed_effectiveness_reviews(plant_id, sc, cal_after_bulk, db)
+
             inserted += 1
         db.commit()
         if errors:

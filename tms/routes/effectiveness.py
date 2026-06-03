@@ -161,10 +161,10 @@ def _register(app):
         db.execute('''UPDATE effectiveness_review SET
             completed_date=?, rating=?, behaviour_change=?,
             application_on_job=?, comments=?,
-            filed_by=?, filed_at=datetime('now','localtime')
+            filed_by=?, filed_at=?
             WHERE id=?''',
             (now_iso, rating, behaviour, application, comments,
-             session.get('user_id'), eff_id))
+             session.get('user_id'), now_iso, eff_id))
         db.commit()
         after = db.execute('SELECT * FROM effectiveness_review WHERE id=?',
                            (eff_id,)).fetchone()

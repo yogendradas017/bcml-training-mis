@@ -7,7 +7,7 @@ import sqlite3
 from tms.constants import GENDERS, GRADES, CATEGORIES, COLLARS, PH_OPTIONS, TEMP_UPLOAD_DIR
 from tms.db import get_db
 from tms.decorators import spoc_required
-from tms.helpers import normalise_collar, _today_ist
+from tms.helpers import normalise_collar, _today_ist, _canonical_emp_field, _smart_title
 from tms.audit import log_action, log_record_change
 
 try:
@@ -32,6 +32,14 @@ def _plant_sections(db, plant_id):
     rows = db.execute(
         "SELECT DISTINCT UPPER(TRIM(section)) FROM employees "
         "WHERE plant_id=? AND section IS NOT NULL AND section!='' ORDER BY 1",
+        (plant_id,)).fetchall()
+    return [r[0] for r in rows]
+
+
+def _plant_designations(db, plant_id):
+    rows = db.execute(
+        "SELECT DISTINCT TRIM(designation) FROM employees "
+        "WHERE plant_id=? AND designation IS NOT NULL AND designation!='' ORDER BY 1",
         (plant_id,)).fetchall()
     return [r[0] for r in rows]
 
@@ -92,13 +100,33 @@ def _register(app):
             (plant_id,)).fetchall()
         departments = _plant_depts(db, plant_id)
         sections = _plant_sections(db, plant_id)
+        designations = _plant_designations(db, plant_id)
         return render_template('employees.html',
                                employees=emps, show_exited=show_exited,
                                recent_exited=recent_exited,
                                genders=GENDERS, grades=GRADES, categories=CATEGORIES,
                                collars=COLLARS, ph_options=PH_OPTIONS,
                                departments=departments, sections=sections,
+                               designations=designations,
                                today=str(_today_ist()))
+
+    @app.route('/employees/suggest-similar')
+    @spoc_required
+    def emp_suggest_similar():
+        """UI fuzzy-suggest before user creates new designation/dept/section value.
+        Returns {similar: <canonical>} if a close existing match exists, else {}."""
+        from flask import jsonify
+        plant_id = session['plant_id']
+        field = (request.args.get('field') or '').strip()
+        value = (request.args.get('value') or '').strip()
+        if field not in ('designation', 'department', 'section') or not value:
+            return jsonify({})
+        db = get_db()
+        canonical = _canonical_emp_field(value, plant_id, db, field)
+        # Only flag if canonical differs (case-insensitive) from raw input
+        if canonical and canonical.lower() != value.lower():
+            return jsonify({'similar': canonical, 'raw': value})
+        return jsonify({})
 
     @app.route('/employees/add', methods=['POST'])
     @spoc_required
@@ -115,8 +143,9 @@ def _register(app):
             return redirect(url_for('employees'))
         collar = normalise_collar(f.get('collar', ''))
         grade = (f.get('grade') or '').strip().upper() or ''
-        dept = (f.get('department') or '').strip().upper() or ''
-        sect = (f.get('section') or '').strip().upper() or ''
+        desig = _canonical_emp_field(f.get('designation', ''), plant_id, db, 'designation')
+        dept = _canonical_emp_field(f.get('department', ''), plant_id, db, 'department')
+        sect = _canonical_emp_field(f.get('section', ''), plant_id, db, 'section')
         cat = (f.get('category') or '').strip().upper() or ''
         try:
             db.execute('''INSERT INTO employees
@@ -124,7 +153,7 @@ def _register(app):
                  category,gender,physically_handicapped,remarks)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (plant_id, f['emp_code'].strip(), f['name'].strip(),
-                 f.get('designation', '').strip(), grade, collar,
+                 desig, grade, collar,
                  dept, sect, cat,
                  f.get('gender', ''), f.get('physically_handicapped', 'No'),
                  f.get('remarks', '')))
@@ -157,14 +186,15 @@ def _register(app):
             return redirect(url_for('employees'))
         collar = normalise_collar(f.get('collar', ''))
         grade  = (f.get('grade') or '').strip().upper()
-        dept   = (f.get('department') or '').strip().upper()
-        sect   = (f.get('section') or '').strip().upper()
+        desig  = _canonical_emp_field(f.get('designation', ''), plant_id, db, 'designation')
+        dept   = _canonical_emp_field(f.get('department', ''),  plant_id, db, 'department')
+        sect   = _canonical_emp_field(f.get('section', ''),     plant_id, db, 'section')
         cat    = (f.get('category') or '').strip().upper()
         db.execute('''UPDATE employees SET
             name=?, designation=?, grade=?, collar=?, department=?, section=?,
             category=?, gender=?, physically_handicapped=?, remarks=?
             WHERE id=? AND plant_id=?''',
-            (f['name'].strip(), f.get('designation','').strip(), grade, collar,
+            (f['name'].strip(), desig, grade, collar,
              dept, sect, cat, f.get('gender',''),
              f.get('physically_handicapped','No'), f.get('remarks',''),
              emp_id, plant_id))
@@ -375,6 +405,18 @@ def _register(app):
         }
         seen_in_file = {}  # emp_code -> first row number (detect within-file duplicates)
 
+        # Pre-load distinct values per fuzzy-cleansed field. Grows as new rows
+        # are accepted in this batch so within-file drift also snaps.
+        existing_desig = list({r[0] for r in db.execute(
+            "SELECT DISTINCT TRIM(designation) FROM employees WHERE plant_id=? "
+            "AND designation IS NOT NULL AND designation!=''", (plant_id,)).fetchall() if r[0]})
+        existing_dept = list({r[0] for r in db.execute(
+            "SELECT DISTINCT TRIM(department) FROM employees WHERE plant_id=? "
+            "AND department IS NOT NULL AND department!=''", (plant_id,)).fetchall() if r[0]})
+        existing_sect = list({r[0] for r in db.execute(
+            "SELECT DISTINCT TRIM(section) FROM employees WHERE plant_id=? "
+            "AND section IS NOT NULL AND section!=''", (plant_id,)).fetchall() if r[0]})
+
         for i, row in enumerate(rows, start=2):
             if not any(row):
                 continue
@@ -406,8 +448,9 @@ def _register(app):
 
             grade  = grade_raw.upper()
             collar = normalise_collar(collar_raw)
-            dept   = dept_raw.upper()
-            sect   = sect_raw.upper()
+            desig  = _canonical_emp_field(desig, plant_id, db, 'designation', _existing=existing_desig)
+            dept   = _canonical_emp_field(dept_raw, plant_id, db, 'department', _existing=existing_dept)
+            sect   = _canonical_emp_field(sect_raw, plant_id, db, 'section', _existing=existing_sect)
             cat    = cat_raw.upper()
             gender = gender_raw
             ph     = ph_raw if ph_raw in PH_OPTIONS else ''
@@ -447,6 +490,9 @@ def _register(app):
                 (plant_id, emp_code, name, desig, grade, collar,
                  dept, sect, cat, gender, ph or 'No', remarks))
             existing_codes.add(emp_code)
+            if desig and desig not in existing_desig: existing_desig.append(desig)
+            if dept  and dept  not in existing_dept:  existing_dept.append(dept)
+            if sect  and sect  not in existing_sect:  existing_sect.append(sect)
             inserted += 1
 
         db.commit()
@@ -682,9 +728,9 @@ def _register(app):
                         continue
                     updates[db_col] = val
                 else:
-                    # Free-text — uppercase dept/section to match existing convention
-                    if db_col in ('department', 'section'):
-                        updates[db_col] = val.upper()
+                    # Free-text — fuzzy-canonicalize designation/department/section
+                    if db_col in ('department', 'section', 'designation'):
+                        updates[db_col] = _canonical_emp_field(val, plant_id, db, db_col)
                     else:
                         updates[db_col] = val
 
