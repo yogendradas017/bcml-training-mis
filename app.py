@@ -131,6 +131,14 @@ def close_db(e=None):
 
 
 @app.context_processor
+def inject_fy_label():
+    """Single source of truth for FY label in all templates.
+    Avoids hardcoded 'FY 2026–27' strings that go stale on Apr 1."""
+    from tms.helpers import _fy_label_long, _fy_label
+    return {'fy_label_long': _fy_label_long(), 'fy_label_short': _fy_label()}
+
+
+@app.context_processor
 def inject_pending_verify_count():
     """Make pending verification + anomaly counts visible to base.html sidebar."""
     role = session.get('role')

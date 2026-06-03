@@ -44,7 +44,7 @@
         <div class="sc-icon"><i class="bi bi-calendar3"></i></div>
         <div class="sc-val">{{ grand.sessions }}</div>
         <div class="sc-lbl">Sessions Planned</div>
-        <div class="sc-sub">FY 2026–27</div>
+        <div class="sc-sub">FY {{ fy_label_long }}</div>
       </div>
       <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
     </div>
@@ -106,7 +106,7 @@
 
 <!-- ── Plant-wise Summary Table ───────────────────────────────────────── -->
 <div class="card mb-4">
-  <div class="ch-dark"><i class="bi bi-building"></i> Plant-wise Training Summary — FY 2026-27</div>
+  <div class="ch-dark"><i class="bi bi-building"></i> Plant-wise Training Summary — FY {{ fy_label_long }}</div>
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0" style="font-size:12.5px;white-space:nowrap;">

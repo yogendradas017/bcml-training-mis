@@ -259,6 +259,16 @@ def _fy_label():
     return f'{str(y-1)[2:]}-{str(y)[2:]}' if today.month < 4 else f'{str(y)[2:]}-{str(y+1)[2:]}'
 
 
+def _fy_label_long():
+    """Returns long FY label like '2026–27' (en-dash) for UI display.
+    Single source of truth — never hardcode in templates."""
+    today = _today_ist()
+    y = today.year
+    start_yr = y - 1 if today.month < 4 else y
+    end_yr = start_yr + 1
+    return f'{start_yr}–{str(end_yr)[2:]}'  # en-dash matches historical literals
+
+
 def _get_or_create_prog_code(plant_id, prog_name, prog_type, db):
     # Atomic: reuse existing prog_code if the programme already has one.
     existing = db.execute(

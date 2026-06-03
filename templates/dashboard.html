@@ -65,7 +65,7 @@
             <div class="kpi-num">
               <span data-count="{{ stats.conducted }}">{{ stats.conducted }}</span><span style="font-size:14px;font-weight:500;color:var(--c-muted);"> / {{ stats.sessions }}</span>
             </div>
-            <div class="kpi-lbl">Sessions Conducted / Planned</div>
+            <div class="kpi-lbl">Own-Plant Sessions Conducted / Planned</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="kpi-icon-wrap"><i class="bi bi-calendar3"></i></div>
@@ -136,7 +136,7 @@
       <div class="analytics-hd">
         <span class="analytics-title"><i class="bi bi-bullseye me-1" style="color:var(--c-primary);"></i>Training Hours vs Target</span>
         <div class="d-flex align-items-center gap-2">
-          <span class="analytics-badge">FY 2026–27</span>
+          <span class="analytics-badge">FY {{ fy_label_long }}</span>
           <button type="button" class="gauge-interactive-badge" onclick="openDrilldown('ALL')"><i class="bi bi-cursor-fill"></i> Click to explore</button>
         </div>
       </div>
