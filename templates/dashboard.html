@@ -57,7 +57,9 @@
       <div class="kpi-body">
         <div class="kpi-header">
           <div>
-            <div class="kpi-num" data-count="{{ stats.manhours|round(0)|int }}">{{ "%.0f"|format(stats.manhours) }}<span style="font-size:var(--fs-base);font-weight:500;color:var(--c-muted);"> / {{ target_hrs|int }} target</span></div>
+            <div class="kpi-num">
+              <span data-count="{{ stats.manhours|round(0)|int }}">{{ "%.0f"|format(stats.manhours) }}</span><span style="font-size:var(--fs-base);font-weight:500;color:var(--c-muted);"> / {{ "{:,}".format(target_hrs|int) }} hrs</span>
+            </div>
             <div class="kpi-lbl">Total Man-Hours (FY {{ fy_label_long }})</div>
           </div>
           <div class="kpi-icon-wrap"><i class="bi bi-clock-history"></i></div>
@@ -74,7 +76,7 @@
           </div>
           <div class="kpi-mini">
             <div class="kpi-mini-v">{{ avg_hrs or '—' }}</div>
-            <div class="kpi-mini-l">Avg Hrs / Rec</div>
+            <div class="kpi-mini-l">Avg Hrs / Employee</div>
           </div>
           <div class="kpi-mini">
             <div class="kpi-mini-v">{{ hrs_pct }}%</div>
@@ -254,54 +256,60 @@
 </div>
 {% endif %}
 
-<!-- ── QUICK ACTIONS ─────────────────────────────────────────── -->
-<div class="section-hd">Quick Actions</div>
+<!-- ── QC ANALYTICS ──────────────────────────────────────────── -->
+<style>
+  .qc-wrap { position: relative; min-height: 240px; }
+  .qc-wrap canvas { max-height: 280px; }
+  .qc-sub { font-size: var(--fs-sm); color: var(--c-muted-2); }
+  .qc-heatmap { display: grid; grid-template-columns: 130px repeat(6, 1fr); gap: 4px; font-size: var(--fs-sm); }
+  .qc-heatmap .hh { font-weight: 700; color: var(--c-muted-2); padding: 6px 4px; text-align: center; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; }
+  .qc-heatmap .hr { font-weight: 600; padding: 6px 8px; display: flex; align-items: center; }
+  .qc-heatmap .hc { padding: 12px 6px; text-align: center; border-radius: 4px; font-weight: 700; font-variant-numeric: tabular-nums; transition: transform .15s; }
+  .qc-heatmap .hc:hover { transform: scale(1.08); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+  .qc-heatmap .h0   { background: #7f1d1d; color: #fff; }
+  .qc-heatmap .h25  { background: #dc2626; color: #fff; }
+  .qc-heatmap .h50  { background: #f59e0b; color: #fff; }
+  .qc-heatmap .h75  { background: #eab308; color: #422006; }
+  .qc-heatmap .h90  { background: #84cc16; color: #1a2e05; }
+  .qc-heatmap .h100 { background: #16a34a; color: #fff; }
+</style>
+<div class="section-hd">QC Analytics</div>
 <div class="row g-3">
-  {% set modules = [
-    ('employees',         'bi-people-fill',          'linear-gradient(135deg,var(--c-primary),var(--c-primary))', 'Employee Master',       'Add joiners, mark exits, view active employees'),
-    ('tni',               'bi-clipboard-check-fill', 'linear-gradient(135deg,var(--c-warn-strong),var(--c-warn))', 'TNI Tracking',          'Record training needs for each employee'),
-    ('training_calendar', 'bi-calendar3',            'linear-gradient(135deg,var(--c-info),#06b6d4)', 'Training Calendar',     'Plan sessions, track Plan vs Actual'),
-    ('emp_training',      'bi-person-check-fill',    'linear-gradient(135deg,#059669,var(--c-success))', 'Training Records (2A)', 'Log who attended which training programme'),
-    ('programme_details', 'bi-journal-richtext',     'linear-gradient(135deg,#1a5a8e,var(--c-primary))', 'Programme Details (2C)','Faculty, feedback, cost per programme'),
-  ] %}
-  {% if session.role in ('spoc','admin') and session.plant_id %}
-    {% set modules = modules + [('effectiveness', 'bi-clipboard-pulse', 'linear-gradient(135deg,var(--c-central),#a855f7)', 'Effectiveness Review', 'Post-training impact: file Kirkpatrick L2/L3 scores')] %}
-  {% endif %}
-  {% set modules = modules + [('monthly_summary', 'bi-bar-chart-fill', 'linear-gradient(135deg,#e11d48,#f43f5e)', 'Monthly Summary', 'Auto-calculated MIS by programme type')] %}
-  {% for endpoint, icon, grad, title, desc in modules %}
-  <div class="col-12 col-md-6 col-lg-4">
-    <a href="{{ url_for(endpoint) }}" class="text-decoration-none">
-      <div class="card card-lift" style="border-top:3px solid transparent;border-image:{{ grad }} 1;">
-        <div class="card-body d-flex align-items-center gap-3 py-3">
-          <div style="width:44px;height:44px;border-radius:12px;background:{{ grad }};display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15);">
-            <i class="bi {{ icon }}" style="font-size:var(--fs-xl);color:var(--c-white);"></i>
-          </div>
-          <div>
-            <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);">{{ title }}</div>
-            <div style="font-size:var(--fs-sm);color:var(--c-muted-2);margin-top:2px;">{{ desc }}</div>
-          </div>
-          <i class="bi bi-chevron-right ms-auto" style="color:var(--c-border-3);font-size:var(--fs-md);"></i>
-        </div>
-      </div>
-    </a>
+  <div class="col-12 col-lg-6">
+    <div class="card"><div class="card-body">
+      <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);"><i class="bi bi-bar-chart-steps" style="color:var(--c-primary);"></i> Pareto — Uncovered Headcount by Programme</div>
+      <div class="qc-sub mb-2">80/20 view — the tallest bars hold most of the uncovered headcount.</div>
+      <div class="qc-wrap"><canvas id="qcPareto"></canvas></div>
+    </div></div>
   </div>
-  {% endfor %}
-
-  <div class="col-12 col-md-6 col-lg-4">
-    <a href="{{ url_for('export_excel', plant_id=session.plant_id) }}" class="text-decoration-none">
-      <div class="card card-lift" style="border-top:3px solid #22c55e;">
-        <div class="card-body d-flex align-items-center gap-3 py-3">
-          <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#16a34a,#22c55e);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(22,163,74,.25);">
-            <i class="bi bi-file-earmark-excel-fill" style="font-size:var(--fs-xl);color:var(--c-white);"></i>
-          </div>
-          <div>
-            <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);">Export to Excel</div>
-            <div style="font-size:var(--fs-sm);color:var(--c-muted-2);margin-top:2px;">Download full MIS in BCML format</div>
-          </div>
-          <i class="bi bi-chevron-right ms-auto" style="color:var(--c-border-3);font-size:var(--fs-md);"></i>
-        </div>
+  <div class="col-12 col-lg-6">
+    <div class="card"><div class="card-body">
+      <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);"><i class="bi bi-bar-chart-fill" style="color:var(--c-primary);"></i> Histogram — Training Hours per Employee</div>
+      <div class="qc-sub mb-2">Distribution shape. Long left tail = many under-trained employees.</div>
+      <div class="qc-wrap"><canvas id="qcHist"></canvas></div>
+    </div></div>
+  </div>
+  <div class="col-12">
+    <div class="card"><div class="card-body">
+      <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);"><i class="bi bi-grid-3x3-gap" style="color:var(--c-primary);"></i> Coverage Heat Map — Collar × Programme Type</div>
+      <div class="qc-sub mb-2">Each cell = % nominated who completed training. Red = action needed.</div>
+      <div class="qc-heatmap">
+        <div></div>
+        <div class="hh">Technical</div><div class="hh">EHS/HR</div><div class="hh">Behav.</div>
+        <div class="hh">Cane</div><div class="hh">Commercial</div><div class="hh">IT</div>
+        {% for row in heatmap %}
+        <div class="hr">{{ row.collar }}</div>
+        {% for c in row.cells %}<div class="hc {{ c.cls }}">{{ c.pct }}%</div>{% endfor %}
+        {% endfor %}
       </div>
-    </a>
+    </div></div>
+  </div>
+  <div class="col-12">
+    <div class="card"><div class="card-body">
+      <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);"><i class="bi bi-activity" style="color:var(--c-primary);"></i> Cumulative Coverage — BC and WC vs FY-end Target</div>
+      <div class="qc-sub mb-2">Each line builds month-by-month toward the 100% target due in March. Gap to target = work remaining.</div>
+      <div class="qc-wrap" style="min-height:300px;"><canvas id="qcRun"></canvas></div>
+    </div></div>
   </div>
 </div>
 <!-- ── MANHOUR DRILLDOWN MODAL (Power BI style) ──────────────── -->
@@ -399,6 +407,53 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+// ── QC Analytics charts (live, plant-scoped data) ──────────────────
+(function(){
+  if (typeof Chart === 'undefined') return;
+  const QC = { danger:'#dc2626', success:'#16a34a', primary:'#2e6da4', info:'#0891b2', muted:'#94a3b8' };
+  Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = '#475569';
+
+  // Pareto — uncovered headcount + cumulative % line
+  const pLabels = {{ paretoLabels|tojson }};
+  const pData   = {{ paretoData|tojson }};
+  const pTotal  = pData.reduce((s,v)=>s+v,0) || 1;
+  let _c = 0; const pCum = pData.map(v => { _c += v; return +(_c/pTotal*100).toFixed(1); });
+  const elP = document.getElementById('qcPareto');
+  if (elP) new Chart(elP, { data: { labels: pLabels, datasets: [
+      { type:'bar',  label:'Uncovered', data:pData, backgroundColor:QC.danger, yAxisID:'y', order:2 },
+      { type:'line', label:'Cumulative %', data:pCum, borderColor:QC.info, backgroundColor:QC.info, yAxisID:'y1', tension:.2, pointRadius:4, order:1 }
+    ]}, options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{display:false} },
+      scales:{ x:{ ticks:{ font:{size:10}, maxRotation:45, minRotation:30 } },
+        y:{ beginAtZero:true, title:{display:true,text:'Uncovered (employees)'} },
+        y1:{ type:'linear', position:'right', min:0, max:100, ticks:{callback:v=>v+'%'}, grid:{drawOnChartArea:false} } } } });
+
+  // Histogram — employees per training-hours bucket
+  const elH = document.getElementById('qcHist');
+  if (elH) new Chart(elH, { type:'bar', data:{ labels:['0-2','2-4','4-6','6-8','8-12','12-16','16-24','24+'],
+      datasets:[{ label:'Employees', data:{{ histData|tojson }}, backgroundColor:QC.primary, borderRadius:3 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ title:ctx=>'Hours: '+ctx[0].label, label:ctx=>ctx.parsed.y+' employees' } } },
+      scales:{ x:{ title:{display:true,text:'Training hours per employee'} }, y:{ beginAtZero:true } } } });
+
+  // Cumulative run — BC vs WC vs target
+  const FY = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  const bc = {{ bcCumulative|tojson }}, wc = {{ wcCumulative|tojson }};
+  const elR = document.getElementById('qcRun');
+  if (elR) new Chart(elR, { type:'line', data:{ labels:FY, datasets:[
+      { label:'FY-end Target (100% by Mar)', data:FY.map(()=>100), borderColor:QC.muted, borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, order:0 },
+      { label:'Blue Collared — Cumulative %', data:bc, borderColor:QC.success, backgroundColor:'rgba(22,163,74,.10)', tension:.25, fill:true, pointRadius:4, order:2 },
+      { label:'White Collared — Cumulative %', data:wc, borderColor:QC.danger, backgroundColor:'rgba(220,38,38,.08)', tension:.25, fill:true, pointRadius:4, order:1 }
+    ]}, options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{ position:'bottom', labels:{ font:{size:12}, padding:16, boxWidth:14 } } },
+      scales:{ x:{ title:{display:true,text:'FY Month'} },
+        y:{ beginAtZero:true, max:110, ticks:{callback:v=>v+'%'}, title:{display:true,text:'Cumulative coverage (%)'} } } } });
+})();
+</script>
 <script>
 function toggleSessDrill() {
   var panel   = document.getElementById('sess-drill-panel');

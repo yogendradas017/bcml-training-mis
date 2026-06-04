@@ -794,6 +794,12 @@ def _register(app):
         target_hrs = compliance['bc_mandate'] + compliance['wc_mandate']
         # Avg Hrs per Employee — ties to manhour mandate (BC 12/yr, WC 24/yr).
         avg_hrs = round(stats['manhours'] / stats['total_emp'], 1) if stats['total_emp'] else 0
+        # QC analytics — live, plant-scoped (Pareto, Histogram, Heat map, Cumulative run)
+        qc = {}
+        qc.update(_qc_pareto(db, plant_id, fy_start, fy_end))
+        qc.update(_qc_histogram(db, plant_id, fy_start, fy_end))
+        qc.update(_qc_cumulative(db, plant_id, fy_start, fy_end))
+        qc.update(_qc_heatmap(db, plant_id, fy_start, fy_end))
         return render_template(
             'dashboard.html',
             stats=stats,
@@ -807,6 +813,7 @@ def _register(app):
             headline_pct=compliance['headline_pct'],
             headline_rag=compliance['headline_rag'],
             worst_cells=compliance['worst_cells'],
+            **qc,
         )
 
     @app.route('/admin/seed-demo', methods=['GET', 'POST'])
