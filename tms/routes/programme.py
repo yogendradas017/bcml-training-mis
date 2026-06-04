@@ -223,6 +223,13 @@ def _register(app):
     @app.route('/programme-master/sync-from-tni', methods=['POST'])
     @spoc_required
     def programme_master_sync_from_tni():
+        # Destructive: wipes manually-added programmes + categories.
+        # Useful only at FY rollover for recovery. Restricted to admin to prevent
+        # SPOC accidentally clearing their own customizations mid-year.
+        if session.get('role') != 'admin':
+            flash('Sync from TNI is restricted to Admin (destructive action). '
+                  'Contact your admin for FY rollover recovery.', 'danger')
+            return redirect(url_for('programme_master'))
         plant_id = session['plant_id']
         db = get_db()
         tni_progs = [r[0] for r in db.execute(

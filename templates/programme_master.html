@@ -80,15 +80,6 @@
       <option>Specialized</option>
     </select>
     <span id="pm-count" style="font-size:var(--fs-body);color:var(--c-muted-2);margin-left:4px;"></span>
-    <div class="ms-auto d-flex gap-2">
-      <form method="POST" action="{{ url_for('programme_master_sync_from_tni') }}" style="display:inline;"
-            data-tms-confirm="Sync from TNI will rebuild the Programme Master from current TNI data. Manually-added New Requirement programmes (without TNI rows) will be DELETED. Continue?">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-warning btn-sm" title="Rebuild master from current TNI (deletes manually-added New Requirement programmes)" aria-label="Sync programme master from TNI">
-          <i class="bi bi-arrow-repeat me-1"></i> Sync from TNI
-        </button>
-      </form>
-    </div>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">

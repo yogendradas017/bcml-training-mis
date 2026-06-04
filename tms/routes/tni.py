@@ -57,11 +57,18 @@ def _register(app):
                   GROUP BY emp_code, programme_name HAVING cnt > 1)
         ''', (plant_id, fy)).fetchone()[0]
 
+        # Programme Master rows for the quick-add-for-employee bulk form
+        master_progs = db.execute(
+            'SELECT id, name, prog_type, COALESCE(category, "General") as category '
+            'FROM programme_master WHERE plant_id=? ORDER BY prog_type, name',
+            (plant_id,)).fetchall()
+
         return render_template('tni.html', total=total,
                                employees=emps, programmes=programmes,
                                prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY,
                                departments=depts, dirty_names=dirty_names,
-                               dup_count=dup_count)
+                               dup_count=dup_count,
+                               master_progs=master_progs)
 
     @app.route('/tni/data')
     @spoc_required
@@ -259,6 +266,72 @@ def _register(app):
         resync_calendar_audience(plant_id, [prog_name], db)
         log_action('RECORD_ADD', f"tni:{emp_code}:{prog_name}")
         flash('TNI entry added.', 'success')
+        return redirect(url_for('tni'))
+
+    @app.route('/tni/quick-add-for-employee', methods=['POST'])
+    @spoc_required
+    def tni_quick_add_for_employee():
+        """Bulk-add multiple TNI rows for ONE employee in a single submit.
+        Designed for late-joiner onboarding: pick employee, tick programmes from
+        Programme Master, set planned hours (default 4 if blank), submit.
+        All programmes inserted as 'TNI Driven'. Skips dupes via UNIQUE constraint."""
+        plant_id = session['plant_id']
+        if _tni_is_locked() and session.get('role') != 'admin':
+            flash('TNI window is closed (FY ended March 31). Contact admin.', 'danger')
+            return redirect(url_for('tni'))
+        db = get_db()
+        emp_code = (request.form.get('emp_code') or '').strip()
+        prog_ids = request.form.getlist('prog_ids')
+        default_hours = request.form.get('default_hours') or '4'
+        try:
+            default_hours = float(default_hours)
+            if default_hours < 0: default_hours = 4.0
+        except (ValueError, TypeError):
+            default_hours = 4.0
+
+        if not emp_code:
+            flash('Pick an employee first.', 'danger')
+            return redirect(url_for('tni'))
+        if not prog_ids:
+            flash('Select at least one programme.', 'danger')
+            return redirect(url_for('tni'))
+
+        emp = db.execute(
+            'SELECT 1 FROM employees WHERE emp_code=? AND plant_id=? AND is_active=1',
+            (emp_code, plant_id)).fetchone()
+        if not emp:
+            flash(f'Employee "{emp_code}" not found in active employees.', 'danger')
+            return redirect(url_for('tni'))
+
+        # Lookup chosen programmes by id (from programme_master)
+        placeholders = ','.join(['?'] * len(prog_ids))
+        progs = db.execute(
+            f'SELECT id, name, prog_type FROM programme_master '
+            f'WHERE plant_id=? AND id IN ({placeholders})',
+            [plant_id] + prog_ids).fetchall()
+
+        added, dupes = 0, 0
+        fy = _fy_label()
+        for p in progs:
+            cur = db.execute(
+                '''INSERT OR IGNORE INTO tni
+                   (plant_id, emp_code, programme_name, prog_type, mode, planned_hours, source, fy_year)
+                   VALUES(?,?,?,?,?,?,?,?)''',
+                (plant_id, emp_code, p['name'], p['prog_type'], None,
+                 default_hours, 'TNI Driven', fy))
+            if cur.rowcount:
+                added += 1
+            else:
+                dupes += 1
+        db.commit()
+        # Re-derive audience for any calendar rows that referenced these programmes
+        if added:
+            resync_calendar_audience(plant_id, [p['name'] for p in progs], db)
+            log_action('BULK_ADD', f"tni-quick-for-emp:{emp_code}:added={added}")
+        msg = f'{added} TNI entries added for {emp_code}.'
+        if dupes:
+            msg += f' ({dupes} already existed — skipped)'
+        flash(msg, 'success' if added else 'warning')
         return redirect(url_for('tni'))
 
     @app.route('/tni/<int:tni_id>/set-source', methods=['POST'])
