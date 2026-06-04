@@ -718,6 +718,78 @@ def _migrate_spoc_requests(db):
         logging.warning(f'_migrate_spoc_requests payload_json failed: {e}')
 
 
+def _dedupe_tni_prog_variants(db):
+    """Merge high-confidence spelling/plural variants of the SAME programme into one
+    canonical name across every table that stores it (tni, programme_master, calendar,
+    programme_details, emp_training). Companion to the _tni_canon_candidates guard that
+    now PREVENTS new variants at entry — this cleans variants that predate the guard.
+
+    Safety: only merges names that are >=0.90 similar AND share the same digit groups
+    AND the same roman-numeral tokens. So 'Communication Skill(s)', 'Behaviour(al) Safety',
+    'Storage'/'Store' merge, but 'Level 1'/'Level 2', 'Phase I'/'Phase II',
+    'ISO 9001'/'ISO 14001' are NEVER merged (genuinely distinct).
+
+    Idempotent — once clean it finds nothing. Runs on every deploy (incl. production).
+    """
+    import re
+    from difflib import SequenceMatcher
+    from collections import defaultdict
+    try:
+        rows = db.execute('SELECT plant_id, prog_type, programme_name, COUNT(*) c '
+                          'FROM tni GROUP BY plant_id, prog_type, programme_name').fetchall()
+    except Exception as e:
+        logging.warning(f'_dedupe_tni_prog_variants skipped: {e}')
+        return
+
+    ROMAN = {'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii'}
+    def _nums(s):   return tuple(re.findall(r'\d+', s.lower()))
+    def _romans(s): return frozenset(t for t in re.findall(r'[a-z]+', s.lower()) if t in ROMAN)
+
+    groups = defaultdict(list)
+    for r in rows:
+        groups[(r['plant_id'], r['prog_type'])].append((r['programme_name'], r['c']))
+
+    plan = []  # (plant_id, variant, canonical)
+    for (pid, _pt), items in groups.items():
+        names = [n for n, _ in items]; cnt = dict(items); used = set()
+        for i, a in enumerate(names):
+            if not a or a in used:
+                continue
+            clust = [a]
+            for b in names[i + 1:]:
+                if not b or b in used:
+                    continue
+                if (SequenceMatcher(None, a.lower(), b.lower()).ratio() >= 0.90
+                        and _nums(a) == _nums(b) and _romans(a) == _romans(b)):
+                    clust.append(b); used.add(b)
+            if len(clust) > 1:
+                canon = max(clust, key=lambda n: (cnt[n], -len(n)))  # most frequent, then shortest
+                for n in clust:
+                    if n != canon:
+                        plan.append((pid, n, canon))
+    if not plan:
+        return
+    try:
+        for pid, var, canon in plan:
+            # tni: drop rows that would collide on UNIQUE(plant,emp,prog,fy), then re-point the rest
+            db.execute('DELETE FROM tni WHERE plant_id=? AND programme_name=? AND EXISTS('
+                       'SELECT 1 FROM tni x WHERE x.plant_id=tni.plant_id AND x.emp_code=tni.emp_code '
+                       'AND x.fy_year=tni.fy_year AND x.programme_name=?)', (pid, var, canon))
+            db.execute('UPDATE tni SET programme_name=? WHERE plant_id=? AND programme_name=?', (canon, pid, var))
+            # programme_master: drop colliding variant row on UNIQUE(plant,name), then re-point
+            db.execute('DELETE FROM programme_master WHERE plant_id=? AND name=? AND EXISTS('
+                       'SELECT 1 FROM programme_master x WHERE x.plant_id=programme_master.plant_id '
+                       'AND x.name=?)', (pid, var, canon))
+            db.execute('UPDATE programme_master SET name=? WHERE plant_id=? AND name=?', (canon, pid, var))
+            db.execute('UPDATE calendar SET programme_name=? WHERE plant_id=? AND programme_name=?', (canon, pid, var))
+            db.execute('UPDATE programme_details SET programme_name=? WHERE plant_id=? AND programme_name=?', (canon, pid, var))
+            db.execute('UPDATE emp_training SET programme_name=? WHERE plant_id=? AND programme_name=?', (canon, pid, var))
+        db.commit()
+        logging.info(f'_dedupe_tni_prog_variants: merged {len(plan)} spelling variant(s) into canonical names')
+    except Exception as e:
+        logging.warning(f'_dedupe_tni_prog_variants failed: {e}')
+
+
 def init_db():
     from tms.helpers import (
         _cleanse_master_spelling, _cleanse_programme_names,
@@ -768,6 +840,7 @@ def init_db():
     db.commit()
     _cleanse_master_spelling(db)
     _cleanse_programme_names(db)
+    _dedupe_tni_prog_variants(db)   # merge pre-guard spelling/plural duplicates (prod-safe, idempotent)
     try:
         _cleanse_emp_fields(db)
     except Exception as e:
