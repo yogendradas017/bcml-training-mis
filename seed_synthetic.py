@@ -163,134 +163,122 @@ def seed(db):
     print(f"  Total TNI rows: {tni_count}")
 
     # ── 3. Calendar + emp_training + programme_details ───────────────────
-    print("Seeding calendar + training records...")
+    # Coverage-DRIVEN: attendees of a programme are drawn from the employees
+    # actually NOMINATED for it in TNI, sized to a varied target coverage. This
+    # is what makes the QC charts meaningful — coverage = trained/nominated lands
+    # at a realistic spread instead of ~1% (random attendees almost never match
+    # their own nominations). Story baked in: BC strong, WC lagging.
+    print("Seeding calendar + training records (coverage-driven)...")
+    from collections import defaultdict
+    PROG_AUD = {n: a for (n, t, a) in PROGRAMMES}
     session_counters = {}  # (plant_id, type_abbr) → int
-    cal_total = 0
-    et_total  = 0
-    pd_total  = 0
+    cal_total = et_total = pd_total = 0
+
+    # Only Apr–Jun are "conducted" (FY 26-27 is at month 3 as of Jun 2026);
+    # Jul+ sessions are planned-but-future, so the cumulative chart ramps then
+    # flattens — a realistic mid-year snapshot with a gap to the Mar target.
+    CONDUCTED = [m for m in MONTHS if m[1] <= date(2026, 6, 30)]
+    FUTURE    = [m for m in MONTHS if m[1] >  date(2026, 6, 30)]
+    # Short, varied per-session hours: realistic for single-topic coverage
+    # sessions, and (since employees attend several) spreads total hours/employee
+    # across the histogram buckets instead of piling everyone into 24+.
+    DURS = [2, 3, 4, 4, 6, 8]
+
+    def _emit_session(pid, uc, pname, ptype, audience, m, attendees, conducted):
+        nonlocal cal_total, et_total, pd_total
+        mname, m_start, m_end = m
+        ta = TYPE_ABBR.get(ptype, 'GEN')
+        key = (pid, ta)
+        session_counters[key] = session_counters.get(key, 0) + 1
+        seq = session_counters[key]
+        prog_code    = f"{uc}/{ta}/{seq:03d}"
+        session_code = f"{prog_code}/26-27/B{seq:02d}"
+        start_d = rand_weekday(m_start, m_end)
+        dur     = random.choice(DURS)
+        end_d   = start_d + timedelta(days=max(0, dur // 8 - 1))
+        status  = 'Conducted' if conducted else 'To Be Planned'
+        pax     = max(len(attendees), random.randint(8, 40))
+        db.execute(
+            "INSERT OR IGNORE INTO calendar("
+            "plant_id, prog_code, session_code, source, programme_name, prog_type,"
+            "planned_month, plan_start, plan_end, duration_hrs, level, mode,"
+            "target_audience, planned_pax, trainer_vendor, status, is_central"
+            ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (pid, prog_code, session_code, 'TNI Driven', pname, ptype,
+             mname, str(start_d), str(end_d), float(dur), 'Basic', 'Classroom',
+             audience, pax, 'Internal Faculty', status, 0))
+        cal_total += 1
+        if not conducted:
+            return
+        db.execute(
+            "INSERT OR IGNORE INTO programme_details("
+            "plant_id, session_code, programme_name, prog_type, level, cal_new, mode,"
+            "start_date, end_date, audience, hours_actual, faculty_name, int_ext,"
+            "cost, venue, course_feedback, faculty_feedback"
+            ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (pid, session_code, pname, ptype, 'Basic', 'Calendar Program', 'Classroom',
+             str(start_d), str(end_d), audience, float(dur),
+             random.choice(['Internal Faculty', 'External Trainer']),
+             random.choice(['Internal', 'External']),
+             random.choice([0, 0, 5000, 10000, 15000, 25000]),
+             f"plant {pid} Training Hall",
+             round(random.uniform(3.5, 5.0), 1), round(random.uniform(3.8, 5.0), 1)))
+        pd_total += 1
+        for emp in attendees:
+            db.execute(
+                "INSERT OR IGNORE INTO emp_training("
+                "plant_id, emp_code, session_code, programme_name, start_date, end_date,"
+                "hrs, prog_type, level, mode, cal_new, pre_rating, post_rating,"
+                "venue, month, host_plant_id"
+                ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (pid, emp, session_code, pname, str(start_d), str(end_d),
+                 float(dur), ptype, 'Basic', 'Classroom', 'Calendar Program',
+                 round(random.uniform(2.0, 3.5), 1), round(random.uniform(3.5, 5.0), 1),
+                 f"plant {pid} Training Hall", mname, pid))
+            et_total += 1
 
     for plant in PLANTS:
-        pid  = plant['id']
-        uc   = plant['unit_code']
+        pid, uc = plant['id'], plant['unit_code']
+        collar_of = {r[0]: r[1] for r in db.execute(
+            "SELECT emp_code, collar FROM employees WHERE plant_id=? AND is_active=1", (pid,)).fetchall()}
+        # nominees[programme][collar] = [emp_codes nominated for it]
+        nominees = defaultdict(lambda: {'Blue Collared': [], 'White Collared': []})
+        for emp, prog in db.execute(
+                "SELECT emp_code, programme_name FROM tni WHERE plant_id=? AND fy_year='26-27'", (pid,)).fetchall():
+            c = collar_of.get(emp)
+            if c in ('Blue Collared', 'White Collared') and prog in PROG_AUD:
+                nominees[prog][c].append(emp)
 
-        # Get employees by collar for this plant
-        bc_emps = [r[0] for r in db.execute(
-            "SELECT emp_code FROM employees WHERE plant_id=? AND is_active=1 AND collar='Blue Collared'",
-            (pid,)).fetchall()]
-        wc_emps = [r[0] for r in db.execute(
-            "SELECT emp_code FROM employees WHERE plant_id=? AND is_active=1 AND collar='White Collared'",
-            (pid,)).fetchall()]
-
-        # Pick ~20 programmes to run across 6 months (mix of types)
-        selected_progs = random.sample(PROGRAMMES, min(20, len(PROGRAMMES)))
-
-        # Distribute: ~4-5 sessions per month
-        sessions_plan = []
-        for mi, (mname, m_start, m_end) in enumerate(MONTHS):
-            # 4-5 sessions per month, choose from selected programmes
-            month_progs = random.sample(selected_progs, random.randint(4, 5))
-            for (pname, ptype, audience) in month_progs:
-                start_d = rand_weekday(m_start, m_end)
-                dur = random.choice([8, 8, 8, 16, 24])  # 1-day, 1-day, 1-day, 2-day, 3-day
-                end_d = start_d + timedelta(days=max(0, dur // 8 - 1))
-                sessions_plan.append({
-                    'month': mname,
-                    'pname': pname, 'ptype': ptype, 'audience': audience,
-                    'start': start_d, 'end': end_d, 'dur': float(dur),
-                })
-
-        # Assign session codes and insert calendar
-        for s in sessions_plan:
-            ta = TYPE_ABBR.get(s['ptype'], 'GEN')
-            key = (pid, ta)
-            session_counters[key] = session_counters.get(key, 0) + 1
-            seq = session_counters[key]
-            prog_code    = f"{uc}/{ta}/{seq:03d}"
-            session_code = f"{prog_code}/26-27/B01"
-
-            # 75% conducted (past months fully, current partially)
-            is_past = s['start'] <= date(2026, 5, 14)
-            conducted = is_past or (random.random() < 0.5)
-            status = 'Conducted' if conducted else 'To Be Planned'
-
-            # Planned pax
-            if s['audience'] == 'Blue Collared':
-                pax = random.randint(20, 45)
-            elif s['audience'] == 'White Collared':
-                pax = random.randint(8, 20)
-            else:
-                pax = random.randint(15, 35)
-
-            db.execute(
-                "INSERT OR IGNORE INTO calendar("
-                "plant_id, prog_code, session_code, source, programme_name, prog_type,"
-                "planned_month, plan_start, plan_end, duration_hrs, level, mode,"
-                "target_audience, planned_pax, trainer_vendor, status, is_central"
-                ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (pid, prog_code, session_code, 'TNI Driven', s['pname'], s['ptype'],
-                 s['month'], str(s['start']), str(s['end']),
-                 s['dur'], 'Basic', 'Classroom',
-                 s['audience'], pax, 'Internal Faculty', status, 0)
-            )
-            cal_total += 1
-
-            if not conducted:
-                continue
-
-            # programme_details
-            fb_course  = round(random.uniform(3.5, 5.0), 1)
-            fb_faculty = round(random.uniform(3.8, 5.0), 1)
-            db.execute(
-                "INSERT OR IGNORE INTO programme_details("
-                "plant_id, session_code, programme_name, prog_type, level, cal_new, mode,"
-                "start_date, end_date, audience, hours_actual, faculty_name, int_ext,"
-                "cost, venue, course_feedback, faculty_feedback"
-                ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (pid, session_code, s['pname'], s['ptype'], 'Basic', 'Calendar Program',
-                 'Classroom', str(s['start']), str(s['end']),
-                 s['audience'], s['dur'],
-                 random.choice(['Internal Faculty', 'External Trainer']),
-                 random.choice(['Internal', 'External']),
-                 random.choice([0, 0, 5000, 10000, 15000, 25000]),
-                 f"{plant['name']} Training Hall",
-                 fb_course, fb_faculty)
-            )
-            pd_total += 1
-
-            # Attendees
-            if s['audience'] == 'Blue Collared':
-                pool = bc_emps
-            elif s['audience'] == 'White Collared':
-                pool = wc_emps
-            else:
-                bc_n = max(1, pax * 2 // 3)
-                wc_n = max(1, pax // 3)
-                pool = random.sample(bc_emps, min(bc_n, len(bc_emps))) + \
-                       random.sample(wc_emps, min(wc_n, len(wc_emps)))
-
-            actual_pax = min(pax, len(pool), random.randint(max(5, pax - 10), pax + 5))
-            attendees  = random.sample(pool, min(actual_pax, len(pool)))
-
-            for emp in attendees:
-                pre  = round(random.uniform(2.0, 3.5), 1)
-                post = round(random.uniform(3.5, 5.0), 1)
-                db.execute(
-                    "INSERT OR IGNORE INTO emp_training("
-                    "plant_id, emp_code, session_code, programme_name, start_date, end_date,"
-                    "hrs, prog_type, level, mode, cal_new, pre_rating, post_rating,"
-                    "venue, month, host_plant_id"
-                    ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (pid, emp, session_code, s['pname'],
-                     str(s['start']), str(s['end']),
-                     s['dur'], s['ptype'], 'Basic', 'Classroom', 'Calendar Program',
-                     pre, post,
-                     f"{plant['name']} Training Hall",
-                     s['month'], pid)
-                )
-                et_total += 1
-
+        n_sessions = 0
+        for prog, by_collar in nominees.items():
+            ptype = next((t for (n, t, a) in PROGRAMMES if n == prog), 'Technical')
+            audience = PROG_AUD.get(prog, 'Common')
+            for collar, emps in by_collar.items():
+                if not emps:
+                    continue
+                # Varied target coverage — BC ahead, WC behind (the chart story)
+                if collar == 'Blue Collared':
+                    cov = random.uniform(0.55, 0.95)
+                else:
+                    cov = random.uniform(0.10, 0.60)
+                trained = random.sample(emps, int(len(emps) * cov))
+                if not trained:
+                    continue
+                # Spread trained attendees across conducted months in ~30-seat
+                # batches so the cumulative coverage line ramps month by month.
+                random.shuffle(trained)
+                batches = [trained[i:i + 30] for i in range(0, len(trained), 30)]
+                for bi, batch in enumerate(batches):
+                    m = CONDUCTED[bi % len(CONDUCTED)]
+                    _emit_session(pid, uc, prog, ptype, audience, m, batch, conducted=True)
+                    n_sessions += 1
+            # A few future (planned, not conducted) sessions → gap to target
+            if FUTURE and random.random() < 0.4:
+                _emit_session(pid, uc, prog, ptype, audience,
+                              random.choice(FUTURE), [], conducted=False)
+                n_sessions += 1
         db.commit()
-        print(f"  {plant['name']}: {len(sessions_plan)} sessions")
+        print(f"  {plant['name']}: {n_sessions} sessions")
 
     return cal_total, et_total, pd_total
 
