@@ -31,9 +31,12 @@
     <div class="sc sc-violet">
       <div class="sc-body">
         <div class="sc-icon"><i class="bi bi-people-fill"></i></div>
-        <div class="sc-val">{{ grand.total_emp }}</div>
-        <div class="sc-lbl">Total Employees</div>
-        <div class="sc-sub">Across {{ plants|length }} plants</div>
+        <div class="sc-val">{{ "{:,}".format(grand.total_emp) }}</div>
+        <div class="sc-lbl">Active Workforce · {{ plants|length }} plants</div>
+        <div class="sc-sub kpi-chips">
+          <span class="kpi-chip kpi-chip-bc"><i class="bi bi-circle-fill" style="font-size:6px;"></i> {{ "{:,}".format(grand.blue_collar) }}&nbsp;Blue</span>
+          <span class="kpi-chip kpi-chip-wc"><i class="bi bi-circle-fill" style="font-size:6px;"></i> {{ "{:,}".format(grand.white_collar) }}&nbsp;White</span>
+        </div>
       </div>
       <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
     </div>
@@ -68,11 +71,14 @@
     <div class="sc sc-amber">
       <div class="sc-body">
         <div class="sc-icon"><i class="bi bi-clock-history"></i></div>
-        <div class="sc-val">{{ grand.manhours }}</div>
+        <div class="sc-val">{{ "{:,.0f}".format(grand.manhours) }}<span style="font-size:var(--fs-base);font-weight:500;color:var(--c-muted);"> / {{ "{:,}".format(grand.target_hrs|int) }} hrs</span></div>
         <div class="sc-lbl">Total Man-Hours</div>
-        <div class="sc-sub">Combined all plants</div>
+        <div class="sc-sub">
+          <span class="{% if grand.hrs_pct >= 75 %}up{% elif grand.hrs_pct < 50 %}down{% endif %}">{{ grand.hrs_pct|int }}%</span> of target ·
+          <strong>{{ grand.avg_hrs_per_emp }}</strong> hrs/employee
+        </div>
       </div>
-      <div class="sc-track"><div class="sc-fill" style="width:100%"></div></div>
+      <div class="sc-track"><div class="sc-fill" style="width:{{ grand.hrs_pct if grand.hrs_pct <= 100 else 100 }}%;background:{% if grand.hrs_pct >= 75 %}var(--c-success){% elif grand.hrs_pct >= 50 %}var(--c-warn){% else %}var(--c-danger){% endif %};"></div></div>
     </div>
   </div>
 </div>

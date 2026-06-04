@@ -119,6 +119,7 @@ def _register(app):
                 'own_sessions': own_s, 'own_conducted': own_c,
                 'manhours': round(manhours, 1),
                 'bc_pct': bc_pct, 'wc_pct': wc_pct,
+                'target_hrs': bc_mandate + wc_mandate,
             })
 
         plant_summaries.sort(key=lambda p: (p['bc_pct'] + p['wc_pct']) / 2, reverse=True)
@@ -128,11 +129,21 @@ def _register(app):
             "WHERE host_plant_id=99 AND session_code IS NOT NULL AND session_code!='' "
             "AND start_date>=? AND start_date<=?",
             (fy_start, fy_end)).fetchone()[0]
+        grand_bc       = sum(p['blue_collar']  for p in plant_summaries)
+        grand_wc       = sum(p['white_collar'] for p in plant_summaries)
+        grand_total    = grand_bc + grand_wc
+        grand_target   = sum(p['target_hrs']   for p in plant_summaries)
+        grand_manhours = round(sum(p['manhours'] for p in plant_summaries), 1)
         grand = {
-            'total_emp': sum(p['total_emp'] for p in plant_summaries),
-            'manhours':  round(sum(p['manhours'] for p in plant_summaries), 1),
-            'sessions':  sum(p['own_sessions'] for p in plant_summaries) + grand_central,
-            'conducted': sum(p['own_conducted'] for p in plant_summaries) + grand_central,
+            'total_emp':    grand_total,
+            'blue_collar':  grand_bc,
+            'white_collar': grand_wc,
+            'manhours':     grand_manhours,
+            'sessions':     sum(p['own_sessions']  for p in plant_summaries) + grand_central,
+            'conducted':    sum(p['own_conducted'] for p in plant_summaries) + grand_central,
+            'target_hrs':   grand_target,
+            'hrs_pct':      round(grand_manhours / grand_target * 100, 0) if grand_target else 0,
+            'avg_hrs_per_emp': round(grand_manhours / grand_total, 1) if grand_total else 0,
         }
 
         return render_template('central.html', plants=plant_summaries, grand=grand)
