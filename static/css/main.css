@@ -1560,3 +1560,56 @@ th:has(.cb-all), td:has(.cb-row) { width: 36px; text-align: center; }
 .context-menu__item { padding:var(--sp-2) var(--sp-4);cursor:pointer; }
 .btn-icon-sm { padding:var(--sp-1) var(--sp-2);font-size:var(--fs-sm);line-height:1; }
 .file-input-md { max-width:18rem; }
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE — token overrides via [data-theme="dark"] on <html>.
+   Toggle via #themeToggle in topbar. Persisted in localStorage.
+═══════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] {
+  --c-bg:           #0f172a;
+  --c-white:        #1e293b;
+  --c-border:       #334155;
+  --c-text:         #e2e8f0;
+  --c-text-strong:  #f1f5f9;
+  --c-muted:        #cbd5e1;
+  --c-muted-2:      #94a3b8;
+  --c-muted-3:      #64748b;
+  --c-surface-1:    #1e293b;
+  --c-surface-2:    #273449;
+  --c-surface-slate:    #1e293b;
+  --c-surface-slate-2:  #273449;
+  --c-border-2:     #475569;
+  --c-divider:      rgba(148,163,184,.16);
+  --shadow-sm:      0 2px 12px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
+  --shadow-md:      0 4px 16px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.3);
+  --shadow-lg:      0 10px 40px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.3);
+}
+
+/* Body + main surfaces */
+:root[data-theme="dark"] body { background: var(--c-bg); color: var(--c-text); }
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .modal-content,
+:root[data-theme="dark"] .dropdown-menu { background: var(--c-white); color: var(--c-text); border-color: var(--c-border); }
+:root[data-theme="dark"] .table { background: var(--c-white); color: var(--c-text); }
+:root[data-theme="dark"] .table thead th { background: var(--c-surface-1); color: var(--c-text-strong); border-bottom-color: var(--c-border-2); }
+:root[data-theme="dark"] .table tbody tr { border-bottom-color: var(--c-divider); }
+:root[data-theme="dark"] .table tbody tr:nth-child(even) { background: rgba(148,163,184,.04); }
+:root[data-theme="dark"] .table tbody tr:hover { background: linear-gradient(90deg, rgba(59,130,246,.12), rgba(59,130,246,.05)) !important; }
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-select { background: var(--c-surface-2); color: var(--c-text); border-color: var(--c-border-2); }
+:root[data-theme="dark"] .form-control::placeholder { color: var(--c-muted-3); }
+:root[data-theme="dark"] .form-control:focus,
+:root[data-theme="dark"] .form-select:focus { background: var(--c-surface-1); color: var(--c-text); }
+:root[data-theme="dark"] .form-label { color: var(--c-text); }
+:root[data-theme="dark"] code { background: rgba(99,102,241,.18); color: #c7d2fe; }
+:root[data-theme="dark"] hr { border-color: var(--c-border); }
+:root[data-theme="dark"] a:not(.btn) { color: #93c5fd; }
+:root[data-theme="dark"] .alert-info-soft { background: rgba(59,130,246,.08); color: var(--c-text); }
+:root[data-theme="dark"] .text-muted { color: var(--c-muted-2) !important; }
+:root[data-theme="dark"] .badge.bg-light { background: var(--c-surface-2) !important; color: var(--c-text) !important; }
+
+/* Topbar + theme toggle button look right both modes */
+:root[data-theme="dark"] #themeToggle { background: rgba(255,255,255,.05); border-color: var(--c-border-2); color: var(--c-text); }
+:root[data-theme="dark"] #themeToggle:hover { background: rgba(255,255,255,.1); }
+
+/* Sidebar already dark — no override needed */
