@@ -1613,3 +1613,130 @@ th:has(.cb-all), td:has(.cb-row) { width: 36px; text-align: center; }
 :root[data-theme="dark"] #themeToggle:hover { background: rgba(255,255,255,.1); }
 
 /* Sidebar already dark — no override needed */
+
+/* ============================================================
+   DARK MODE POLISH — audit-driven additions
+   Uses existing tokens. Sidebar intentionally untouched.
+   ============================================================ */
+
+/* TomSelect — searchable dropdowns (programme picker, etc.) */
+:root[data-theme="dark"] .ts-control { background: var(--c-surface-2) !important; border-color: var(--c-border-2) !important; color: var(--c-text) !important; }
+:root[data-theme="dark"] .ts-control input,
+:root[data-theme="dark"] .ts-control .item { color: var(--c-text) !important; }
+:root[data-theme="dark"] .ts-dropdown { background: var(--c-white) !important; border-color: var(--c-border) !important; color: var(--c-text) !important; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+:root[data-theme="dark"] .ts-dropdown .option,
+:root[data-theme="dark"] .ts-dropdown .optgroup-header { color: var(--c-text) !important; background: transparent !important; }
+:root[data-theme="dark"] .ts-dropdown .option:hover,
+:root[data-theme="dark"] .ts-dropdown .option.active,
+:root[data-theme="dark"] .ts-dropdown .active { background: rgba(59,130,246,.18) !important; color: #93c5fd !important; }
+:root[data-theme="dark"] .ts-dropdown .no-results { color: var(--c-muted-2) !important; }
+
+/* Modal — header / footer borders + close button visibility */
+:root[data-theme="dark"] .modal-content { background: var(--c-white); color: var(--c-text); border-color: var(--c-border); }
+:root[data-theme="dark"] .modal-header,
+:root[data-theme="dark"] .modal-footer { border-color: var(--c-border); }
+:root[data-theme="dark"] .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+:root[data-theme="dark"] .modal-backdrop.show { opacity: .75; }
+
+/* Alert variants — soft + standard Bootstrap */
+:root[data-theme="dark"] .alert-warning-soft,
+:root[data-theme="dark"] .alert-warning { background: rgba(245,158,11,.12); color: #fbbf24; border-color: rgba(245,158,11,.4); }
+:root[data-theme="dark"] .alert-success-soft,
+:root[data-theme="dark"] .alert-success { background: rgba(16,185,129,.12); color: #34d399; border-color: rgba(16,185,129,.4); }
+:root[data-theme="dark"] .alert-danger-soft,
+:root[data-theme="dark"] .alert-danger { background: rgba(239,68,68,.12); color: #f87171; border-color: rgba(239,68,68,.4); }
+:root[data-theme="dark"] .alert-info { background: rgba(59,130,246,.12); color: #93c5fd; border-color: rgba(59,130,246,.4); }
+
+/* Outline buttons — lifted contrast in dark */
+:root[data-theme="dark"] .btn-outline-primary { color: #60a5fa; border-color: #60a5fa; }
+:root[data-theme="dark"] .btn-outline-primary:hover { background: #60a5fa; color: var(--c-bg); }
+:root[data-theme="dark"] .btn-outline-danger { color: #f87171; border-color: #f87171; }
+:root[data-theme="dark"] .btn-outline-danger:hover { background: #f87171; color: var(--c-bg); }
+:root[data-theme="dark"] .btn-outline-success { color: #4ade80; border-color: #4ade80; }
+:root[data-theme="dark"] .btn-outline-success:hover { background: #4ade80; color: var(--c-bg); }
+:root[data-theme="dark"] .btn-outline-secondary { color: var(--c-text); border-color: var(--c-border-2); }
+:root[data-theme="dark"] .btn-outline-secondary:hover { background: var(--c-surface-2); color: var(--c-text-strong); }
+
+/* List groups, pagination, nav-tabs, breadcrumb, input-group, card head/foot */
+:root[data-theme="dark"] .list-group-item,
+:root[data-theme="dark"] .page-link,
+:root[data-theme="dark"] .nav-tabs .nav-link,
+:root[data-theme="dark"] .breadcrumb,
+:root[data-theme="dark"] .input-group-text,
+:root[data-theme="dark"] .card-header,
+:root[data-theme="dark"] .card-footer { background: var(--c-white); color: var(--c-text); border-color: var(--c-border); }
+:root[data-theme="dark"] .nav-tabs { border-bottom-color: var(--c-border); }
+:root[data-theme="dark"] .nav-tabs .nav-link.active,
+:root[data-theme="dark"] .nav-tabs .nav-link:hover { background: var(--c-surface-2); color: var(--c-text-strong); border-color: var(--c-border); }
+:root[data-theme="dark"] .page-item.active .page-link { background: #2563eb; border-color: #2563eb; color: #fff; }
+:root[data-theme="dark"] .page-item.disabled .page-link { background: var(--c-surface-1); color: var(--c-muted-3); }
+:root[data-theme="dark"] .breadcrumb-item + .breadcrumb-item::before { color: var(--c-muted-2); }
+
+/* Dropdown menus */
+:root[data-theme="dark"] .dropdown-menu { background: var(--c-white); border-color: var(--c-border); box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+:root[data-theme="dark"] .dropdown-item { color: var(--c-text); }
+:root[data-theme="dark"] .dropdown-item:hover,
+:root[data-theme="dark"] .dropdown-item:focus { background: var(--c-surface-2); color: var(--c-text-strong); }
+:root[data-theme="dark"] .dropdown-divider { border-top-color: var(--c-border); }
+:root[data-theme="dark"] .dropdown-header { color: var(--c-muted-2); }
+
+/* Form-check (checkboxes / switches) */
+:root[data-theme="dark"] .form-check-input { background-color: var(--c-surface-2); border-color: var(--c-border-2); }
+:root[data-theme="dark"] .form-check-input:checked { background-color: #2563eb; border-color: #2563eb; }
+:root[data-theme="dark"] .form-check-label { color: var(--c-text); }
+
+/* Badge variants */
+:root[data-theme="dark"] .badge.bg-warning { color: #0f172a !important; }
+:root[data-theme="dark"] .badge.bg-secondary { background: var(--c-surface-2) !important; color: var(--c-text) !important; }
+
+/* Misc — pager, pre, popover, tooltip */
+:root[data-theme="dark"] .tbl-pager,
+:root[data-theme="dark"] pre,
+:root[data-theme="dark"] .popover { background: var(--c-white); color: var(--c-text); border-color: var(--c-border); }
+:root[data-theme="dark"] .popover-body,
+:root[data-theme="dark"] .popover-header { color: var(--c-text); background: var(--c-white); border-color: var(--c-border); }
+:root[data-theme="dark"] .tooltip-inner { background: var(--c-surface-2); color: var(--c-text); }
+
+/* Focus ring — brighter in dark */
+:root[data-theme="dark"] :focus-visible { outline-color: #60a5fa; }
+
+/* Utility classes referenced by templates (replace inline hex literals) */
+.table-head-soft { background: var(--c-surface-1); }
+:root[data-theme="dark"] .table-head-soft { background: var(--c-surface-2); }
+
+.panel-soft { background: var(--c-surface-1); }
+:root[data-theme="dark"] .panel-soft { background: var(--c-surface-2); }
+
+.card-soft { background: #fff; border: 1px solid var(--c-border); }
+:root[data-theme="dark"] .card-soft { background: var(--c-white); border-color: var(--c-border); }
+
+.chip-gray { background: #f3f4f6; color: #374151; }
+.chip-danger { background: #fee2e2; color: #991b1b; }
+.chip-warn { background: #fef3c7; color: #92400e; }
+:root[data-theme="dark"] .chip-gray { background: var(--c-surface-2); color: var(--c-text); }
+:root[data-theme="dark"] .chip-danger { background: rgba(239,68,68,.18); color: #f87171; }
+:root[data-theme="dark"] .chip-warn { background: rgba(245,158,11,.18); color: #fbbf24; }
+
+.row-warn { background: #fef9c3; }
+.row-danger { background: #fee2e2; }
+:root[data-theme="dark"] .row-warn { background: rgba(245,158,11,.12); }
+:root[data-theme="dark"] .row-danger { background: rgba(239,68,68,.12); }
+
+.banner-warn { background: #fef9c3; color: #854d0e; }
+:root[data-theme="dark"] .banner-warn { background: rgba(245,158,11,.14); color: #fbbf24; }
+
+/* Sheet card (export_config) */
+.sheet-card { background: var(--c-white); }
+.sheet-card:hover { background: var(--c-surface-2); }
+.sheet-card.selected { background: rgba(59,130,246,.10); }
+
+/* Pane (_dashboard_compare) */
+.pane { background: var(--c-white); }
+
+/* TNI sticky cell hover token */
+:root { --c-row-hover: #fafbff; }
+:root[data-theme="dark"] { --c-row-hover: rgba(96,165,250,.08); }
+
+/* Card hover */
+:root[data-theme="dark"] .card:hover { border-color: var(--c-border-2); }
+

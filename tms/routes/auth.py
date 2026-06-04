@@ -11,7 +11,7 @@ import base64
 from tms.constants import PLANT_MAP, DB_PATH
 from tms.db import get_db
 from tms.decorators import spoc_required, login_required, admin_required
-from tms.helpers import _current_fy, _now_ist
+from tms.helpers import _current_fy, _now_ist, _calc_compliance
 from tms.audit import log_action
 
 
@@ -575,7 +575,19 @@ def _register(app):
         tni_drill = {}
         for r in _drill:
             tni_drill.setdefault(r['prog_type'], []).append((r['programme_name'], r['emp_cnt']))
-        return render_template('dashboard.html', stats=stats, tni_by_type=tni_by_type, tni_drill=tni_drill)
+        compliance = _calc_compliance(plant_id, db)
+        return render_template(
+            'dashboard.html',
+            stats=stats,
+            tni_by_type=tni_by_type,
+            tni_drill=tni_drill,
+            compliance=compliance,
+            bc_pct=compliance['bc_pct'],
+            wc_pct=compliance['wc_pct'],
+            headline_pct=compliance['headline_pct'],
+            headline_rag=compliance['headline_rag'],
+            worst_cells=compliance['worst_cells'],
+        )
 
     @app.route('/admin/seed-demo', methods=['GET', 'POST'])
     @admin_required

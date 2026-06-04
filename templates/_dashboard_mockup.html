@@ -8,53 +8,61 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
+/* :root removed — inherit tokens from base.html / main.css.
+   Map: --green→var(--c-success), --amber→var(--c-warn), --red→var(--c-danger),
+        --green-bg→var(--c-success-bg), --amber-bg→var(--c-warn-bg), --red-bg→var(--c-danger-bg),
+        --dark→var(--c-surface-dark), --darker→var(--c-sidebar),
+        --sidebar-w→var(--sidebar-w defined in base.html). */
+/* Local aliases so existing var(--green), var(--red), var(--amber) refs below still resolve.
+   These point at the canonical tokens — no semantic change. */
 :root {
-  --green:  #16a34a;
-  --amber:  #d97706;
-  --red:    #dc2626;
-  --green-bg: #dcfce7;
-  --amber-bg: #fef3c7;
-  --red-bg:   #fee2e2;
+  --green:    var(--c-success);
+  --amber:    var(--c-warn);
+  --red:      var(--c-danger);
+  --green-bg: var(--c-success-bg);
+  --amber-bg: var(--c-warn-bg);
+  --red-bg:   var(--c-danger-bg);
   --sidebar-w: 220px;
-  --dark: #1e293b;
+  --dark:   #1e293b;
   --darker: #0f172a;
 }
 * { box-sizing: border-box; }
-body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; color: #1e293b; font-size: 14px; }
+/* font-family removed — inherits var(--font-sans)/Inter from base.html / main.css */
+body { margin: 0; background: #f1f5f9; color: #1e293b; font-size: var(--fs-base); }
 
 /* ── LAYOUT ── */
 .layout { display: flex; min-height: 100vh; }
 .sidebar { width: var(--sidebar-w); background: var(--darker); color: #94a3b8; flex-shrink: 0; display: flex; flex-direction: column; }
 .sidebar-brand { padding: 18px 16px; border-bottom: 1px solid #1e293b; }
-.sidebar-brand .app-name { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: .5px; }
+.sidebar-brand .app-name { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: var(--tracking-wide); }
 .sidebar-brand .app-sub  { font-size: 11px; color: #64748b; }
 .sidebar-nav { flex: 1; padding: 8px 0; }
 .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 18px; font-size: 13px; cursor: pointer; border-left: 3px solid transparent; }
 .nav-item:hover { background: #1e293b; color: #cbd5e1; }
 .nav-item.active { border-left-color: #3b82f6; background: #1e293b; color: #fff; }
-.nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 16px 18px 4px; color: #475569; }
+.nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: var(--tracking-wide); padding: 16px 18px 4px; color: #475569; }
 .main { flex: 1; overflow-y: auto; }
 
 /* ── TOP BAR ── */
 .topbar { background: var(--dark); color: #fff; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
 .topbar-left { display: flex; align-items: center; gap: 12px; }
-.plant-badge { background: #3b82f6; color: #fff; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 4px; }
-.fy-badge { background: #334155; color: #94a3b8; font-size: 12px; padding: 3px 10px; border-radius: 4px; }
+.plant-badge { background: #3b82f6; color: #fff; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: var(--radius-xs); }
+.fy-badge { background: #334155; color: #94a3b8; font-size: 12px; padding: 3px 10px; border-radius: var(--radius-xs); }
 .topbar-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #94a3b8; }
-.role-chip { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 3px 10px; font-size: 11px; }
+.role-chip { background: #0f172a; border: 1px solid #334155; border-radius: var(--radius-pill); padding: var(--sp-1) var(--sp-2); font-size: 11px; }
 
 /* ── CONTENT AREA ── */
 .content { padding: 20px 24px; }
-.section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 10px; }
+.section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: #64748b; margin-bottom: 10px; }
 
 /* ── TNI HERO BAND ── */
-.tni-hero { background: var(--dark); border-radius: 12px; padding: 20px 28px; margin-bottom: 16px; display: flex; align-items: center; gap: 32px; }
+.tni-hero { background: var(--dark); border-radius: var(--radius-md); padding: var(--sp-5) 28px; margin-bottom: var(--sp-4); display: flex; align-items: center; gap: var(--sp-8); }
 .tni-hero-main { display: flex; align-items: baseline; gap: 12px; }
-.tni-pct { font-size: 56px; font-weight: 800; line-height: 1; }
-.tni-pct.amber { color: #fbbf24; }
-.tni-pct.green { color: #4ade80; }
-.tni-pct.red   { color: #f87171; }
-.tni-label { font-size: 13px; color: #94a3b8; font-weight: 600; letter-spacing: .5px; }
+.tni-pct { font-size: var(--fs-display); font-weight: 800; line-height: 1; }
+.tni-pct.amber { color: var(--c-on-dark-warn); }
+.tni-pct.green { color: var(--c-on-dark-success); }
+.tni-pct.red   { color: var(--c-on-dark-danger); }
+.tni-label { font-size: 13px; color: #94a3b8; font-weight: 600; letter-spacing: var(--tracking-wide); }
 .tni-sub   { font-size: 12px; color: #64748b; margin-top: 3px; }
 .tni-divider { width: 1px; background: #334155; height: 60px; }
 .tni-bc-wc { display: flex; flex-direction: column; gap: 8px; }
@@ -63,9 +71,9 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f
 .bc-tag { background: #1e3a5f; color: #60a5fa; }
 .wc-tag { background: #1a3a2e; color: #4ade80; }
 .collar-pct { font-size: 22px; font-weight: 800; color: #fff; }
-.collar-pct.amber { color: #fbbf24; }
-.collar-pct.green { color: #4ade80; }
-.collar-pct.red   { color: #f87171; }
+.collar-pct.amber { color: var(--c-on-dark-warn); }
+.collar-pct.green { color: var(--c-on-dark-success); }
+.collar-pct.red   { color: var(--c-on-dark-danger); }
 .collar-detail { font-size: 11px; color: #64748b; }
 .tni-type-mini { display: flex; flex-direction: column; gap: 5px; margin-left: auto; }
 .type-mini-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #94a3b8; }
@@ -74,8 +82,8 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f
 .type-mini-pct { font-size: 11px; font-weight: 700; min-width: 30px; text-align: right; }
 
 /* ── EXCEPTION ALERTS ── */
-.alerts-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-.alert-card { border-radius: 10px; padding: 12px 16px; flex: 1; min-width: 160px; display: flex; align-items: center; gap: 12px; border: 1.5px solid; }
+.alerts-row { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-4); flex-wrap: wrap; }
+.alert-card { border-radius: var(--radius-md); padding: var(--sp-3) var(--sp-4); flex: 1; min-width: 160px; display: flex; align-items: center; gap: var(--sp-3); border: 1px solid; }
 .alert-card.danger { background: #fff1f2; border-color: #fca5a5; }
 .alert-card.warning { background: #fffbeb; border-color: #fcd34d; }
 .alert-card.info    { background: #eff6ff; border-color: #93c5fd; }
@@ -94,10 +102,10 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f
 .alert-card.info    .alert-link { color: #2563eb; }
 
 /* ── KPI ROW ── */
-.kpi-row { display: flex; gap: 12px; margin-bottom: 16px; }
-.kpi-card { background: #fff; border-radius: 10px; padding: 16px 20px; flex: 1; border: 1px solid #e2e8f0; }
-.kpi-card-header { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #94a3b8; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-.kpi-num { font-size: 32px; font-weight: 800; color: #0f172a; line-height: 1; }
+.kpi-row { display: flex; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.kpi-card { background: #fff; border-radius: var(--radius-md); padding: var(--sp-4) var(--sp-5); flex: 1; border: 1px solid #e2e8f0; }
+.kpi-card-header { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: #94a3b8; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.kpi-num { font-size: var(--fs-h1); font-weight: 800; color: var(--c-text-strong); line-height: 1; }
 .kpi-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
 .kpi-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
 .chip { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
@@ -113,7 +121,7 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f
 .kpi-progress-fill.red   { background: var(--red); }
 
 /* ── SESSION STATUS STRIP ── */
-.status-strip-wrap { background: #fff; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; border: 1px solid #e2e8f0; }
+.status-strip-wrap { background: #fff; border-radius: var(--radius-md); padding: 14px var(--sp-5); margin-bottom: var(--sp-4); border: 1px solid #e2e8f0; }
 .status-strip { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; margin: 8px 0; }
 .ss-seg { height: 10px; }
 .ss-seg.conducted  { background: var(--green); }
@@ -125,8 +133,8 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f
 .sl-dot { width: 10px; height: 10px; border-radius: 2px; }
 
 /* ── PROGRAMME TYPE GRID ── */
-.prog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-.prog-card { background: #fff; border-radius: 10px; padding: 14px 16px; border: 1px solid #e2e8f0; border-left: 4px solid; }
+.prog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.prog-card { background: #fff; border-radius: var(--radius-md); padding: 14px var(--sp-4); border: 1px solid #e2e8f0; border-left: 4px solid; }
 .prog-card.green-border { border-left-color: var(--green); }
 .prog-card.amber-border { border-left-color: var(--amber); }
 .prog-card.red-border   { border-left-color: var(--red); }
@@ -143,11 +151,11 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f
 .prog-counts { font-size: 11px; color: #64748b; }
 
 /* ── CHART + GAUGES ROW ── */
-.chart-gauge-row { display: flex; gap: 12px; margin-bottom: 16px; }
-.chart-card { background: #fff; border-radius: 10px; padding: 16px 20px; flex: 2; border: 1px solid #e2e8f0; }
-.gauge-col { display: flex; flex-direction: column; gap: 10px; flex: 1; }
-.gauge-card { background: #fff; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0; text-align: center; flex: 1; }
-.gauge-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: #94a3b8; margin-bottom: 8px; }
+.chart-gauge-row { display: flex; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.chart-card { background: #fff; border-radius: var(--radius-md); padding: var(--sp-4) var(--sp-5); flex: 2; border: 1px solid #e2e8f0; }
+.gauge-col { display: flex; flex-direction: column; gap: var(--sp-2); flex: 1; }
+.gauge-card { background: #fff; border-radius: var(--radius-md); padding: var(--sp-4); border: 1px solid #e2e8f0; text-align: center; flex: 1; }
+.gauge-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: #94a3b8; margin-bottom: 8px; }
 .gauge-ring { position: relative; width: 90px; height: 90px; margin: 0 auto; }
 .gauge-ring svg { transform: rotate(-90deg); }
 .gauge-ring-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; }
@@ -165,10 +173,10 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f
 .dash-tab.active { color: #1d4ed8; border-bottom-color: #1d4ed8; }
 
 /* ── CENTRAL SPECIFIC ── */
-.leaderboard { background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 16px; }
+.leaderboard { background: #fff; border-radius: var(--radius-md); border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: var(--sp-4); }
 .lb-header { background: var(--dark); color: #94a3b8; display: grid; grid-template-columns: 140px 1fr 80px 80px 80px 80px 70px; gap: 0; }
 .lb-header div, .lb-row div { padding: 10px 12px; font-size: 12px; }
-.lb-header div { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: #64748b; }
+.lb-header div { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: #64748b; }
 .lb-row { display: grid; grid-template-columns: 140px 1fr 80px 80px 80px 80px 70px; border-top: 1px solid #f1f5f9; align-items: center; }
 .lb-row:hover { background: #f8fafc; }
 .lb-row.red-plant   { background: #fff5f5; }
@@ -183,26 +191,26 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f
 .red-text   { color: var(--red); }
 .amber-text { color: var(--amber); }
 .green-text { color: var(--green); }
-.overdue-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+.overdue-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: var(--radius-xs); }
 .overdue-badge.red   { background: var(--red-bg); color: var(--red); }
 .overdue-badge.amber { background: var(--amber-bg); color: var(--amber); }
 .overdue-badge.ok    { background: #f1f5f9; color: #94a3b8; }
 
-.grand-kpi-row { display: flex; gap: 12px; margin-bottom: 16px; }
-.grand-kpi { background: var(--dark); color: #fff; border-radius: 10px; padding: 16px 20px; flex: 1; }
-.grand-kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #64748b; margin-bottom: 6px; }
+.grand-kpi-row { display: flex; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.grand-kpi { background: var(--dark); color: #fff; border-radius: var(--radius-md); padding: var(--sp-4) var(--sp-5); flex: 1; }
+.grand-kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: #64748b; margin-bottom: 6px; }
 .grand-kpi-num { font-size: 30px; font-weight: 800; line-height: 1; }
 .grand-kpi-sub  { font-size: 11px; color: #64748b; margin-top: 4px; }
-.grand-kpi-num.amber { color: #fbbf24; }
-.grand-kpi-num.red   { color: #f87171; }
-.grand-kpi-num.green { color: #4ade80; }
+.grand-kpi-num.amber { color: var(--c-on-dark-warn); }
+.grand-kpi-num.red   { color: var(--c-on-dark-danger); }
+.grand-kpi-num.green { color: var(--c-on-dark-success); }
 
 /* ── EMPTY STATE ── */
 .empty-hero { text-align: center; padding: 48px 24px; }
 .empty-icon { font-size: 64px; color: #cbd5e1; margin-bottom: 16px; }
 .empty-title { font-size: 20px; font-weight: 700; color: #334155; margin-bottom: 8px; }
 .empty-sub { font-size: 14px; color: #64748b; margin-bottom: 24px; }
-.checklist { background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; max-width: 400px; margin: 0 auto; padding: 20px 24px; text-align: left; }
+.checklist { background: #fff; border-radius: var(--radius-md); border: 1px solid #e2e8f0; max-width: 400px; margin: 0 auto; padding: var(--sp-5) var(--sp-6); text-align: left; }
 .check-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
 .check-item:last-child { border-bottom: none; }
 .check-item i.done  { color: var(--green); }
@@ -259,76 +267,122 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f
 <!-- ═══════════ SPOC VIEW ═══════════ -->
 <div id="view-spoc" class="content">
 
-  <!-- TNI HERO BAND -->
+  <!-- TNI HERO BAND — NON-DILUTING (MIN of BC/WC). Data hooks: {{ headline_pct }} {{ headline_rag }} {{ headline_label }} {{ bc_pct }} {{ bc_trained }} {{ bc_nominated }} {{ wc_pct }} {{ wc_trained }} {{ wc_nominated }} {{ worst_cells }} {{ src_tni_pct }} {{ src_new_pct }} — sample: BC 100% / WC 0% edge case. -->
   <div class="section-label">Training Need Coverage — FY Headline</div>
-  <div class="tni-hero" style="margin-bottom:16px;">
-    <div>
-      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#64748b; margin-bottom:4px;">TNI Coverage</div>
-      <div class="tni-hero-main">
-        <div class="tni-pct amber">71%</div>
-        <div>
-          <div class="tni-label" style="color:#fbbf24;">AMBER</div>
-          <div class="tni-sub">319 trained of 449 nominated</div>
+  <style>
+  .tni-hero-v2 { background: var(--c-surface-strong, var(--dark, #1e293b)); border-radius:12px; padding:22px 26px; margin-bottom:16px; display:grid; grid-template-columns:minmax(260px,320px) 1fr; gap:28px; align-items:stretch; }
+  .tni-headline-col { display:flex; flex-direction:column; justify-content:center; }
+  .tni-headline-eyebrow { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--c-muted-2,#64748b); margin-bottom:6px; }
+  .tni-headline-num { font-size:64px; font-weight:800; line-height:1; letter-spacing:-1px; }
+  .tni-headline-num.green { color:var(--c-success,#4ade80); }
+  .tni-headline-num.amber { color:var(--c-warn,#fbbf24); }
+  .tni-headline-num.red   { color:var(--c-danger,#f87171); }
+  .tni-headline-status { font-size:14px; font-weight:700; margin-top:10px; letter-spacing:.3px; }
+  .tni-headline-status.green { color:var(--c-success,#4ade80); }
+  .tni-headline-status.amber { color:var(--c-warn,#fbbf24); }
+  .tni-headline-status.red   { color:var(--c-danger,#f87171); }
+  .tni-headline-rule { font-size:11px; color:var(--c-muted-2,#64748b); margin-top:6px; }
+  .tni-right-col { display:flex; flex-direction:column; gap:14px; }
+  .tni-collar-row-v2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .tni-collar-block { background:var(--c-surface-2,#0f172a); border:1px solid #1f2a3d; border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:6px; }
+  .tni-collar-block.is-worst { border-color:#7f1d1d; box-shadow:inset 0 0 0 1px #7f1d1d33; }
+  .tni-collar-head { display:flex; align-items:center; gap:8px; }
+  .tni-collar-tag { font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; letter-spacing:.5px; }
+  .tni-collar-tag.bc { background:#1e3a5f; color:#60a5fa; }
+  .tni-collar-tag.wc { background:#1a3a2e; color:#4ade80; }
+  .tni-collar-title { font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:.6px; font-weight:600; }
+  .tni-collar-pct-v2 { font-size:38px; font-weight:800; line-height:1; }
+  .tni-collar-pct-v2.green { color:var(--c-success,#4ade80); }
+  .tni-collar-pct-v2.amber { color:var(--c-warn,#fbbf24); }
+  .tni-collar-pct-v2.red   { color:var(--c-danger,#f87171); }
+  .tni-collar-counts { font-size:12px; color:#94a3b8; }
+  .tni-collar-counts strong { color:var(--c-text-strong,#e2e8f0); }
+  .tni-collar-bar { height:6px; background:#1e293b; border-radius:3px; overflow:hidden; margin-top:4px; }
+  .tni-collar-bar > span { display:block; height:100%; border-radius:3px; }
+  .tni-collar-bar > span.green { background:var(--c-success,#4ade80); }
+  .tni-collar-bar > span.red   { background:var(--c-danger,#f87171); }
+  .tni-worst-panel { background:var(--c-surface-2,#0f172a); border:1px solid #1f2a3d; border-radius:10px; padding:12px 16px; }
+  .tni-worst-head { display:flex; align-items:center; justify-content:space-between; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--c-warn,#fbbf24); margin-bottom:8px; }
+  .tni-worst-head .tni-worst-sub { color:var(--c-muted-2,#64748b); font-weight:600; }
+  .tni-worst-list { display:flex; flex-direction:column; gap:8px; }
+  .tni-worst-row { display:grid; grid-template-columns:22px 1fr 110px 110px 44px; align-items:center; gap:10px; font-size:12px; }
+  .tni-worst-rank { font-weight:800; color:var(--c-danger,#f87171); font-size:13px; }
+  .tni-worst-cell { color:var(--c-text-strong,#e2e8f0); font-weight:600; }
+  .tni-worst-cell .tni-worst-collar { display:inline-block; font-size:10px; font-weight:700; padding:1px 5px; border-radius:3px; margin-right:6px; }
+  .tni-worst-cell .tni-worst-collar.bc { background:#1e3a5f; color:#60a5fa; }
+  .tni-worst-cell .tni-worst-collar.wc { background:#1a3a2e; color:#4ade80; }
+  .tni-worst-counts { font-size:11px; color:#94a3b8; text-align:right; }
+  .tni-worst-bar { height:6px; background:#1e293b; border-radius:3px; overflow:hidden; }
+  .tni-worst-bar > span { display:block; height:100%; border-radius:3px; }
+  .tni-worst-bar > span.red { background:var(--c-danger,#f87171); }
+  .tni-worst-bar > span.amber { background:var(--c-warn,#fbbf24); }
+  .tni-worst-pct { font-size:12px; font-weight:800; text-align:right; }
+  .tni-worst-pct.red   { color:var(--c-danger,#f87171); }
+  .tni-worst-pct.amber { color:var(--c-warn,#fbbf24); }
+  .tni-source-split { display:flex; align-items:center; gap:14px; background:#1a2535; border-radius:8px; padding:8px 14px; align-self:flex-start; }
+  .tni-source-split .ss-label { font-size:10px; text-transform:uppercase; letter-spacing:.7px; color:var(--c-muted-2,#64748b); }
+  .tni-source-split .ss-val { font-size:16px; font-weight:800; }
+  .tni-source-split .ss-val.tni { color:#60a5fa; }
+  .tni-source-split .ss-val.new { color:#a78bfa; }
+  .tni-source-split .ss-sub { font-size:10px; color:var(--c-muted-2,#64748b); }
+  .tni-source-split .ss-sep { width:1px; height:28px; background:#334155; }
+  </style>
+  <div class="tni-hero-v2">
+    <div class="tni-headline-col">
+      <div class="tni-headline-eyebrow">TNI Coverage · Headline</div>
+      <div class="tni-headline-num red">0%</div>
+      <div class="tni-headline-status red"><i class="bi bi-exclamation-octagon-fill"></i> Critical — WC at 0%</div>
+      <div class="tni-headline-rule">Headline = lower of BC / WC. A strong collar cannot mask a weak one.</div>
+    </div>
+    <div class="tni-right-col">
+      <div class="tni-collar-row-v2">
+        <div class="tni-collar-block">
+          <div class="tni-collar-head"><span class="tni-collar-tag bc">BC</span><span class="tni-collar-title">Blue Collared</span></div>
+          <div class="tni-collar-pct-v2 green">100%</div>
+          <div class="tni-collar-counts"><strong>287</strong> trained of <strong>287</strong> nominated</div>
+          <div class="tni-collar-bar"><span class="green" style="width:100%;"></span></div>
+        </div>
+        <div class="tni-collar-block is-worst">
+          <div class="tni-collar-head"><span class="tni-collar-tag wc">WC</span><span class="tni-collar-title">White Collared</span></div>
+          <div class="tni-collar-pct-v2 red">0%</div>
+          <div class="tni-collar-counts"><strong>0</strong> trained of <strong>162</strong> nominated</div>
+          <div class="tni-collar-bar"><span class="red" style="width:0%;"></span></div>
         </div>
       </div>
-    </div>
-    <div class="tni-divider"></div>
-    <div class="tni-bc-wc">
-      <div class="collar-row">
-        <span class="collar-tag bc-tag">BC</span>
-        <span class="collar-pct amber">69%</span>
-        <span class="collar-detail">198 / 287 nominated</span>
+      <div class="tni-worst-panel">
+        <div class="tni-worst-head"><span><i class="bi bi-bullseye"></i> Improvement Areas — Worst 3 cells</span><span class="tni-worst-sub">collar × programme type</span></div>
+        <div class="tni-worst-list">
+          <div class="tni-worst-row">
+            <div class="tni-worst-rank">1</div>
+            <div class="tni-worst-cell"><span class="tni-worst-collar wc">WC</span>EHS/HR</div>
+            <div class="tni-worst-counts">0 of 54 trained</div>
+            <div class="tni-worst-bar"><span class="red" style="width:0%;"></span></div>
+            <div class="tni-worst-pct red">0%</div>
+          </div>
+          <div class="tni-worst-row">
+            <div class="tni-worst-rank">2</div>
+            <div class="tni-worst-cell"><span class="tni-worst-collar wc">WC</span>Technical</div>
+            <div class="tni-worst-counts">0 of 71 trained</div>
+            <div class="tni-worst-bar"><span class="red" style="width:0%;"></span></div>
+            <div class="tni-worst-pct red">0%</div>
+          </div>
+          <div class="tni-worst-row">
+            <div class="tni-worst-rank">3</div>
+            <div class="tni-worst-cell"><span class="tni-worst-collar wc">WC</span>Behavioural/Leadership</div>
+            <div class="tni-worst-counts">0 of 37 trained</div>
+            <div class="tni-worst-bar"><span class="red" style="width:0%;"></span></div>
+            <div class="tni-worst-pct red">0%</div>
+          </div>
+        </div>
       </div>
-      <div class="collar-row">
-        <span class="collar-tag wc-tag">WC</span>
-        <span class="collar-pct green">75%</span>
-        <span class="collar-detail">121 / 162 nominated</span>
-      </div>
-    </div>
-    <div class="tni-divider"></div>
-    <div class="tni-type-mini">
-      <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#64748b; margin-bottom:4px;">By Type</div>
-      <div class="type-mini-row">
-        <span style="min-width:120px;">Technical</span>
-        <div class="type-mini-bar-wrap"><div class="type-mini-bar" style="width:76%; background:#fbbf24;"></div></div>
-        <span class="type-mini-pct" style="color:#fbbf24;">76%</span>
-      </div>
-      <div class="type-mini-row">
-        <span style="min-width:120px;">EHS/HR</span>
-        <div class="type-mini-bar-wrap"><div class="type-mini-bar" style="width:38%; background:#dc2626;"></div></div>
-        <span class="type-mini-pct" style="color:#dc2626;">38%</span>
-      </div>
-      <div class="type-mini-row">
-        <span style="min-width:120px;">Behavioural/Leadership</span>
-        <div class="type-mini-bar-wrap"><div class="type-mini-bar" style="width:84%; background:#16a34a;"></div></div>
-        <span class="type-mini-pct" style="color:#16a34a;">84%</span>
-      </div>
-      <div class="type-mini-row">
-        <span style="min-width:120px;">Cane</span>
-        <div class="type-mini-bar-wrap"><div class="type-mini-bar" style="width:46%; background:#dc2626;"></div></div>
-        <span class="type-mini-pct" style="color:#dc2626;">46%</span>
-      </div>
-      <div class="type-mini-row">
-        <span style="min-width:120px;">Commercial</span>
-        <div class="type-mini-bar-wrap"><div class="type-mini-bar" style="width:80%; background:#16a34a;"></div></div>
-        <span class="type-mini-pct" style="color:#16a34a;">80%</span>
-      </div>
-      <div class="type-mini-row">
-        <span style="min-width:120px;">IT</span>
-        <div class="type-mini-bar-wrap"><div class="type-mini-bar" style="width:62%; background:#fbbf24;"></div></div>
-        <span class="type-mini-pct" style="color:#fbbf24;">62%</span>
-      </div>
-    </div>
-    <div style="margin-left:auto; background:#1a2535; border-radius:8px; padding:10px 16px; text-align:center;">
-      <div style="font-size:10px; text-transform:uppercase; letter-spacing:.7px; color:#64748b; margin-bottom:4px;">Source Split</div>
-      <div style="display:flex; gap:10px; align-items:center;">
-        <div style="text-align:center;"><div style="font-size:20px; font-weight:800; color:#60a5fa;">72%</div><div style="font-size:10px; color:#64748b;">TNI Driven</div></div>
-        <div style="font-size:18px; color:#334155;">|</div>
-        <div style="text-align:center;"><div style="font-size:20px; font-weight:800; color:#a78bfa;">28%</div><div style="font-size:10px; color:#64748b;">New Requirement</div></div>
+      <div class="tni-source-split">
+        <div><div class="ss-label">Source split</div></div>
+        <div style="text-align:center;"><div class="ss-val tni">72%</div><div class="ss-sub">TNI Driven</div></div>
+        <div class="ss-sep"></div>
+        <div style="text-align:center;"><div class="ss-val new">28%</div><div class="ss-sub">New Requirement</div></div>
       </div>
     </div>
   </div>
-
   <!-- EXCEPTION ALERTS -->
   <div class="section-label">Needs Attention</div>
   <div class="alerts-row">
@@ -530,7 +584,7 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f
       <div class="grand-kpi-num">56,760</div>
       <div class="grand-kpi-sub">across all plants</div>
     </div>
-    <div class="grand-kpi" style="border: 1.5px solid #7f1d1d;">
+    <div class="grand-kpi" style="border: 1px solid #7f1d1d;">
       <div class="grand-kpi-label" style="color:#f87171;"><i class="bi bi-exclamation-triangle-fill"></i> Overdue Sessions</div>
       <div class="grand-kpi-num red">95</div>
       <div class="grand-kpi-sub" style="color:#7f1d1d;">across 7 plants</div>

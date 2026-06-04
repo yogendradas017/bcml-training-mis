@@ -1,0 +1,26 @@
+/* ═══════════════════════════════════════════════════════════════
+   TMS Design Tokens — extensions to main.css :root.
+   These are split out so dashboard/mockup styles can reference a
+   single source of truth for dark-surface accents and the larger
+   display/heading scale used in hero KPIs.
+   Loaded AFTER main.css so values here take precedence.
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* Dark-surface accent variants — readable on var(--c-surface-dark)/sidebar */
+  --c-on-dark-success: #4ade80;
+  --c-on-dark-warn:    #fbbf24;
+  --c-on-dark-danger:  #f87171;
+
+  /* Pill / micro radius (radius-pill already defined in main.css; xxs is new) */
+  --radius-pill: 999px;
+  --radius-xxs:  2px;
+
+  /* Letter-spacing scale — replaces ad-hoc .5px/.7px/.8px/1px values */
+  --tracking-wide: .05em;
+
+  /* Display / hero heading scale — for dashboard hero KPIs */
+  --fs-display: 56px;
+  --fs-h1:      32px;
+  --fs-h2:      26px;
+  --fs-h3:      20px;
+}

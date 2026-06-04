@@ -604,15 +604,89 @@ def _calc_compliance(plant_id, db):
     wc_target = get_config('mh_target_wc', 24, plant_id=plant_id)
     bc_mandate = bc * bc_target
     wc_mandate = wc * wc_target
+    bc_pct = round(bc_act / bc_mandate * 100, 1) if bc_mandate else 0
+    wc_pct = round(wc_act / wc_mandate * 100, 1) if wc_mandate else 0
+    total_pct = round((bc_act + wc_act) / (bc_mandate + wc_mandate) * 100, 1) \
+                 if (bc_mandate + wc_mandate) else 0
+    # Headline = MIN(bc_pct, wc_pct), excluding any collar with 0 employees.
+    candidates = []
+    if bc > 0: candidates.append(bc_pct)
+    if wc > 0: candidates.append(wc_pct)
+    headline_pct = min(candidates) if candidates else 0
+    if headline_pct >= 75:
+        headline_rag = 'on-track'
+    elif headline_pct >= 50:
+        headline_rag = 'watch'
+    else:
+        headline_rag = 'critical'
     return {
         'bc_emp': bc, 'wc_emp': wc,
         'bc_mandate': bc_mandate, 'wc_mandate': wc_mandate,
         'bc_actual': round(bc_act, 1), 'wc_actual': round(wc_act, 1),
-        'bc_pct': round(bc_act / bc_mandate * 100, 1) if bc_mandate else 0,
-        'wc_pct': round(wc_act / wc_mandate * 100, 1) if wc_mandate else 0,
-        'total_pct': round((bc_act + wc_act) / (bc_mandate + wc_mandate) * 100, 1)
-                     if (bc_mandate + wc_mandate) else 0
+        'bc_pct': bc_pct,
+        'wc_pct': wc_pct,
+        'total_pct': total_pct,
+        'headline_pct': headline_pct,
+        'headline_rag': headline_rag,
+        'worst_cells': _calc_worst_cells(plant_id, db),
     }
+
+
+def _calc_worst_cells(plant_id, db, limit=3, min_nominated=3):
+    """Return up to `limit` worst (prog_type, collar) cells by TNI coverage %.
+    A cell's coverage = trained_cnt / nominated * 100, where a TNI row is 'trained'
+    if any emp_training row exists for that emp on a session whose programme matches.
+    Only cells with at least `min_nominated` TNI rows are considered.
+    Each row also carries a `rag` label using the same 75/50 thresholds.
+    """
+    sql = '''
+        SELECT prog_type, collar,
+               ROUND(100.0 * SUM(CASE WHEN trained THEN 1 ELSE 0 END)
+                     / NULLIF(COUNT(*), 0), 1) AS cov_pct,
+               COUNT(*) AS nominated,
+               SUM(CASE WHEN trained THEN 1 ELSE 0 END) AS trained_cnt
+        FROM (
+            SELECT t.prog_type, e.collar, t.emp_code,
+                   EXISTS(
+                       SELECT 1 FROM emp_training et
+                       JOIN programme_details pd ON pd.session_code = et.session_code
+                       WHERE et.emp_code = t.emp_code
+                         AND pd.programme_name = t.programme_name
+                         AND pd.plant_id = t.plant_id
+                   ) AS trained
+            FROM tni t
+            JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
+            WHERE t.plant_id = ? AND e.is_active = 1
+        )
+        GROUP BY prog_type, collar
+        HAVING nominated >= ?
+        ORDER BY cov_pct ASC
+        LIMIT ?
+    '''
+    try:
+        rows = db.execute(sql, (plant_id, min_nominated, limit)).fetchall()
+    except Exception:
+        return []
+    out = []
+    for r in rows:
+        pct = r['cov_pct'] or 0
+        if pct >= 75:
+            rag = 'on-track'
+        elif pct >= 50:
+            rag = 'watch'
+        else:
+            rag = 'critical'
+        out.append({
+            'prog_type':   r['prog_type'] or '',
+            'collar':      r['collar'] or '',
+            'pct':         pct,
+            'cov_pct':     pct,
+            'trained':     r['trained_cnt'] or 0,
+            'trained_cnt': r['trained_cnt'] or 0,
+            'nominated':   r['nominated'] or 0,
+            'rag':         rag,
+        })
+    return out
 
 
 # ── Excel error response ──────────────────────────────────────────────────────
