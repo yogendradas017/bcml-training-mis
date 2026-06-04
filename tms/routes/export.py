@@ -152,7 +152,7 @@ def _register(app):
             ws4.append([hc(ws4, h) for h in
                 ['Sr.','Emp Code','Name','Designation','Grade','Collar','Dept','Section',
                  'Session Code','Start Date','End Date','Hrs','Programme Name','Type','Level','Mode',
-                 'Source','Pre Rating','Post Rating','Venue','Month']])
+                 'Source','Pre Score (%)','Post Score (%)','Venue','Month']])
             where  = ['t.plant_id=?']; params = [plant_id]
             if month_f:  where.append('t.month=?');       params.append(month_f)
             if collar_f: where.append('e.collar=?');      params.append(collar_f)
@@ -181,7 +181,7 @@ def _register(app):
             ws5.append([hc(ws5, h) for h in
                 ['Sr.','Session Code','Programme Name','Type','Level','Cal/New','Mode',
                  'Start Date','End Date','Audience','Hours Actual','Faculty Name','Int/Ext',
-                 'Cost (Rs.)','Venue','Course FB','Faculty FB','Trainer FB-Participants',
+                 'Cost (Rs.)','Venue','Course Fdbk (1-4)','Faculty Fdbk (1-4)','Trainer FB-Participants (1-4)',
                  'Trainer FB-Facilities','Participants','Man-Hours']])
             pax_map = {row[0]: row[1] for row in db.execute(
                 'SELECT session_code, COUNT(*) FROM emp_training WHERE plant_id=? GROUP BY session_code', (plant_id,))}
@@ -421,7 +421,7 @@ def _register(app):
                 'Grade', 'Collar', 'Dept', 'Section',
                 'Session Code', 'Start Date', 'End Date', 'Hrs',
                 'Programme Name', 'Type', 'Level', 'Mode', 'Source',
-                'Pre Rating', 'Post Rating', 'Venue', 'Month']])
+                'Pre Score (%)', 'Post Score (%)', 'Venue', 'Month']])
             where = ['t.start_date BETWEEN ? AND ?']; params = [fy_start, fy_end]
             if month_f: where.append('t.month=?'); params.append(month_f)
             r = 1
@@ -454,7 +454,7 @@ def _register(app):
                 'Sr.', 'Plant', 'Unit', 'Session Code', 'Programme Name',
                 'Type', 'Level', 'Cal/New', 'Mode', 'Start Date', 'End Date',
                 'Audience', 'Hours Actual', 'Faculty Name', 'Int/Ext',
-                'Cost (Rs.)', 'Venue', 'Course FB', 'Faculty FB',
+                'Cost (Rs.)', 'Venue', 'Course Fdbk (1-4)', 'Faculty Fdbk (1-4)',
                 'Trainer FB-Pax', 'Trainer FB-Fac', 'Participants', 'Man-Hours']])
             pax_map = {(r[0], r[1]): r[2] for r in db.execute(
                 'SELECT plant_id, session_code, COUNT(*) FROM emp_training WHERE start_date BETWEEN ? AND ? GROUP BY plant_id, session_code',

@@ -548,10 +548,16 @@ def _register(app):
             (plant_id, session_code)
         ).fetchone()
 
-        form_course   = _safe_float(f.get('course_feedback'))
-        form_faculty  = _safe_float(f.get('faculty_feedback'))
-        form_partic   = _safe_float(f.get('trainer_fb_participants'))
-        form_facil    = _safe_float(f.get('trainer_fb_facilities'))
+        def _clamp_fb(v):
+            if v is None: return None
+            try: v = float(v)
+            except (TypeError, ValueError): return None
+            if v < 0 or v > 4: return None
+            return v if v > 0 else None
+        form_course   = _clamp_fb(f.get('course_feedback'))
+        form_faculty  = _clamp_fb(f.get('faculty_feedback'))
+        form_partic   = _clamp_fb(f.get('trainer_fb_participants'))
+        form_facil    = _clamp_fb(f.get('trainer_fb_facilities'))
 
         if existing_pd:
             # Prefer non-blank form value; otherwise keep stub's pre-computed value.

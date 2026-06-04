@@ -278,6 +278,27 @@ def _migrate_central_plant(db):
         logging.warning(f'_migrate_central_plant failed: {e}')
 
 
+def _migrate_feedback_scale_to_4(db):
+    """One-time: cap legacy 1-5 feedback values to 1-4 after scale change.
+    Values >4 in course_feedback/faculty_feedback/trainer_fb_* are pre-change
+    data from the 1-5 scale. Clamping to 4 prevents Feedback Reports showing
+    >100% percentages. Idempotent."""
+    import logging
+    try:
+        cols = ['course_feedback','faculty_feedback',
+                'trainer_fb_participants','trainer_fb_facilities']
+        total = 0
+        for col in cols:
+            n = db.execute(
+                f"UPDATE programme_details SET {col}=4 WHERE {col} > 4").rowcount
+            total += n
+        if total > 0:
+            db.commit()
+            logging.info(f'_migrate_feedback_scale_to_4: clamped {total} cells to <=4')
+    except Exception as e:
+        logging.warning(f'_migrate_feedback_scale_to_4 failed: {e}')
+
+
 def _migrate_mode_offline_to_classroom(db):
     """One-time data hygiene: collapse legacy 'Offline' mode to canonical 'Classroom'.
     Per tms.constants.MODES (Classroom/OJT/SOP/Online), 'Offline' is not a valid value —
@@ -719,6 +740,7 @@ def init_db():
     _migrate_central_plant(db)
     _migrate_calendar_is_central(db)
     _migrate_mode_offline_to_classroom(db)
+    _migrate_feedback_scale_to_4(db)
     _migrate_emp_training_host(db)
     _migrate_corp_members(db)
     _migrate_central_user_plant(db)

@@ -277,15 +277,15 @@ def _register(app):
         ws.title = '2A_Bulk_Upload'
         headers = ['Employee Code', 'Session Code (optional)', 'Programme Name',
                    'Type of Programme', 'Start Date (DD-MM-YYYY)', 'End Date (DD-MM-YYYY)',
-                   'Hours', 'Venue', 'Pre-Session Rating (1-4)', 'Post-Session Rating (1-4)']
+                   'Hours', 'Venue', 'Pre-Session Score (%)', 'Post-Session Score (%)']
         hdr_fill = PatternFill('solid', start_color='1F4E79')
         hdr_font = Font(bold=True, color='FFFFFF')
         for i, h in enumerate(headers, 1):
             cell = ws.cell(row=1, column=i, value=h)
             cell.fill = hdr_fill; cell.font = hdr_font
             ws.column_dimensions[get_column_letter(i)].width = 26
-        ws.append(['21700011', 'BCM/EHS/001/B01', 'Fire Safety Training', 'EHS/HR', '10-06-2026', '10-06-2026', 4, 'Training Hall', 2.5, 3.8])
-        ws.append(['21101568', '', 'MS Office Basics', 'IT', '05-07-2026', '06-07-2026', 8, 'Computer Lab', '', 3.5])
+        ws.append(['21700011', 'BCM/EHS/001/B01', 'Fire Safety Training', 'EHS/HR', '10-06-2026', '10-06-2026', 4, 'Training Hall', 60, 85])
+        ws.append(['21101568', '', 'MS Office Basics', 'IT', '05-07-2026', '06-07-2026', 8, 'Computer Lab', '', 78])
         ws['A5'] = 'NOTE: Session Code is optional. If provided, Programme Name/Type/Mode auto-fill from Calendar. Dates must be DD-MM-YYYY.'
         out = io.BytesIO()
         wb.save(out); out.seek(0)
@@ -322,13 +322,15 @@ def _register(app):
                 continue
             hrs          = _safe_float(_clean(row, ['hours', 'hrs', 'duration'])) or 0
             venue        = _clean(row, ['venue'])
-            pre_r        = _safe_float(_clean(row, ['pre-session rating', 'pre rating', 'pre_rating']))
-            post_r       = _safe_float(_clean(row, ['post-session rating', 'post rating', 'post_rating']))
-            # Rating bounds 1-4 — block bad rows so silent garbage doesn't poison stats.
+            pre_r        = _safe_float(_clean(row, ['pre-session score (%)', 'pre-session score', 'pre score',
+                                                    'pre-session rating', 'pre rating', 'pre_rating']))
+            post_r       = _safe_float(_clean(row, ['post-session score (%)', 'post-session score', 'post score',
+                                                    'post-session rating', 'post rating', 'post_rating']))
+            # Score bounds 0-100 (%) — block bad rows so silent garbage doesn't poison stats.
             bad = next(((lbl, v) for lbl, v in [('Pre', pre_r), ('Post', post_r)]
-                        if v is not None and v != 0 and not (1 <= v <= 4)), None)
+                        if v is not None and v != 0 and not (0 <= v <= 100)), None)
             if bad:
-                errors.append(f'Row {i+2}: {bad[0]}-Session Rating must be 1-4 (got {bad[1]}).')
+                errors.append(f'Row {i+2}: {bad[0]}-Session Score must be 0-100 (got {bad[1]}).')
                 continue
 
             if not emp_code:
