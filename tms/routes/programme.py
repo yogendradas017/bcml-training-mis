@@ -675,7 +675,7 @@ def _register(app):
         def _fb(name):
             try:
                 v = float(f.get(name) or 0)
-                if v < 0 or v > 5: return None
+                if v < 0 or v > 4: return None
                 return v if v > 0 else None
             except (ValueError, TypeError):
                 return None
@@ -786,8 +786,8 @@ def _register(app):
         ws.title = '2C_Bulk_Upload'
         headers = ['Session Code', 'Actual Start Date (DD-MM-YYYY)', 'Actual End Date (DD-MM-YYYY)',
                    'Actual Hours', 'Faculty Name', 'Internal/External', 'Cost (Rs.)', 'Venue',
-                   'Course Feedback (1-5)', 'Faculty Feedback (1-5)',
-                   'Trainer FB Participants (1-5)', 'Trainer FB Facilities (1-5)']
+                   'Course Feedback (1-4)', 'Faculty Feedback (1-4)',
+                   'Trainer FB Participants (1-4)', 'Trainer FB Facilities (1-4)']
         hdr_fill = PatternFill('solid', fgColor='6B3FA0')
         hdr_font = Font(bold=True, color='FFFFFF')
         for i, h in enumerate(headers, 1):
@@ -829,10 +829,10 @@ def _register(app):
             int_ext    = _clean(row, ['internal/external', 'int/ext', 'internal external'])
             cost       = _safe_float(_clean(row, ['cost (rs.)', 'cost'])) or 0
             venue      = _clean(row, ['venue'])
-            cfb        = _safe_float(_clean(row, ['course feedback (1-5)', 'course feedback', 'course fb']))
-            ffb        = _safe_float(_clean(row, ['faculty feedback (1-5)', 'faculty feedback', 'faculty fb']))
-            tfbp       = _safe_float(_clean(row, ['trainer fb participants (1-5)', 'trainer fb participants']))
-            tfbf       = _safe_float(_clean(row, ['trainer fb facilities (1-5)', 'trainer fb facilities']))
+            cfb        = _safe_float(_clean(row, ['course feedback (1-4)', 'course feedback (1-5)', 'course feedback', 'course fb']))
+            ffb        = _safe_float(_clean(row, ['faculty feedback (1-4)', 'faculty feedback (1-5)', 'faculty feedback', 'faculty fb']))
+            tfbp       = _safe_float(_clean(row, ['trainer fb participants (1-4)', 'trainer fb participants (1-5)', 'trainer fb participants']))
+            tfbf       = _safe_float(_clean(row, ['trainer fb facilities (1-4)', 'trainer fb facilities (1-5)', 'trainer fb facilities']))
             if not sc:
                 errors.append(f'Row {i+2}: Session Code is required.')
                 continue
