@@ -321,7 +321,7 @@ function qaUpdateCount(){
             <th class="sticky-l" style="min-width:36px;"><input type="checkbox" id="tni-cb-all" class="cb-all"></th>
             <th>#</th><th class="sticky-l" style="left:36px;min-width:180px;">Employee</th><th>Collar</th><th>Department</th>
             <th>Programme Name</th><th>Type of Programme</th><th>Mode</th>
-            <th>Source</th><th title="Planned training hours per nomination">Planned Hrs</th><th>Completed?</th><th class="sticky-r" style="min-width:90px;">Action</th>
+            <th>Source</th><th title="Planned training hours per nomination">Planned Hrs</th><th>Completed?</th><th class="sticky-r" style="min-width:110px;width:110px;text-align:center;">Action</th>
           </tr>
         </thead>
         <tbody id="tniBody">
@@ -442,7 +442,7 @@ const TNI = {
         <td>${srcCell}</td>
         <td>${r.planned_hours}</td>
         <td>${doneBadge}</td>
-        <td class="sticky-r"><form method="POST" action="${r.delete_url}" style="display:inline;">
+        <td class="sticky-r" style="width:110px;text-align:center;"><form method="POST" action="${r.delete_url}" style="display:inline;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="button" class="btn btn-sm btn-outline-danger" onclick="ajaxDelete(this,'Delete this TNI entry?')" title="Delete this TNI entry" aria-label="Delete this TNI entry">
             <i class="bi bi-trash"></i></button></form></td>
