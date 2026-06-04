@@ -48,6 +48,15 @@ def _validate_password_strength(pw, username=''):
 
 def _register(app):
 
+    @app.route('/_dashboard-preview')
+    def _dashboard_preview():
+        """Temp: serve docs/dashboard_mockup.html for design review.
+        Remove route after dashboard rebuild decision."""
+        from flask import send_from_directory
+        import os
+        from tms.constants import BASE_DIR
+        return send_from_directory(os.path.join(BASE_DIR, 'docs'), 'dashboard_mockup.html')
+
     @app.route('/')
     def index():
         if 'user_id' not in session:
