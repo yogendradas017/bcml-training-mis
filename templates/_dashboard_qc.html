@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TMS — QC Analytics Dashboard Preview</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3/dist/chartjs-plugin-annotation.umd.min.js"></script>
+<style>
+  :root {
+    --c-bg: #f8fafc;
+    --c-card: #fff;
+    --c-border: #e2e8f0;
+    --c-text: #0f172a;
+    --c-muted: #64748b;
+    --c-primary: #2e6da4;
+    --c-success: #16a34a;
+    --c-warn: #d97706;
+    --c-danger: #dc2626;
+    --c-info: #0891b2;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--c-bg); color: var(--c-text); padding: 20px; font-size: 14px; }
+  .page-hdr { max-width: 1500px; margin: 0 auto 16px; display: flex; align-items: center; gap: 16px; }
+  .page-hdr h1 { font-size: 18px; font-weight: 700; }
+  .page-hdr .sub { color: var(--c-muted); font-size: 12px; }
+  .badge-rag { padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+  .badge-rag.critical { background: #fee2e2; color: #991b1b; }
+  .badge-rag.watch { background: #fef3c7; color: #92400e; }
+
+  .grid { max-width: 1500px; margin: 0 auto; display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+  .card { background: var(--c-card); border: 1px solid var(--c-border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+  .card-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--c-border); }
+  .card-title { font-size: 13px; font-weight: 700; color: var(--c-text); display: flex; align-items: center; gap: 6px; }
+  .card-title i { color: var(--c-primary); }
+  .card-sub { font-size: 11px; color: var(--c-muted); }
+  .chart-wrap { position: relative; flex: 1; min-height: 220px; }
+  .chart-wrap canvas { max-height: 280px; }
+
+  /* Grid spans */
+  .c4 { grid-column: span 4; }
+  .c6 { grid-column: span 6; }
+  .c8 { grid-column: span 8; }
+  .c12 { grid-column: span 12; }
+
+  /* Headline KPI strip */
+  .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px; max-width: 1500px; margin-left: auto; margin-right: auto; }
+  .kpi { background: var(--c-card); border: 1px solid var(--c-border); border-radius: var(--radius); padding: 14px 18px; box-shadow: var(--shadow); }
+  .kpi-lbl { font-size: 11px; font-weight: 600; color: var(--c-muted); text-transform: uppercase; letter-spacing: .05em; }
+  .kpi-num { font-size: 30px; font-weight: 800; line-height: 1.1; margin-top: 2px; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+  .kpi-num.critical { color: var(--c-danger); }
+  .kpi-num.success { color: var(--c-success); }
+  .kpi-sub { font-size: 11px; color: var(--c-muted); margin-top: 4px; }
+
+  /* Heat map */
+  .heatmap { display: grid; grid-template-columns: 140px repeat(6, 1fr); gap: 4px; font-size: 11px; }
+  .heatmap-hdr { font-weight: 700; color: var(--c-muted); padding: 6px 4px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+  .heatmap-row-lbl { font-weight: 600; padding: 6px 8px; display: flex; align-items: center; font-size: 11px; }
+  .heatmap-cell { padding: 12px 6px; text-align: center; border-radius: 4px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: default; transition: transform .15s; }
+  .heatmap-cell:hover { transform: scale(1.08); z-index: 1; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+  .heatmap-cell.h0   { background: #7f1d1d; color: #fff; }
+  .heatmap-cell.h25  { background: #dc2626; color: #fff; }
+  .heatmap-cell.h50  { background: #f59e0b; color: #fff; }
+  .heatmap-cell.h75  { background: #eab308; color: #422006; }
+  .heatmap-cell.h90  { background: #84cc16; color: #1a2e05; }
+  .heatmap-cell.h100 { background: #16a34a; color: #fff; }
+
+  /* Pareto cumulative line label */
+  .pareto-legend { font-size: 11px; color: var(--c-muted); display: flex; gap: 12px; margin-top: 6px; }
+  .pareto-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<div class="page-hdr">
+  <h1>TMS — QC Analytics Dashboard</h1>
+  <span class="sub">Balrampur · FY 2026-27 · Updated 2 min ago</span>
+  <span style="margin-left:auto;" class="badge-rag critical">Coverage CRITICAL — WC at 0%</span>
+</div>
+
+<!-- HEADLINE KPI STRIP -->
+<div class="kpi-strip">
+  <div class="kpi">
+    <div class="kpi-lbl">Coverage (Min of BC/WC)</div>
+    <div class="kpi-num critical">0%</div>
+    <div class="kpi-sub">BC 100% · WC 0%</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-lbl">Sessions YTD</div>
+    <div class="kpi-num">88 / 142</div>
+    <div class="kpi-sub">62% of planned</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-lbl">Man-Hours</div>
+    <div class="kpi-num success">6,420</div>
+    <div class="kpi-sub">of 16,080 target</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-lbl">Overdue Sessions</div>
+    <div class="kpi-num critical">15</div>
+    <div class="kpi-sub">past planned date</div>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- ─── PARETO ─── -->
+  <div class="card c6">
+    <div class="card-hdr">
+      <div>
+        <div class="card-title"><i class="bi bi-bar-chart-steps"></i> Pareto — Uncovered Headcount by Programme</div>
+        <div class="card-sub">80/20: top 4 programmes drive 78% of the gap. Focus here.</div>
+      </div>
+      <span class="badge-rag critical">Critical</span>
+    </div>
+    <div class="chart-wrap"><canvas id="paretoChart"></canvas></div>
+    <div class="pareto-legend">
+      <span><span class="dot" style="background:#dc2626;"></span>Uncovered employees</span>
+      <span><span class="dot" style="background:#0891b2;"></span>Cumulative %</span>
+      <span><span class="dot" style="background:#16a34a;"></span>80% line</span>
+    </div>
+  </div>
+
+  <!-- ─── CONTROL CHART ─── -->
+  <div class="card c6">
+    <div class="card-hdr">
+      <div>
+        <div class="card-title"><i class="bi bi-graph-up"></i> Control Chart — Monthly Sessions vs Limits</div>
+        <div class="card-sub">UCL/LCL = 3σ. Out-of-control points flag process issue.</div>
+      </div>
+      <span class="badge-rag watch">2 violations</span>
+    </div>
+    <div class="chart-wrap"><canvas id="controlChart"></canvas></div>
+  </div>
+
+  <!-- ─── HEAT MAP ─── -->
+  <div class="card c8">
+    <div class="card-hdr">
+      <div>
+        <div class="card-title"><i class="bi bi-grid-3x3-gap"></i> Coverage Heat Map — Collar × Programme Type</div>
+        <div class="card-sub">Each cell = % nominated who completed training. Red = action needed.</div>
+      </div>
+      <a href="#" style="font-size:11px; color:var(--c-primary); text-decoration:none;">Drill into worst cells →</a>
+    </div>
+    <div class="heatmap">
+      <div></div>
+      <div class="heatmap-hdr">Technical</div>
+      <div class="heatmap-hdr">EHS/HR</div>
+      <div class="heatmap-hdr">Behav.</div>
+      <div class="heatmap-hdr">Cane</div>
+      <div class="heatmap-hdr">Commercial</div>
+      <div class="heatmap-hdr">IT</div>
+
+      <div class="heatmap-row-lbl">Blue Collared</div>
+      <div class="heatmap-cell h100">100%</div>
+      <div class="heatmap-cell h90">92%</div>
+      <div class="heatmap-cell h100">100%</div>
+      <div class="heatmap-cell h100">100%</div>
+      <div class="heatmap-cell h75">82%</div>
+      <div class="heatmap-cell h90">88%</div>
+
+      <div class="heatmap-row-lbl">White Collared</div>
+      <div class="heatmap-cell h0">0%</div>
+      <div class="heatmap-cell h0">0%</div>
+      <div class="heatmap-cell h0">0%</div>
+      <div class="heatmap-cell h25">18%</div>
+      <div class="heatmap-cell h50">52%</div>
+      <div class="heatmap-cell h25">22%</div>
+
+      <div class="heatmap-row-lbl">Common</div>
+      <div class="heatmap-cell h75">76%</div>
+      <div class="heatmap-cell h50">48%</div>
+      <div class="heatmap-cell h75">82%</div>
+      <div class="heatmap-cell h75">71%</div>
+      <div class="heatmap-cell h90">88%</div>
+      <div class="heatmap-cell h75">68%</div>
+    </div>
+  </div>
+
+  <!-- ─── HISTOGRAM ─── -->
+  <div class="card c4">
+    <div class="card-hdr">
+      <div>
+        <div class="card-title"><i class="bi bi-bar-chart-fill"></i> Training Hours Histogram</div>
+        <div class="card-sub">Distribution — fairness check.</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="histChart"></canvas></div>
+  </div>
+
+  <!-- ─── RUN CHART ─── -->
+  <div class="card c6">
+    <div class="card-hdr">
+      <div>
+        <div class="card-title"><i class="bi bi-activity"></i> Run Chart — Coverage % over Time</div>
+        <div class="card-sub">BC vs WC monthly trend. Diverging series = critical signal.</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="runChart"></canvas></div>
+  </div>
+
+  <!-- ─── STACKED BAR ─── -->
+  <div class="card c6">
+    <div class="card-hdr">
+      <div>
+        <div class="card-title"><i class="bi bi-bar-chart"></i> Sessions by Status — Monthly</div>
+        <div class="card-sub">Planned / Conducted / Awaiting Verification / Cancelled / Lapsed.</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+  </div>
+
+  <!-- ─── SCATTER ─── -->
+  <div class="card c12">
+    <div class="card-hdr">
+      <div>
+        <div class="card-title"><i class="bi bi-asterisk"></i> Scatter — Course Feedback vs Faculty Feedback</div>
+        <div class="card-sub">Anomaly detection. Outliers in bottom-left or top-right reveal sessions where rating doesn't match course quality.</div>
+      </div>
+    </div>
+    <div class="chart-wrap" style="min-height:260px;"><canvas id="scatterChart"></canvas></div>
+  </div>
+
+</div>
+
+<script>
+const TMS_COLORS = {
+  danger: '#dc2626',
+  warn: '#d97706',
+  success: '#16a34a',
+  primary: '#2e6da4',
+  info: '#0891b2',
+  muted: '#94a3b8',
+};
+
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#475569';
+Chart.defaults.borderColor = '#e2e8f0';
+
+// ─── PARETO ──────────────────────────────────────────────────────
+const paretoLabels = ['EHS/HR – Fire Safety','Technical – SCADA','Behav. – Team Lead','Cane – Crop Rotation','IT – MS Office','Commercial – Costing','Behav. – Communication','Tech. – Boiler Ops'];
+const paretoData = [89, 64, 42, 36, 22, 14, 10, 8];
+const total = paretoData.reduce((s,v) => s+v, 0);
+let cum = 0;
+const paretoCum = paretoData.map(v => { cum += v; return (cum/total*100).toFixed(1); });
+
+new Chart(document.getElementById('paretoChart'), {
+  data: {
+    labels: paretoLabels,
+    datasets: [
+      { type: 'bar', label: 'Uncovered', data: paretoData, backgroundColor: TMS_COLORS.danger, yAxisID: 'y', order: 2 },
+      { type: 'line', label: 'Cumulative %', data: paretoCum, borderColor: TMS_COLORS.info, backgroundColor: TMS_COLORS.info, yAxisID: 'y1', tension: 0.2, pointRadius: 4, pointBackgroundColor: TMS_COLORS.info, order: 1 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 30 } },
+      y: { beginAtZero: true, title: { display: true, text: 'Uncovered (employees)' } },
+      y1: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { drawOnChartArea: false } }
+    }
+  }
+});
+
+// ─── CONTROL CHART ───────────────────────────────────────────────
+const controlMonths = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+const controlData =   [12,    14,   13,   11,   9,    14,   18,   16,   22,   17,   8,    null];
+const controlMean = 14.0;
+const controlUCL  = 22.5;
+const controlLCL  = 5.5;
+
+new Chart(document.getElementById('controlChart'), {
+  type: 'line',
+  data: {
+    labels: controlMonths,
+    datasets: [{
+      label: 'Sessions',
+      data: controlData,
+      borderColor: TMS_COLORS.primary, backgroundColor: 'rgba(46,109,164,.1)',
+      tension: 0.25, pointRadius: 5,
+      pointBackgroundColor: controlData.map(v => v === null ? '#fff' : (v > controlUCL || v < controlLCL ? TMS_COLORS.danger : TMS_COLORS.primary)),
+      pointBorderColor: controlData.map(v => v === null ? '#fff' : (v > controlUCL || v < controlLCL ? TMS_COLORS.danger : TMS_COLORS.primary)),
+      fill: false
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      annotation: {
+        annotations: {
+          ucl: { type: 'line', yMin: controlUCL, yMax: controlUCL, borderColor: TMS_COLORS.danger, borderWidth: 1.5, borderDash: [6,4], label: { content: 'UCL ' + controlUCL, display: true, position: 'end', backgroundColor: TMS_COLORS.danger, color: '#fff', font: { size: 9 }, padding: 3 } },
+          mean: { type: 'line', yMin: controlMean, yMax: controlMean, borderColor: TMS_COLORS.muted, borderWidth: 1, borderDash: [2,3], label: { content: 'Mean ' + controlMean, display: true, position: 'end', color: TMS_COLORS.muted, font: { size: 9 } } },
+          lcl: { type: 'line', yMin: controlLCL, yMax: controlLCL, borderColor: TMS_COLORS.danger, borderWidth: 1.5, borderDash: [6,4], label: { content: 'LCL ' + controlLCL, display: true, position: 'end', backgroundColor: TMS_COLORS.danger, color: '#fff', font: { size: 9 }, padding: 3 } }
+        }
+      }
+    },
+    scales: { y: { beginAtZero: true, title: { display: true, text: 'Sessions / month' } } }
+  }
+});
+
+// ─── HISTOGRAM ───────────────────────────────────────────────────
+new Chart(document.getElementById('histChart'), {
+  type: 'bar',
+  data: {
+    labels: ['0-2','2-4','4-6','6-8','8-12','12-16','16-24','24+'],
+    datasets: [{ label: 'Employees', data: [82, 145, 188, 220, 156, 88, 42, 18], backgroundColor: TMS_COLORS.primary, borderRadius: 3 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { title: ctx => 'Hours: ' + ctx[0].label, label: ctx => ctx.parsed.y + ' employees' } } },
+    scales: { x: { title: { display: true, text: 'Training hours per employee' } }, y: { beginAtZero: true } }
+  }
+});
+
+// ─── RUN CHART ───────────────────────────────────────────────────
+new Chart(document.getElementById('runChart'), {
+  type: 'line',
+  data: {
+    labels: controlMonths,
+    datasets: [
+      { label: 'BC %', data: [22,36,48,55,62,68,72,78,84,90,95,100], borderColor: TMS_COLORS.success, backgroundColor: 'rgba(22,163,74,.1)', tension: 0.3, fill: true, pointRadius: 3 },
+      { label: 'WC %', data: [0,0,0,0,0,0,0,0,0,0,0,0], borderColor: TMS_COLORS.danger, backgroundColor: 'rgba(220,38,38,.05)', tension: 0.3, fill: true, pointRadius: 3 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } } },
+    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+  }
+});
+
+// ─── STACKED BAR ─────────────────────────────────────────────────
+new Chart(document.getElementById('statusChart'), {
+  type: 'bar',
+  data: {
+    labels: controlMonths,
+    datasets: [
+      { label: 'Conducted',      data: [8, 12, 11, 9, 7, 11, 14, 13, 18, 14, 6, 0],  backgroundColor: TMS_COLORS.success },
+      { label: 'Awaiting Verify', data: [2, 1, 2, 2, 2, 2, 3, 2, 3, 2, 1, 0],         backgroundColor: TMS_COLORS.warn },
+      { label: 'Cancelled',      data: [1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0],         backgroundColor: TMS_COLORS.muted },
+      { label: 'Overdue',        data: [1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],         backgroundColor: TMS_COLORS.danger }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10, boxWidth: 12 } } },
+    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+  }
+});
+
+// ─── SCATTER ─────────────────────────────────────────────────────
+const scatterData = [
+  { x: 4.2, y: 4.5, name: 'Fire Safety Apr' }, { x: 3.8, y: 3.9, name: 'SCADA May' },
+  { x: 4.5, y: 4.7, name: '5S Audit Jun' }, { x: 2.8, y: 3.2, name: 'MS Office Jul' },
+  { x: 4.1, y: 4.0, name: 'Boiler Aug' }, { x: 3.5, y: 3.9, name: 'Comm Sep' },
+  { x: 4.6, y: 4.4, name: 'Crop Oct' }, { x: 1.8, y: 3.6, name: 'Cost Nov ⚠' },
+  { x: 4.7, y: 1.9, name: 'Mill Dec ⚠' }, { x: 4.3, y: 4.3, name: 'Sugar Jan' },
+];
+
+new Chart(document.getElementById('scatterChart'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      { label: 'Healthy', data: scatterData.filter(d => Math.abs(d.x - d.y) < 1), backgroundColor: TMS_COLORS.success, pointRadius: 7 },
+      { label: 'Anomaly', data: scatterData.filter(d => Math.abs(d.x - d.y) >= 1), backgroundColor: TMS_COLORS.danger, pointRadius: 9, pointStyle: 'rectRot' },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } },
+      tooltip: { callbacks: { label: ctx => `${ctx.raw.name}: Course ${ctx.raw.x} · Faculty ${ctx.raw.y}` } }
+    },
+    scales: {
+      x: { min: 1, max: 5, title: { display: true, text: 'Course Feedback (1-4)' } },
+      y: { min: 1, max: 5, title: { display: true, text: 'Faculty Feedback (1-4)' } }
+    }
+  }
+});
+</script>
+
+</body>
+</html>

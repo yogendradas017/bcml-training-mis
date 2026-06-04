@@ -63,6 +63,11 @@ def _register(app):
         """Temp: Vercel vs Power BI style comparison for design direction."""
         return render_template('_dashboard_styles.html')
 
+    @app.route('/_dashboard-qc')
+    def _dashboard_qc():
+        """Temp: QC analytics preview — Pareto, Control, Heat map, Histogram, Run, Stacked, Scatter."""
+        return render_template('_dashboard_qc.html')
+
     @app.route('/')
     def index():
         if 'user_id' not in session:
