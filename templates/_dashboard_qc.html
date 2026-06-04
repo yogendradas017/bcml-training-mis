@@ -124,20 +124,19 @@
     </div>
   </div>
 
-  <!-- ─── CONTROL CHART ─── -->
+  <!-- ─── HISTOGRAM (moved up) ─── -->
   <div class="card c6">
     <div class="card-hdr">
       <div>
-        <div class="card-title"><i class="bi bi-graph-up"></i> Control Chart — Monthly Sessions vs Limits</div>
-        <div class="card-sub">UCL/LCL = 3σ. Out-of-control points flag process issue.</div>
+        <div class="card-title"><i class="bi bi-bar-chart-fill"></i> Histogram — Training Hours per Employee</div>
+        <div class="card-sub">Distribution shape. Long left tail = many under-trained employees.</div>
       </div>
-      <span class="badge-rag watch">2 violations</span>
     </div>
-    <div class="chart-wrap"><canvas id="controlChart"></canvas></div>
+    <div class="chart-wrap"><canvas id="histChart"></canvas></div>
   </div>
 
   <!-- ─── HEAT MAP ─── -->
-  <div class="card c8">
+  <div class="card c12">
     <div class="card-hdr">
       <div>
         <div class="card-title"><i class="bi bi-grid-3x3-gap"></i> Coverage Heat Map — Collar × Programme Type</div>
@@ -180,48 +179,16 @@
     </div>
   </div>
 
-  <!-- ─── HISTOGRAM ─── -->
-  <div class="card c4">
-    <div class="card-hdr">
-      <div>
-        <div class="card-title"><i class="bi bi-bar-chart-fill"></i> Training Hours Histogram</div>
-        <div class="card-sub">Distribution — fairness check.</div>
-      </div>
-    </div>
-    <div class="chart-wrap"><canvas id="histChart"></canvas></div>
-  </div>
-
-  <!-- ─── RUN CHART ─── -->
-  <div class="card c6">
-    <div class="card-hdr">
-      <div>
-        <div class="card-title"><i class="bi bi-activity"></i> Run Chart — Coverage % over Time</div>
-        <div class="card-sub">BC vs WC monthly trend. Diverging series = critical signal.</div>
-      </div>
-    </div>
-    <div class="chart-wrap"><canvas id="runChart"></canvas></div>
-  </div>
-
-  <!-- ─── STACKED BAR ─── -->
-  <div class="card c6">
-    <div class="card-hdr">
-      <div>
-        <div class="card-title"><i class="bi bi-bar-chart"></i> Sessions by Status — Monthly</div>
-        <div class="card-sub">Planned / Conducted / Awaiting Verification / Cancelled / Lapsed.</div>
-      </div>
-    </div>
-    <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
-  </div>
-
-  <!-- ─── SCATTER ─── -->
+  <!-- ─── CUMULATIVE RUN CHART (full width) ─── -->
   <div class="card c12">
     <div class="card-hdr">
       <div>
-        <div class="card-title"><i class="bi bi-asterisk"></i> Scatter — Course Feedback vs Faculty Feedback</div>
-        <div class="card-sub">Anomaly detection. Outliers in bottom-left or top-right reveal sessions where rating doesn't match course quality.</div>
+        <div class="card-title"><i class="bi bi-activity"></i> Cumulative Coverage — BC and WC vs FY-end Target</div>
+        <div class="card-sub">Each line builds incrementally month-by-month toward the 100% target due in March. Gap to target = work remaining.</div>
       </div>
+      <span class="badge-rag critical">WC trajectory critical</span>
     </div>
-    <div class="chart-wrap" style="min-height:260px;"><canvas id="scatterChart"></canvas></div>
+    <div class="chart-wrap" style="min-height:300px;"><canvas id="runChart"></canvas></div>
   </div>
 
 </div>
@@ -268,42 +235,7 @@ new Chart(document.getElementById('paretoChart'), {
   }
 });
 
-// ─── CONTROL CHART ───────────────────────────────────────────────
-const controlMonths = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
-const controlData =   [12,    14,   13,   11,   9,    14,   18,   16,   22,   17,   8,    null];
-const controlMean = 14.0;
-const controlUCL  = 22.5;
-const controlLCL  = 5.5;
-
-new Chart(document.getElementById('controlChart'), {
-  type: 'line',
-  data: {
-    labels: controlMonths,
-    datasets: [{
-      label: 'Sessions',
-      data: controlData,
-      borderColor: TMS_COLORS.primary, backgroundColor: 'rgba(46,109,164,.1)',
-      tension: 0.25, pointRadius: 5,
-      pointBackgroundColor: controlData.map(v => v === null ? '#fff' : (v > controlUCL || v < controlLCL ? TMS_COLORS.danger : TMS_COLORS.primary)),
-      pointBorderColor: controlData.map(v => v === null ? '#fff' : (v > controlUCL || v < controlLCL ? TMS_COLORS.danger : TMS_COLORS.primary)),
-      fill: false
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      annotation: {
-        annotations: {
-          ucl: { type: 'line', yMin: controlUCL, yMax: controlUCL, borderColor: TMS_COLORS.danger, borderWidth: 1.5, borderDash: [6,4], label: { content: 'UCL ' + controlUCL, display: true, position: 'end', backgroundColor: TMS_COLORS.danger, color: '#fff', font: { size: 9 }, padding: 3 } },
-          mean: { type: 'line', yMin: controlMean, yMax: controlMean, borderColor: TMS_COLORS.muted, borderWidth: 1, borderDash: [2,3], label: { content: 'Mean ' + controlMean, display: true, position: 'end', color: TMS_COLORS.muted, font: { size: 9 } } },
-          lcl: { type: 'line', yMin: controlLCL, yMax: controlLCL, borderColor: TMS_COLORS.danger, borderWidth: 1.5, borderDash: [6,4], label: { content: 'LCL ' + controlLCL, display: true, position: 'end', backgroundColor: TMS_COLORS.danger, color: '#fff', font: { size: 9 }, padding: 3 } }
-        }
-      }
-    },
-    scales: { y: { beginAtZero: true, title: { display: true, text: 'Sessions / month' } } }
-  }
-});
+const FY_MONTHS = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
 
 // ─── HISTOGRAM ───────────────────────────────────────────────────
 new Chart(document.getElementById('histChart'), {
@@ -319,70 +251,105 @@ new Chart(document.getElementById('histChart'), {
   }
 });
 
-// ─── RUN CHART ───────────────────────────────────────────────────
+// ─── CUMULATIVE RUN CHART — BC + WC incremental toward Mar target ─
+// Each value = CUMULATIVE % trained by end of that month.
+// Realistic case: BC trajectory healthy (will hit ~100% by Mar). WC flat at 0% (critical).
+const bcCumulative = [22, 38, 50, 58, 65, 71, 76, 82, 88, 93, 97, 100]; // ends at 100% (on track)
+const wcCumulative = [0,  2,  4,  5,  8,  10, 12, 14, 15, 16, 16, 16];  // flat → ends at 16% (far short of 100%)
+const TARGET_PCT = 100;
+
+// Build a "target line" — flat at 100% across all 12 months, so users see the gap to target each month
+const targetLine = FY_MONTHS.map(() => TARGET_PCT);
+
 new Chart(document.getElementById('runChart'), {
   type: 'line',
   data: {
-    labels: controlMonths,
+    labels: FY_MONTHS,
     datasets: [
-      { label: 'BC %', data: [22,36,48,55,62,68,72,78,84,90,95,100], borderColor: TMS_COLORS.success, backgroundColor: 'rgba(22,163,74,.1)', tension: 0.3, fill: true, pointRadius: 3 },
-      { label: 'WC %', data: [0,0,0,0,0,0,0,0,0,0,0,0], borderColor: TMS_COLORS.danger, backgroundColor: 'rgba(220,38,38,.05)', tension: 0.3, fill: true, pointRadius: 3 }
-    ]
+      {
+        label: 'FY-end Target (100% by Mar)',
+        data: targetLine,
+        borderColor: TMS_COLORS.muted,
+        borderDash: [6, 4],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false,
+        tension: 0,
+        order: 0,
+      },
+      {
+        label: 'Blue Collared — Cumulative %',
+        data: bcCumulative,
+        borderColor: TMS_COLORS.success,
+        backgroundColor: 'rgba(22,163,74,.10)',
+        tension: 0.25,
+        fill: true,
+        pointRadius: 4,
+        pointBackgroundColor: TMS_COLORS.success,
+        order: 2,
+      },
+      {
+        label: 'White Collared — Cumulative %',
+        data: wcCumulative,
+        borderColor: TMS_COLORS.danger,
+        backgroundColor: 'rgba(220,38,38,.08)',
+        tension: 0.25,
+        fill: true,
+        pointRadius: 4,
+        pointBackgroundColor: TMS_COLORS.danger,
+        order: 1,
+      },
+    ],
   },
   options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } } },
-    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
-  }
-});
-
-// ─── STACKED BAR ─────────────────────────────────────────────────
-new Chart(document.getElementById('statusChart'), {
-  type: 'bar',
-  data: {
-    labels: controlMonths,
-    datasets: [
-      { label: 'Conducted',      data: [8, 12, 11, 9, 7, 11, 14, 13, 18, 14, 6, 0],  backgroundColor: TMS_COLORS.success },
-      { label: 'Awaiting Verify', data: [2, 1, 2, 2, 2, 2, 3, 2, 3, 2, 1, 0],         backgroundColor: TMS_COLORS.warn },
-      { label: 'Cancelled',      data: [1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0],         backgroundColor: TMS_COLORS.muted },
-      { label: 'Overdue',        data: [1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],         backgroundColor: TMS_COLORS.danger }
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10, boxWidth: 12 } } },
-    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
-  }
-});
-
-// ─── SCATTER ─────────────────────────────────────────────────────
-const scatterData = [
-  { x: 4.2, y: 4.5, name: 'Fire Safety Apr' }, { x: 3.8, y: 3.9, name: 'SCADA May' },
-  { x: 4.5, y: 4.7, name: '5S Audit Jun' }, { x: 2.8, y: 3.2, name: 'MS Office Jul' },
-  { x: 4.1, y: 4.0, name: 'Boiler Aug' }, { x: 3.5, y: 3.9, name: 'Comm Sep' },
-  { x: 4.6, y: 4.4, name: 'Crop Oct' }, { x: 1.8, y: 3.6, name: 'Cost Nov ⚠' },
-  { x: 4.7, y: 1.9, name: 'Mill Dec ⚠' }, { x: 4.3, y: 4.3, name: 'Sugar Jan' },
-];
-
-new Chart(document.getElementById('scatterChart'), {
-  type: 'scatter',
-  data: {
-    datasets: [
-      { label: 'Healthy', data: scatterData.filter(d => Math.abs(d.x - d.y) < 1), backgroundColor: TMS_COLORS.success, pointRadius: 7 },
-      { label: 'Anomaly', data: scatterData.filter(d => Math.abs(d.x - d.y) >= 1), backgroundColor: TMS_COLORS.danger, pointRadius: 9, pointStyle: 'rectRot' },
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } },
-      tooltip: { callbacks: { label: ctx => `${ctx.raw.name}: Course ${ctx.raw.x} · Faculty ${ctx.raw.y}` } }
+      legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 16, boxWidth: 14 } },
+      tooltip: {
+        callbacks: {
+          afterBody: (items) => {
+            const bc = items.find(i => i.dataset.label.startsWith('Blue'))?.parsed.y ?? 0;
+            const wc = items.find(i => i.dataset.label.startsWith('White'))?.parsed.y ?? 0;
+            return ['', 'Gap to target:', `  BC: ${100 - bc}% remaining`, `  WC: ${100 - wc}% remaining`];
+          },
+        },
+      },
+      annotation: {
+        annotations: {
+          marTarget: {
+            type: 'point',
+            xValue: 'Mar',
+            yValue: TARGET_PCT,
+            backgroundColor: TMS_COLORS.primary,
+            borderColor: '#fff',
+            borderWidth: 2,
+            radius: 8,
+          },
+          marLabel: {
+            type: 'label',
+            xValue: 'Mar',
+            yValue: TARGET_PCT,
+            content: ['Target', '100% by Mar'],
+            color: TMS_COLORS.primary,
+            font: { size: 10, weight: '700' },
+            backgroundColor: 'rgba(255,255,255,.95)',
+            borderColor: TMS_COLORS.primary,
+            borderWidth: 1,
+            borderRadius: 4,
+            padding: 4,
+            xAdjust: -45,
+            yAdjust: -8,
+          },
+        },
+      },
     },
     scales: {
-      x: { min: 1, max: 5, title: { display: true, text: 'Course Feedback (1-4)' } },
-      y: { min: 1, max: 5, title: { display: true, text: 'Faculty Feedback (1-4)' } }
-    }
-  }
+      x: { title: { display: true, text: 'FY Month' } },
+      y: { beginAtZero: true, max: 110, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Cumulative coverage (%)' } },
+    },
+  },
 });
 </script>
 
