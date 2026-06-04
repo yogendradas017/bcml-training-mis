@@ -58,6 +58,11 @@ def _register(app):
         """Temp: side-by-side current /dashboard vs proposed mockup."""
         return render_template('_dashboard_compare.html')
 
+    @app.route('/_dashboard-styles')
+    def _dashboard_styles():
+        """Temp: Vercel vs Power BI style comparison for design direction."""
+        return render_template('_dashboard_styles.html')
+
     @app.route('/')
     def index():
         if 'user_id' not in session:

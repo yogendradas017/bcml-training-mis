@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TMS — Style Comparison: Vercel vs Power BI</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #f5f5f7; padding: 24px; color: #1d1d1f; min-height: 100vh; }
+  .page-hdr { max-width: 1400px; margin: 0 auto 24px; }
+  .page-hdr h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .page-hdr p { color: #6b7280; font-size: 13px; }
+  .compare { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .style-block { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+  .style-tag { padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+  .style-tag.vercel { background: linear-gradient(135deg, #000, #1a1a1a); color: #fff; }
+  .style-tag.pbi { background: linear-gradient(135deg, #0078d4, #106ebe); color: #fff; }
+  .style-tag .pill { background: rgba(255,255,255,.18); padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 600; }
+  .pick-btn { background: #16a34a; color: #fff; border: 0; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .pick-btn:hover { background: #15803d; }
+
+  /* ═══════════════════════════════════════════════════════════════
+     VERCEL STYLE — dark, mono-numeric, sharp borders, subtle dots
+  ═══════════════════════════════════════════════════════════════ */
+  .vercel-pane { background: #000; color: #ededed; padding: 24px; min-height: 600px; font-family: 'Geist', 'Inter', system-ui, sans-serif; }
+  .v-card { background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  .v-card-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .v-card-title { font-size: 12px; font-weight: 500; color: #a1a1a1; text-transform: uppercase; letter-spacing: 0.06em; }
+  .v-card-action { font-size: 12px; color: #ededed; text-decoration: none; border: 1px solid #2e2e2e; padding: 4px 10px; border-radius: 6px; }
+
+  .v-status { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; border-radius: 99px; }
+  .v-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .v-status.critical { background: rgba(244,63,94,.12); color: #fb7185; }
+  .v-status.critical .v-dot { background: #f43f5e; box-shadow: 0 0 0 3px rgba(244,63,94,.18); }
+  .v-status.watch { background: rgba(234,179,8,.12); color: #fbbf24; }
+  .v-status.watch .v-dot { background: #eab308; box-shadow: 0 0 0 3px rgba(234,179,8,.18); }
+
+  .v-hero-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; }
+  .v-hero-headline .v-num { font-size: 64px; font-weight: 700; letter-spacing: -2px; font-variant-numeric: tabular-nums; line-height: 1; color: #f43f5e; font-family: 'Geist', monospace; }
+  .v-hero-headline .v-label { font-size: 12px; color: #a1a1a1; margin-top: 8px; }
+  .v-hero-headline .v-rationale { font-size: 11px; color: #6b6b6b; margin-top: 4px; line-height: 1.5; }
+  .v-collar-tile { background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 6px; padding: 16px; position: relative; }
+  .v-collar-tile.is-worst { border-color: rgba(244,63,94,.4); }
+  .v-collar-tile .v-collar-tag { font-size: 10px; font-weight: 600; color: #a1a1a1; text-transform: uppercase; letter-spacing: .05em; }
+  .v-collar-tile .v-collar-num { font-size: 34px; font-weight: 700; letter-spacing: -1px; font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 4px; font-family: 'Geist', monospace; }
+  .v-collar-tile.green .v-collar-num { color: #22c55e; }
+  .v-collar-tile.red .v-collar-num { color: #f43f5e; }
+  .v-collar-tile.amber .v-collar-num { color: #eab308; }
+  .v-collar-tile .v-collar-count { font-size: 11px; color: #6b6b6b; margin-top: 6px; font-variant-numeric: tabular-nums; }
+
+  .v-worst-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .v-worst-row { background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 6px; padding: 12px 14px; }
+  .v-worst-row .v-w-collar { font-size: 10px; font-weight: 600; color: #f43f5e; text-transform: uppercase; letter-spacing: .04em; }
+  .v-worst-row .v-w-prog { font-size: 13px; color: #ededed; margin-top: 2px; font-weight: 500; }
+  .v-worst-row .v-w-pct { font-size: 18px; font-weight: 700; color: #f43f5e; font-variant-numeric: tabular-nums; margin-top: 4px; font-family: 'Geist', monospace; }
+  .v-worst-row .v-w-counts { font-size: 11px; color: #6b6b6b; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .v-worst-bar { background: #1f1f1f; height: 3px; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .v-worst-bar > div { background: #f43f5e; height: 3px; border-radius: 2px; }
+
+  .v-meta-row { display: flex; gap: 14px; margin-top: 16px; }
+  .v-meta-item { flex: 1; }
+  .v-meta-item .v-m-num { font-size: 22px; font-weight: 600; font-family: 'Geist', monospace; }
+  .v-meta-item .v-m-label { font-size: 11px; color: #6b6b6b; }
+
+  /* ═══════════════════════════════════════════════════════════════
+     POWER BI STYLE — light, bold KPI cards, blue accent, dense
+  ═══════════════════════════════════════════════════════════════ */
+  .pbi-pane { background: #f3f2f1; padding: 24px; min-height: 600px; font-family: 'Segoe UI', 'Inter', system-ui, sans-serif; color: #252423; }
+  .pbi-card { background: #fff; border: 1px solid #e1dfdd; border-radius: 4px; padding: 18px 22px; margin-bottom: 14px; box-shadow: 0 1.6px 3.6px rgba(0,0,0,.13), 0 0.3px 0.9px rgba(0,0,0,.11); }
+  .pbi-card-hdr { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #f3f2f1; padding-bottom: 10px; margin-bottom: 14px; }
+  .pbi-title { font-size: 14px; font-weight: 600; color: #252423; }
+  .pbi-subtitle { font-size: 11px; color: #605e5c; margin-top: 2px; }
+  .pbi-status-badge { padding: 4px 10px; border-radius: 2px; font-size: 11px; font-weight: 600; }
+  .pbi-status-badge.critical { background: #fde7e9; color: #a4262c; border-left: 3px solid #a4262c; }
+  .pbi-status-badge.watch { background: #fff4ce; color: #797673; border-left: 3px solid #d29200; }
+
+  .pbi-hero { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 16px; align-items: center; }
+  .pbi-headline-block .pbi-num { font-size: 60px; font-weight: 700; line-height: 1; color: #a4262c; font-variant-numeric: tabular-nums; letter-spacing: -1.5px; }
+  .pbi-headline-block .pbi-label { font-size: 14px; font-weight: 600; color: #605e5c; text-transform: uppercase; letter-spacing: .04em; margin-top: 8px; }
+  .pbi-headline-block .pbi-arrow { font-size: 12px; color: #a4262c; margin-top: 4px; }
+  .pbi-collar-card { background: #fafafa; border: 1px solid #e1dfdd; border-left-width: 4px; padding: 14px 18px; border-radius: 2px; }
+  .pbi-collar-card.bc { border-left-color: #107c10; }
+  .pbi-collar-card.wc { border-left-color: #a4262c; }
+  .pbi-collar-card .pbi-c-label { font-size: 11px; font-weight: 600; color: #605e5c; text-transform: uppercase; letter-spacing: .04em; }
+  .pbi-collar-card .pbi-c-num { font-size: 38px; font-weight: 700; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .pbi-collar-card.bc .pbi-c-num { color: #107c10; }
+  .pbi-collar-card.wc .pbi-c-num { color: #a4262c; }
+  .pbi-collar-card .pbi-c-bar-wrap { background: #f3f2f1; height: 6px; margin-top: 8px; border-radius: 2px; overflow: hidden; }
+  .pbi-collar-card.bc .pbi-c-bar-wrap > div { background: #107c10; height: 6px; }
+  .pbi-collar-card.wc .pbi-c-bar-wrap > div { background: #a4262c; height: 6px; }
+  .pbi-collar-card .pbi-c-counts { font-size: 11px; color: #605e5c; margin-top: 6px; font-variant-numeric: tabular-nums; }
+
+  .pbi-worst-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
+  .pbi-worst-table thead th { background: #f3f2f1; color: #605e5c; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 8px 12px; text-align: left; }
+  .pbi-worst-table thead th.num { text-align: right; }
+  .pbi-worst-table tbody td { padding: 10px 12px; border-bottom: 1px solid #f3f2f1; }
+  .pbi-worst-table tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pbi-collar-chip { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: 700; letter-spacing: .03em; }
+  .pbi-collar-chip.bc { background: #e0f1d3; color: #107c10; }
+  .pbi-collar-chip.wc { background: #f9d9dc; color: #a4262c; }
+  .pbi-bar-mini { display: inline-block; width: 80px; height: 6px; background: #f3f2f1; border-radius: 2px; vertical-align: middle; overflow: hidden; }
+  .pbi-bar-mini > div { background: #a4262c; height: 6px; }
+  .pbi-pct-strong { font-weight: 700; color: #a4262c; }
+  .pbi-pct-strong.amber { color: #d29200; }
+
+  .pbi-meta-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+  .pbi-meta-card { background: #fafafa; border: 1px solid #e1dfdd; padding: 12px 16px; border-radius: 2px; }
+  .pbi-meta-card .pbi-m-label { font-size: 11px; font-weight: 600; color: #605e5c; text-transform: uppercase; letter-spacing: .04em; }
+  .pbi-meta-card .pbi-m-num { font-size: 24px; font-weight: 700; color: #252423; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 1000px) {
+    .compare { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-hdr">
+  <h1>TMS Dashboard — Style Direction Comparison</h1>
+  <p>Same data (BC 100% / WC 0% edge case). Two visual languages. Pick one — I rebuild the real /dashboard in that style.</p>
+</div>
+
+<div class="compare">
+
+  <!-- ═══════════ VERCEL ═══════════ -->
+  <div class="style-block">
+    <div class="style-tag vercel">
+      <div>Vercel-style — dark, mono, sharp</div>
+      <button class="pick-btn" onclick="alert('Reply: pick vercel')">Pick this →</button>
+    </div>
+    <div class="vercel-pane">
+
+      <!-- TNI HERO -->
+      <div class="v-card">
+        <div class="v-card-hdr">
+          <div class="v-card-title">TNI Coverage · Balrampur · FY 26-27</div>
+          <div class="v-status critical"><span class="v-dot"></span> Critical</div>
+        </div>
+        <div class="v-hero-row">
+          <div class="v-hero-headline">
+            <div class="v-num">0%</div>
+            <div class="v-label">Headline = worst-collar coverage</div>
+            <div class="v-rationale">WC at 0%. Healthy collar hidden in averages. Action: nominate WC for EHS/HR + Technical.</div>
+          </div>
+          <div class="v-collar-tile green">
+            <div class="v-collar-tag">Blue Collared</div>
+            <div class="v-collar-num">100%</div>
+            <div class="v-collar-count">890 / 890 trained</div>
+          </div>
+          <div class="v-collar-tile red is-worst">
+            <div class="v-collar-tag">White Collared · WORST</div>
+            <div class="v-collar-num">0%</div>
+            <div class="v-collar-count">0 / 225 trained</div>
+          </div>
+        </div>
+        <div class="v-meta-row">
+          <div class="v-meta-item">
+            <div class="v-m-num">0/142</div>
+            <div class="v-m-label">Sessions conducted</div>
+          </div>
+          <div class="v-meta-item">
+            <div class="v-m-num">0</div>
+            <div class="v-m-label">Total man-hours</div>
+          </div>
+          <div class="v-meta-item">
+            <div class="v-m-num">72/28</div>
+            <div class="v-m-label">TNI Driven / New Req split</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WORST CELLS -->
+      <div class="v-card">
+        <div class="v-card-hdr">
+          <div class="v-card-title">Improvement Areas · Worst Cells</div>
+          <a href="#" class="v-card-action">View all →</a>
+        </div>
+        <div class="v-worst-grid">
+          <div class="v-worst-row">
+            <div class="v-w-collar">White · EHS/HR</div>
+            <div class="v-w-prog">Fire Safety</div>
+            <div class="v-w-pct">0%</div>
+            <div class="v-w-counts">0 of 89 trained</div>
+            <div class="v-worst-bar"><div style="width:0%;"></div></div>
+          </div>
+          <div class="v-worst-row">
+            <div class="v-w-collar">White · Technical</div>
+            <div class="v-w-prog">SCADA Basics</div>
+            <div class="v-w-pct">0%</div>
+            <div class="v-w-counts">0 of 64 trained</div>
+            <div class="v-worst-bar"><div style="width:0%;"></div></div>
+          </div>
+          <div class="v-worst-row">
+            <div class="v-w-collar">White · Behavioural</div>
+            <div class="v-w-prog">Team Leadership</div>
+            <div class="v-w-pct">0%</div>
+            <div class="v-w-counts">0 of 42 trained</div>
+            <div class="v-worst-bar"><div style="width:0%;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALERTS -->
+      <div class="v-card" style="padding:14px 20px;">
+        <div style="display:flex; gap:14px; flex-wrap:wrap;">
+          <div style="font-size:12px; color:#a1a1a1;"><span class="v-dot" style="background:#f43f5e; display:inline-block; margin-right:6px;"></span> 15 overdue sessions</div>
+          <div style="font-size:12px; color:#a1a1a1;"><span class="v-dot" style="background:#eab308; display:inline-block; margin-right:6px;"></span> 7 programmes unplanned</div>
+          <div style="font-size:12px; color:#a1a1a1;"><span class="v-dot" style="background:#f43f5e; display:inline-block; margin-right:6px;"></span> 12 effectiveness reviews overdue</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════ POWER BI ═══════════ -->
+  <div class="style-block">
+    <div class="style-tag pbi">
+      <div>Power BI-style — light, dense, blue accent</div>
+      <button class="pick-btn" onclick="alert('Reply: pick powerbi')">Pick this →</button>
+    </div>
+    <div class="pbi-pane">
+
+      <!-- TNI HERO -->
+      <div class="pbi-card">
+        <div class="pbi-card-hdr">
+          <div>
+            <div class="pbi-title">TNI Coverage Plan</div>
+            <div class="pbi-subtitle">Balrampur · FY 2026-27 · YTD as of Jun 4</div>
+          </div>
+          <div class="pbi-status-badge critical"><i class="bi bi-exclamation-octagon-fill" style="margin-right:4px;"></i> Critical</div>
+        </div>
+        <div class="pbi-hero">
+          <div class="pbi-headline-block">
+            <div class="pbi-num">0%</div>
+            <div class="pbi-label">Worst-collar headline</div>
+            <div class="pbi-arrow">▼ WC at 0% — improve to lift headline</div>
+          </div>
+          <div class="pbi-collar-card bc">
+            <div class="pbi-c-label">Blue Collared</div>
+            <div class="pbi-c-num">100%</div>
+            <div class="pbi-c-bar-wrap"><div style="width:100%;"></div></div>
+            <div class="pbi-c-counts">890 of 890 trained</div>
+          </div>
+          <div class="pbi-collar-card wc">
+            <div class="pbi-c-label">White Collared · Worst</div>
+            <div class="pbi-c-num">0%</div>
+            <div class="pbi-c-bar-wrap"><div style="width:0%;"></div></div>
+            <div class="pbi-c-counts">0 of 225 trained</div>
+          </div>
+        </div>
+        <div class="pbi-meta-row">
+          <div class="pbi-meta-card">
+            <div class="pbi-m-label">Sessions Conducted</div>
+            <div class="pbi-m-num">0 / 142</div>
+          </div>
+          <div class="pbi-meta-card">
+            <div class="pbi-m-label">Total Man-Hours</div>
+            <div class="pbi-m-num">0</div>
+          </div>
+          <div class="pbi-meta-card">
+            <div class="pbi-m-label">Source Split (TNI / New)</div>
+            <div class="pbi-m-num">72% / 28%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WORST CELLS -->
+      <div class="pbi-card">
+        <div class="pbi-card-hdr">
+          <div>
+            <div class="pbi-title">Improvement Areas — Top 3 Worst Cells</div>
+            <div class="pbi-subtitle">Coverage by collar × programme type (nominated ≥ 3 only)</div>
+          </div>
+          <a href="#" style="font-size:12px; color:#0078d4; text-decoration:none;">View full TNI report →</a>
+        </div>
+        <table class="pbi-worst-table">
+          <thead>
+            <tr>
+              <th>Collar</th>
+              <th>Programme Type</th>
+              <th class="num">Coverage</th>
+              <th>Progress</th>
+              <th class="num">Trained / Nom</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="pbi-collar-chip wc">White</span></td>
+              <td>EHS/HR — Fire Safety</td>
+              <td class="num pbi-pct-strong">0.0%</td>
+              <td><div class="pbi-bar-mini"><div style="width:0%;"></div></div></td>
+              <td class="num">0 / 89</td>
+            </tr>
+            <tr>
+              <td><span class="pbi-collar-chip wc">White</span></td>
+              <td>Technical — SCADA Basics</td>
+              <td class="num pbi-pct-strong">0.0%</td>
+              <td><div class="pbi-bar-mini"><div style="width:0%;"></div></div></td>
+              <td class="num">0 / 64</td>
+            </tr>
+            <tr>
+              <td><span class="pbi-collar-chip wc">White</span></td>
+              <td>Behavioural — Team Leadership</td>
+              <td class="num pbi-pct-strong">0.0%</td>
+              <td><div class="pbi-bar-mini"><div style="width:0%;"></div></div></td>
+              <td class="num">0 / 42</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ALERTS -->
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+        <div class="pbi-card" style="margin:0; padding:14px 18px; border-left: 4px solid #a4262c;">
+          <div style="font-size:11px; color:#605e5c; text-transform:uppercase; font-weight:600; letter-spacing:.04em;">Overdue Sessions</div>
+          <div style="font-size:28px; font-weight:700; color:#a4262c; margin-top:4px; line-height:1;">15</div>
+          <div style="font-size:11px; color:#605e5c; margin-top:4px;">past planned date</div>
+        </div>
+        <div class="pbi-card" style="margin:0; padding:14px 18px; border-left: 4px solid #d29200;">
+          <div style="font-size:11px; color:#605e5c; text-transform:uppercase; font-weight:600; letter-spacing:.04em;">Unplanned Programmes</div>
+          <div style="font-size:28px; font-weight:700; color:#d29200; margin-top:4px; line-height:1;">7</div>
+          <div style="font-size:11px; color:#605e5c; margin-top:4px;">TNI without sessions</div>
+        </div>
+        <div class="pbi-card" style="margin:0; padding:14px 18px; border-left: 4px solid #a4262c;">
+          <div style="font-size:11px; color:#605e5c; text-transform:uppercase; font-weight:600; letter-spacing:.04em;">Effectiveness Overdue</div>
+          <div style="font-size:28px; font-weight:700; color:#a4262c; margin-top:4px; line-height:1;">12</div>
+          <div style="font-size:11px; color:#605e5c; margin-top:4px;">90+ day Specialized reviews</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
