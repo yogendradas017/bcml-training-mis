@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TMS Dashboard — Mockup (B+D Blend)</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --green:  #16a34a;
+  --amber:  #d97706;
+  --red:    #dc2626;
+  --green-bg: #dcfce7;
+  --amber-bg: #fef3c7;
+  --red-bg:   #fee2e2;
+  --sidebar-w: 220px;
+  --dark: #1e293b;
+  --darker: #0f172a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; color: #1e293b; font-size: 14px; }
+
+/* ── LAYOUT ── */
+.layout { display: flex; min-height: 100vh; }
+.sidebar { width: var(--sidebar-w); background: var(--darker); color: #94a3b8; flex-shrink: 0; display: flex; flex-direction: column; }
+.sidebar-brand { padding: 18px 16px; border-bottom: 1px solid #1e293b; }
+.sidebar-brand .app-name { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: .5px; }
+.sidebar-brand .app-sub  { font-size: 11px; color: #64748b; }
+.sidebar-nav { flex: 1; padding: 8px 0; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 18px; font-size: 13px; cursor: pointer; border-left: 3px solid transparent; }
+.nav-item:hover { background: #1e293b; color: #cbd5e1; }
+.nav-item.active { border-left-color: #3b82f6; background: #1e293b; color: #fff; }
+.nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 16px 18px 4px; color: #475569; }
+.main { flex: 1; overflow-y: auto; }
+
+/* ── TOP BAR ── */
+.topbar { background: var(--dark); color: #fff; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.plant-badge { background: #3b82f6; color: #fff; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 4px; }
+.fy-badge { background: #334155; color: #94a3b8; font-size: 12px; padding: 3px 10px; border-radius: 4px; }
+.topbar-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #94a3b8; }
+.role-chip { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 3px 10px; font-size: 11px; }
+
+/* ── CONTENT AREA ── */
+.content { padding: 20px 24px; }
+.section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 10px; }
+
+/* ── TNI HERO BAND ── */
+.tni-hero { background: var(--dark); border-radius: 12px; padding: 20px 28px; margin-bottom: 16px; display: flex; align-items: center; gap: 32px; }
+.tni-hero-main { display: flex; align-items: baseline; gap: 12px; }
+.tni-pct { font-size: 56px; font-weight: 800; line-height: 1; }
+.tni-pct.amber { color: #fbbf24; }
+.tni-pct.green { color: #4ade80; }
+.tni-pct.red   { color: #f87171; }
+.tni-label { font-size: 13px; color: #94a3b8; font-weight: 600; letter-spacing: .5px; }
+.tni-sub   { font-size: 12px; color: #64748b; margin-top: 3px; }
+.tni-divider { width: 1px; background: #334155; height: 60px; }
+.tni-bc-wc { display: flex; flex-direction: column; gap: 8px; }
+.collar-row { display: flex; align-items: center; gap: 10px; }
+.collar-tag { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 3px; min-width: 26px; text-align: center; }
+.bc-tag { background: #1e3a5f; color: #60a5fa; }
+.wc-tag { background: #1a3a2e; color: #4ade80; }
+.collar-pct { font-size: 22px; font-weight: 800; color: #fff; }
+.collar-pct.amber { color: #fbbf24; }
+.collar-pct.green { color: #4ade80; }
+.collar-pct.red   { color: #f87171; }
+.collar-detail { font-size: 11px; color: #64748b; }
+.tni-type-mini { display: flex; flex-direction: column; gap: 5px; margin-left: auto; }
+.type-mini-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #94a3b8; }
+.type-mini-bar-wrap { width: 80px; height: 5px; background: #334155; border-radius: 3px; }
+.type-mini-bar { height: 5px; border-radius: 3px; }
+.type-mini-pct { font-size: 11px; font-weight: 700; min-width: 30px; text-align: right; }
+
+/* ── EXCEPTION ALERTS ── */
+.alerts-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.alert-card { border-radius: 10px; padding: 12px 16px; flex: 1; min-width: 160px; display: flex; align-items: center; gap: 12px; border: 1.5px solid; }
+.alert-card.danger { background: #fff1f2; border-color: #fca5a5; }
+.alert-card.warning { background: #fffbeb; border-color: #fcd34d; }
+.alert-card.info    { background: #eff6ff; border-color: #93c5fd; }
+.alert-icon { font-size: 22px; }
+.alert-card.danger .alert-icon  { color: var(--red); }
+.alert-card.warning .alert-icon { color: var(--amber); }
+.alert-card.info    .alert-icon { color: #2563eb; }
+.alert-num  { font-size: 26px; font-weight: 800; line-height: 1; }
+.alert-card.danger .alert-num  { color: var(--red); }
+.alert-card.warning .alert-num { color: var(--amber); }
+.alert-card.info    .alert-num { color: #2563eb; }
+.alert-text { font-size: 12px; color: #475569; margin-top: 2px; }
+.alert-link { font-size: 11px; text-decoration: none; font-weight: 600; }
+.alert-card.danger .alert-link  { color: var(--red); }
+.alert-card.warning .alert-link { color: var(--amber); }
+.alert-card.info    .alert-link { color: #2563eb; }
+
+/* ── KPI ROW ── */
+.kpi-row { display: flex; gap: 12px; margin-bottom: 16px; }
+.kpi-card { background: #fff; border-radius: 10px; padding: 16px 20px; flex: 1; border: 1px solid #e2e8f0; }
+.kpi-card-header { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #94a3b8; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.kpi-num { font-size: 32px; font-weight: 800; color: #0f172a; line-height: 1; }
+.kpi-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+.kpi-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.chip { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+.chip-green   { background: var(--green-bg); color: var(--green); }
+.chip-amber   { background: var(--amber-bg); color: var(--amber); }
+.chip-red     { background: var(--red-bg);   color: var(--red); }
+.chip-blue    { background: #dbeafe; color: #1d4ed8; }
+.chip-gray    { background: #f1f5f9; color: #475569; }
+.kpi-progress { height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 10px; }
+.kpi-progress-fill { height: 4px; border-radius: 2px; }
+.kpi-progress-fill.green { background: var(--green); }
+.kpi-progress-fill.amber { background: var(--amber); }
+.kpi-progress-fill.red   { background: var(--red); }
+
+/* ── SESSION STATUS STRIP ── */
+.status-strip-wrap { background: #fff; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; border: 1px solid #e2e8f0; }
+.status-strip { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; margin: 8px 0; }
+.ss-seg { height: 10px; }
+.ss-seg.conducted  { background: var(--green); }
+.ss-seg.rescheduled { background: var(--amber); }
+.ss-seg.cancelled  { background: #94a3b8; }
+.ss-seg.overdue    { background: var(--red); }
+.status-legend { display: flex; gap: 16px; flex-wrap: wrap; }
+.sl-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #475569; }
+.sl-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+/* ── PROGRAMME TYPE GRID ── */
+.prog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.prog-card { background: #fff; border-radius: 10px; padding: 14px 16px; border: 1px solid #e2e8f0; border-left: 4px solid; }
+.prog-card.green-border { border-left-color: var(--green); }
+.prog-card.amber-border { border-left-color: var(--amber); }
+.prog-card.red-border   { border-left-color: var(--red); }
+.prog-type-name { font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+.prog-coverage-pct { font-size: 26px; font-weight: 800; line-height: 1; }
+.prog-coverage-pct.green { color: var(--green); }
+.prog-coverage-pct.amber { color: var(--amber); }
+.prog-coverage-pct.red   { color: var(--red); }
+.prog-bar-wrap { height: 5px; background: #e2e8f0; border-radius: 3px; margin: 6px 0; }
+.prog-bar { height: 5px; border-radius: 3px; }
+.prog-bar.green { background: var(--green); }
+.prog-bar.amber { background: var(--amber); }
+.prog-bar.red   { background: var(--red); }
+.prog-counts { font-size: 11px; color: #64748b; }
+
+/* ── CHART + GAUGES ROW ── */
+.chart-gauge-row { display: flex; gap: 12px; margin-bottom: 16px; }
+.chart-card { background: #fff; border-radius: 10px; padding: 16px 20px; flex: 2; border: 1px solid #e2e8f0; }
+.gauge-col { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.gauge-card { background: #fff; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0; text-align: center; flex: 1; }
+.gauge-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: #94a3b8; margin-bottom: 8px; }
+.gauge-ring { position: relative; width: 90px; height: 90px; margin: 0 auto; }
+.gauge-ring svg { transform: rotate(-90deg); }
+.gauge-ring-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+.gauge-pct-num { font-size: 20px; font-weight: 800; line-height: 1; }
+.gauge-pct-lbl { font-size: 9px; color: #94a3b8; }
+.gauge-hrs { font-size: 11px; color: #64748b; margin-top: 6px; }
+
+/* ── SECTION HEADING ── */
+.sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sec-head a { font-size: 12px; color: #3b82f6; text-decoration: none; }
+
+/* ── TABS ── */
+.dashboard-tabs { display: flex; gap: 0; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; }
+.dash-tab { padding: 10px 20px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.dash-tab.active { color: #1d4ed8; border-bottom-color: #1d4ed8; }
+
+/* ── CENTRAL SPECIFIC ── */
+.leaderboard { background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 16px; }
+.lb-header { background: var(--dark); color: #94a3b8; display: grid; grid-template-columns: 140px 1fr 80px 80px 80px 80px 70px; gap: 0; }
+.lb-header div, .lb-row div { padding: 10px 12px; font-size: 12px; }
+.lb-header div { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: #64748b; }
+.lb-row { display: grid; grid-template-columns: 140px 1fr 80px 80px 80px 80px 70px; border-top: 1px solid #f1f5f9; align-items: center; }
+.lb-row:hover { background: #f8fafc; }
+.lb-row.red-plant   { background: #fff5f5; }
+.lb-row.amber-plant { background: #fffbeb; }
+.lb-row.green-plant { background: #f0fdf4; }
+.lb-row.collapsed   { background: #f8fafc; color: #94a3b8; }
+.lb-plant-name { font-weight: 700; font-size: 13px; color: #1e293b; }
+.lb-cov-cell { display: flex; align-items: center; gap: 8px; }
+.lb-cov-bar-wrap { flex: 1; height: 6px; background: #e2e8f0; border-radius: 3px; }
+.lb-cov-bar { height: 6px; border-radius: 3px; }
+.lb-cov-pct { font-size: 13px; font-weight: 800; min-width: 36px; }
+.red-text   { color: var(--red); }
+.amber-text { color: var(--amber); }
+.green-text { color: var(--green); }
+.overdue-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+.overdue-badge.red   { background: var(--red-bg); color: var(--red); }
+.overdue-badge.amber { background: var(--amber-bg); color: var(--amber); }
+.overdue-badge.ok    { background: #f1f5f9; color: #94a3b8; }
+
+.grand-kpi-row { display: flex; gap: 12px; margin-bottom: 16px; }
+.grand-kpi { background: var(--dark); color: #fff; border-radius: 10px; padding: 16px 20px; flex: 1; }
+.grand-kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #64748b; margin-bottom: 6px; }
+.grand-kpi-num { font-size: 30px; font-weight: 800; line-height: 1; }
+.grand-kpi-sub  { font-size: 11px; color: #64748b; margin-top: 4px; }
+.grand-kpi-num.amber { color: #fbbf24; }
+.grand-kpi-num.red   { color: #f87171; }
+.grand-kpi-num.green { color: #4ade80; }
+
+/* ── EMPTY STATE ── */
+.empty-hero { text-align: center; padding: 48px 24px; }
+.empty-icon { font-size: 64px; color: #cbd5e1; margin-bottom: 16px; }
+.empty-title { font-size: 20px; font-weight: 700; color: #334155; margin-bottom: 8px; }
+.empty-sub { font-size: 14px; color: #64748b; margin-bottom: 24px; }
+.checklist { background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; max-width: 400px; margin: 0 auto; padding: 20px 24px; text-align: left; }
+.check-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+.check-item:last-child { border-bottom: none; }
+.check-item i.done  { color: var(--green); }
+.check-item i.pending { color: #cbd5e1; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="app-name">TMS</div>
+    <div class="app-sub">Training Management System</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-item active"><i class="bi bi-speedometer2"></i> Dashboard</div>
+    <div class="nav-section">Training</div>
+    <div class="nav-item"><i class="bi bi-people"></i> Employees</div>
+    <div class="nav-item"><i class="bi bi-list-task"></i> TNI</div>
+    <div class="nav-item"><i class="bi bi-calendar3"></i> Calendar</div>
+    <div class="nav-item"><i class="bi bi-clipboard-data"></i> 2C — Conducted</div>
+    <div class="nav-item"><i class="bi bi-person-check"></i> 2A — Attendance</div>
+    <div class="nav-section">Reports</div>
+    <div class="nav-item"><i class="bi bi-bar-chart-line"></i> Monthly Summary</div>
+    <div class="nav-item"><i class="bi bi-download"></i> Export</div>
+    <div class="nav-section">Admin</div>
+    <div class="nav-item"><i class="bi bi-shield-check"></i> Users</div>
+  </div>
+</div>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<div class="main">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span style="font-weight:700; color:#fff; font-size:15px;">Dashboard</span>
+    <span class="plant-badge" id="plant-label">Pune-1</span>
+    <span class="fy-badge">FY 2025-26</span>
+  </div>
+  <div class="topbar-right">
+    <!-- Tab switcher -->
+    <div style="display:flex; gap:4px;">
+      <button onclick="showView('spoc')" id="btn-spoc" class="btn btn-sm btn-primary" style="font-size:12px;">SPOC View</button>
+      <button onclick="showView('central')" id="btn-central" class="btn btn-sm btn-outline-secondary" style="font-size:12px; color:#94a3b8; border-color:#334155;">Central View</button>
+      <button onclick="showView('empty')" id="btn-empty" class="btn btn-sm btn-outline-secondary" style="font-size:12px; color:#94a3b8; border-color:#334155;">Empty State</button>
+    </div>
+    <span class="role-chip"><i class="bi bi-person-circle"></i> SPOC — AR</span>
+  </div>
+</div>
+
+<!-- ═══════════ SPOC VIEW ═══════════ -->
+<div id="view-spoc" class="content">
+
+  <!-- TNI HERO BAND -->
+  <div class="section-label">Training Need Coverage — FY Headline</div>
+  <div class="tni-hero" style="margin-bottom:16px;">
+    <div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#64748b; margin-bottom:4px;">TNI Coverage</div>
+      <div class="tni-hero-main">
+        <div class="tni-pct amber">71%</div>
+        <div>
+          <div class="tni-label" style="color:#fbbf24;">AMBER</div>
+          <div class="tni-sub">319 trained of 449 nominated</div>
+        </div>
+      </div>
+    </div>
+    <div class="tni-divider"></div>
+    <div class="tni-bc-wc">
+      <div class="collar-row">
+        <span class="collar-tag bc-tag">BC</span>
+        <span class="collar-pct amber">69%</span>
+        <span class="collar-detail">198 / 287 nominated</span>
+      </div>
+      <div class="collar-row">
+        <span class="collar-tag wc-tag">WC</span>
+        <span class="collar-pct green">75%</span>
+        <span class="collar-detail">121 / 162 nominated</span>
+      </div>
+    </div>
+    <div class="tni-divider"></div>
+    <div class="tni-type-mini">
+      <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#64748b; margin-bottom:4px;">By Type</div>
+      <div class="type-mini-row">
+        <span style="min-width:68px;">Technical</span>
+        <div class="type-mini-bar-wrap"><div class="type-mini-bar" style="width:76%; background:#fbbf24;"></div></div>
+        <span class="type-mini-pct" style="color:#fbbf24;">76%</span>
+      </div>
+      <div class="type-mini-row">
+        <span style="min-width:68px;">Safety</span>
+        <div class="type-mini-bar-wrap"><div class="type-mini-bar" style="width:38%; background:#dc2626;"></div></div>
+        <span class="type-mini-pct" style="color:#dc2626;">38%</span>
+      </div>
+      <div class="type-mini-row">
+        <span style="min-width:68px;">Behavioral</span>
+        <div class="type-mini-bar-wrap"><div class="type-mini-bar" style="width:84%; background:#16a34a;"></div></div>
+        <span class="type-mini-pct" style="color:#16a34a;">84%</span>
+      </div>
+      <div class="type-mini-row">
+        <span style="min-width:68px;">Statutory</span>
+        <div class="type-mini-bar-wrap"><div class="type-mini-bar" style="width:46%; background:#dc2626;"></div></div>
+        <span class="type-mini-pct" style="color:#dc2626;">46%</span>
+      </div>
+      <div class="type-mini-row">
+        <span style="min-width:68px;">Skill</span>
+        <div class="type-mini-bar-wrap"><div class="type-mini-bar" style="width:80%; background:#16a34a;"></div></div>
+        <span class="type-mini-pct" style="color:#16a34a;">80%</span>
+      </div>
+    </div>
+    <div style="margin-left:auto; background:#1a2535; border-radius:8px; padding:10px 16px; text-align:center;">
+      <div style="font-size:10px; text-transform:uppercase; letter-spacing:.7px; color:#64748b; margin-bottom:4px;">Source Split</div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <div style="text-align:center;"><div style="font-size:20px; font-weight:800; color:#60a5fa;">72%</div><div style="font-size:10px; color:#64748b;">TNI Driven</div></div>
+        <div style="font-size:18px; color:#334155;">|</div>
+        <div style="text-align:center;"><div style="font-size:20px; font-weight:800; color:#a78bfa;">28%</div><div style="font-size:10px; color:#64748b;">Ad-hoc</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXCEPTION ALERTS -->
+  <div class="section-label">Needs Attention</div>
+  <div class="alerts-row">
+    <div class="alert-card danger">
+      <i class="bi bi-exclamation-triangle-fill alert-icon"></i>
+      <div>
+        <div class="alert-num">15</div>
+        <div class="alert-text">Overdue sessions — past planned date, still pending</div>
+        <a href="#" class="alert-link">View list →</a>
+      </div>
+    </div>
+    <div class="alert-card danger">
+      <i class="bi bi-shield-exclamation alert-icon"></i>
+      <div>
+        <div class="alert-num">38%</div>
+        <div class="alert-text">Safety coverage — 58 of 154 nominated trained</div>
+        <a href="#" class="alert-link">View programme →</a>
+      </div>
+    </div>
+    <div class="alert-card danger">
+      <i class="bi bi-file-earmark-x alert-icon"></i>
+      <div>
+        <div class="alert-num">46%</div>
+        <div class="alert-text">Statutory coverage — 33 of 71 nominated trained</div>
+        <a href="#" class="alert-link">View programme →</a>
+      </div>
+    </div>
+    <div class="alert-card warning">
+      <i class="bi bi-calendar-x alert-icon"></i>
+      <div>
+        <div class="alert-num">7</div>
+        <div class="alert-text">TNI programmes have no session planned yet</div>
+        <a href="#" class="alert-link">Open Calendar →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI ROW -->
+  <div class="section-label">At a Glance</div>
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-card-header"><i class="bi bi-people-fill"></i> Workforce</div>
+      <div class="kpi-num">487</div>
+      <div class="kpi-sub">Active employees</div>
+      <div class="kpi-chips">
+        <span class="chip chip-blue">BC 312</span>
+        <span class="chip chip-gray">WC 175</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card-header"><i class="bi bi-calendar-check"></i> Sessions</div>
+      <div class="kpi-num">88 <span style="font-size:16px; font-weight:400; color:#94a3b8;">of 142</span></div>
+      <div class="kpi-sub">Conducted of planned</div>
+      <div class="kpi-chips">
+        <span class="chip chip-amber">Rescheduled 26</span>
+        <span class="chip chip-gray">Cancelled 13</span>
+        <span class="chip chip-red">Overdue 15</span>
+      </div>
+      <div class="kpi-progress"><div class="kpi-progress-fill amber" style="width:62%;"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card-header"><i class="bi bi-clock-history"></i> Man-Hours</div>
+      <div class="kpi-num">6,420</div>
+      <div class="kpi-sub">of 8,200 target <strong style="color:#d97706;">78%</strong></div>
+      <div class="kpi-progress"><div class="kpi-progress-fill amber" style="width:78%;"></div></div>
+    </div>
+  </div>
+
+  <!-- SESSION STATUS STRIP -->
+  <div class="status-strip-wrap">
+    <div class="sec-head"><div class="section-label" style="margin:0;">Session Pipeline — 142 total</div></div>
+    <div class="status-strip">
+      <div class="ss-seg conducted"  style="flex:88;"></div>
+      <div class="ss-seg rescheduled" style="flex:26;"></div>
+      <div class="ss-seg cancelled"  style="flex:13;"></div>
+      <div class="ss-seg overdue"    style="flex:15;"></div>
+    </div>
+    <div class="status-legend">
+      <div class="sl-item"><div class="sl-dot" style="background:var(--green);"></div>Conducted 88</div>
+      <div class="sl-item"><div class="sl-dot" style="background:var(--amber);"></div>Rescheduled 26</div>
+      <div class="sl-item"><div class="sl-dot" style="background:#94a3b8;"></div>Cancelled 13</div>
+      <div class="sl-item"><div class="sl-dot" style="background:var(--red);"></div><strong style="color:var(--red);">Overdue 15</strong></div>
+    </div>
+  </div>
+
+  <!-- PROGRAMME TYPE GRID -->
+  <div class="sec-head">
+    <div class="section-label" style="margin:0;">Coverage by Programme Type</div>
+    <a href="#">Full TNI Report →</a>
+  </div>
+  <div class="prog-grid">
+    <div class="prog-card amber-border">
+      <div class="prog-type-name"><i class="bi bi-gear"></i> Technical</div>
+      <div class="prog-coverage-pct amber">76%</div>
+      <div class="prog-bar-wrap"><div class="prog-bar amber" style="width:76%;"></div></div>
+      <div class="prog-counts">142 trained of 188 nominated</div>
+    </div>
+    <div class="prog-card red-border">
+      <div class="prog-type-name"><i class="bi bi-shield-fill-exclamation"></i> Safety</div>
+      <div class="prog-coverage-pct red">38%</div>
+      <div class="prog-bar-wrap"><div class="prog-bar red" style="width:38%;"></div></div>
+      <div class="prog-counts">58 trained of 154 nominated</div>
+    </div>
+    <div class="prog-card green-border">
+      <div class="prog-type-name"><i class="bi bi-emoji-smile"></i> Behavioral</div>
+      <div class="prog-coverage-pct green">84%</div>
+      <div class="prog-bar-wrap"><div class="prog-bar green" style="width:84%;"></div></div>
+      <div class="prog-counts">81 trained of 96 nominated</div>
+    </div>
+    <div class="prog-card red-border">
+      <div class="prog-type-name"><i class="bi bi-file-earmark-ruled"></i> Statutory</div>
+      <div class="prog-coverage-pct red">46%</div>
+      <div class="prog-bar-wrap"><div class="prog-bar red" style="width:46%;"></div></div>
+      <div class="prog-counts">33 trained of 71 nominated</div>
+    </div>
+    <div class="prog-card green-border">
+      <div class="prog-type-name"><i class="bi bi-tools"></i> Skill</div>
+      <div class="prog-coverage-pct green">80%</div>
+      <div class="prog-bar-wrap"><div class="prog-bar green" style="width:80%;"></div></div>
+      <div class="prog-counts">67 trained of 84 nominated</div>
+    </div>
+    <div class="prog-card amber-border">
+      <div class="prog-type-name"><i class="bi bi-three-dots"></i> Others</div>
+      <div class="prog-coverage-pct amber">68%</div>
+      <div class="prog-bar-wrap"><div class="prog-bar amber" style="width:68%;"></div></div>
+      <div class="prog-counts">15 trained of 22 nominated</div>
+    </div>
+  </div>
+
+  <!-- CHART + GAUGES -->
+  <div class="chart-gauge-row">
+    <div class="chart-card">
+      <div class="sec-head">
+        <div class="section-label" style="margin:0;">Sessions per Month + Manhour Target</div>
+        <span style="font-size:11px; color:#64748b;">FY 2025-26</span>
+      </div>
+      <canvas id="spocChart" height="120"></canvas>
+    </div>
+    <div class="gauge-col">
+      <div class="gauge-card">
+        <div class="gauge-title">BC Manhour Compliance</div>
+        <div class="gauge-ring">
+          <svg width="90" height="90" viewBox="0 0 90 90">
+            <circle cx="45" cy="45" r="36" fill="none" stroke="#e2e8f0" stroke-width="9"/>
+            <circle cx="45" cy="45" r="36" fill="none" stroke="#d97706" stroke-width="9"
+              stroke-dasharray="226" stroke-dashoffset="49" stroke-linecap="round"/>
+          </svg>
+          <div class="gauge-ring-text">
+            <span class="gauge-pct-num" style="color:#d97706;">78%</span>
+            <span class="gauge-pct-lbl">target</span>
+          </div>
+        </div>
+        <div class="gauge-hrs">9,360 of 12,000 hrs</div>
+      </div>
+      <div class="gauge-card">
+        <div class="gauge-title">WC Manhour Compliance</div>
+        <div class="gauge-ring">
+          <svg width="90" height="90" viewBox="0 0 90 90">
+            <circle cx="45" cy="45" r="36" fill="none" stroke="#e2e8f0" stroke-width="9"/>
+            <circle cx="45" cy="45" r="36" fill="none" stroke="#dc2626" stroke-width="9"
+              stroke-dasharray="226" stroke-dashoffset="81" stroke-linecap="round"/>
+          </svg>
+          <div class="gauge-ring-text">
+            <span class="gauge-pct-num" style="color:#dc2626;">64%</span>
+            <span class="gauge-pct-lbl">target</span>
+          </div>
+        </div>
+        <div class="gauge-hrs">2,688 of 4,200 hrs</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /view-spoc -->
+
+
+<!-- ═══════════ CENTRAL VIEW ═══════════ -->
+<div id="view-central" class="content" style="display:none;">
+
+  <!-- GRAND KPIs -->
+  <div class="section-label">All Plants — FY 2025-26</div>
+  <div class="grand-kpi-row">
+    <div class="grand-kpi">
+      <div class="grand-kpi-label"><i class="bi bi-people-fill"></i> Total Employees</div>
+      <div class="grand-kpi-num">4,486</div>
+      <div class="grand-kpi-sub">BC 2,843 · WC 1,643</div>
+    </div>
+    <div class="grand-kpi">
+      <div class="grand-kpi-label"><i class="bi bi-bullseye"></i> TNI Coverage</div>
+      <div class="grand-kpi-num amber">71%</div>
+      <div class="grand-kpi-sub">BC 68% · WC 75%</div>
+    </div>
+    <div class="grand-kpi">
+      <div class="grand-kpi-label"><i class="bi bi-calendar-check"></i> Sessions</div>
+      <div class="grand-kpi-num">940 <span style="font-size:16px; font-weight:400; color:#64748b;">/ 1,352</span></div>
+      <div class="grand-kpi-sub">70% of planned</div>
+    </div>
+    <div class="grand-kpi">
+      <div class="grand-kpi-label"><i class="bi bi-clock-history"></i> Man-Hours</div>
+      <div class="grand-kpi-num">56,760</div>
+      <div class="grand-kpi-sub">across all plants</div>
+    </div>
+    <div class="grand-kpi" style="border: 1.5px solid #7f1d1d;">
+      <div class="grand-kpi-label" style="color:#f87171;"><i class="bi bi-exclamation-triangle-fill"></i> Overdue Sessions</div>
+      <div class="grand-kpi-num red">95</div>
+      <div class="grand-kpi-sub" style="color:#7f1d1d;">across 7 plants</div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div class="sec-head">
+    <div class="section-label" style="margin:0;">Plant Coverage — Worst First</div>
+    <span style="font-size:11px; color:#64748b;">Sorted by TNI Coverage ↑ · 2 red · 4 amber · 4 green</span>
+  </div>
+  <div class="leaderboard">
+    <div class="lb-header" style="display:grid; grid-template-columns:140px 1fr 90px 90px 80px 80px 80px; padding:0;">
+      <div>Plant</div>
+      <div>TNI Coverage</div>
+      <div>Conducted</div>
+      <div>Man-Hrs</div>
+      <div>BC Mc%</div>
+      <div>WC Mc%</div>
+      <div>Overdue</div>
+    </div>
+    <!-- RED plants -->
+    <div class="lb-row red-plant" style="grid-template-columns:140px 1fr 90px 90px 80px 80px 80px;">
+      <div><span class="lb-plant-name">Vadodara</span></div>
+      <div class="lb-cov-cell">
+        <div class="lb-cov-bar-wrap"><div class="lb-cov-bar" style="width:42%; background:var(--red);"></div></div>
+        <span class="lb-cov-pct red-text">42%</span>
+        <span style="font-size:11px; color:#94a3b8;">BC 38% · WC 46%</span>
+      </div>
+      <div style="font-size:13px;">47 <span style="color:#94a3b8; font-size:11px;">/ 122</span></div>
+      <div style="font-size:13px;">3,200</div>
+      <div><span class="chip chip-red">41%</span></div>
+      <div><span class="chip chip-amber">48%</span></div>
+      <div><span class="overdue-badge red">▲ 24</span></div>
+    </div>
+    <div class="lb-row red-plant" style="grid-template-columns:140px 1fr 90px 90px 80px 80px 80px;">
+      <div><span class="lb-plant-name">Pune-2</span></div>
+      <div class="lb-cov-cell">
+        <div class="lb-cov-bar-wrap"><div class="lb-cov-bar" style="width:47%; background:var(--red);"></div></div>
+        <span class="lb-cov-pct red-text">47%</span>
+        <span style="font-size:11px; color:#94a3b8;">BC 42% · WC 51%</span>
+      </div>
+      <div style="font-size:13px;">38 <span style="color:#94a3b8; font-size:11px;">/ 84</span></div>
+      <div style="font-size:13px;">2,240</div>
+      <div><span class="chip chip-amber">47%</span></div>
+      <div><span class="chip chip-amber">52%</span></div>
+      <div><span class="overdue-badge red">▲ 18</span></div>
+    </div>
+    <!-- AMBER plants -->
+    <div class="lb-row amber-plant" style="grid-template-columns:140px 1fr 90px 90px 80px 80px 80px;">
+      <div><span class="lb-plant-name">Nashik</span></div>
+      <div class="lb-cov-cell">
+        <div class="lb-cov-bar-wrap"><div class="lb-cov-bar" style="width:61%; background:var(--amber);"></div></div>
+        <span class="lb-cov-pct amber-text">61%</span>
+        <span style="font-size:11px; color:#94a3b8;">BC 58% · WC 64%</span>
+      </div>
+      <div style="font-size:13px;">71 <span style="color:#94a3b8; font-size:11px;">/ 121</span></div>
+      <div style="font-size:13px;">4,280</div>
+      <div><span class="chip chip-amber">62%</span></div>
+      <div><span class="chip chip-amber">60%</span></div>
+      <div><span class="overdue-badge amber">▲ 11</span></div>
+    </div>
+    <div class="lb-row amber-plant" style="grid-template-columns:140px 1fr 90px 90px 80px 80px 80px;">
+      <div><span class="lb-plant-name">Kolkata</span></div>
+      <div class="lb-cov-cell">
+        <div class="lb-cov-bar-wrap"><div class="lb-cov-bar" style="width:68%; background:var(--amber);"></div></div>
+        <span class="lb-cov-pct amber-text">68%</span>
+        <span style="font-size:11px; color:#94a3b8;">BC 64% · WC 71%</span>
+      </div>
+      <div style="font-size:13px;">92 <span style="color:#94a3b8; font-size:11px;">/ 138</span></div>
+      <div style="font-size:13px;">5,640</div>
+      <div><span class="chip chip-amber">70%</span></div>
+      <div><span class="chip chip-amber">65%</span></div>
+      <div><span class="overdue-badge amber">▲ 8</span></div>
+    </div>
+    <div class="lb-row amber-plant" style="grid-template-columns:140px 1fr 90px 90px 80px 80px 80px;">
+      <div><span class="lb-plant-name">Pune-1</span></div>
+      <div class="lb-cov-cell">
+        <div class="lb-cov-bar-wrap"><div class="lb-cov-bar" style="width:71%; background:var(--amber);"></div></div>
+        <span class="lb-cov-pct amber-text">71%</span>
+        <span style="font-size:11px; color:#94a3b8;">BC 69% · WC 75%</span>
+      </div>
+      <div style="font-size:13px;">88 <span style="color:#94a3b8; font-size:11px;">/ 142</span></div>
+      <div style="font-size:13px;">6,420</div>
+      <div><span class="chip chip-amber">78%</span></div>
+      <div><span class="chip chip-red">64%</span></div>
+      <div><span class="overdue-badge amber">▲ 15</span></div>
+    </div>
+    <div class="lb-row amber-plant" style="grid-template-columns:140px 1fr 90px 90px 80px 80px 80px;">
+      <div><span class="lb-plant-name">Jamshedpur</span></div>
+      <div class="lb-cov-cell">
+        <div class="lb-cov-bar-wrap"><div class="lb-cov-bar" style="width:75%; background:var(--amber);"></div></div>
+        <span class="lb-cov-pct amber-text">75%</span>
+        <span style="font-size:11px; color:#94a3b8;">BC 71% · WC 78%</span>
+      </div>
+      <div style="font-size:13px;">142 <span style="color:#94a3b8; font-size:11px;">/ 201</span></div>
+      <div style="font-size:13px;">8,640</div>
+      <div><span class="chip chip-amber">74%</span></div>
+      <div><span class="chip chip-amber">70%</span></div>
+      <div><span class="overdue-badge amber">▲ 9</span></div>
+    </div>
+    <!-- GREEN plants (collapsed) -->
+    <div class="lb-row collapsed" style="grid-template-columns:140px 1fr 90px 90px 80px 80px 80px; background:#f8fafc;">
+      <div colspan="7" style="grid-column:1/-1; display:flex; align-items:center; gap:16px; padding:10px 12px;">
+        <i class="bi bi-check-circle-fill" style="color:var(--green);"></i>
+        <span style="font-size:12px; color:#64748b;">4 plants on track — Indore 81% · Gurgaon HQ 82% · Hosur 84% · Chennai 88%</span>
+        <a href="#" style="font-size:11px; color:#3b82f6; margin-left:auto;">Show all →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTRAL CHART -->
+  <div class="chart-card">
+    <div class="sec-head">
+      <div class="section-label" style="margin:0;">Monthly Sessions — All Plants</div>
+    </div>
+    <canvas id="centralChart" height="80"></canvas>
+  </div>
+
+</div><!-- /view-central -->
+
+
+<!-- ═══════════ EMPTY STATE ═══════════ -->
+<div id="view-empty" class="content" style="display:none;">
+
+  <div class="kpi-row">
+    <div class="kpi-card" style="text-align:center; color:#cbd5e1;">
+      <div class="kpi-card-header" style="justify-content:center;">Workforce</div>
+      <div style="font-size:36px; font-weight:800; color:#e2e8f0;">—</div>
+      <div style="font-size:12px; color:#cbd5e1;">no data yet</div>
+    </div>
+    <div class="kpi-card" style="text-align:center;">
+      <div class="kpi-card-header" style="justify-content:center;">TNI Coverage</div>
+      <div style="font-size:36px; font-weight:800; color:#e2e8f0;">—</div>
+      <div style="font-size:12px; color:#cbd5e1;">no data yet</div>
+    </div>
+    <div class="kpi-card" style="text-align:center;">
+      <div class="kpi-card-header" style="justify-content:center;">Sessions</div>
+      <div style="font-size:36px; font-weight:800; color:#e2e8f0;">—</div>
+      <div style="font-size:12px; color:#cbd5e1;">no data yet</div>
+    </div>
+    <div class="kpi-card" style="text-align:center;">
+      <div class="kpi-card-header" style="justify-content:center;">Man-Hours</div>
+      <div style="font-size:36px; font-weight:800; color:#e2e8f0;">—</div>
+      <div style="font-size:12px; color:#cbd5e1;">no data yet</div>
+    </div>
+  </div>
+
+  <div class="empty-hero">
+    <div class="empty-icon"><i class="bi bi-bar-chart-steps"></i></div>
+    <div class="empty-title">No sessions yet in FY 2025-26</div>
+    <div class="empty-sub">Complete the setup checklist to start tracking coverage.</div>
+    <div class="checklist">
+      <div class="check-item"><i class="bi bi-check-circle-fill done"></i> Import TNI nominations</div>
+      <div class="check-item"><i class="bi bi-circle pending"></i> Upload FY training calendar</div>
+      <div class="check-item"><i class="bi bi-circle pending"></i> Confirm BC / WC headcount split</div>
+      <div class="check-item"><i class="bi bi-circle pending"></i> Assign session SPOCs</div>
+    </div>
+  </div>
+</div><!-- /view-empty -->
+
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function showView(v) {
+  ['spoc','central','empty'].forEach(id => {
+    document.getElementById('view-'+id).style.display = id===v ? 'block' : 'none';
+  });
+  document.getElementById('btn-spoc').className    = 'btn btn-sm ' + (v==='spoc'    ? 'btn-primary' : 'btn-outline-secondary');
+  document.getElementById('btn-central').className = 'btn btn-sm ' + (v==='central' ? 'btn-primary' : 'btn-outline-secondary');
+  document.getElementById('btn-empty').className   = 'btn btn-sm ' + (v==='empty'   ? 'btn-primary' : 'btn-outline-secondary');
+  if(v==='spoc')    { document.getElementById('plant-label').textContent='Pune-1'; document.getElementById('plant-label').style.display=''; }
+  if(v==='central') { document.getElementById('plant-label').textContent='All Plants'; }
+  if(v==='empty')   { document.getElementById('plant-label').textContent='Pune-1'; }
+  ['btn-spoc','btn-central','btn-empty'].forEach(id => {
+    document.getElementById(id).style.fontSize='12px';
+    if(!document.getElementById(id).classList.contains('btn-primary')) {
+      document.getElementById(id).style.color='#94a3b8';
+      document.getElementById(id).style.borderColor='#334155';
+    } else {
+      document.getElementById(id).style.color='';
+      document.getElementById(id).style.borderColor='';
+    }
+  });
+}
+
+// SPOC Chart
+const spocCtx = document.getElementById('spocChart').getContext('2d');
+new Chart(spocCtx, {
+  data: {
+    labels: ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+    datasets: [
+      { type:'bar', label:'Sessions', data:[6,8,9,7,5,8,10,9,11,8,7,0], backgroundColor:'#3b82f633', borderColor:'#3b82f6', borderWidth:1.5, borderRadius:3 },
+      { type:'line', label:'Manhour Target', data:[683,683,683,683,683,683,683,683,683,683,683,683], borderColor:'#f59e0b', borderWidth:2, pointRadius:0, borderDash:[5,3] },
+      { type:'line', label:'Manhour Actual', data:[580,620,700,520,410,650,780,710,890,560,0,0], borderColor:'#10b981', borderWidth:2, pointRadius:3, tension:.3, fill:false }
+    ]
+  },
+  options: { responsive:true, plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, boxWidth:12 } } }, scales:{ y:{ beginAtZero:true, grid:{color:'#f1f5f9'} }, x:{ grid:{display:false} } } }
+});
+
+// Central Chart
+const cCtx = document.getElementById('centralChart').getContext('2d');
+new Chart(cCtx, {
+  type:'bar',
+  data: {
+    labels: ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+    datasets: [
+      { label:'Conducted', data:[72,88,95,81,64,92,105,98,118,83,44,0], backgroundColor:'#3b82f666', borderColor:'#3b82f6', borderWidth:1.5, borderRadius:3 },
+      { label:'Overdue', data:[5,3,8,6,4,9,12,8,14,10,16,0], backgroundColor:'#dc262666', borderColor:'#dc2626', borderWidth:1.5, borderRadius:3 }
+    ]
+  },
+  options: { responsive:true, plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, boxWidth:12 } } }, scales:{ y:{ beginAtZero:true, grid:{color:'#f1f5f9'}, stacked:false }, x:{ grid:{display:false} } } }
+});
+</script>
+</body>
+</html>

@@ -48,14 +48,15 @@ def _validate_password_strength(pw, username=''):
 
 def _register(app):
 
-    @app.route('/_dashboard-preview')
-    def _dashboard_preview():
-        """Temp: serve docs/dashboard_mockup.html for design review.
-        Remove route after dashboard rebuild decision."""
-        from flask import send_from_directory
-        import os
-        from tms.constants import BASE_DIR
-        return send_from_directory(os.path.join(BASE_DIR, 'docs'), 'dashboard_mockup.html')
+    @app.route('/_dashboard-mockup')
+    def _dashboard_mockup():
+        """Temp: serve the mockup standalone (used inside compare iframe)."""
+        return render_template('_dashboard_mockup.html')
+
+    @app.route('/_dashboard-compare')
+    def _dashboard_compare():
+        """Temp: side-by-side current /dashboard vs proposed mockup."""
+        return render_template('_dashboard_compare.html')
 
     @app.route('/')
     def index():

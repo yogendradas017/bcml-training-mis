@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>TMS Dashboard — Side by Side</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #fff; font-family: 'Inter', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+  .topbar { background: #1e293b; padding: 12px 20px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #334155; flex-shrink: 0; }
+  .topbar h1 { font-size: 14px; font-weight: 700; margin-right: auto; }
+  .topbar .sub { font-size: 12px; color: #94a3b8; }
+  .topbar .actions { display: flex; gap: 8px; }
+  .topbar .btn { padding: 6px 12px; border-radius: 6px; background: #334155; color: #e2e8f0; text-decoration: none; font-size: 12px; border: none; cursor: pointer; }
+  .topbar .btn:hover { background: #475569; }
+  .topbar .btn-go { background: #16a34a; color: #fff; font-weight: 600; }
+  .topbar .btn-no { background: #dc2626; color: #fff; font-weight: 600; }
+  .split { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #334155; overflow: hidden; }
+  .pane { background: #fff; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .pane-hdr { padding: 8px 14px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .pane-hdr.current { background: linear-gradient(90deg, #64748b, #475569); color: #fff; }
+  .pane-hdr.proposed { background: linear-gradient(90deg, #16a34a, #15803d); color: #fff; }
+  .pane-hdr .pill { background: rgba(255,255,255,.2); padding: 2px 8px; border-radius: 99px; font-size: 10px; }
+  .pane iframe { flex: 1; border: 0; width: 100%; }
+  .hint { font-size: 11px; color: #cbd5e1; }
+  @media (max-width: 900px) {
+    .split { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>TMS Dashboard — Side-by-Side Preview</h1>
+  <span class="sub hint">Compare current live dashboard vs proposed redesign. Scroll each panel independently.</span>
+  <div class="actions">
+    <a href="/dashboard" class="btn">← Back to /dashboard</a>
+    <a href="javascript:document.querySelectorAll('iframe').forEach(f=>f.contentWindow.scrollTo(0,0))" class="btn">Reset scroll</a>
+  </div>
+</div>
+<div class="split">
+  <div class="pane">
+    <div class="pane-hdr current">
+      <span>Current — live /dashboard</span>
+      <span class="pill">production</span>
+    </div>
+    <iframe src="/dashboard"></iframe>
+  </div>
+  <div class="pane">
+    <div class="pane-hdr proposed">
+      <span>Proposed — full rebuild (mockup)</span>
+      <span class="pill">design preview</span>
+    </div>
+    <iframe src="/_dashboard-mockup"></iframe>
+  </div>
+</div>
+</body>
+</html>
