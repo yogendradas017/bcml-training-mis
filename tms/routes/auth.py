@@ -586,12 +586,16 @@ def _register(app):
         for r in _drill:
             tni_drill.setdefault(r['prog_type'], []).append((r['programme_name'], r['emp_cnt']))
         compliance = _calc_compliance(plant_id, db)
+        target_hrs = compliance['bc_mandate'] + compliance['wc_mandate']
+        avg_hrs = round(stats['manhours'] / stats['trainings'], 1) if stats['trainings'] else 0
         return render_template(
             'dashboard.html',
             stats=stats,
             tni_by_type=tni_by_type,
             tni_drill=tni_drill,
             compliance=compliance,
+            target_hrs=target_hrs,
+            avg_hrs=avg_hrs,
             bc_pct=compliance['bc_pct'],
             wc_pct=compliance['wc_pct'],
             headline_pct=compliance['headline_pct'],
