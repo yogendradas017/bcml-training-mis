@@ -200,62 +200,6 @@
   </div>
 </div>
 
-<!-- ── TNI BY PROGRAMME TYPE ─────────────────────────────────── -->
-{% if tni_by_type %}
-<div class="section-hd">TNI by Programme Type</div>
-<div class="analytics-card mb-4">
-  <div class="analytics-hd">
-    <span class="analytics-title"><i class="bi bi-clipboard-data-fill me-1" style="color:var(--c-warn);"></i>Training Need Identification — Breakdown</span>
-    <span class="analytics-badge">{{ stats.tni_count }} total nominations</span>
-  </div>
-  <div class="analytics-body" style="padding:12px 16px 16px;">
-    {%- set total = stats.tni_count if stats.tni_count else 1 -%}
-    {%- set colors = ['var(--c-primary)','var(--c-warn-strong)','#059669','var(--c-info)','var(--c-central)','#e11d48','#374151','#b45309'] -%}
-    <div class="row g-2">
-      {% for row in tni_by_type %}
-      {%- set clr = colors[loop.index0 % colors|length] -%}
-      {%- set pct = (row.cnt / total * 100)|round(1) -%}
-      {%- set progs = tni_drill.get(row.prog_type, []) -%}
-      <div class="col-12 col-sm-6 col-lg-4">
-        <div class="tni-type-card" role="button" tabindex="0" aria-expanded="false" aria-controls="tni-drill-{{ loop.index }}" onclick="toggleTniDrill(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTniDrill(this);}" style="background:var(--c-surface-1);border-radius:10px;padding:10px 14px;border-left:4px solid {{ clr }};cursor:pointer;user-select:none;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-size:var(--fs-body);font-weight:600;color:var(--c-text-strong);">{{ row.prog_type }}</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span style="font-size:var(--fs-base);font-weight:800;color:{{ clr }};">{{ row.cnt }}</span>
-              <i class="bi bi-chevron-down tni-chevron" style="font-size:var(--fs-sm);color:var(--c-muted-3);transition:transform .2s;"></i>
-            </div>
-          </div>
-          <div style="background:var(--c-border-2);border-radius:4px;height:5px;overflow:hidden;">
-            <div style="width:{{ pct }}%;background:{{ clr }};height:100%;border-radius:4px;transition:width .4s;"></div>
-          </div>
-          <div style="font-size:var(--fs-xs);color:var(--c-muted-2);margin-top:4px;">{{ pct }}% of total TNI &nbsp;·&nbsp; {{ progs|length }} programme{{ 's' if progs|length != 1 }}</div>
-        </div>
-        <div id="tni-drill-{{ loop.index }}" class="tni-drill-panel" style="display:none;background:var(--c-white);border:1px solid var(--c-border);border-top:none;border-radius:0 0 var(--radius-md) var(--radius-md);padding:4px 14px 8px;margin-top:-4px;max-height:260px;overflow-y:auto;">
-          <div class="tni-drill-head" style="position:sticky;top:0;background:var(--c-white);padding:6px 0 4px;border-bottom:1px solid #f3f4f6;z-index:1;">
-            <div style="font-size:var(--fs-xs);font-weight:700;color:var(--c-muted-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">TNI — {{ row.prog_type }}</div>
-            <div class="input-group input-group-sm">
-              <span class="input-group-text" style="background:var(--c-surface-2);border-right:0;padding:2px 8px;"><i class="bi bi-search" style="font-size:var(--fs-sm);"></i></span>
-              <input type="text" class="form-control tni-drill-q" aria-label="Filter {{ row.prog_type }} programmes" placeholder="Filter programmes…" oninput="tniDrillFilter(this)" style="border-left:0;font-size:var(--fs-sm);padding:2px 8px;">
-            </div>
-            <div class="tni-drill-count visually-hidden" aria-live="polite"></div>
-          </div>
-          {% for prog_name, emp_cnt in progs %}
-          <div class="tni-drill-row" data-name="{{ prog_name|lower }}" style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #f9fafb;font-size:var(--fs-sm);">
-            <span style="color:var(--c-text-2);flex:1;padding-right:8px;">{{ prog_name }}</span>
-            <span style="font-weight:700;color:{{ clr }};white-space:nowrap;">{{ emp_cnt }} nominated</span>
-          </div>
-          {% else %}
-          <div style="font-size:var(--fs-sm);color:var(--c-muted-3);padding:8px 0;">No data</div>
-          {% endfor %}
-          <div class="tni-drill-empty" hidden style="font-size:var(--fs-sm);color:var(--c-muted-3);padding:12px 0;text-align:center;"><i class="bi bi-search" style="opacity:.5;"></i> No programmes match</div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</div>
-{% endif %}
-
 <!-- ── QC ANALYTICS ──────────────────────────────────────────── -->
 <style>
   .qc-wrap { position: relative; min-height: 240px; }
@@ -461,46 +405,6 @@ function toggleSessDrill() {
   var open    = panel.style.display !== 'none';
   panel.style.display   = open ? 'none' : 'block';
   chevron.style.transform = open ? '' : 'rotate(180deg)';
-}
-function toggleTniDrill(card) {
-  var panel = card.nextElementSibling;
-  var icon  = card.querySelector('.tni-chevron');
-  var open  = panel.style.display === 'block';
-  document.querySelectorAll('.tni-drill-panel').forEach(function(p){
-    p.style.display = 'none';
-    var q = p.querySelector('.tni-drill-q'); if (q) q.value = '';
-    p.querySelectorAll('.tni-drill-row').forEach(function(r){ r.hidden = false; });
-    var e = p.querySelector('.tni-drill-empty'); if (e) e.hidden = true;
-  });
-  document.querySelectorAll('.tni-type-card').forEach(function(c){
-    c.setAttribute('aria-expanded', 'false');
-    var i = c.querySelector('.tni-chevron'); if (i) i.style.transform = '';
-  });
-  if (!open) {
-    panel.style.display = 'block';
-    card.setAttribute('aria-expanded', 'true');
-    if (icon) icon.style.transform = 'rotate(180deg)';
-    var q = panel.querySelector('.tni-drill-q'); if (q) setTimeout(function(){ q.focus(); }, 30);
-  }
-}
-var _tniDebounce = null;
-function tniDrillFilter(input) {
-  clearTimeout(_tniDebounce);
-  _tniDebounce = setTimeout(function(){
-    var panel = input.closest('.tni-drill-panel');
-    var q = input.value.trim().toLowerCase();
-    var rows = panel.querySelectorAll('.tni-drill-row');
-    var shown = 0;
-    rows.forEach(function(r){
-      var match = !q || (r.dataset.name || '').indexOf(q) !== -1;
-      r.hidden = !match;
-      if (match) shown++;
-    });
-    var empty = panel.querySelector('.tni-drill-empty');
-    if (empty) empty.hidden = (shown !== 0) || rows.length === 0;
-    var counter = panel.querySelector('.tni-drill-count');
-    if (counter) counter.textContent = shown + ' of ' + rows.length + ' shown';
-  }, 200);
 }
 </script>
 <script>

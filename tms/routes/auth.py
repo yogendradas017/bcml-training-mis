@@ -735,19 +735,6 @@ def _register(app):
             'trainings':    db.execute('SELECT COUNT(*) FROM emp_training WHERE plant_id=? AND start_date BETWEEN ? AND ?', (plant_id, fy_start, fy_end)).fetchone()[0],
             'manhours':     db.execute('SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND start_date BETWEEN ? AND ?', (plant_id, fy_start, fy_end)).fetchone()[0],
         }
-        tni_by_type = db.execute(
-            'SELECT prog_type, COUNT(DISTINCT emp_code || "|" || programme_name) as cnt'
-            ' FROM tni WHERE plant_id=? AND fy_year=? AND prog_type IS NOT NULL AND prog_type!=""'
-            ' GROUP BY prog_type ORDER BY cnt DESC',
-            (plant_id, fy)).fetchall()
-        _drill = db.execute(
-            'SELECT prog_type, programme_name, COUNT(DISTINCT emp_code) as emp_cnt'
-            ' FROM tni WHERE plant_id=? AND fy_year=? AND prog_type IS NOT NULL AND prog_type!=""'
-            ' GROUP BY prog_type, programme_name ORDER BY prog_type, emp_cnt DESC',
-            (plant_id, fy)).fetchall()
-        tni_drill = {}
-        for r in _drill:
-            tni_drill.setdefault(r['prog_type'], []).append((r['programme_name'], r['emp_cnt']))
         compliance = _calc_compliance(plant_id, db)
         target_hrs = compliance['bc_mandate'] + compliance['wc_mandate']
         # Avg Hrs per Employee — ties to manhour mandate (BC 12/yr, WC 24/yr).
@@ -761,8 +748,6 @@ def _register(app):
         return render_template(
             'dashboard.html',
             stats=stats,
-            tni_by_type=tni_by_type,
-            tni_drill=tni_drill,
             compliance=compliance,
             target_hrs=target_hrs,
             avg_hrs=avg_hrs,

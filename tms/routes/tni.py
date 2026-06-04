@@ -63,12 +63,28 @@ def _register(app):
             'FROM programme_master WHERE plant_id=? ORDER BY prog_type, name',
             (plant_id,)).fetchall()
 
+        # TNI breakdown by programme type + per-type drill (relocated from dashboard)
+        tni_by_type = db.execute(
+            'SELECT prog_type, COUNT(DISTINCT emp_code || "|" || programme_name) as cnt'
+            ' FROM tni WHERE plant_id=? AND fy_year=? AND prog_type IS NOT NULL AND prog_type!=""'
+            ' GROUP BY prog_type ORDER BY cnt DESC',
+            (plant_id, fy)).fetchall()
+        _drill = db.execute(
+            'SELECT prog_type, programme_name, COUNT(DISTINCT emp_code) as emp_cnt'
+            ' FROM tni WHERE plant_id=? AND fy_year=? AND prog_type IS NOT NULL AND prog_type!=""'
+            ' GROUP BY prog_type, programme_name ORDER BY prog_type, emp_cnt DESC',
+            (plant_id, fy)).fetchall()
+        tni_drill = {}
+        for r in _drill:
+            tni_drill.setdefault(r['prog_type'], []).append((r['programme_name'], r['emp_cnt']))
+
         return render_template('tni.html', total=total,
                                employees=emps, programmes=programmes,
                                prog_types=PROG_TYPES, modes=MODES, months=MONTHS_FY,
                                departments=depts, dirty_names=dirty_names,
                                dup_count=dup_count,
-                               master_progs=master_progs)
+                               master_progs=master_progs,
+                               tni_by_type=tni_by_type, tni_drill=tni_drill)
 
     @app.route('/tni/data')
     @spoc_required
