@@ -51,6 +51,9 @@
     <li><a href="{{ url_for('spoc_dashboard') }}" class="{% if request.endpoint=='spoc_dashboard' %}active{% endif %}">
       <i class="bi bi-speedometer2"></i> Dashboard
     </a></li>
+    <li><a href="{{ url_for('_dashboard_qc') }}" class="{% if request.endpoint=='_dashboard_qc' %}active{% endif %}">
+      <i class="bi bi-bar-chart-steps"></i> QC Analytics
+    </a></li>
     <li><a href="{{ url_for('employees') }}" class="{% if request.endpoint=='employees' %}active{% endif %}">
       <i class="bi bi-people-fill"></i> Employee Master
     </a></li>
