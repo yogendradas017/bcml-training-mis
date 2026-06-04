@@ -11,7 +11,7 @@ import base64
 from tms.constants import PLANT_MAP, DB_PATH
 from tms.db import get_db
 from tms.decorators import spoc_required, login_required, admin_required
-from tms.helpers import _current_fy, _now_ist, _calc_compliance, _fy_label, _fy_label_long
+from tms.helpers import _current_fy, _now_ist, _calc_compliance, _fy_label
 from tms.audit import log_action
 
 
@@ -230,48 +230,6 @@ def _register(app):
     def _dashboard_styles():
         """Temp: Vercel vs Power BI style comparison for design direction."""
         return render_template('_dashboard_styles.html')
-
-    @app.route('/_dashboard-qc')
-    @spoc_required
-    def _dashboard_qc():
-        """QC analytics — Pareto, Histogram, Heat map, Cumulative run. Live, plant-scoped."""
-        plant_id = session['plant_id']
-        db = get_db()
-        fy_start, fy_end = _current_fy()
-        today = _now_ist().strftime('%Y-%m-%d')
-
-        compliance = _calc_compliance(plant_id, db)
-        target_hrs = compliance['bc_mandate'] + compliance['wc_mandate']
-        manhours   = db.execute(
-            'SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND start_date BETWEEN ? AND ?',
-            (plant_id, fy_start, fy_end)).fetchone()[0]
-        planned = db.execute(
-            "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND plan_start BETWEEN ? AND ?",
-            (plant_id, fy_start, fy_end)).fetchone()[0]
-        conducted = db.execute(
-            "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted' AND plan_start BETWEEN ? AND ?",
-            (plant_id, fy_start, fy_end)).fetchone()[0]
-        overdue = db.execute(
-            "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status!='Conducted' "
-            "AND plan_start BETWEEN ? AND ? AND plan_start < ?",
-            (plant_id, fy_start, fy_end, today)).fetchone()[0]
-
-        ctx = {
-            'plant_name':   session.get('plant_name') or PLANT_MAP.get(plant_id, {}).get('name', ''),
-            'fy_label_long': _fy_label_long(),
-            'compliance':   compliance,
-            'manhours':     round(manhours),
-            'target_hrs':   int(target_hrs),
-            'sess_planned': planned,
-            'sess_done':    conducted,
-            'sess_pct':     round(conducted / planned * 100) if planned else 0,
-            'overdue':      overdue,
-        }
-        ctx.update(_qc_pareto(db, plant_id, fy_start, fy_end))
-        ctx.update(_qc_histogram(db, plant_id, fy_start, fy_end))
-        ctx.update(_qc_cumulative(db, plant_id, fy_start, fy_end))
-        ctx.update(_qc_heatmap(db, plant_id, fy_start, fy_end))
-        return render_template('_dashboard_qc.html', **ctx)
 
     @app.route('/')
     def index():
