@@ -84,13 +84,15 @@
           <label class="form-label" for="auto_2c_venue">Venue</label>
           <input type="text" name="venue" id="auto_2c_venue" class="form-control" placeholder="e.g. Training Hall" autocomplete="off">
         </div>
-        <div class="col-12"><hr class="my-1"><strong style="font-size:var(--fs-md);">Feedback Scores (1&#8211;5)</strong></div>
+        <div class="col-12"><hr class="my-1"><strong style="font-size:var(--fs-md);">Feedback Scores (1&#8211;5)</strong>
+          <span style="font-size:var(--fs-sm);color:var(--c-muted-2);margin-left:8px;">Participant rates Course + Faculty. Trainer rates Participants + Facilities.</span>
+        </div>
         <div class="col-md-3">
-          <label class="form-label" for="auto_course_feedback">Course Feedback</label>
+          <label class="form-label" for="auto_course_feedback">Participant Feedback on Course</label>
           <input type="number" name="course_feedback" id="auto_course_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-md-3">
-          <label class="form-label" for="auto_faculty_feedback">Faculty Feedback</label>
+          <label class="form-label" for="auto_faculty_feedback">Participant Feedback on Faculty</label>
           <input type="number" name="faculty_feedback" id="auto_faculty_feedback" class="form-control" min="1" max="5" step="0.1" placeholder="1-5">
         </div>
         <div class="col-md-3">
@@ -149,7 +151,7 @@
             <th><input type="checkbox" class="cb-all"></th>
             <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th><th>Status</th>
             <th>Source</th><th>Start Date</th><th>Hrs</th><th>Faculty</th><th>Int/Ext</th>
-            <th class="text-end">Cost (&#8377;)</th><th class="text-end">Course FB</th><th class="text-end">Participants</th><th class="text-end">Man-Hrs</th><th>Action</th>
+            <th class="text-end">Cost (&#8377;)</th><th class="text-end">Course Fdbk</th><th class="text-end">Participants</th><th class="text-end">Man-Hrs</th><th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -247,7 +249,7 @@
           <tr>
             <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th>
             <th>Source</th><th>Start Date</th><th class="text-end">Hrs</th><th>Faculty</th><th>Int/Ext</th>
-            <th class="text-end">Cost (&#8377;)</th><th class="text-end">Course FB</th><th class="text-end">Participants</th><th class="text-end">Man-Hrs</th>
+            <th class="text-end">Cost (&#8377;)</th><th class="text-end">Course Fdbk</th><th class="text-end">Participants</th><th class="text-end">Man-Hrs</th>
           </tr>
         </thead>
         <tbody>
@@ -314,13 +316,13 @@
             <div class="col-md-12"><label class="form-label">Venue</label>
               <input type="text" name="venue" id="edit_2c_venue" class="form-control" maxlength="200"></div>
             <div class="col-12"><hr class="my-1"><strong style="font-size:var(--fs-md);">Feedback Scores (1–5, blank = not collected)</strong></div>
-            <div class="col-md-3"><label class="form-label">Course Feedback</label>
+            <div class="col-md-3"><label class="form-label">Participant Feedback on Course</label>
               <input type="number" name="course_feedback" id="edit_2c_cf" class="form-control" min="1" max="5" step="0.1"></div>
-            <div class="col-md-3"><label class="form-label">Faculty Feedback</label>
+            <div class="col-md-3"><label class="form-label">Participant Feedback on Faculty</label>
               <input type="number" name="faculty_feedback" id="edit_2c_ff" class="form-control" min="1" max="5" step="0.1"></div>
             <div class="col-md-3"><label class="form-label">Trainer Feedback on Participants</label>
               <input type="number" name="trainer_fb_participants" id="edit_2c_trp" class="form-control" min="1" max="5" step="0.1"></div>
-            <div class="col-md-3"><label class="form-label">Trainer FB — Facilities</label>
+            <div class="col-md-3"><label class="form-label">Trainer Feedback on Facilities</label>
               <input type="number" name="trainer_fb_facilities" id="edit_2c_trf" class="form-control" min="1" max="5" step="0.1"></div>
           </div>
         </div>

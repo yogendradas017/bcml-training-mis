@@ -191,12 +191,12 @@ def _register(app):
             flash(f'Training date must be within the current financial year ({fy_start} to {fy_end}).', 'danger')
             return redirect(url_for('emp_training'))
 
-        # Pre / Post rating range: 1-4 scale (matches feedback question scale).
+        # Pre / Post score range: 0-100 percentage scale.
         pre_r  = _safe_float(f.get('pre_rating'))
         post_r = _safe_float(f.get('post_rating'))
         for lbl, v in [('Pre', pre_r), ('Post', post_r)]:
-            if v is not None and v != 0 and not (1 <= v <= 4):
-                flash(f'{lbl}-Session Rating must be between 1 and 4 (got {v}).', 'danger')
+            if v is not None and v != 0 and not (0 <= v <= 100):
+                flash(f'{lbl}-Session Score must be between 0 and 100 (got {v}).', 'danger')
                 return redirect(url_for('emp_training'))
 
         anom_str = ','.join(anomaly_flags) if anomaly_flags else None
