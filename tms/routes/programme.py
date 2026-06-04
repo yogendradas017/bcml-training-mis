@@ -835,10 +835,26 @@ def _register(app):
             int_ext    = _clean(row, ['internal/external', 'int/ext', 'internal external'])
             cost       = _safe_float(_clean(row, ['cost (rs.)', 'cost'])) or 0
             venue      = _clean(row, ['venue'])
-            cfb        = _safe_float(_clean(row, ['course feedback (1-4)', 'course feedback (1-5)', 'course feedback', 'course fb']))
-            ffb        = _safe_float(_clean(row, ['faculty feedback (1-4)', 'faculty feedback (1-5)', 'faculty feedback', 'faculty fb']))
-            tfbp       = _safe_float(_clean(row, ['trainer fb participants (1-4)', 'trainer fb participants (1-5)', 'trainer fb participants']))
-            tfbf       = _safe_float(_clean(row, ['trainer fb facilities (1-4)', 'trainer fb facilities (1-5)', 'trainer fb facilities']))
+            def _fb_in(v):
+                """Bulk-upload feedback clamp: drop out-of-range silently to NULL.
+                Same semantics as form _clamp_fb. Legacy 1-5 values >4 stored as NULL."""
+                if v is None: return None
+                try: v = float(v)
+                except (TypeError, ValueError): return None
+                if v < 0 or v > 4: return None
+                return v if v > 0 else None
+            cfb_raw   = _safe_float(_clean(row, ['course feedback (1-4)', 'course feedback (1-5)', 'course feedback', 'course fb']))
+            ffb_raw   = _safe_float(_clean(row, ['faculty feedback (1-4)', 'faculty feedback (1-5)', 'faculty feedback', 'faculty fb']))
+            tfbp_raw  = _safe_float(_clean(row, ['trainer fb participants (1-4)', 'trainer fb participants (1-5)', 'trainer fb participants']))
+            tfbf_raw  = _safe_float(_clean(row, ['trainer fb facilities (1-4)', 'trainer fb facilities (1-5)', 'trainer fb facilities']))
+            cfb, ffb, tfbp, tfbf = _fb_in(cfb_raw), _fb_in(ffb_raw), _fb_in(tfbp_raw), _fb_in(tfbf_raw)
+            _dropped = [(n, raw) for n, raw, v in
+                        [('Course', cfb_raw, cfb), ('Faculty', ffb_raw, ffb),
+                         ('Trainer-Participants', tfbp_raw, tfbp), ('Trainer-Facilities', tfbf_raw, tfbf)]
+                        if raw is not None and raw not in (None, 0) and v is None]
+            if _dropped:
+                errors.append(f'Row {i+2}: feedback value(s) out of range 0-4 (dropped to blank): ' +
+                              ', '.join(f'{n}={raw}' for n, raw in _dropped))
             if not sc:
                 errors.append(f'Row {i+2}: Session Code is required.')
                 continue

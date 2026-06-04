@@ -4,7 +4,7 @@ from datetime import date
 from flask import render_template, request, redirect, url_for, session, flash, send_file
 import sqlite3
 
-from tms.constants import GENDERS, GRADES, CATEGORIES, COLLARS, PH_OPTIONS, TEMP_UPLOAD_DIR
+from tms.constants import GENDERS, GRADES, CATEGORIES, COLLARS, PH_OPTIONS, TEMP_UPLOAD_DIR, EMPLOYEES_PAGE_CAP
 from tms.db import get_db
 from tms.decorators import spoc_required
 from tms.helpers import normalise_collar, _today_ist, _canonical_emp_field, _smart_title
@@ -97,10 +97,8 @@ def _register(app):
         total_count = db.execute(
             f'SELECT COUNT(*) FROM ({base_sql})', (plant_id,)).fetchone()[0]
 
-        # Default render cap: first 200 by name. SPOCs working with a specific
-        # dept use Search + Filter; full DOM only loads when explicitly requested.
-        # Prevents 2MB+ HTML payload on plants with 1000+ headcount.
-        LIMIT = 200
+        # Default render cap from constants (override per-org via org_config later).
+        LIMIT = EMPLOYEES_PAGE_CAP
         if show_all or total_count <= LIMIT:
             emps = db.execute(f'{base_sql} ORDER BY name', (plant_id,)).fetchall()
             truncated = False

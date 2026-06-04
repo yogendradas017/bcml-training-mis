@@ -69,14 +69,31 @@
               {% endif %}
             </td>
             <td style="white-space:nowrap;">
+              {% if u.username != session.username %}
+              <form method="POST" action="{{ url_for('admin_set_role', user_id=u.id) }}"
+                    style="display:inline-flex;gap:4px;align-items:center;margin-right:4px;"
+                    onsubmit="return confirm('Change role for {{ u.username }} to ' + this.role.value + '?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="role" class="form-select form-select-sm" style="font-size:var(--fs-sm);width:90px;">
+                  <option value="spoc"    {% if u.role == 'spoc' %}selected{% endif %}>spoc</option>
+                  <option value="central" {% if u.role == 'central' %}selected{% endif %}>central</option>
+                  <option value="admin"   {% if u.role == 'admin' %}selected{% endif %}>admin</option>
+                </select>
+                <button type="submit" class="btn-action btn-action-primary" style="font-size:var(--fs-sm);" title="Save role">
+                  <i class="bi bi-check2"></i>
+                </button>
+              </form>
+              {% endif %}
+              {% if u.username != session.username %}
               <form method="POST" action="{{ url_for('admin_reset_password', user_id=u.id) }}"
                     style="display:inline;"
-                    onsubmit="return confirm('{% if u.username == session.username %}Reset YOUR OWN password to default (bcml@1234)?\nYou will be forced to set a new password immediately.{% else %}Reset password for {{ u.username }} to default?\nThey will be forced to create a new password on next login.{% endif %}')">
+                    onsubmit="return confirm('Reset password for {{ u.username }} to default?\nThey will be forced to create a new password on next login.')">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn-action btn-action-danger" style="font-size:var(--fs-sm);">
                   <i class="bi bi-arrow-counterclockwise"></i> Reset PW
                 </button>
               </form>
+              {% endif %}
               {% if u.username == session.username %}
               <a href="{{ url_for('change_password') }}" class="btn-action btn-action-success" style="font-size:var(--fs-sm);">
                 <i class="bi bi-key-fill"></i> Change Mine

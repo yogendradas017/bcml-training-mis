@@ -234,7 +234,7 @@
     <div class="d-flex gap-2 flex-wrap">
       <div class="position-relative flex-grow-1" style="max-width:300px;">
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted-3);font-size:var(--fs-md);"></i>
-        <input type="text" class="form-control" placeholder="Search name, emp code..." style="padding-left:34px;" oninput="TBL.search('empTable',this.value)" aria-label="Search employees by name or code">
+        <input type="text" class="form-control" placeholder="{% if truncated %}Search first {{ employees|length }} (use Show all for full search){% else %}Search name, emp code...{% endif %}" style="padding-left:34px;" oninput="TBL.search('empTable',this.value)" aria-label="Search employees by name or code">
       </div>
       <select class="form-select" style="width:150px;" onchange="TBL.filter('empTable','collar',this.value)">
         <option value="">All Collar Types</option>
@@ -272,7 +272,7 @@
         </thead>
         <tbody>
           {% for emp in employees %}
-          <tr {% if not emp.is_active %}class="table-secondary text-muted"{% endif %} data-collar="{{ emp.collar or '' }}" data-dept="{{ emp.department or '' }}" data-sect="{{ emp.section or '' }}" data-gender="{{ emp.gender or '' }}" data-status="{{ 'Active' if emp.is_active else 'Exited' }}">
+          <tr {% if not emp.is_active %}class="table-secondary text-muted"{% endif %} data-collar="{{ emp.collar or '' }}" data-dept="{{ (emp.department or '')|upper }}" data-sect="{{ (emp.section or '')|upper }}" data-gender="{{ emp.gender or '' }}" data-status="{{ 'Active' if emp.is_active else 'Exited' }}">
             <td>{{ loop.index }}</td>
             <td><span class="emp-code">{{ emp.emp_code }}</span></td>
             <td><strong>{{ emp.name }}</strong></td>

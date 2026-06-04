@@ -755,7 +755,11 @@ def _register(app):
         summary_rows = _calc_summary(plant_id, sel_month, db)
         totals       = _calc_totals(summary_rows, db=db, plant_id=plant_id)
         compliance   = _calc_compliance(plant_id, db)
+        # Plant-specific manhour targets (override org default via org_config per-plant key)
+        mh_target_bc = get_config('mh_target_bc', 12, plant_id=plant_id)
+        mh_target_wc = get_config('mh_target_wc', 24, plant_id=plant_id)
         return render_template('central_plant.html', plant=plant,
                                summary_rows=summary_rows, totals=totals,
                                compliance=compliance, months=MONTHS_FY,
-                               selected_month=sel_month)
+                               selected_month=sel_month,
+                               mh_target_bc=mh_target_bc, mh_target_wc=mh_target_wc)

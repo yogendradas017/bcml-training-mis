@@ -37,6 +37,10 @@ STATUSES    = ['To Be Planned', 'Awaiting Verification', 'Conducted', 'Re-Schedu
 INT_EXT     = ['Internal', 'External', 'Online']
 MONTHS_FY   = ['April','May','June','July','August','September',
                'October','November','December','January','February','March']
+
+# Default page cap for Employees list — large plants render banner + 'Show all' toggle.
+# Override per-org via org_config key 'employees_page_cap' if needed.
+EMPLOYEES_PAGE_CAP = 200
 MONTH_NUM   = {m: f'{i+1:02d}' for i, m in enumerate(
                ['January','February','March','April','May','June',
                 'July','August','September','October','November','December'])}

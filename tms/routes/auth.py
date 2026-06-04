@@ -480,12 +480,42 @@ def _register(app):
             return redirect(url_for('central_dashboard') if role in ('central', 'admin') else url_for('spoc_dashboard'))
         return render_template('change_password.html')
 
+    @app.route('/admin/users/<int:user_id>/set-role', methods=['POST'])
+    @login_required
+    def admin_set_role(user_id):
+        if session.get('role') != 'admin':
+            flash('Access denied.', 'danger')
+            return redirect(url_for('index'))
+        if user_id == session.get('user_id'):
+            flash('Cannot change your own role — ask another admin.', 'danger')
+            return redirect(url_for('admin_users'))
+        new_role = (request.form.get('role') or '').strip()
+        if new_role not in ('spoc', 'central', 'admin'):
+            flash('Invalid role.', 'danger')
+            return redirect(url_for('admin_users'))
+        db = get_db()
+        user = db.execute('SELECT username FROM users WHERE id=?', (user_id,)).fetchone()
+        if not user:
+            flash('User not found.', 'danger')
+            return redirect(url_for('admin_users'))
+        db.execute('UPDATE users SET role=? WHERE id=?', (new_role, user_id))
+        db.commit()
+        log_action('ROLE_CHANGE', f"user:{user['username']}:to={new_role}")
+        flash(f"Role for '{user['username']}' set to {new_role}.", 'success')
+        return redirect(url_for('admin_users'))
+
     @app.route('/admin/reset-password/<int:user_id>', methods=['POST'])
     @login_required
     def admin_reset_password(user_id):
         if session.get('role') != 'admin':
             flash('Access denied.', 'danger')
             return redirect(url_for('index'))
+        # Block self-reset: prevents session-hijack DoS where stolen admin session
+        # could lock out the legitimate admin. Another admin must reset.
+        if user_id == session.get('user_id'):
+            flash('Cannot reset your own password from here. Use Change Password (with current) '
+                  'or ask another admin to reset on your behalf.', 'danger')
+            return redirect(url_for('admin_users'))
         db = get_db()
         user = db.execute('SELECT username FROM users WHERE id=?', (user_id,)).fetchone()
         if not user:

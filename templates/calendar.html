@@ -262,7 +262,8 @@
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted-3);font-size:var(--fs-md);"></i>
         <input type="text" class="form-control" placeholder="Search session, programme, trainer..." style="padding-left:34px;" oninput="TBL.search('calTable',this.value)">
       </div>
-      <select class="form-select" style="width:165px;" onchange="TBL.filter('calTable','status',this.value)">
+      {% set _lapsed_url = url_for('training_calendar', include_lapsed=1) %}
+      <select class="form-select" style="width:165px;" onchange="if (this.value==='Lapsed' && !{{ 'true' if show_lapsed else 'false' }}) { window.location='{{ _lapsed_url }}'; return; } TBL.filter('calTable','status',this.value)">
         <option value="">All Statuses</option>
         <option>To Be Planned</option>
         <option>Awaiting Verification</option>

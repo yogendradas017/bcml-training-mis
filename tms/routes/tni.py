@@ -281,11 +281,22 @@ def _register(app):
             return redirect(url_for('tni'))
         db = get_db()
         emp_code = (request.form.get('emp_code') or '').strip()
-        prog_ids = request.form.getlist('prog_ids')
+        # int-cast prog_ids — reject non-numeric tampering, surface count loss
+        raw_prog_ids = request.form.getlist('prog_ids')
+        prog_ids = []
+        for rid in raw_prog_ids:
+            try:
+                prog_ids.append(int(rid))
+            except (ValueError, TypeError):
+                pass
+        if raw_prog_ids and len(prog_ids) != len(raw_prog_ids):
+            flash(f'{len(raw_prog_ids) - len(prog_ids)} invalid programme id(s) ignored.', 'warning')
         default_hours = request.form.get('default_hours') or '4'
         try:
             default_hours = float(default_hours)
-            if default_hours < 0: default_hours = 4.0
+            if default_hours <= 0:
+                flash('Default hours was 0 or negative — coerced to 4.', 'warning')
+                default_hours = 4.0
         except (ValueError, TypeError):
             default_hours = 4.0
 
@@ -327,7 +338,8 @@ def _register(app):
         # Re-derive audience for any calendar rows that referenced these programmes
         if added:
             resync_calendar_audience(plant_id, [p['name'] for p in progs], db)
-            log_action('BULK_ADD', f"tni-quick-for-emp:{emp_code}:added={added}")
+            _prog_list = ','.join(str(p['id']) for p in progs)[:300]
+            log_action('BULK_ADD', f"tni-quick-for-emp:{emp_code}:added={added}:progs=[{_prog_list}]")
         msg = f'{added} TNI entries added for {emp_code}.'
         if dupes:
             msg += f' ({dupes} already existed — skipped)'
