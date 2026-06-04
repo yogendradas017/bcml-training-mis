@@ -1190,6 +1190,32 @@ def _canonical_prog(raw_name, plant_id, db, strict=False, _master=None):
     return None if strict else _smart_title(corrected)
 
 
+def _tni_canon_candidates(plant_id, db, fy=None):
+    """Canonical candidate names for TNI programme canonicalization:
+    programme_master ∪ distinct names already in TNI.
+
+    Folding in existing TNI names is what stops a *second* spelling variant of a
+    NEW programme from entering once the first one is present — `programme_master`
+    alone can't, because a brand-new programme isn't in master yet when its first
+    spelling is saved. Pass the returned list as `_master=` to `_canonical_prog`,
+    and append each accepted canonical back to it inside batch loops so variants
+    later in the same file collapse onto the earlier spelling.
+    """
+    names = [r[0] for r in db.execute(
+        'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)).fetchall()]
+    seen = {n.lower() for n in names if n}
+    q = 'SELECT DISTINCT programme_name FROM tni WHERE plant_id=?'
+    params = [plant_id]
+    if fy:
+        q += ' AND fy_year=?'
+        params.append(fy)
+    for (n,) in db.execute(q, params).fetchall():
+        if n and n.lower() not in seen:
+            names.append(n)
+            seen.add(n.lower())
+    return names
+
+
 def _fuzzy_fix(val, valid_list):
     if not val: return '', False
     vl = val.strip().lower()
@@ -1417,6 +1443,15 @@ def _smart_analyze_rows(df, plant_id, db, columns=None):
     _active_master       = [r[0] for r in db.execute(
         'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,))]
     _active_master_lower = [p.lower() for p in _active_master]
+    # Fold in distinct names already in TNI so the analyzer collapses an incoming
+    # spelling variant onto a programme that exists in TNI even before it reaches
+    # programme_master — same duplicate-prevention rule as _tni_canon_candidates.
+    _seen_lower = set(_active_master_lower)
+    for (_n,) in db.execute('SELECT DISTINCT programme_name FROM tni WHERE plant_id=?', (plant_id,)).fetchall():
+        if _n and _n.lower() not in _seen_lower:
+            _active_master.append(_n)
+            _active_master_lower.append(_n.lower())
+            _seen_lower.add(_n.lower())
     _has_master          = len(_active_master) > 0
 
     def _match_master(raw_lower):

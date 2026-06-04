@@ -12,7 +12,7 @@ from tms.constants import (
 from tms.db import get_db
 from tms.decorators import spoc_required
 from tms.helpers import (
-    _is_ajax, _get_programme_names, _canonical_prog, _sync_master_from_tni,
+    _is_ajax, _get_programme_names, _canonical_prog, _tni_canon_candidates, _sync_master_from_tni,
     _read_upload_file, _read_upload_file_path, _clean, _safe_float,
     _error_excel_response, _process_fresh_tni, _parse_msforms_excel,
     _smart_analyze_rows, _fy_label, _tni_is_locked,
@@ -238,7 +238,10 @@ def _register(app):
             return redirect(url_for('tni'))
 
         auto_add = f.get('auto_add_to_master') == '1'
-        prog_name = _canonical_prog(prog_name_raw, plant_id, db)
+        # Canonicalize against master ∪ existing TNI names so a spelling variant
+        # collapses onto a programme already present in TNI (not just master).
+        prog_name = _canonical_prog(prog_name_raw, plant_id, db,
+                                    _master=_tni_canon_candidates(plant_id, db))
         in_master = db.execute(
             'SELECT 1 FROM programme_master WHERE plant_id=? AND LOWER(name)=LOWER(?)',
             (plant_id, prog_name)).fetchone()
@@ -682,14 +685,15 @@ def _register(app):
 
         db = get_db(); inserted = 0; errors = []
         affected_progs = set()
-        # Pre-load master once and employee set once — avoids N DB queries in loop
-        master_cache = [r[0] for r in db.execute(
-            'SELECT name FROM programme_master WHERE plant_id=? ORDER BY name', (plant_id,)
-        ).fetchall()] or []
         active_emps = {r[0] for r in db.execute(
             'SELECT emp_code FROM employees WHERE plant_id=? AND is_active=1', (plant_id,)
         ).fetchall()}
         fy = _fy_label()
+        # Canonical candidates = master ∪ existing TNI names. GROWS as new programmes
+        # are accepted below, so a 2nd spelling variant later in THIS file collapses
+        # onto the first one (closes the stale-snapshot duplicate leak).
+        master_cache = _tni_canon_candidates(plant_id, db, fy)
+        _cand_lower = {n.lower() for n in master_cache}
         for i, row in enumerate(df.to_dict('records')):
             emp_code  = _clean(row, ['employee code', 'emp code', 'empcode', 'employee_code'])
             prog_name = _clean(row, ['programme name', 'program name', 'programme_name', 'training name'])
@@ -704,6 +708,9 @@ def _register(app):
                 errors.append(f'Row {i+2}: Employee {emp_code} not found in your plant.')
                 continue
             prog_name = _canonical_prog(prog_name, plant_id, db, _master=master_cache)
+            if prog_name and prog_name.lower() not in _cand_lower:
+                master_cache.append(prog_name)        # let later rows canonicalize onto it
+                _cand_lower.add(prog_name.lower())
             db.execute('INSERT OR IGNORE INTO tni(plant_id,emp_code,programme_name,prog_type,mode,planned_hours,fy_year) VALUES(?,?,?,?,?,?,?)',
                        (plant_id, emp_code, prog_name, prog_type, mode, hours, fy))
             affected_progs.add(prog_name)
