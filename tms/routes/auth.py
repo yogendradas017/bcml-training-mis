@@ -11,7 +11,7 @@ import base64
 from tms.constants import PLANT_MAP, DB_PATH
 from tms.db import get_db
 from tms.decorators import spoc_required, login_required, admin_required
-from tms.helpers import _current_fy, _now_ist, _calc_compliance
+from tms.helpers import _current_fy, _now_ist, _calc_compliance, _fy_label, _fy_label_long
 from tms.audit import log_action
 
 
@@ -46,6 +46,174 @@ def _validate_password_strength(pw, username=''):
     return None
 
 
+# ── QC analytics chart data (live, plant-scoped) ──────────────────────────────
+# Coverage convention everywhere below: denominator = TNI-nominated rows ONLY
+# (never all employees), BC/WC kept SEPARATE (never averaged), scoped by plant_id.
+
+def _qc_pareto(db, plant_id, fy_start, fy_end):
+    """Pareto — uncovered headcount per programme (nominated − trained), desc."""
+    fy = _fy_label()
+    rows = db.execute('''
+        SELECT programme_name,
+               COUNT(*) - SUM(CASE WHEN trained THEN 1 ELSE 0 END) AS uncovered
+        FROM (
+            SELECT t.programme_name, t.emp_code,
+                   EXISTS(
+                       SELECT 1 FROM emp_training et
+                       JOIN programme_details pd ON pd.session_code = et.session_code
+                       WHERE et.emp_code = t.emp_code
+                         AND pd.programme_name = t.programme_name
+                         AND pd.plant_id = t.plant_id
+                   ) AS trained
+            FROM tni t
+            JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
+            WHERE t.plant_id = ? AND t.fy_year = ? AND e.is_active = 1
+        )
+        GROUP BY programme_name
+        HAVING uncovered > 0
+        ORDER BY uncovered DESC, programme_name ASC
+        LIMIT 8
+    ''', (plant_id, fy)).fetchall()
+    return {
+        'paretoLabels': [r['programme_name'] for r in rows],
+        'paretoData':   [int(r['uncovered']) for r in rows],
+    }
+
+
+def _qc_histogram(db, plant_id, fy_start, fy_end):
+    """Histogram — count of active employees per total-FY-training-hours bucket.
+    Fixed 8 buckets, upper edges [2,4,6,8,12,16,24, inf]. Never-trained → '0-2'."""
+    EDGES = [2, 4, 6, 8, 12, 16, 24, float('inf')]
+    rows = db.execute('''
+        SELECT e.emp_code, COALESCE(SUM(t.hrs), 0) AS hrs
+        FROM employees e
+        LEFT JOIN emp_training t
+          ON t.emp_code = e.emp_code
+         AND t.plant_id = e.plant_id
+         AND t.start_date BETWEEN ? AND ?
+        WHERE e.plant_id = ?
+          AND e.is_active = 1
+          AND e.collar IN ('Blue Collared', 'White Collared')
+        GROUP BY e.emp_code
+    ''', (fy_start, fy_end, plant_id)).fetchall()
+    counts = [0] * 8
+    for r in rows:
+        h = r['hrs'] or 0
+        for i, edge in enumerate(EDGES):
+            if h < edge:
+                counts[i] += 1
+                break
+        else:
+            counts[7] += 1
+    return {'histData': counts}
+
+
+def _qc_cumulative(db, plant_id, fy_start, fy_end):
+    """Cumulative run — BC vs WC cumulative TNI-coverage % across 12 FY months.
+    Separate denominators per collar (never averaged); monotonic non-decreasing."""
+    fy = _fy_label()
+    start_year = int(fy_start[:4])
+    month_ends = [
+        f'{start_year}-04-30', f'{start_year}-05-31', f'{start_year}-06-30',
+        f'{start_year}-07-31', f'{start_year}-08-31', f'{start_year}-09-30',
+        f'{start_year}-10-31', f'{start_year}-11-30', f'{start_year}-12-31',
+        f'{start_year + 1}-01-31', f'{start_year + 1}-02-28', f'{start_year + 1}-03-31',
+    ]
+    rows = db.execute('''
+        SELECT e.collar AS collar, MIN(et.start_date) AS first_train
+        FROM tni t
+        JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
+        LEFT JOIN emp_training et
+          ON et.emp_code = t.emp_code AND et.plant_id = t.plant_id
+         AND et.start_date IS NOT NULL AND et.start_date != ''
+         AND et.start_date BETWEEN ? AND ?
+         AND EXISTS(
+                 SELECT 1 FROM programme_details pd
+                 WHERE pd.session_code = et.session_code
+                   AND pd.programme_name = t.programme_name
+                   AND pd.plant_id = t.plant_id
+             )
+        WHERE t.plant_id = ? AND t.fy_year = ? AND e.is_active = 1
+          AND e.collar IN ('Blue Collared', 'White Collared')
+        GROUP BY t.id, e.collar
+    ''', (fy_start, fy_end, plant_id, fy)).fetchall()
+    denom = {'Blue Collared': 0, 'White Collared': 0}
+    firsts = {'Blue Collared': [], 'White Collared': []}
+    for r in rows:
+        collar = r['collar']
+        if collar not in denom:
+            continue
+        denom[collar] += 1
+        firsts[collar].append(r['first_train'])
+
+    def cum_series(collar):
+        d = denom[collar]
+        if d == 0:
+            return [0] * 12
+        return [round(100.0 * sum(1 for ft in firsts[collar] if ft and ft <= me) / d, 1)
+                for me in month_ends]
+
+    return {
+        'bcCumulative': cum_series('Blue Collared'),
+        'wcCumulative': cum_series('White Collared'),
+    }
+
+
+def _qc_hclass(pct):
+    """Heatmap cell CSS class by coverage %: h0<25, h25<50, h50<75, h75<90, h90<100, h100."""
+    if pct >= 100: return 'h100'
+    if pct >= 90:  return 'h90'
+    if pct >= 75:  return 'h75'
+    if pct >= 50:  return 'h50'
+    if pct >= 25:  return 'h25'
+    return 'h0'
+
+
+def _qc_heatmap(db, plant_id, fy_start, fy_end):
+    """Heat map — prog_type × collar TNI-coverage % matrix in display column order.
+    Coverage = trained / nominated per cell, over TNI rows ONLY, never averaged."""
+    DISPLAY_COLS = [
+        ('Technical',  'Technical'),
+        ('EHS/HR',     'EHS/HR'),
+        ('Behav.',     'Behavioural/Leadership'),
+        ('Cane',       'Cane'),
+        ('Commercial', 'Commercial'),
+        ('IT',         'IT'),
+    ]
+    ROW_COLLARS = ['Blue Collared', 'White Collared']
+    rows = db.execute('''
+        SELECT prog_type, collar,
+               ROUND(100.0 * SUM(CASE WHEN trained THEN 1 ELSE 0 END)
+                     / NULLIF(COUNT(*), 0), 1) AS cov_pct
+        FROM (
+            SELECT t.prog_type, e.collar, t.emp_code,
+                   EXISTS(
+                       SELECT 1 FROM emp_training et
+                       JOIN programme_details pd ON pd.session_code = et.session_code
+                       WHERE et.emp_code = t.emp_code
+                         AND pd.programme_name = t.programme_name
+                         AND pd.plant_id = t.plant_id
+                   ) AS trained
+            FROM tni t
+            JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
+            WHERE t.plant_id = ? AND e.is_active = 1
+        )
+        GROUP BY prog_type, collar
+    ''', (plant_id,)).fetchall()
+    matrix = {}
+    for r in rows:
+        matrix.setdefault(r['collar'] or '', {})[r['prog_type'] or ''] = r['cov_pct']
+    heatmap = []
+    for collar in ROW_COLLARS:
+        cells = []
+        for _label, ptype in DISPLAY_COLS:
+            pct = matrix.get(collar, {}).get(ptype)
+            pct = int(round(pct)) if pct is not None else 0
+            cells.append({'pct': pct, 'cls': _qc_hclass(pct)})
+        heatmap.append({'collar': collar, 'cells': cells})
+    return {'heatmap': heatmap}
+
+
 def _register(app):
 
     @app.route('/_dashboard-mockup')
@@ -64,9 +232,46 @@ def _register(app):
         return render_template('_dashboard_styles.html')
 
     @app.route('/_dashboard-qc')
+    @spoc_required
     def _dashboard_qc():
-        """Temp: QC analytics preview — Pareto, Control, Heat map, Histogram, Run, Stacked, Scatter."""
-        return render_template('_dashboard_qc.html')
+        """QC analytics — Pareto, Histogram, Heat map, Cumulative run. Live, plant-scoped."""
+        plant_id = session['plant_id']
+        db = get_db()
+        fy_start, fy_end = _current_fy()
+        today = _now_ist().strftime('%Y-%m-%d')
+
+        compliance = _calc_compliance(plant_id, db)
+        target_hrs = compliance['bc_mandate'] + compliance['wc_mandate']
+        manhours   = db.execute(
+            'SELECT COALESCE(SUM(hrs),0) FROM emp_training WHERE plant_id=? AND start_date BETWEEN ? AND ?',
+            (plant_id, fy_start, fy_end)).fetchone()[0]
+        planned = db.execute(
+            "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND plan_start BETWEEN ? AND ?",
+            (plant_id, fy_start, fy_end)).fetchone()[0]
+        conducted = db.execute(
+            "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Conducted' AND plan_start BETWEEN ? AND ?",
+            (plant_id, fy_start, fy_end)).fetchone()[0]
+        overdue = db.execute(
+            "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status!='Conducted' "
+            "AND plan_start BETWEEN ? AND ? AND plan_start < ?",
+            (plant_id, fy_start, fy_end, today)).fetchone()[0]
+
+        ctx = {
+            'plant_name':   session.get('plant_name') or PLANT_MAP.get(plant_id, {}).get('name', ''),
+            'fy_label_long': _fy_label_long(),
+            'compliance':   compliance,
+            'manhours':     round(manhours),
+            'target_hrs':   int(target_hrs),
+            'sess_planned': planned,
+            'sess_done':    conducted,
+            'sess_pct':     round(conducted / planned * 100) if planned else 0,
+            'overdue':      overdue,
+        }
+        ctx.update(_qc_pareto(db, plant_id, fy_start, fy_end))
+        ctx.update(_qc_histogram(db, plant_id, fy_start, fy_end))
+        ctx.update(_qc_cumulative(db, plant_id, fy_start, fy_end))
+        ctx.update(_qc_heatmap(db, plant_id, fy_start, fy_end))
+        return render_template('_dashboard_qc.html', **ctx)
 
     @app.route('/')
     def index():
@@ -587,7 +792,8 @@ def _register(app):
             tni_drill.setdefault(r['prog_type'], []).append((r['programme_name'], r['emp_cnt']))
         compliance = _calc_compliance(plant_id, db)
         target_hrs = compliance['bc_mandate'] + compliance['wc_mandate']
-        avg_hrs = round(stats['manhours'] / stats['trainings'], 1) if stats['trainings'] else 0
+        # Avg Hrs per Employee — ties to manhour mandate (BC 12/yr, WC 24/yr).
+        avg_hrs = round(stats['manhours'] / stats['total_emp'], 1) if stats['total_emp'] else 0
         return render_template(
             'dashboard.html',
             stats=stats,
