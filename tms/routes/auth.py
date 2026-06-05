@@ -81,11 +81,14 @@ def _qc_pareto(db, plant_id, fy_start, fy_end):
 
 
 def _qc_histogram(db, plant_id, fy_start, fy_end):
-    """Histogram — count of active employees per total-FY-training-hours bucket.
-    Fixed 8 buckets, upper edges [2,4,6,8,12,16,24, inf]. Never-trained → '0-2'."""
+    """Histogram — employees per total-FY-training-hours bucket, split BC vs WC.
+    Fixed 8 buckets, upper edges [2,4,6,8,12,16,24, inf]. Never-trained → '0-2'.
+    Also returns each collar's average hours/employee and its man-hour target,
+    so the chart can overlay average + target reference lines."""
+    from tms.config import get_config
     EDGES = [2, 4, 6, 8, 12, 16, 24, float('inf')]
     rows = db.execute('''
-        SELECT e.emp_code, COALESCE(SUM(t.hrs), 0) AS hrs
+        SELECT e.collar AS collar, COALESCE(SUM(t.hrs), 0) AS hrs
         FROM employees e
         LEFT JOIN emp_training t
           ON t.emp_code = e.emp_code
@@ -96,16 +99,27 @@ def _qc_histogram(db, plant_id, fy_start, fy_end):
           AND e.collar IN ('Blue Collared', 'White Collared')
         GROUP BY e.emp_code
     ''', (fy_start, fy_end, plant_id)).fetchall()
-    counts = [0] * 8
+    bc, wc = [0] * 8, [0] * 8
+    bc_sum = bc_n = wc_sum = wc_n = 0
     for r in rows:
         h = r['hrs'] or 0
         for i, edge in enumerate(EDGES):
             if h < edge:
-                counts[i] += 1
+                idx = i
                 break
         else:
-            counts[7] += 1
-    return {'histData': counts}
+            idx = 7
+        if r['collar'] == 'Blue Collared':
+            bc[idx] += 1; bc_sum += h; bc_n += 1
+        else:
+            wc[idx] += 1; wc_sum += h; wc_n += 1
+    return {
+        'histBc': bc, 'histWc': wc,
+        'histAvgBc': round(bc_sum / bc_n, 1) if bc_n else 0,
+        'histAvgWc': round(wc_sum / wc_n, 1) if wc_n else 0,
+        'histTargetBc': get_config('mh_target_bc', 12, plant_id=plant_id),
+        'histTargetWc': get_config('mh_target_wc', 24, plant_id=plant_id),
+    }
 
 
 def _qc_cumulative(db, plant_id, fy_start, fy_end):
