@@ -259,6 +259,13 @@
       <div class="qc-wrap" style="min-height:300px;"><canvas id="qcRun"></canvas></div>
     </div></div>
   </div>
+  <div class="col-12">
+    <div class="card"><div class="card-body">
+      <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);"><i class="bi bi-clock-history" style="color:var(--c-primary);"></i> Cumulative Man-Hours vs Target</div>
+      <div class="qc-sub mb-2">Man-hours delivered, building each month, against the annual target (solid) and the even-pace path (dashed). Below the dashed line = behind pace.</div>
+      <div class="qc-wrap" style="min-height:300px;"><canvas id="qcHrs"></canvas></div>
+    </div></div>
+  </div>
 </div>
 <!-- ── MANHOUR DRILLDOWN MODAL (Power BI style) ──────────────── -->
 <div class="modal fade" id="mhDrillModal" tabindex="-1" aria-hidden="true">
@@ -467,6 +474,19 @@
         plugins:{ legend:{ position:'bottom', labels:{ font:{size:12}, padding:16, boxWidth:14 } } },
         scales:{ x:{ title:{display:true,text:'FY Month'} },
           y:{ beginAtZero:true, max:110, ticks:{callback:v=>v+'%'}, title:{display:true,text:'Cumulative coverage (%)'} } } } });
+
+    // Cumulative man-hours vs annual target + even-pace path
+    const elHrs = document.getElementById('qcHrs');
+    const tgt = d.hoursTarget || 0;
+    if (elHrs) new Chart(elHrs, { type:'line', data:{ labels:FY, datasets:[
+        { label:'Annual target ('+tgt.toLocaleString()+' h)', data:FY.map(()=>tgt), borderColor:QC.danger, borderWidth:1.5, pointRadius:0, fill:false, order:0 },
+        { label:'Even pace', data:d.hoursPace || [], borderColor:QC.muted, borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, order:1 },
+        { label:'Man-hours delivered', data:d.hoursCumulative || [], borderColor:QC.primary, backgroundColor:'rgba(46,109,164,.10)', tension:.25, fill:true, pointRadius:4, order:2 }
+      ]}, options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{ position:'bottom', labels:{ font:{size:12}, padding:16, boxWidth:14 } },
+          tooltip:{ callbacks:{ label:ctx=>ctx.dataset.label+': '+(ctx.parsed.y||0).toLocaleString()+' h' } } },
+        scales:{ x:{ title:{display:true,text:'FY Month'} },
+          y:{ beginAtZero:true, ticks:{callback:v=>v.toLocaleString()}, title:{display:true,text:'Cumulative man-hours'} } } } });
 
     // Heat map — append collar rows + cells to the grid
     const grid = document.getElementById('qcHeatmap');

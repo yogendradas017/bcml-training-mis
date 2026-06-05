@@ -204,6 +204,41 @@ def _qc_cumulative(db, plant_id, fy_start, fy_end):
     }
 
 
+def _qc_cumulative_hours(db, plant_id, fy_start, fy_end):
+    """Cumulative man-hours delivered month-by-month vs the annual target.
+    Returns the running total of training hours by end of each FY month, the
+    flat annual target (Σ BC×bc_target + WC×wc_target), and an even-pace line
+    (target spread linearly across 12 months) so the chart shows on/behind pace."""
+    from tms.config import get_config
+    bc_t = get_config('mh_target_bc', 12, plant_id=plant_id)
+    wc_t = get_config('mh_target_wc', 24, plant_id=plant_id)
+    counts = db.execute(
+        "SELECT collar, COUNT(*) n FROM employees "
+        "WHERE plant_id=? AND is_active=1 AND collar IN ('Blue Collared','White Collared') "
+        "GROUP BY collar", (plant_id,)).fetchall()
+    bc_n = next((r['n'] for r in counts if r['collar'] == 'Blue Collared'), 0)
+    wc_n = next((r['n'] for r in counts if r['collar'] == 'White Collared'), 0)
+    target = bc_n * bc_t + wc_n * wc_t
+    monthly = [0.0] * 12  # FY index 0=Apr .. 11=Mar
+    for r in db.execute(
+            "SELECT start_date, COALESCE(hrs,0) AS hrs FROM emp_training "
+            "WHERE plant_id=? AND start_date BETWEEN ? AND ?",
+            (plant_id, fy_start, fy_end)).fetchall():
+        sd = r['start_date']
+        if not sd or len(sd) < 7:
+            continue
+        m = int(sd[5:7])
+        idx = m - 4 if m >= 4 else m + 8  # Apr->0 .. Dec->8, Jan->9, Feb->10, Mar->11
+        if 0 <= idx < 12:
+            monthly[idx] += r['hrs'] or 0
+    cum, run = [], 0.0
+    for v in monthly:
+        run += v
+        cum.append(round(run))
+    pace = [round(target * (i + 1) / 12) for i in range(12)]
+    return {'hoursCumulative': cum, 'hoursTarget': int(target), 'hoursPace': pace}
+
+
 def _qc_hclass(pct):
     """Heatmap cell CSS class by coverage %: h0<25, h25<50, h50<75, h75<90, h90<100, h100."""
     if pct >= 100: return 'h100'
@@ -812,6 +847,7 @@ def _register(app):
         out.update(_qc_histogram(db, plant_id, fy_start, fy_end))
         out.update(_qc_dept_compliance(db, plant_id, fy_start, fy_end))
         out.update(_qc_cumulative(db, plant_id, fy_start, fy_end))
+        out.update(_qc_cumulative_hours(db, plant_id, fy_start, fy_end))
         out.update(_qc_heatmap(db, plant_id, fy_start, fy_end))
         return jsonify(out)
 
