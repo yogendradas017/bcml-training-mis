@@ -370,14 +370,21 @@
           if (h<hi || i===7){ let f=(h-lo)/(i<7?(hi-lo):8); f=Math.max(0,Math.min(1,f)); return x.left+(i+f)*cw; } }
         return x.right;
       }
-      opts.lines.forEach(function(ln,k){
+      opts.lines.forEach(function(ln){
         if (ln.hours==null) return;
         const xp = px(ln.hours);
         ctx.save();
         ctx.beginPath(); ctx.moveTo(xp,top); ctx.lineTo(xp,bottom);
         ctx.lineWidth = 1.5; ctx.strokeStyle = ln.color; if (ln.dash) ctx.setLineDash(ln.dash); ctx.stroke();
-        ctx.setLineDash([]); ctx.font = '700 9px Inter, sans-serif'; ctx.fillStyle = ln.color; ctx.textAlign = 'center';
-        ctx.fillText(ln.label, xp, top + 9 + k*10);
+        ctx.setLineDash([]); ctx.font = '700 9px Inter, sans-serif'; ctx.fillStyle = ln.color;
+        // edge-aware alignment so labels never run off the canvas
+        let dx = 0;
+        if (xp > x.right - 42){ ctx.textAlign = 'right'; dx = -4; }
+        else if (xp < x.left + 42){ ctx.textAlign = 'left'; dx = 4; }
+        else { ctx.textAlign = 'center'; }
+        // targets at top, averages at bottom → no vertical collision
+        const ty = (ln.pos === 'bottom') ? bottom - 5 : top + 9;
+        ctx.fillText(ln.label, xp + dx, ty);
         ctx.restore();
       });
     }
@@ -409,10 +416,10 @@
         plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:10, boxWidth:12 } },
           tooltip:{ callbacks:{ title:ctx=>'Hours: '+ctx[0].label, label:ctx=>ctx.dataset.label+': '+ctx.parsed.y+' employees' } },
           qcLines:{ lines:[
-            { hours:d.histTargetBc, color:QC.primary, label:'BC target '+d.histTargetBc+'h' },
-            { hours:d.histTargetWc, color:QC.success, label:'WC target '+d.histTargetWc+'h' },
-            { hours:d.histAvgBc, color:QC.primary, dash:[5,4], label:'BC avg '+d.histAvgBc+'h' },
-            { hours:d.histAvgWc, color:QC.success, dash:[5,4], label:'WC avg '+d.histAvgWc+'h' }
+            { hours:d.histTargetBc, color:QC.primary, pos:'top', label:'BC target '+d.histTargetBc+'h' },
+            { hours:d.histTargetWc, color:QC.success, pos:'top', label:'WC target '+d.histTargetWc+'h' },
+            { hours:d.histAvgBc, color:QC.primary, dash:[5,4], pos:'bottom', label:'BC avg '+d.histAvgBc+'h' },
+            { hours:d.histAvgWc, color:QC.success, dash:[5,4], pos:'bottom', label:'WC avg '+d.histAvgWc+'h' }
           ] } },
         scales:{ x:{ title:{display:true,text:'Training hours per employee'} }, y:{ beginAtZero:true } } },
       plugins:[ qcLinesPlugin ] });
