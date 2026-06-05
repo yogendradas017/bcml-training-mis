@@ -236,6 +236,13 @@
   </div>
   <div class="col-12">
     <div class="card"><div class="card-body">
+      <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);"><i class="bi bi-building" style="color:var(--c-primary);"></i> Department — Man-Hour Target Compliance</div>
+      <div class="qc-sub mb-2">Per department: employees who met their man-hour target (each judged against their own collar's BC/WC target) vs below. % met labelled.</div>
+      <div class="qc-wrap" style="min-height:200px;"><canvas id="qcDept"></canvas></div>
+    </div></div>
+  </div>
+  <div class="col-12">
+    <div class="card"><div class="card-body">
       <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);"><i class="bi bi-grid-3x3-gap" style="color:var(--c-primary);"></i> Coverage Heat Map — Collar × Programme Type</div>
       <div class="qc-sub mb-2">Each cell = % nominated who completed training. Red = action needed.</div>
       <div class="qc-heatmap" id="qcHeatmap">
@@ -434,6 +441,20 @@
       st.innerHTML = chip('BC', QC.primary, d.histAvgBc, d.histTargetBc)
                    + chip('WC', QC.success, d.histAvgWc, d.histTargetWc);
     }
+
+    // Department — man-hour target compliance (met vs below, per department)
+    const elD = document.getElementById('qcDept');
+    const dc = d.deptCompliance || [];
+    if (elD && dc.length) new Chart(elD, { type:'bar',
+      data:{ labels: dc.map(x=>x.dept+' · '+x.pct+'% met'),
+        datasets:[
+          { label:'Met target',   data:dc.map(x=>x.met),   backgroundColor:QC.success, borderRadius:3 },
+          { label:'Below target', data:dc.map(x=>x.below), backgroundColor:QC.danger,  borderRadius:3 }
+        ]},
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:10, boxWidth:12 } },
+          tooltip:{ callbacks:{ label:ctx=>ctx.dataset.label+': '+ctx.parsed.x+' employees' } } },
+        scales:{ x:{ stacked:true, beginAtZero:true, title:{display:true,text:'Employees'} }, y:{ stacked:true } } } });
 
     // Cumulative run — BC vs WC vs target
     const FY = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];

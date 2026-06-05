@@ -122,6 +122,38 @@ def _qc_histogram(db, plant_id, fy_start, fy_end):
     }
 
 
+def _qc_dept_compliance(db, plant_id, fy_start, fy_end):
+    """Per-department man-hour target compliance: how many active employees met
+    their collar target (BC vs WC, from config) vs fell below. Each employee is
+    judged against their own collar's target; results grouped by department."""
+    from tms.config import get_config
+    bc_t = get_config('mh_target_bc', 12, plant_id=plant_id)
+    wc_t = get_config('mh_target_wc', 24, plant_id=plant_id)
+    rows = db.execute('''
+        SELECT COALESCE(NULLIF(e.department, ''), 'Unassigned') AS dept,
+               e.collar AS collar, COALESCE(SUM(t.hrs), 0) AS hrs
+        FROM employees e
+        LEFT JOIN emp_training t
+          ON t.emp_code = e.emp_code AND t.plant_id = e.plant_id
+         AND t.start_date BETWEEN ? AND ?
+        WHERE e.plant_id = ? AND e.is_active = 1
+          AND e.collar IN ('Blue Collared', 'White Collared')
+        GROUP BY e.emp_code
+    ''', (fy_start, fy_end, plant_id)).fetchall()
+    agg = {}  # dept -> {met, below}
+    for r in rows:
+        target = bc_t if r['collar'] == 'Blue Collared' else wc_t
+        d = agg.setdefault(r['dept'], {'met': 0, 'below': 0})
+        d['met' if (r['hrs'] or 0) >= target else 'below'] += 1
+    out = []
+    for dept, c in agg.items():
+        total = c['met'] + c['below']
+        out.append({'dept': dept, 'met': c['met'], 'below': c['below'],
+                    'total': total, 'pct': round(c['met'] / total * 100) if total else 0})
+    out.sort(key=lambda x: x['pct'], reverse=True)
+    return {'deptCompliance': out}
+
+
 def _qc_cumulative(db, plant_id, fy_start, fy_end):
     """Cumulative run — BC vs WC cumulative TNI-coverage % across 12 FY months.
     Separate denominators per collar (never averaged); monotonic non-decreasing."""
@@ -778,6 +810,7 @@ def _register(app):
         out = {}
         out.update(_qc_pareto(db, plant_id, fy_start, fy_end))
         out.update(_qc_histogram(db, plant_id, fy_start, fy_end))
+        out.update(_qc_dept_compliance(db, plant_id, fy_start, fy_end))
         out.update(_qc_cumulative(db, plant_id, fy_start, fy_end))
         out.update(_qc_heatmap(db, plant_id, fy_start, fy_end))
         return jsonify(out)
