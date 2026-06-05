@@ -217,7 +217,7 @@
   .qc-heatmap .h90  { background: #84cc16; color: #1a2e05; }
   .qc-heatmap .h100 { background: #16a34a; color: #fff; }
 </style>
-<div class="section-hd">QC Analytics</div>
+<div class="section-hd">QC Analytics <span id="qcLoading" class="qc-sub" style="font-weight:500;"><span class="spinner-border spinner-border-sm" style="width:.8rem;height:.8rem;"></span> loading…</span></div>
 <div class="row g-3">
   <div class="col-12 col-lg-6">
     <div class="card"><div class="card-body">
@@ -237,14 +237,10 @@
     <div class="card"><div class="card-body">
       <div style="font-weight:700;font-size:var(--fs-md);color:var(--c-text-strong);"><i class="bi bi-grid-3x3-gap" style="color:var(--c-primary);"></i> Coverage Heat Map — Collar × Programme Type</div>
       <div class="qc-sub mb-2">Each cell = % nominated who completed training. Red = action needed.</div>
-      <div class="qc-heatmap">
+      <div class="qc-heatmap" id="qcHeatmap">
         <div></div>
         <div class="hh">Technical</div><div class="hh">EHS/HR</div><div class="hh">Behav.</div>
         <div class="hh">Cane</div><div class="hh">Commercial</div><div class="hh">IT</div>
-        {% for row in heatmap %}
-        <div class="hr">{{ row.collar }}</div>
-        {% for c in row.cells %}<div class="hc {{ c.cls }}">{{ c.pct }}%</div>{% endfor %}
-        {% endfor %}
       </div>
     </div></div>
   </div>
@@ -353,7 +349,7 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
-// ── QC Analytics charts (live, plant-scoped data) ──────────────────
+// ── QC Analytics charts — fetched async so the page renders instantly ──
 (function(){
   if (typeof Chart === 'undefined') return;
   const QC = { danger:'#dc2626', success:'#16a34a', primary:'#2e6da4', info:'#0891b2', muted:'#94a3b8' };
@@ -361,41 +357,55 @@
   Chart.defaults.font.size = 11;
   Chart.defaults.color = '#475569';
 
-  // Pareto — uncovered headcount + cumulative % line
-  const pLabels = {{ paretoLabels|tojson }};
-  const pData   = {{ paretoData|tojson }};
-  const pTotal  = pData.reduce((s,v)=>s+v,0) || 1;
-  let _c = 0; const pCum = pData.map(v => { _c += v; return +(_c/pTotal*100).toFixed(1); });
-  const elP = document.getElementById('qcPareto');
-  if (elP) new Chart(elP, { data: { labels: pLabels, datasets: [
-      { type:'bar',  label:'Uncovered', data:pData, backgroundColor:QC.danger, yAxisID:'y', order:2 },
-      { type:'line', label:'Cumulative %', data:pCum, borderColor:QC.info, backgroundColor:QC.info, yAxisID:'y1', tension:.2, pointRadius:4, order:1 }
-    ]}, options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-      plugins:{ legend:{display:false} },
-      scales:{ x:{ ticks:{ font:{size:10}, maxRotation:45, minRotation:30 } },
-        y:{ beginAtZero:true, title:{display:true,text:'Uncovered (employees)'} },
-        y1:{ type:'linear', position:'right', min:0, max:100, ticks:{callback:v=>v+'%'}, grid:{drawOnChartArea:false} } } } });
+  function render(d){
+    // Pareto — uncovered headcount + cumulative % line
+    const pData = d.paretoData || [];
+    const pTotal = pData.reduce((s,v)=>s+v,0) || 1;
+    let _c = 0; const pCum = pData.map(v => { _c += v; return +(_c/pTotal*100).toFixed(1); });
+    const elP = document.getElementById('qcPareto');
+    if (elP) new Chart(elP, { data: { labels: d.paretoLabels || [], datasets: [
+        { type:'bar',  label:'Uncovered', data:pData, backgroundColor:QC.danger, yAxisID:'y', order:2 },
+        { type:'line', label:'Cumulative %', data:pCum, borderColor:QC.info, backgroundColor:QC.info, yAxisID:'y1', tension:.2, pointRadius:4, order:1 }
+      ]}, options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{display:false} },
+        scales:{ x:{ ticks:{ font:{size:10}, maxRotation:45, minRotation:30 } },
+          y:{ beginAtZero:true, title:{display:true,text:'Uncovered (employees)'} },
+          y1:{ type:'linear', position:'right', min:0, max:100, ticks:{callback:v=>v+'%'}, grid:{drawOnChartArea:false} } } } });
 
-  // Histogram — employees per training-hours bucket
-  const elH = document.getElementById('qcHist');
-  if (elH) new Chart(elH, { type:'bar', data:{ labels:['0-2','2-4','4-6','6-8','8-12','12-16','16-24','24+'],
-      datasets:[{ label:'Employees', data:{{ histData|tojson }}, backgroundColor:QC.primary, borderRadius:3 }] },
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ title:ctx=>'Hours: '+ctx[0].label, label:ctx=>ctx.parsed.y+' employees' } } },
-      scales:{ x:{ title:{display:true,text:'Training hours per employee'} }, y:{ beginAtZero:true } } } });
+    // Histogram — employees per training-hours bucket
+    const elH = document.getElementById('qcHist');
+    if (elH) new Chart(elH, { type:'bar', data:{ labels:['0-2','2-4','4-6','6-8','8-12','12-16','16-24','24+'],
+        datasets:[{ label:'Employees', data:d.histData || [], backgroundColor:QC.primary, borderRadius:3 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ title:ctx=>'Hours: '+ctx[0].label, label:ctx=>ctx.parsed.y+' employees' } } },
+        scales:{ x:{ title:{display:true,text:'Training hours per employee'} }, y:{ beginAtZero:true } } } });
 
-  // Cumulative run — BC vs WC vs target
-  const FY = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
-  const bc = {{ bcCumulative|tojson }}, wc = {{ wcCumulative|tojson }};
-  const elR = document.getElementById('qcRun');
-  if (elR) new Chart(elR, { type:'line', data:{ labels:FY, datasets:[
-      { label:'FY-end Target (100% by Mar)', data:FY.map(()=>100), borderColor:QC.muted, borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, order:0 },
-      { label:'Blue Collared — Cumulative %', data:bc, borderColor:QC.success, backgroundColor:'rgba(22,163,74,.10)', tension:.25, fill:true, pointRadius:4, order:2 },
-      { label:'White Collared — Cumulative %', data:wc, borderColor:QC.danger, backgroundColor:'rgba(220,38,38,.08)', tension:.25, fill:true, pointRadius:4, order:1 }
-    ]}, options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-      plugins:{ legend:{ position:'bottom', labels:{ font:{size:12}, padding:16, boxWidth:14 } } },
-      scales:{ x:{ title:{display:true,text:'FY Month'} },
-        y:{ beginAtZero:true, max:110, ticks:{callback:v=>v+'%'}, title:{display:true,text:'Cumulative coverage (%)'} } } } });
+    // Cumulative run — BC vs WC vs target
+    const FY = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+    const elR = document.getElementById('qcRun');
+    if (elR) new Chart(elR, { type:'line', data:{ labels:FY, datasets:[
+        { label:'FY-end Target (100% by Mar)', data:FY.map(()=>100), borderColor:QC.muted, borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, order:0 },
+        { label:'Blue Collared — Cumulative %', data:d.bcCumulative || [], borderColor:QC.success, backgroundColor:'rgba(22,163,74,.10)', tension:.25, fill:true, pointRadius:4, order:2 },
+        { label:'White Collared — Cumulative %', data:d.wcCumulative || [], borderColor:QC.danger, backgroundColor:'rgba(220,38,38,.08)', tension:.25, fill:true, pointRadius:4, order:1 }
+      ]}, options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{ position:'bottom', labels:{ font:{size:12}, padding:16, boxWidth:14 } } },
+        scales:{ x:{ title:{display:true,text:'FY Month'} },
+          y:{ beginAtZero:true, max:110, ticks:{callback:v=>v+'%'}, title:{display:true,text:'Cumulative coverage (%)'} } } } });
+
+    // Heat map — append collar rows + cells to the grid
+    const grid = document.getElementById('qcHeatmap');
+    if (grid && d.heatmap) d.heatmap.forEach(function(row){
+      const lbl = document.createElement('div'); lbl.className='hr'; lbl.textContent=row.collar; grid.appendChild(lbl);
+      row.cells.forEach(function(c){ const cell=document.createElement('div'); cell.className='hc '+c.cls; cell.textContent=c.pct+'%'; grid.appendChild(cell); });
+    });
+
+    const ld = document.getElementById('qcLoading'); if (ld) ld.remove();
+  }
+
+  fetch('{{ url_for("api_dashboard_qc") }}')
+    .then(function(r){ return r.json(); })
+    .then(render)
+    .catch(function(){ var ld=document.getElementById('qcLoading'); if (ld) ld.innerHTML='<span style="color:var(--c-danger);font-weight:600;">failed to load</span>'; });
 })();
 </script>
 <script>

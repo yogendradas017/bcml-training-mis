@@ -29,6 +29,7 @@ def _ensure_indexes(db):
         CREATE INDEX IF NOT EXISTS idx_cal_plant_plan ON calendar(plant_id, plan_start);
         CREATE INDEX IF NOT EXISTS idx_cal_session ON calendar(plant_id, session_code);
         CREATE INDEX IF NOT EXISTS idx_pd_session  ON programme_details(plant_id, session_code);
+        CREATE INDEX IF NOT EXISTS idx_pd_prog     ON programme_details(plant_id, programme_name);
     ''')
     db.commit()
 

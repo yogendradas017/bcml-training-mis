@@ -2,7 +2,7 @@ import io
 import os
 import shutil
 from datetime import date, datetime, timedelta
-from flask import render_template, request, redirect, url_for, session, flash, send_file
+from flask import render_template, request, redirect, url_for, session, flash, send_file, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
 import pyotp
 import qrcode
@@ -119,32 +119,31 @@ def _qc_cumulative(db, plant_id, fy_start, fy_end):
         f'{start_year}-10-31', f'{start_year}-11-30', f'{start_year}-12-31',
         f'{start_year + 1}-01-31', f'{start_year + 1}-02-28', f'{start_year + 1}-03-31',
     ]
-    rows = db.execute('''
-        SELECT e.collar AS collar, MIN(et.start_date) AS first_train
-        FROM tni t
-        JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
-        LEFT JOIN emp_training et
-          ON et.emp_code = t.emp_code AND et.plant_id = t.plant_id
-         AND et.start_date IS NOT NULL AND et.start_date != ''
-         AND et.start_date BETWEEN ? AND ?
-         AND EXISTS(
-                 SELECT 1 FROM programme_details pd
-                 WHERE pd.session_code = et.session_code
-                   AND pd.programme_name = t.programme_name
-                   AND pd.plant_id = t.plant_id
-             )
-        WHERE t.plant_id = ? AND t.fy_year = ? AND e.is_active = 1
-          AND e.collar IN ('Blue Collared', 'White Collared')
-        GROUP BY t.id, e.collar
-    ''', (fy_start, fy_end, plant_id, fy)).fetchall()
+    # Two flat, index-driven queries + a Python match — avoids the tni×sessions×
+    # attendance join explosion that made the SQL-join versions take 35–66s.
+    # 1) trained facts: earliest in-FY training date per (emp, programme).
+    trained = {}  # (emp_code, programme_name) -> earliest start_date
+    for r in db.execute('''
+            SELECT et.emp_code AS emp, pd.programme_name AS prog, MIN(et.start_date) AS first_train
+            FROM emp_training et
+            JOIN programme_details pd ON pd.session_code = et.session_code AND pd.plant_id = et.plant_id
+            WHERE et.plant_id = ? AND et.start_date BETWEEN ? AND ?
+            GROUP BY et.emp_code, pd.programme_name
+        ''', (plant_id, fy_start, fy_end)).fetchall():
+        trained[(r['emp'], r['prog'])] = r['first_train']
+    # 2) nominations (the coverage universe) with collar.
     denom = {'Blue Collared': 0, 'White Collared': 0}
     firsts = {'Blue Collared': [], 'White Collared': []}
-    for r in rows:
+    for r in db.execute('''
+            SELECT t.emp_code AS emp, t.programme_name AS prog, e.collar AS collar
+            FROM tni t
+            JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
+            WHERE t.plant_id = ? AND t.fy_year = ? AND e.is_active = 1
+              AND e.collar IN ('Blue Collared', 'White Collared')
+        ''', (plant_id, fy)).fetchall():
         collar = r['collar']
-        if collar not in denom:
-            continue
         denom[collar] += 1
-        firsts[collar].append(r['first_train'])
+        firsts[collar].append(trained.get((r['emp'], r['prog'])))
 
     def cum_series(collar):
         d = denom[collar]
@@ -739,12 +738,8 @@ def _register(app):
         target_hrs = compliance['bc_mandate'] + compliance['wc_mandate']
         # Avg Hrs per Employee — ties to manhour mandate (BC 12/yr, WC 24/yr).
         avg_hrs = round(stats['manhours'] / stats['total_emp'], 1) if stats['total_emp'] else 0
-        # QC analytics — live, plant-scoped (Pareto, Histogram, Heat map, Cumulative run)
-        qc = {}
-        qc.update(_qc_pareto(db, plant_id, fy_start, fy_end))
-        qc.update(_qc_histogram(db, plant_id, fy_start, fy_end))
-        qc.update(_qc_cumulative(db, plant_id, fy_start, fy_end))
-        qc.update(_qc_heatmap(db, plant_id, fy_start, fy_end))
+        # QC analytics charts are fetched async via /api/dashboard-qc so the
+        # dashboard page renders immediately instead of blocking on their queries.
         return render_template(
             'dashboard.html',
             stats=stats,
@@ -756,8 +751,22 @@ def _register(app):
             headline_pct=compliance['headline_pct'],
             headline_rag=compliance['headline_rag'],
             worst_cells=compliance['worst_cells'],
-            **qc,
         )
+
+    @app.route('/api/dashboard-qc')
+    @spoc_required
+    def api_dashboard_qc():
+        """QC analytics datasets (Pareto, Histogram, Heat map, Cumulative) as JSON,
+        fetched async by the dashboard so the page is not blocked on these queries."""
+        plant_id = session['plant_id']
+        db = get_db()
+        fy_start, fy_end = _current_fy()
+        out = {}
+        out.update(_qc_pareto(db, plant_id, fy_start, fy_end))
+        out.update(_qc_histogram(db, plant_id, fy_start, fy_end))
+        out.update(_qc_cumulative(db, plant_id, fy_start, fy_end))
+        out.update(_qc_heatmap(db, plant_id, fy_start, fy_end))
+        return jsonify(out)
 
     @app.route('/admin/seed-demo', methods=['GET', 'POST'])
     @admin_required
