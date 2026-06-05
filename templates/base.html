@@ -114,6 +114,25 @@
     <li><a href="{{ url_for('central_attendance') }}" class="{% if request.endpoint=='central_attendance' %}active{% endif %}">
       <i class="bi bi-person-check-fill"></i> Central Attendance
     </a></li>
+    <li><a href="{{ url_for('central_tni_errors') }}" class="{% if request.endpoint=='central_tni_errors' %}active{% endif %}">
+      <i class="bi bi-clipboard-data"></i> SPOC Upload Errors
+    </a></li>
+    <li><a href="{{ url_for('feedback_reports_index') }}" class="{% if request.endpoint=='feedback_reports_index' %}active{% endif %}">
+      <i class="bi bi-chat-square-text-fill"></i> Feedback Reports
+    </a></li>
+    <li><a href="{{ url_for('central_programmes') }}" class="{% if request.endpoint=='central_programmes' %}active{% endif %}">
+      <i class="bi bi-journal-check"></i> Programme Master
+    </a></li>
+    <li><a href="{{ url_for('central_corp_members') }}" class="{% if request.endpoint=='central_corp_members' %}active{% endif %}">
+      <i class="bi bi-person-badge-fill"></i> Corp Members
+    </a></li>
+    <li><a href="{{ url_for('central_export') }}" class="{% if request.endpoint=='central_export' %}active{% endif %}" style="color:#4ade80;">
+      <i class="bi bi-file-earmark-excel-fill"></i> Consolidated Export
+    </a></li>
+  </ul>
+
+  <div class="sb-label">Review Queue</div>
+  <ul class="sb-nav">
     <li><a href="{{ url_for('verify_sessions') }}" class="{% if request.endpoint in ('verify_sessions','verify_trail') %}active{% endif %}" style="color:#fbbf24;">
       <i class="bi bi-patch-check-fill"></i> Verify Sessions
       {% if pending_verify_count and pending_verify_count > 0 %}
@@ -132,22 +151,11 @@
       <span title="open reviews (pending + due + overdue)" style="background:{% if eff_overdue_count > 0 %}#dc2626{% else %}#6b7280{% endif %};color:#fff;font-size:var(--fs-xs);font-weight:800;padding:1px 7px;border-radius:10px;margin-left:6px;">{{ eff_open_count }}</span>
       {% endif %}
     </a></li>
-    <li><a href="{{ url_for('central_tni_errors') }}" class="{% if request.endpoint=='central_tni_errors' %}active{% endif %}">
-      <i class="bi bi-clipboard-data"></i> SPOC Upload Errors
-    </a></li>
-    <li><a href="{{ url_for('feedback_reports_index') }}" class="{% if request.endpoint=='feedback_reports_index' %}active{% endif %}">
-      <i class="bi bi-chat-square-text-fill"></i> Feedback Reports
-    </a></li>
-    <li><a href="{{ url_for('central_programmes') }}" class="{% if request.endpoint=='central_programmes' %}active{% endif %}">
-      <i class="bi bi-journal-check"></i> Programme Master
-    </a></li>
-    <li><a href="{{ url_for('central_corp_members') }}" class="{% if request.endpoint=='central_corp_members' %}active{% endif %}">
-      <i class="bi bi-person-badge-fill"></i> Corp Members
-    </a></li>
-    <li><a href="{{ url_for('central_export') }}" class="{% if request.endpoint=='central_export' %}active{% endif %}" style="color:#4ade80;">
-      <i class="bi bi-file-earmark-excel-fill"></i> Consolidated Export
-    </a></li>
-    {% if session.role == 'admin' %}
+  </ul>
+
+  {% if session.role == 'admin' %}
+  <div class="sb-label">Admin</div>
+  <ul class="sb-nav">
     <li><a href="{{ url_for('admin_users') }}" class="{% if request.endpoint=='admin_users' %}active{% endif %}" style="color:#fbbf24;">
       <i class="bi bi-key-fill"></i> User Management
     </a></li>
@@ -166,8 +174,8 @@
     <li><a href="{{ url_for('admin_settings') }}" class="{% if request.endpoint and request.endpoint.startswith('admin_settings') %}active{% endif %}" style="color:#fbbf24;">
       <i class="bi bi-sliders"></i> Organisation Settings
     </a></li>
-    {% endif %}
   </ul>
+  {% endif %}
   {% endif %}
 
   <div class="sb-footer">
