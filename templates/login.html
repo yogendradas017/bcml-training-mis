@@ -217,34 +217,34 @@ table.st tbody tr.hi td{color:rgba(255,255,255,.82);}
 .qr-ldot{width:5px;height:5px;border-radius:50%;background:#34c267;animation:qrpulse 1.5s infinite;}
 @keyframes qrpulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ─── FEEDBACK MOCKUP ─── */
-.fb-wrap{background:#fff;border-radius:14px;overflow:hidden;}
-.fb-hd{background:#fff;border-bottom:1px solid #f0f0f0;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;}
-.fb-hd-l{font-size:13px;font-weight:700;color:#1d1d1f;letter-spacing:-.2px;}
-.fb-hd-r{font-size:10px;color:#9d9da3;font-weight:500;}
-.fb-body{padding:16px 18px;}
-/* Overall score row */
-.fb-score-row{display:flex;align-items:center;gap:20px;margin-bottom:20px;padding:14px 16px;background:linear-gradient(135deg,rgba(46,109,164,.05),rgba(26,122,60,.05));border-radius:12px;border:1px solid rgba(46,109,164,.1);}
-.fb-arc-wrap{position:relative;width:72px;height:72px;flex-shrink:0;}
-.fb-arc-wrap svg{display:block;}
-.fb-arc-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.fb-arc-n{font-size:17px;font-weight:800;color:#1d1d1f;letter-spacing:-1px;line-height:1;}
-.fb-arc-l{font-size:8px;font-weight:600;color:#9d9da3;text-transform:uppercase;letter-spacing:.06em;}
-.fb-score-meta{flex:1;}
-.fb-score-title{font-size:13px;font-weight:700;color:#1d1d1f;margin-bottom:3px;}
-.fb-score-sub{font-size:11px;color:#6e6e73;line-height:1.4;}
-/* Legend */
-/* Programme */
-.fb-prog{margin-bottom:16px;}
-.fb-prog-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.fb-pname{font-size:12px;font-weight:700;color:#1d1d1f;letter-spacing:-.2px;}
-.fb-prog-avg{font-size:10px;font-weight:700;color:#2e6da4;background:rgba(46,109,164,.1);padding:2px 9px;border-radius:10px;}
-.fb-criterion{display:grid;grid-template-columns:56px 1fr 36px;align-items:center;gap:8px;margin-bottom:8px;}
-.fb-crit-lbl{font-size:10px;font-weight:600;color:#9d9da3;text-align:right;}
-.fb-crit-bar{height:9px;background:#f0f0f0;border-radius:5px;overflow:hidden;}
-.fb-bar-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#34c267,#2e6da4);transition:width .5s ease;}
-.fb-crit-pct{font-size:11px;font-weight:700;color:#1d1d1f;text-align:right;}
-.fb-divider{height:1px;background:#f0f0f0;margin:14px 0;}
+/* ─── COMPLIANCE MOCKUP ─── */
+.cd-wrap{background:#fff;border-radius:14px;overflow:hidden;}
+.cd-hd{background:#fff;border-bottom:1px solid #f0f0f0;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;}
+.cd-hd-l{font-size:13px;font-weight:700;color:#1d1d1f;letter-spacing:-.2px;}
+.cd-body{padding:16px 18px;}
+/* Twin man-hour gauges */
+.cd-gauges{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.cd-gauge{display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:12px;border:1px solid rgba(46,109,164,.1);background:linear-gradient(135deg,rgba(46,109,164,.05),rgba(26,122,60,.05));}
+.cd-arc-wrap{position:relative;width:64px;height:64px;flex-shrink:0;}
+.cd-arc-wrap svg{display:block;}
+.cd-arc-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.cd-arc-n{font-size:16px;font-weight:800;color:#1d1d1f;letter-spacing:-1px;line-height:1;}
+.cd-arc-l{font-size:7px;font-weight:600;color:#9d9da3;text-transform:uppercase;letter-spacing:.05em;}
+.cd-g-meta{flex:1;min-width:0;}
+.cd-g-title{font-size:12px;font-weight:700;color:#1d1d1f;margin-bottom:2px;letter-spacing:-.2px;}
+.cd-g-sub{font-size:10px;color:#6e6e73;line-height:1.4;}
+/* KPI strip */
+.cd-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
+.cd-stat{text-align:center;padding:10px 6px;background:#f7f8fa;border-radius:10px;}
+.cd-stat-n{font-size:16px;font-weight:800;color:#1d1d1f;letter-spacing:-.5px;line-height:1;}
+.cd-stat-l{font-size:9px;font-weight:600;color:#9d9da3;text-transform:uppercase;letter-spacing:.04em;margin-top:5px;}
+/* Coverage rows */
+.cd-cov-hd{font-size:10px;font-weight:700;color:#9d9da3;text-transform:uppercase;letter-spacing:.06em;margin-bottom:11px;}
+.cd-cov{display:grid;grid-template-columns:92px 1fr 34px;align-items:center;gap:8px;margin-bottom:9px;}
+.cd-cov-lbl{font-size:11px;font-weight:600;color:#424245;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cd-cov-bar{height:9px;background:#f0f0f0;border-radius:5px;overflow:hidden;}
+.cd-cov-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#34c267,#2e6da4);transition:width .5s ease;}
+.cd-cov-pct{font-size:11px;font-weight:700;color:#1d1d1f;text-align:right;}
 
 /* ── MODULES GRID ── */
 .mods{padding:100px 36px;background:#f2f2f7;}
@@ -713,65 +713,76 @@ table.st tbody tr.hi td{color:rgba(255,255,255,.82);}
   </div>
 </section>
 
-<!-- ── FEATURE 4: Feedback Reports (white) ── -->
+<!-- ── FEATURE 4: Compliance Dashboard (white) ── -->
 <section class="sec seclight">
   <div class="seci">
     <div class="rr">
       <div class="smk tr reveal-r">
         <div class="smki">
-          <div class="fb-wrap">
-            <div class="fb-hd">
-              <span class="fb-hd-l">Feedback Analytics — April 2026</span>
-              <span class="fb-hd-r" style="background:linear-gradient(135deg,#1a7a3c,#2e6da4);color:#fff;padding:3px 10px;border-radius:20px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Reaction Survey</span>
+          <div class="cd-wrap">
+            <div class="cd-hd">
+              <span class="cd-hd-l">Compliance Dashboard — FY 2026-27</span>
+              <span style="background:linear-gradient(135deg,#1a7a3c,#2e6da4);color:#fff;padding:3px 10px;border-radius:20px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Live</span>
             </div>
-            <div class="fb-body">
-              <!-- Overall score with arc -->
-              <div class="fb-score-row">
-                <div class="fb-arc-wrap">
-                  <svg width="72" height="72" viewBox="0 0 72 72">
-                    <circle cx="36" cy="36" r="28" fill="none" stroke="#f0f0f0" stroke-width="7"/>
-                    <circle cx="36" cy="36" r="28" fill="none" stroke="url(#fg1)" stroke-width="7"
-                      stroke-dasharray="156.5 175.9" stroke-dashoffset="44" stroke-linecap="round"
-                      transform="rotate(-90 36 36)"/>
-                    <defs><linearGradient id="fg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2e6da4"/><stop offset="100%" stop-color="#1a7a3c"/></linearGradient></defs>
-                  </svg>
-                  <div class="fb-arc-txt"><span class="fb-arc-n">89%</span><span class="fb-arc-l">CSAT</span></div>
+            <div class="cd-body">
+              <!-- Twin man-hour compliance gauges -->
+              <div class="cd-gauges">
+                <div class="cd-gauge">
+                  <div class="cd-arc-wrap">
+                    <svg width="64" height="64" viewBox="0 0 64 64">
+                      <circle cx="32" cy="32" r="26" fill="none" stroke="#f0f0f0" stroke-width="7"/>
+                      <circle cx="32" cy="32" r="26" fill="none" stroke="url(#cdbc)" stroke-width="7"
+                        stroke-dasharray="127.4 163.4" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+                      <defs><linearGradient id="cdbc" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2e6da4"/><stop offset="100%" stop-color="#5aa0d8"/></linearGradient></defs>
+                    </svg>
+                    <div class="cd-arc-txt"><span class="cd-arc-n">78%</span><span class="cd-arc-l">BC</span></div>
+                  </div>
+                  <div class="cd-g-meta">
+                    <div class="cd-g-title">Blue Collar</div>
+                    <div class="cd-g-sub">9.4 of 12 h<br>per employee</div>
+                  </div>
                 </div>
-                <div class="fb-score-meta">
-                  <div class="fb-score-title">Overall Satisfaction</div>
-                  <div class="fb-score-sub">Content, faculty &amp; venue combined — April 2026</div>
+                <div class="cd-gauge">
+                  <div class="cd-arc-wrap">
+                    <svg width="64" height="64" viewBox="0 0 64 64">
+                      <circle cx="32" cy="32" r="26" fill="none" stroke="#f0f0f0" stroke-width="7"/>
+                      <circle cx="32" cy="32" r="26" fill="none" stroke="url(#cdwc)" stroke-width="7"
+                        stroke-dasharray="148.7 163.4" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+                      <defs><linearGradient id="cdwc" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a7a3c"/><stop offset="100%" stop-color="#34c267"/></linearGradient></defs>
+                    </svg>
+                    <div class="cd-arc-txt"><span class="cd-arc-n">91%</span><span class="cd-arc-l">WC</span></div>
+                  </div>
+                  <div class="cd-g-meta">
+                    <div class="cd-g-title">White Collar</div>
+                    <div class="cd-g-sub">21.8 of 24 h<br>per employee</div>
+                  </div>
                 </div>
               </div>
-              <!-- Programme 1 -->
-              <div class="fb-prog">
-                <div class="fb-prog-hd"><span class="fb-pname">Safety Induction</span><span class="fb-prog-avg">87% avg</span></div>
-                <div class="fb-criterion"><span class="fb-crit-lbl">Content</span><div class="fb-crit-bar"><div class="fb-bar-fill" style="width:87%"></div></div><span class="fb-crit-pct">87%</span></div>
-                <div class="fb-criterion"><span class="fb-crit-lbl">Faculty</span><div class="fb-crit-bar"><div class="fb-bar-fill" style="width:92%"></div></div><span class="fb-crit-pct">92%</span></div>
-                <div class="fb-criterion"><span class="fb-crit-lbl">Venue</span><div class="fb-crit-bar"><div class="fb-bar-fill" style="width:80%"></div></div><span class="fb-crit-pct">80%</span></div>
-                <div class="fb-criterion"><span class="fb-crit-lbl">Overall</span><div class="fb-crit-bar"><div class="fb-bar-fill" style="width:89%"></div></div><span class="fb-crit-pct">89%</span></div>
+              <!-- KPI strip -->
+              <div class="cd-stats">
+                <div class="cd-stat"><div class="cd-stat-n">18,420</div><div class="cd-stat-l">Man-Hours</div></div>
+                <div class="cd-stat"><div class="cd-stat-n">16.2 h</div><div class="cd-stat-l">Avg / Emp</div></div>
+                <div class="cd-stat"><div class="cd-stat-n">7 / 10</div><div class="cd-stat-l">On Track</div></div>
               </div>
-              <div class="fb-divider"></div>
-              <!-- Programme 2 -->
-              <div class="fb-prog">
-                <div class="fb-prog-hd"><span class="fb-pname">5S Housekeeping</span><span class="fb-prog-avg">82% avg</span></div>
-                <div class="fb-criterion"><span class="fb-crit-lbl">Content</span><div class="fb-crit-bar"><div class="fb-bar-fill" style="width:80%"></div></div><span class="fb-crit-pct">80%</span></div>
-                <div class="fb-criterion"><span class="fb-crit-lbl">Faculty</span><div class="fb-crit-bar"><div class="fb-bar-fill" style="width:83%"></div></div><span class="fb-crit-pct">83%</span></div>
-                <div class="fb-criterion"><span class="fb-crit-lbl">Venue</span><div class="fb-crit-bar"><div class="fb-bar-fill" style="width:80%"></div></div><span class="fb-crit-pct">80%</span></div>
-                <div class="fb-criterion"><span class="fb-crit-lbl">Overall</span><div class="fb-crit-bar"><div class="fb-bar-fill" style="width:84%"></div></div><span class="fb-crit-pct">84%</span></div>
-              </div>
+              <!-- Coverage by programme type -->
+              <div class="cd-cov-hd">Coverage by Type</div>
+              <div class="cd-cov"><span class="cd-cov-lbl">Technical</span><div class="cd-cov-bar"><div class="cd-cov-fill" style="width:84%"></div></div><span class="cd-cov-pct">84%</span></div>
+              <div class="cd-cov"><span class="cd-cov-lbl">EHS / HR</span><div class="cd-cov-bar"><div class="cd-cov-fill" style="width:92%"></div></div><span class="cd-cov-pct">92%</span></div>
+              <div class="cd-cov"><span class="cd-cov-lbl">Behavioural</span><div class="cd-cov-bar"><div class="cd-cov-fill" style="width:71%"></div></div><span class="cd-cov-pct">71%</span></div>
+              <div class="cd-cov"><span class="cd-cov-lbl">Cane</span><div class="cd-cov-bar"><div class="cd-cov-fill" style="width:79%"></div></div><span class="cd-cov-pct">79%</span></div>
             </div>
           </div>
         </div>
       </div>
       <div class="reveal">
-        <p class="sectag">Feedback Reports</p>
-        <h2 class="sech" style="color:#1d1d1f;">Measure what<br>matters after<br>every session.</h2>
-        <p class="secsub">Participants rate content, faculty, and venue after every session. Gradient score bars reveal programme quality trends across months and plants — exportable as Excel for compliance records.</p>
+        <p class="sectag">Compliance Dashboard</p>
+        <h2 class="sech" style="color:#1d1d1f;">Know where<br>every plant<br>stands.</h2>
+        <p class="secsub">Man-hour compliance against the 12 h blue-collar and 24 h white-collar yearly mandate, coverage % by programme type, and a live cross-plant ranking — the numbers leadership asks for, ready before they ask.</p>
         <div class="spills">
-          <span class="spill"><span class="spilld" style="background:#2e6da4;"></span>Reaction Survey</span>
-          <span class="spill"><span class="spilld" style="background:#34c267;"></span>Per-programme analytics</span>
-          <span class="spill"><span class="spilld" style="background:#f5a623;"></span>Cross-plant compare</span>
-          <span class="spill"><span class="spilld" style="background:#a78bfa;"></span>Excel export</span>
+          <span class="spill"><span class="spilld" style="background:#2e6da4;"></span>Man-hour gauges</span>
+          <span class="spill"><span class="spilld" style="background:#34c267;"></span>Coverage % by type</span>
+          <span class="spill"><span class="spilld" style="background:#f5a623;"></span>Cross-plant ranking</span>
+          <span class="spill"><span class="spilld" style="background:#a78bfa;"></span>Live KPIs</span>
         </div>
       </div>
     </div>
