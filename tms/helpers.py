@@ -332,14 +332,39 @@ def _sync_calendar_from_2c(plant_id, db):
         (SELECT session_code FROM programme_details WHERE plant_id=?)
         AND status NOT IN ('Awaiting Verification','Conducted','Lapsed','Cancelled','Re-Scheduled')''',
         (plant_id, plant_id))
-    programmes = db.execute(
-        'SELECT DISTINCT programme_name FROM calendar WHERE plant_id=?', (plant_id,)).fetchall()
-    for row in programmes:
-        tni_aud = _derive_audience(plant_id, row['programme_name'], db)
-        if tni_aud:
-            db.execute('''UPDATE calendar SET target_audience=?
-                WHERE plant_id=? AND LOWER(programme_name)=LOWER(?) AND target_audience!=?''',
-                (tni_aud, plant_id, row['programme_name'], tni_aud))
+    # Audience sync — set-based. Was a per-programme loop calling _derive_audience
+    # (a tni⋈employees join with non-sargable LOWER()) once per distinct calendar
+    # programme: M programmes = M join queries = the old ~4-5s /calendar load.
+    # Now: one GROUP BY derives every audience, one SELECT reads current calendar
+    # audiences, and only true diffs are batched via executemany.
+    fy = _fy_label()
+    aud_rows = db.execute('''
+        SELECT LOWER(t.programme_name) AS pname,
+               CASE
+                 WHEN MAX(CASE WHEN e.collar='Blue Collared'  THEN 1 ELSE 0 END)=1
+                  AND MAX(CASE WHEN e.collar='White Collared' THEN 1 ELSE 0 END)=1 THEN 'Common'
+                 WHEN MAX(CASE WHEN e.collar='Blue Collared'  THEN 1 ELSE 0 END)=1 THEN 'Blue Collared'
+                 WHEN MAX(CASE WHEN e.collar='White Collared' THEN 1 ELSE 0 END)=1 THEN 'White Collared'
+                 ELSE NULL
+               END AS aud
+        FROM tni t
+        JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
+        WHERE t.plant_id=? AND t.fy_year=?
+          AND e.collar IN ('Blue Collared','White Collared')
+        GROUP BY LOWER(t.programme_name)
+    ''', (plant_id, fy)).fetchall()
+    aud_map = {r['pname']: r['aud'] for r in aud_rows if r['aud']}
+    if aud_map:
+        # Current calendar audiences, keyed by lowercase programme name. Only rows
+        # whose derived audience differs from the stored value get an UPDATE.
+        cur = db.execute(
+            'SELECT id, LOWER(programme_name) AS pname, target_audience FROM calendar WHERE plant_id=?',
+            (plant_id,)).fetchall()
+        updates = [(aud_map[c['pname']], c['id'])
+                   for c in cur
+                   if c['pname'] in aud_map and c['target_audience'] != aud_map[c['pname']]]
+        if updates:
+            db.executemany('UPDATE calendar SET target_audience=? WHERE id=?', updates)
     db.commit()
 
 
