@@ -654,6 +654,10 @@ def _register(app):
                                    error='Please enter or select your Employee Code.')
 
         is_central_session = (qr['plant_id'] == CENTRAL_PLANT_ID)
+        # Write created_at explicitly in IST with a time component. The schema
+        # default is date('now') = UTC, date-only — which both drifts by date
+        # near IST midnight on Render AND gives the live monitor no scan time.
+        scan_ts = _now_iso()
 
         if is_central_session:
             # Determine attendee's home plant from form (set by JS suggestion picker)
@@ -702,13 +706,13 @@ def _register(app):
             # GAP 7: cal_new must be 'Calendar Program' (session exists in calendar)
             db.execute('''INSERT OR IGNORE INTO emp_training
                 (plant_id, emp_code, session_code, programme_name, start_date, end_date,
-                 hrs, prog_type, level, mode, cal_new, venue, month, host_plant_id)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                 hrs, prog_type, level, mode, cal_new, venue, month, host_plant_id, created_at)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (emp_plant, emp_code, qr['session_code'], qr['programme_name'],
                  qr['plan_start'] or '', qr['plan_end'] or '',
                  qr['duration_hrs'] or 0, qr['prog_type'] or '',
                  qr['level'] or '', qr['mode'] or '', 'Calendar Program',
-                 '', month, host_pid))
+                 '', month, host_pid, scan_ts))
             # Auto-update programme_master for attendee's plant + central
             for pid in ({emp_plant, CENTRAL_PLANT_ID}):
                 db.execute('''INSERT OR IGNORE INTO programme_master(plant_id, name, prog_type, source)
@@ -735,13 +739,13 @@ def _register(app):
             month = _date_to_month(qr['plan_start'] or '')
             db.execute('''INSERT OR IGNORE INTO emp_training
                 (plant_id, emp_code, session_code, programme_name, start_date, end_date,
-                 hrs, prog_type, level, mode, cal_new, venue, month, anomaly_flags)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                 hrs, prog_type, level, mode, cal_new, venue, month, anomaly_flags, created_at)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (qr['plant_id'], emp_code, qr['session_code'], qr['programme_name'],
                  qr['plan_start'] or '', qr['plan_end'] or '',
                  qr['duration_hrs'] or 0, qr['prog_type'] or '',
                  qr['level'] or '', qr['mode'] or '', 'Calendar Program',
-                 '', month, ','.join(anom) if anom else None))
+                 '', month, ','.join(anom) if anom else None, scan_ts))
 
         changed = db.execute('SELECT changes()').fetchone()[0]
         # Refresh calendar actuals if this is a new insert
@@ -828,15 +832,18 @@ def _register(app):
             except (ValueError, TypeError):
                 return None
 
+        # submitted_at written explicitly in IST. Schema default is
+        # datetime('now','localtime') = UTC on Render (server TZ is UTC), so the
+        # default drifts feedback timestamps 5.5h behind IST. Set it ourselves.
         db.execute('''INSERT OR REPLACE INTO feedback_response
-            (plant_id, session_code, emp_code,
+            (plant_id, session_code, emp_code, submitted_at,
              q_obj_explained, q_well_structured, q_content_appropriate,
              q_presentation_quality, q_time_reasonable,
              q_inputs_appropriate, q_communication_clear,
              q_queries_responded, q_well_involved,
              key_learnings, suggestions, ip_address, lang)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-            (qr['plant_id'], qr['session_code'], emp_code,
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+            (qr['plant_id'], qr['session_code'], emp_code, _now_iso(),
              _r('q1'), _r('q2'), _r('q3'), _r('q4'), _r('q5'),
              _r('q6'), _r('q7'), _r('q8'), _r('q9'),
              request.form.get('key_learnings', '').strip()[:1000],
