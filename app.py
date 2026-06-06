@@ -356,6 +356,13 @@ for _vf in ('qr_attend', 'qr_feedback'):
     if _vf in app.view_functions:
         limiter.limit('10 per minute')(app.view_functions[_vf])
 
+# Rate-limit the public employee-search endpoint. A leaked QR link otherwise
+# lets anyone enumerate the plant directory (central token = all plants):
+# names, codes, designation, department. 40/min is ample for a human typing a
+# name (client debounces at 300ms) but blocks scripted directory scraping.
+if 'qr_emp_search' in app.view_functions:
+    limiter.limit('40 per minute')(app.view_functions['qr_emp_search'])
+
 # CSRF-exempt public QR submission routes (no session on phone scan)
 for _vf in ('qr_attend', 'qr_feedback'):
     if _vf in app.view_functions:

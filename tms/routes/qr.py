@@ -545,7 +545,7 @@ def _register(app):
             lang = 'en'
         if qr['stage'] == 'attendance':
             return render_template('qr_attendance.html', qr=qr, token=token,
-                                   has_pin=bool(qr['session_pin']), error=None)
+                                   has_pin=bool(qr['session_pin']), error=None, lang=lang)
         return render_template('qr_feedback.html', qr=qr, token=token, error=None, lang=lang)
 
     # ── PUBLIC: thanks (PRG target — GET only) ────────────────────────────────
@@ -612,7 +612,9 @@ def _register(app):
     @app.route('/q/<token>/attend', methods=['GET', 'POST'])
     def qr_attend(token):
         if request.method == 'GET':
-            return redirect(url_for('qr_landing', token=token), 302)
+            lang = request.args.get('lang')
+            return redirect(url_for('qr_landing', token=token, lang=lang) if lang in ('en', 'hi')
+                            else url_for('qr_landing', token=token), 302)
         db = get_db()
         try:
             qr = _validate_token(token, db)
@@ -620,20 +622,24 @@ def _register(app):
             return render_template('qr_error.html',
                                    msg='This QR code is invalid or has expired.'), 410
 
+        lang = request.args.get('lang', request.form.get('lang', 'en'))
+        if lang not in ('en', 'hi'):
+            lang = 'en'
+
+        def _att_err(error):
+            return render_template('qr_attendance.html', qr=qr, token=token,
+                                   has_pin=bool(qr['session_pin']), error=error, lang=lang)
+
         if qr['session_pin']:
             entered_pin = request.form.get('session_pin', '').strip()
             if entered_pin != qr['session_pin']:
-                return render_template('qr_attendance.html', qr=qr, token=token,
-                                       has_pin=True,
-                                       error='Incorrect session code. Ask your trainer for the 4-digit code.')
+                return _att_err('Incorrect session code. Ask your trainer for the 4-digit code.')
 
         # GAP 6 (time gate): block scans before session start date
         if qr['plan_start']:
             today_iso = _today_ist().isoformat()
             if today_iso < qr['plan_start']:
-                return render_template('qr_attendance.html', qr=qr, token=token,
-                                       has_pin=bool(qr['session_pin']),
-                                       error=f'Session has not started. Attendance opens on {qr["plan_start"]}.')
+                return _att_err(f'Session has not started. Attendance opens on {qr["plan_start"]}.')
 
         # Lock: attendance scan only while status='To Be Planned'.
         # Awaiting Verification / Conducted = 2C saved, central reviewing/done;
@@ -643,15 +649,11 @@ def _register(app):
             'SELECT status FROM calendar WHERE session_code=? AND plant_id=?',
             (qr['session_code'], qr['plant_id'])).fetchone()
         if cal_status and cal_status['status'] != 'To Be Planned':
-            return render_template('qr_attendance.html', qr=qr, token=token,
-                                   has_pin=bool(qr['session_pin']),
-                                   error=f'Attendance closed — session is "{cal_status["status"]}".')
+            return _att_err(f'Attendance closed — session is "{cal_status["status"]}".')
 
         emp_code = request.form.get('emp_code', '').strip().upper()
         if not emp_code:
-            return render_template('qr_attendance.html', qr=qr, token=token,
-                                   has_pin=bool(qr['session_pin']),
-                                   error='Please enter or select your Employee Code.')
+            return _att_err('Please enter or select your Employee Code.')
 
         is_central_session = (qr['plant_id'] == CENTRAL_PLANT_ID)
         # Write created_at explicitly in IST with a time component. The schema
@@ -691,9 +693,7 @@ def _register(app):
                         'WHERE emp_code=? AND is_active=1 LIMIT 1', (emp_code,)
                     ).fetchone()
                     if not found:
-                        return render_template('qr_attendance.html', qr=qr, token=token,
-                                               has_pin=bool(qr['session_pin']),
-                                               error=f'Employee code "{emp_code}" not found.')
+                        return _att_err(f'Employee code "{emp_code}" not found.')
                     emp_plant = found['plant_id']
                     emp_name  = found['name']
                     host_pid  = CENTRAL_PLANT_ID
@@ -725,9 +725,7 @@ def _register(app):
                 (qr['plant_id'], emp_code)
             ).fetchone()
             if not emp:
-                return render_template('qr_attendance.html', qr=qr, token=token,
-                                       has_pin=bool(qr['session_pin']),
-                                       error=f'Employee code "{emp_code}" not found for {qr["plant_name"]}.')
+                return _att_err(f'Employee code "{emp_code}" not found for {qr["plant_name"]}.')
 
             # Collar mismatch → ALLOW but flag (Central reviews via /anomalies)
             anom = []
