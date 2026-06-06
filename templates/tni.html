@@ -363,13 +363,41 @@ function qaUpdateCount(){
     </div>
   </div>
   <div class="card-body p-0">
-    <div class="table-responsive" style="overflow-x:auto;">
+    <div class="d-md-none text-muted px-3 pt-2" style="font-size:var(--fs-sm);">
+      <i class="bi bi-arrow-left-right"></i> Swipe the table sideways to see more. Employee &amp; delete stay pinned.
+    </div>
+    <div id="tni-scroll-ctrls" class="align-items-center justify-content-end gap-1 px-3 pt-2" style="display:none;">
+      <small class="text-muted me-1">Scroll table</small>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="tniScroll(-1)" title="Scroll left" aria-label="Scroll table left"><i class="bi bi-chevron-left"></i></button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="tniScroll(1)" title="Scroll right" aria-label="Scroll table right"><i class="bi bi-chevron-right"></i></button>
+    </div>
+    <div class="table-responsive tni-scroll" tabindex="0" role="region" aria-label="TNI records table — use arrow keys or the scroll buttons to move sideways" style="overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;">
       <style>
         #tniTable th.sticky-l, #tniTable td.sticky-l { position:sticky; left:0; background:var(--c-white); z-index:2; box-shadow:1px 0 0 var(--c-border); }
         #tniTable thead th.sticky-l { background:var(--c-surface-slate); z-index:3; }
         #tniTable th.sticky-r, #tniTable td.sticky-r { position:sticky; right:0; background:var(--c-white); z-index:2; box-shadow:-1px 0 0 var(--c-border); }
         #tniTable thead th.sticky-r { background:var(--c-surface-slate); z-index:3; }
         #tniTable tbody tr:hover td.sticky-l, #tniTable tbody tr:hover td.sticky-r { background:#fafbff; }
+        /* visible scrollbar so touch users know it scrolls */
+        .tni-scroll::-webkit-scrollbar { height:9px; }
+        .tni-scroll::-webkit-scrollbar-thumb { background:var(--c-border-2); border-radius:9px; }
+        /* Tablet / large phone: drop the lowest-value columns, let table shrink to fit */
+        @media (max-width:768px) {
+          #tniTable { min-width:760px !important; }
+          #tniTable th:nth-child(2),  #tniTable td:nth-child(2),   /* # */
+          #tniTable th:nth-child(8),  #tniTable td:nth-child(8),   /* Mode */
+          #tniTable th:nth-child(10), #tniTable td:nth-child(10)   /* Planned Hrs */
+          { display:none; }
+        }
+        /* Small phone: keep only Employee · Programme · Source · Completed · Action (+ checkbox) */
+        @media (max-width:560px) {
+          #tniTable { min-width:auto !important; }
+          #tniTable th:nth-child(4), #tniTable td:nth-child(4),    /* Collar */
+          #tniTable th:nth-child(5), #tniTable td:nth-child(5),    /* Department */
+          #tniTable th:nth-child(7), #tniTable td:nth-child(7)     /* Type of Programme */
+          { display:none; }
+          #tniTable td:nth-child(3), #tniTable th:nth-child(3) { min-width:140px; }
+        }
       </style>
       <table class="table table-hover mb-0" id="tniTable" style="font-size:var(--fs-md);min-width:1280px;">
         <thead>
@@ -389,6 +417,21 @@ function qaUpdateCount(){
     </div>
     <div id="tni-pager" class="d-flex justify-content-between align-items-center px-3 py-2" style="font-size:var(--fs-md);border-top:var(--bw-1) solid var(--c-border);"></div>
   </div>
+  <script>
+    // Mouse-free horizontal scroll for the wide TNI table: click buttons or focus + arrow keys.
+    function tniScroll(dir){
+      var el=document.querySelector('.tni-scroll');
+      if(el) el.scrollBy({left:dir*Math.round(el.clientWidth*0.7),behavior:'smooth'});
+    }
+    function tniScrollCtrls(){
+      var el=document.querySelector('.tni-scroll'), c=document.getElementById('tni-scroll-ctrls');
+      if(!el||!c) return;
+      var overflow=(el.scrollWidth-el.clientWidth)>4;
+      c.style.display=(overflow && window.innerWidth>=768)?'flex':'none';
+    }
+    window.addEventListener('load', tniScrollCtrls);
+    window.addEventListener('resize', tniScrollCtrls);
+  </script>
 </div>
 {% endblock %}
 {% block scripts %}
