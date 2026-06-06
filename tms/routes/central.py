@@ -85,18 +85,19 @@ def _register(app):
             "SELECT plant_id, COALESCE(SUM(hrs),0) AS cnt FROM emp_training "
             "WHERE start_date>=? AND start_date<=? GROUP BY plant_id",
             (fy_start, fy_end)).fetchall())
-        mh_bc = _by_plant(db.execute(
-            "SELECT t.plant_id, COALESCE(SUM(t.hrs),0) AS cnt "
+        # BC + WC man-hours in one emp_training⋈employees scan instead of two.
+        # mh_all stays a separate (un-joined) scan on purpose — it counts hrs
+        # for orphan emp_training rows whose emp_code isn't in employees.
+        mh_collar = {r['plant_id']: r for r in db.execute(
+            "SELECT t.plant_id, "
+            "  COALESCE(SUM(CASE WHEN e.collar='Blue Collared'  THEN t.hrs END),0) AS bc, "
+            "  COALESCE(SUM(CASE WHEN e.collar='White Collared' THEN t.hrs END),0) AS wc "
             "FROM emp_training t JOIN employees e "
             "  ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id "
-            "WHERE e.collar='Blue Collared' AND t.start_date>=? AND t.start_date<=? "
-            "GROUP BY t.plant_id", (fy_start, fy_end)).fetchall())
-        mh_wc = _by_plant(db.execute(
-            "SELECT t.plant_id, COALESCE(SUM(t.hrs),0) AS cnt "
-            "FROM emp_training t JOIN employees e "
-            "  ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id "
-            "WHERE e.collar='White Collared' AND t.start_date>=? AND t.start_date<=? "
-            "GROUP BY t.plant_id", (fy_start, fy_end)).fetchall())
+            "WHERE t.start_date>=? AND t.start_date<=? "
+            "GROUP BY t.plant_id", (fy_start, fy_end)).fetchall()}
+        mh_bc = {pid: r['bc'] for pid, r in mh_collar.items()}
+        mh_wc = {pid: r['wc'] for pid, r in mh_collar.items()}
 
         plant_summaries = []
         for p in PLANTS:
