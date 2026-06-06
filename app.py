@@ -59,9 +59,11 @@ limiter  = Limiter(get_remote_address, app=app, default_limits=[], storage_uri='
                    swallow_errors=True)
 Compress(app)
 
-# Session: 2 hours of inactivity then re-login
-app.config['SESSION_PERMANENT']          = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
+# Session: 30 min of inactivity then re-login (sliding window).
+# Needs session.permanent=True at login (set in auth.py); SESSION_PERMANENT is a
+# Flask-Session key and is ignored by vanilla Flask, so it is intentionally dropped.
+app.config['PERMANENT_SESSION_LIFETIME']   = timedelta(minutes=30)
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
 # Security: only send session cookie over HTTPS in production
 app.config['SESSION_COOKIE_SECURE']   = _on_render

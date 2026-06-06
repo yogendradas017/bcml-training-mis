@@ -356,6 +356,7 @@ def _register(app):
                     )
                     return redirect(url_for('login_2fa'))
                 session.clear()
+                session.permanent       = True   # enable 30-min idle expiry (PERMANENT_SESSION_LIFETIME)
                 session['user_id']      = user['id']
                 session['username']     = user['username']
                 session['role']         = user['role']
@@ -408,6 +409,7 @@ def _register(app):
             if totp.verify(code, valid_window=1):
                 next_ep = session.pop('2fa_next', 'spoc_dashboard')
                 session.clear()
+                session.permanent       = True   # enable 30-min idle expiry (PERMANENT_SESSION_LIFETIME)
                 session['user_id']      = user['id']
                 session['username']     = user['username']
                 session['role']         = user['role']
