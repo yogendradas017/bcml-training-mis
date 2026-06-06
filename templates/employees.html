@@ -244,9 +244,8 @@
       <select id="empDeptFilter" class="form-select" style="width:180px;" onchange="TBL.filter('empTable','dept',this.value)">
         <option value="">All Departments</option>
       </select>
-      <select id="empSectFilter" class="form-select" style="width:160px;" onchange="TBL.filter('empTable','sect',this.value)">
+      <select id="empSectFilter" class="form-select" style="width:160px;" aria-label="Filter by section" onchange="TBL.filter('empTable','sect',this.value)">
         <option value="">All Sections</option>
-        {% for s in sections %}<option>{{ s }}</option>{% endfor %}
       </select>
       <select class="form-select" style="width:130px;" onchange="TBL.filter('empTable','gender',this.value)">
         <option value="">All Genders</option>
@@ -300,6 +299,7 @@
             <td>
               {% if emp.is_active %}
               <button class="btn-action btn-action-primary edit-btn me-1"
+                      aria-label="Edit {{ emp.name }}"
                       data-emp-id="{{ emp.id }}"
                       data-emp-code="{{ emp.emp_code }}"
                       data-emp-name="{{ emp.name }}"
@@ -316,6 +316,7 @@
                 <i class="bi bi-pencil-square"></i> Edit
               </button>
               <button class="btn-action btn-action-danger exit-btn"
+                      aria-label="Exit {{ emp.name }}"
                       data-emp-id="{{ emp.id }}"
                       data-emp-name="{{ emp.name }}"
                       data-exit-url="{{ url_for('exit_employee', emp_id=emp.id) }}">
@@ -326,7 +327,7 @@
                     style="display:inline;"
                     data-tms-confirm="Reactivate {{ emp.name }}?">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn-action btn-action-success">
+                <button type="submit" class="btn-action btn-action-success" aria-label="Reactivate {{ emp.name }}">
                   <i class="bi bi-arrow-counterclockwise"></i> Reactivate
                 </button>
               </form>
@@ -468,6 +469,7 @@
 <script>
 TBL.init('empTable', 30);
 TBL.buildDynamic('empTable', 'dept', document.getElementById('empDeptFilter'), 'All Departments');
+TBL.buildDynamic('empTable', 'sect', document.getElementById('empSectFilter'), 'All Sections');
 
 // Tom Select for Designation, Department & Section — pick from list OR type a new value.
 // On create (new value), fuzzy-check server; offer to snap to existing canonical.

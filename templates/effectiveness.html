@@ -15,7 +15,7 @@
 {# Scorecards #}
 <div class="row g-3 mb-3">
   <div class="col-6 col-md-3">
-    <a href="{{ url_for('effectiveness', status='pending') }}" class="text-decoration-none">
+    <a href="{{ url_for('effectiveness', status='pending') }}" class="text-decoration-none"{% if sel_status == 'pending' %} aria-current="true"{% endif %}>
     <div class="card h-100 {% if sel_status == 'pending' %}border-primary{% endif %}" style="border-top:4px solid var(--c-muted);">
       <div class="card-body py-3 text-center">
         <div style="font-size:32px;font-weight:800;color:var(--c-muted-2);line-height:1;">{{ counts.pending }}</div>
@@ -25,7 +25,7 @@
     </a>
   </div>
   <div class="col-6 col-md-3">
-    <a href="{{ url_for('effectiveness', status='due') }}" class="text-decoration-none">
+    <a href="{{ url_for('effectiveness', status='due') }}" class="text-decoration-none"{% if sel_status == 'due' %} aria-current="true"{% endif %}>
     <div class="card h-100 {% if sel_status == 'due' %}border-warning{% endif %}" style="border-top:4px solid var(--c-warn);">
       <div class="card-body py-3 text-center">
         <div style="font-size:32px;font-weight:800;color:var(--c-warn);line-height:1;">{{ counts.due }}</div>
@@ -35,7 +35,7 @@
     </a>
   </div>
   <div class="col-6 col-md-3">
-    <a href="{{ url_for('effectiveness', status='overdue') }}" class="text-decoration-none">
+    <a href="{{ url_for('effectiveness', status='overdue') }}" class="text-decoration-none"{% if sel_status == 'overdue' %} aria-current="true"{% endif %}>
     <div class="card h-100 {% if sel_status == 'overdue' %}border-danger{% endif %}" style="border-top:4px solid var(--c-danger);">
       <div class="card-body py-3 text-center">
         <div style="font-size:32px;font-weight:800;color:var(--c-danger);line-height:1;">{{ counts.overdue }}</div>
@@ -45,7 +45,7 @@
     </a>
   </div>
   <div class="col-6 col-md-3">
-    <a href="{{ url_for('effectiveness', status='completed') }}" class="text-decoration-none">
+    <a href="{{ url_for('effectiveness', status='completed') }}" class="text-decoration-none"{% if sel_status == 'completed' %} aria-current="true"{% endif %}>
     <div class="card h-100 {% if sel_status == 'completed' %}border-success{% endif %}" style="border-top:4px solid var(--c-success);">
       <div class="card-body py-3 text-center">
         <div style="font-size:32px;font-weight:800;color:var(--c-success);line-height:1;">{{ counts.completed }}</div>
@@ -78,8 +78,12 @@
 </div>
 {% else %}
 
+<div class="mb-2" style="max-width:340px;">
+  <input type="search" class="form-control form-control-sm" placeholder="Search programme, attendee, code..."
+         aria-label="Search reviews" oninput="TBL.search('effTable', this.value)">
+</div>
 <div class="table-responsive">
-<table class="table table-hover align-middle" style="font-size:var(--fs-body);background:var(--c-white);">
+<table id="effTable" class="table table-hover align-middle" style="font-size:var(--fs-body);background:var(--c-white);">
   <thead style="background:#1a3a5c;color:var(--c-white);">
     <tr>
       {% if is_central %}<th style="padding:10px 12px;">Plant</th>{% endif %}
@@ -148,6 +152,7 @@
       </td>
     </tr>
     {% endfor %}
+    <tr data-empty="1" style="display:none;"><td colspan="{{ 8 if is_central else 7 }}" class="text-center text-muted py-4">No reviews match your search.</td></tr>
   </tbody>
 </table>
 </div>
@@ -156,13 +161,13 @@
 {% for r in rows %}
 {%- set st = r.status_ -%}
 {% if st != 'completed' %}
-<div class="modal fade" id="fileModal-{{ r.id }}" tabindex="-1">
+<div class="modal fade" id="fileModal-{{ r.id }}" tabindex="-1" aria-labelledby="fileTitle-{{ r.id }}">
   <div class="modal-dialog modal-lg">
-    <form method="POST" action="{{ url_for('effectiveness_file', eff_id=r.id) }}">
+    <form method="POST" action="{{ url_for('effectiveness_file', eff_id=r.id) }}" onsubmit="return effValidate(this)">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-content">
         <div class="modal-header" style="background:#1a3a5c;color:var(--c-white);">
-          <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>File Effectiveness Review</h5>
+          <h5 class="modal-title" id="fileTitle-{{ r.id }}"><i class="bi bi-pencil-square me-2"></i>File Effectiveness Review</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
@@ -172,7 +177,7 @@
           </div>
           <div class="mb-3">
             <label class="form-label fw-semibold" style="font-size:var(--fs-md);">Manager's Rating <span class="text-danger">*</span></label>
-            <div class="btn-group d-flex" role="group">
+            <div class="btn-group d-flex" role="radiogroup" aria-label="Manager's rating, 1 to 5">
               {% for n in [1,2,3,4,5] %}
               <input type="radio" class="btn-check" name="rating" id="r{{ r.id }}-{{ n }}" value="{{ n }}" autocomplete="off" required>
               <label class="btn btn-outline-primary btn-sm" for="r{{ r.id }}-{{ n }}" style="font-size:var(--fs-md);font-weight:600;">{{ n }}</label>
@@ -208,11 +213,11 @@
   </div>
 </div>
 {% else %}
-<div class="modal fade" id="viewModal-{{ r.id }}" tabindex="-1">
+<div class="modal fade" id="viewModal-{{ r.id }}" tabindex="-1" aria-labelledby="viewTitle-{{ r.id }}">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header" style="background:var(--c-success);color:var(--c-white);">
-        <h5 class="modal-title"><i class="bi bi-check-circle me-2"></i>Review Filed</h5>
+        <h5 class="modal-title" id="viewTitle-{{ r.id }}"><i class="bi bi-check-circle me-2"></i>Review Filed</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -237,4 +242,30 @@
 
 {% endif %}
 
+{% endblock %}
+{% block scripts %}
+<script>
+  // Enable search (+ consistent 30/page) on the reviews table.
+  if (window.TBL && document.getElementById('effTable')) TBL.init('effTable', 30);
+
+  // Keep the modal open + preserve typed input when the min-10 rule fails client-side.
+  function effValidate(form){
+    if(!form.querySelector('input[name=rating]:checked')){ alert('Please select a rating (1–5).'); return false; }
+    const b = (form.querySelector('[name=behaviour_change]')||{}).value || '';
+    const a = (form.querySelector('[name=application_on_job]')||{}).value || '';
+    if(b.trim().length < 10 && a.trim().length < 10){
+      alert('Provide at least one observation (Behaviour Change OR Application on Job, min 10 chars).');
+      return false;
+    }
+    return true;
+  }
+
+  // Live character counters under each capped textarea.
+  document.querySelectorAll('textarea[maxlength]').forEach(function(t){
+    const c = document.createElement('small');
+    c.className = 'text-muted'; c.style.cssText = 'display:block;text-align:right;';
+    const upd = () => { c.textContent = t.value.length + '/' + t.getAttribute('maxlength'); };
+    upd(); t.addEventListener('input', upd); t.insertAdjacentElement('afterend', c);
+  });
+</script>
 {% endblock %}

@@ -67,7 +67,10 @@
         </div>
         <div class="col-md-3">
           <label class="form-label" for="auto_faculty_name">Faculty Name</label>
-          <input type="text" name="faculty_name" id="auto_faculty_name" class="form-control" placeholder="Trainer / Faculty name" autocomplete="off">
+          <input type="text" name="faculty_name" id="auto_faculty_name" class="form-control" placeholder="Trainer / Faculty name" list="facultyList" autocomplete="off">
+          <datalist id="facultyList">
+            {% for fn in records|map(attribute='faculty_name')|select|unique|sort %}<option value="{{ fn }}">{% endfor %}
+          </datalist>
         </div>
         <div class="col-md-3">
           <label class="form-label" for="auto_int_ext">Faculty Type (Internal / External)</label>
@@ -120,19 +123,19 @@
     <div class="d-flex gap-2 flex-wrap">
       <div class="position-relative flex-grow-1" style="max-width:300px;">
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted-3);font-size:var(--fs-md);"></i>
-        <input type="text" class="form-control" placeholder="Search session, programme, faculty..." style="padding-left:34px;" oninput="TBL.search('prog2cTable',this.value)">
+        <input type="text" class="form-control" placeholder="Search session, programme, faculty..." aria-label="Search records" style="padding-left:34px;" oninput="TBL.search('prog2cTable',this.value)">
       </div>
-      <select class="form-select" style="width:170px;" onchange="TBL.filter('prog2cTable','type',this.value)">
+      <select class="form-select" style="width:170px;" aria-label="Filter by programme type" onchange="TBL.filter('prog2cTable','type',this.value)">
         <option value="">All Types</option>
         {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
       </select>
-      <select class="form-select" style="width:140px;" onchange="TBL.filter('prog2cTable','intext',this.value)">
+      <select class="form-select" style="width:140px;" aria-label="Filter by faculty type" onchange="TBL.filter('prog2cTable','intext',this.value)">
         <option value="">Internal / External</option>
         <option value="Internal">Internal</option>
         <option value="External">External</option>
         <option value="Online">Online</option>
       </select>
-      <select class="form-select" style="width:170px;" onchange="TBL.filter('prog2cTable','status',this.value)">
+      <select class="form-select" style="width:170px;" aria-label="Filter by status" onchange="TBL.filter('prog2cTable','status',this.value)">
         <option value="">All Statuses</option>
         <option>To Be Planned</option>
         <option>Awaiting Verification</option>
@@ -145,10 +148,10 @@
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0" id="prog2cTable" style="font-size:var(--fs-md);">
+      <table class="table table-hover mb-0" id="prog2cTable" style="font-size:var(--fs-md);min-width:1280px;">
         <thead>
           <tr>
-            <th><input type="checkbox" class="cb-all"></th>
+            <th><input type="checkbox" class="cb-all" aria-label="Select all rows"></th>
             <th>#</th><th>Session Code</th><th>Programme</th><th>Type</th><th>Status</th>
             <th>Source</th><th>Start Date</th><th>Hrs</th><th>Faculty</th><th>Int/Ext</th>
             <th class="text-end">Cost (&#8377;)</th><th class="text-end">Course Fdbk</th><th class="text-end">Participants</th><th class="text-end">Man-Hrs</th><th>Action</th>
@@ -230,6 +233,20 @@
           <tr data-empty="1"><td colspan="16" class="text-center text-muted py-4"><div style="font-weight:600;margin-bottom:4px;">No programme records yet</div><div style="font-size:var(--fs-sm);">Pick a Session Code from the form above (or use Bulk Upload) to record a conducted session.</div></td></tr>
           {% endfor %}
         </tbody>
+        {% if records %}
+        {% set ns = namespace(p=0, mh=0, cost=0) %}
+        {% for r in records %}{% set ns.p = ns.p + (r.participants or 0) %}{% set ns.mh = ns.mh + (r.man_hours or 0) %}{% set ns.cost = ns.cost + (r.cost or 0) %}{% endfor %}
+        <tfoot>
+          <tr style="font-weight:700;background:var(--c-surface-slate);border-top:2px solid var(--c-border);">
+            <td colspan="11" class="text-end">Totals (all records)</td>
+            <td class="text-end">{{ "%.0f"|format(ns.cost) }}</td>
+            <td></td>
+            <td class="text-end">{{ ns.p }}</td>
+            <td class="text-end">{{ "%.1f"|format(ns.mh) }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+        {% endif %}
       </table>
     </div>
   </div>
@@ -424,6 +441,9 @@ function _fill2C(val) {
   const fyStart = `${yr}-04-01`, fyEnd = `${yr+1}-03-31`;
   document.querySelectorAll('input[type=date]').forEach(el => { el.min = fyStart; el.max = fyEnd; });
   document.querySelectorAll('input[name=hours_actual]').forEach(el => { el.min = '0.5'; });
+  // Prevent an end date earlier than the chosen start date.
+  const s = document.getElementById('pc_start_date'), e = document.getElementById('pc_end_date');
+  if (s && e) s.addEventListener('change', () => { e.min = s.value || fyStart; if (e.value && e.value < s.value) e.value = s.value; });
 })();
 </script>
 {% endblock %}

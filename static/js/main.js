@@ -400,7 +400,21 @@ const TBL = {
     all.forEach(r => r.style.display = 'none');
 
     if (vis.length === 0) {
-      if (emptyRow) emptyRow.style.display = '';
+      if (emptyRow) {
+        // Distinguish "no data at all" from "filters hid everything" so users
+        // don't think their records vanished (and re-enter duplicates).
+        const hasData   = all.some(r => !r.dataset.empty);
+        const filtering = !!st.search || Object.entries(st).some(([k,v]) =>
+                            !['page','pageSize','search'].includes(k) && v);
+        const cell = emptyRow.querySelector('td');
+        if (cell) {
+          if (emptyRow.dataset.origHtml === undefined) emptyRow.dataset.origHtml = cell.innerHTML;
+          cell.innerHTML = (hasData && filtering)
+            ? 'No records match your filters. Clear search/filters to see all.'
+            : emptyRow.dataset.origHtml;
+        }
+        emptyRow.style.display = '';
+      }
       this._pager(id, 0, 1, 1); return;
     }
 

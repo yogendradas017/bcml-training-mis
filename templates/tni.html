@@ -304,7 +304,7 @@ function qaUpdateCount(){
         </div>
         <div class="col-md-2">
           <label class="form-label">Planned Hours</label>
-          <input type="number" name="planned_hours" class="form-control" step="0.5" min="0" value="0">
+          <input type="number" name="planned_hours" class="form-control" step="0.5" min="0" value="4">
           <div class="form-text" style="font-size:var(--fs-sm);">Estimated training duration per attendee.</div>
         </div>
         <div class="col-12">
@@ -340,24 +340,27 @@ function qaUpdateCount(){
         <option value="Blue Collared">Blue Collar</option>
         <option value="White Collared">White Collar</option>
       </select>
-      <select id="tni-dept" class="form-select" style="width:170px;">
+      <select id="tni-dept" class="form-select" style="width:170px;" aria-label="Filter by department">
         <option value="">All Departments</option>
         {% for d in departments %}<option>{{ d }}</option>{% endfor %}
       </select>
-      <select id="tni-type" class="form-select" style="width:170px;">
+      <select id="tni-type" class="form-select" style="width:170px;" aria-label="Filter by programme type">
         <option value="">All Types</option>
         {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
       </select>
-      <select id="tni-mode" class="form-select" style="width:130px;">
+      <select id="tni-mode" class="form-select" style="width:130px;" aria-label="Filter by mode">
         <option value="">All Modes</option>
         {% for m in modes %}<option>{{ m }}</option>{% endfor %}
       </select>
-      <select id="tni-completed" class="form-select" style="width:130px;">
+      <select id="tni-completed" class="form-select" style="width:130px;" aria-label="Filter by completion status">
         <option value="">All Statuses</option>
         <option value="Yes">Completed</option>
         <option value="Pending">Pending</option>
       </select>
-      <button type="button" class="btn btn-outline-primary btn-sm ms-auto" onclick="TNI._exportFiltered()" title="Download current filtered view as Excel" aria-label="Export filtered TNI to Excel">
+      <button type="button" id="tni-clear" class="btn btn-outline-secondary btn-sm ms-auto" style="display:none;" onclick="TNI._clearFilters()" title="Clear all filters">
+        <i class="bi bi-x-circle me-1"></i> Clear
+      </button>
+      <button type="button" class="btn btn-outline-primary btn-sm" onclick="TNI._exportFiltered()" title="Download current filtered view as Excel" aria-label="Export filtered TNI to Excel">
         <i class="bi bi-download me-1"></i> Export
       </button>
     </div>
@@ -504,13 +507,26 @@ const TNI = {
     window.location = '/tni/export?' + p.toString();
   },
 
+  _filterIds: ['tni-q','tni-collar','tni-dept','tni-type','tni-mode','tni-completed'],
+  _syncClearBtn() {
+    const any = this._filterIds.some(id => { const el = document.getElementById(id); return el && el.value; });
+    const btn = document.getElementById('tni-clear');
+    if (btn) btn.style.display = any ? '' : 'none';
+  },
+  _clearFilters() {
+    this._filterIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    this._syncClearBtn();
+    this.load(true);
+  },
+
   init() {
     var $ = (id) => document.getElementById(id);
     if ($('tni-q')) $('tni-q').addEventListener('input', () => {
+      this._syncClearBtn();
       clearTimeout(this._timer); this._timer = setTimeout(() => this.load(true), 320);
     });
     ['tni-collar','tni-dept','tni-type','tni-mode','tni-completed'].forEach(id => {
-      const el = $(id); if (el) el.addEventListener('change', () => this.load(true));
+      const el = $(id); if (el) el.addEventListener('change', () => { this._syncClearBtn(); this.load(true); });
     });
     if ($('tni-cb-all')) $('tni-cb-all').addEventListener('change', e => this._togglePageAll(e.target.checked));
     if ($('bulk-delete-btn')) $('bulk-delete-btn').addEventListener('click', () => this._bulkDelete());
@@ -601,6 +617,8 @@ const TNI = {
 
     // Source dropdown AJAX handler
     tbody.querySelectorAll('.tni-src-sel').forEach(sel => {
+      sel.dataset.prev = sel.value;
+      sel.addEventListener('focus', function() { this.dataset.prev = this.value; });
       sel.addEventListener('change', function() {
         const id = this.dataset.id;
         const src = this.value;
@@ -608,15 +626,20 @@ const TNI = {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({source: src})
-        }).then(r => r.json()).then(d => {
+        }).then(r => r.ok ? r.json() : Promise.reject()).then(d => {
           if (d.ok) {
             const [bg, fg] = ({'New Requirement': ['#dbeafe','#1d4ed8']})[src] || ['#e5e7eb','#374151'];
             sel.style.background = bg;
             sel.style.color = fg;
             sel.style.borderColor = fg + '40';
+            sel.dataset.prev = src;
           } else {
+            sel.value = sel.dataset.prev;   // revert — server rejected
             alert('Failed to update source: ' + (d.error||'unknown error'));
           }
+        }).catch(() => {
+          sel.value = sel.dataset.prev;     // revert — network/parse failure
+          alert('Could not update source — check your connection and try again.');
         });
       });
     });

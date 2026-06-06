@@ -93,6 +93,7 @@
         <div class="col-md-2">
           <label class="form-label" for="tr_hrs">Hours <span class="required-star">*</span></label>
           <input type="number" name="hrs" id="tr_hrs" class="form-control" step="0.5" min="0" required value="0">
+          <small class="text-muted">Hours this person actually attended — edit if they left early.</small>
         </div>
         <div class="col-md-3">
           <label class="form-label" for="auto_venue">Venue</label>
@@ -121,30 +122,30 @@
   <div class="card-header ch-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
     <span><i class="bi bi-table me-1"></i> Training Records — <strong>{{ records|length }}</strong> entries</span>
     <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:var(--fs-body);padding:5px 14px;border-radius:8px;font-weight:700;">
-      <i class="bi bi-clock-fill me-1" style="font-size:var(--fs-sm);"></i>Total Hours: {{ records|sum(attribute='hrs')|round(1) }}
+      <i class="bi bi-clock-fill me-1" style="font-size:var(--fs-sm);"></i>Total Hours (all records): {{ records|sum(attribute='hrs')|round(1) }}
     </span>
   </div>
   <div class="card-body py-3">
     <div class="d-flex gap-2 flex-wrap align-items-center">
       <div class="position-relative flex-grow-1" style="max-width:300px;">
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted);font-size:var(--fs-md);pointer-events:none;"></i>
-        <input type="text" class="form-control" placeholder="Search name, code, programme…" style="padding-left:36px;height:38px;" oninput="TBL.search('training2aTable',this.value)">
+        <input type="text" class="form-control" placeholder="Search name, code, programme…" aria-label="Search training records" style="padding-left:36px;height:38px;" oninput="TBL.search('training2aTable',this.value)">
       </div>
-      <select class="form-select" style="width:140px;height:38px;" onchange="TBL.filter('training2aTable','collar',this.value)">
+      <select class="form-select" style="width:140px;height:38px;" aria-label="Filter by collar" onchange="TBL.filter('training2aTable','collar',this.value)">
         <option value="">All Collar</option>
         <option value="Blue Collared">Blue Collar</option>
         <option value="White Collared">White Collar</option>
       </select>
-      <select class="form-select" style="width:170px;height:38px;" onchange="TBL.filter('training2aTable','type',this.value)">
+      <select class="form-select" style="width:170px;height:38px;" aria-label="Filter by programme type" onchange="TBL.filter('training2aTable','type',this.value)">
         <option value="">All Types</option>
         {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
       </select>
-      <select class="form-select" style="width:145px;height:38px;" onchange="TBL.filter('training2aTable','source',this.value)">
+      <select class="form-select" style="width:145px;height:38px;" aria-label="Filter by source" onchange="TBL.filter('training2aTable','source',this.value)">
         <option value="">All Sources</option>
         <option value="TNI Driven">TNI Driven</option>
         <option value="New Requirement">New Req</option>
       </select>
-      <select class="form-select" style="width:135px;height:38px;" onchange="TBL.filter('training2aTable','month',this.value)">
+      <select class="form-select" style="width:135px;height:38px;" aria-label="Filter by month" onchange="TBL.filter('training2aTable','month',this.value)">
         <option value="">All Months</option>
         {% for mo in months %}<option>{{ mo }}</option>{% endfor %}
       </select>
@@ -177,7 +178,7 @@
         {% set has_anom = rec.anomaly_flags and rec.anomaly_flags|length > 0 %}
         <tr data-collar="{{ rec.collar or '' }}" data-type="{{ rec.prog_type or '' }}"
             data-month="{{ rec.month or '' }}" data-source="{{ src }}"
-            {% if has_anom %}style="background:var(--c-white)7ed;" title="Anomaly: {{ rec.anomaly_flags }}"{% endif %}>
+            {% if has_anom %}style="background:var(--c-warn-bg-alt);" title="Anomaly: {{ rec.anomaly_flags }}"{% endif %}>
           <td style="width:40px;"><input type="checkbox" class="cb-row" value="{{ rec.id }}"></td>
           <td style="color:var(--c-muted);">
             {{ loop.index }}
