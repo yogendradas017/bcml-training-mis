@@ -25,6 +25,7 @@ def _ensure_indexes(db):
         CREATE INDEX IF NOT EXISTS idx_tni_prog ON tni(plant_id, programme_name);
         CREATE INDEX IF NOT EXISTS idx_et_lookup ON emp_training(plant_id, emp_code, programme_name);
         CREATE INDEX IF NOT EXISTS idx_et_plant_date ON emp_training(plant_id, start_date);
+        CREATE INDEX IF NOT EXISTS idx_et_plant_emp_date ON emp_training(plant_id, emp_code, start_date);
         CREATE INDEX IF NOT EXISTS idx_et_session ON emp_training(plant_id, session_code);
         CREATE INDEX IF NOT EXISTS idx_cal_plant_plan ON calendar(plant_id, plan_start);
         CREATE INDEX IF NOT EXISTS idx_cal_session ON calendar(plant_id, session_code);

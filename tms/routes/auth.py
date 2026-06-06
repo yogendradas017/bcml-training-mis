@@ -57,55 +57,69 @@ def _validate_password_strength(pw, username=''):
 # Coverage convention everywhere below: denominator = TNI-nominated rows ONLY
 # (never all employees), BC/WC kept SEPARATE (never averaged), scoped by plant_id.
 
-def _qc_pareto(db, plant_id, fy_start, fy_end):
-    """Pareto — uncovered headcount per programme (nominated − trained), desc."""
+def _emp_fy_hours(db, plant_id, fy_start, fy_end):
+    """One per-active-employee row: collar, department, total in-FY training hours.
+    Shared by histogram + dept-compliance so the heavy per-emp aggregation runs
+    once. Date-range join is covered by idx_et_plant_emp_date."""
+    return db.execute('''
+        SELECT e.collar AS collar,
+               COALESCE(NULLIF(e.department, ''), 'Unassigned') AS dept,
+               COALESCE(SUM(t.hrs), 0) AS hrs
+        FROM employees e
+        LEFT JOIN emp_training t
+          ON t.emp_code = e.emp_code AND t.plant_id = e.plant_id
+         AND t.start_date BETWEEN ? AND ?
+        WHERE e.plant_id = ? AND e.is_active = 1
+          AND e.collar IN ('Blue Collared', 'White Collared')
+        GROUP BY e.emp_code
+    ''', (fy_start, fy_end, plant_id)).fetchall()
+
+
+def _trained_pairs(db, plant_id):
+    """Set of (emp_code, programme_name) this plant has actually trained — one
+    pass over emp_training⋈programme_details. Shared by pareto + heatmap so the
+    per-row correlated EXISTS (≈660ms + 247ms) is replaced by a single scan."""
+    return {(r['emp'], r['prog']) for r in db.execute('''
+        SELECT DISTINCT et.emp_code AS emp, pd.programme_name AS prog
+        FROM emp_training et
+        JOIN programme_details pd ON pd.session_code = et.session_code
+                                 AND pd.plant_id = et.plant_id
+        WHERE et.plant_id = ?
+    ''', (plant_id,)).fetchall()}
+
+
+def _qc_pareto(db, plant_id, fy_start, fy_end, trained=None):
+    """Pareto — uncovered headcount per programme (nominated − trained), desc.
+    Set-based: count uncovered nominations against the trained-pairs set."""
+    from collections import defaultdict
     fy = _fy_label()
-    rows = db.execute('''
-        SELECT programme_name,
-               COUNT(*) - SUM(CASE WHEN trained THEN 1 ELSE 0 END) AS uncovered
-        FROM (
-            SELECT t.programme_name, t.emp_code,
-                   EXISTS(
-                       SELECT 1 FROM emp_training et
-                       JOIN programme_details pd ON pd.session_code = et.session_code
-                       WHERE et.emp_code = t.emp_code
-                         AND pd.programme_name = t.programme_name
-                         AND pd.plant_id = t.plant_id
-                   ) AS trained
+    if trained is None:
+        trained = _trained_pairs(db, plant_id)
+    unc = defaultdict(int)
+    for r in db.execute('''
+            SELECT t.programme_name AS prog, t.emp_code AS emp
             FROM tni t
             JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
             WHERE t.plant_id = ? AND t.fy_year = ? AND e.is_active = 1
-        )
-        GROUP BY programme_name
-        HAVING uncovered > 0
-        ORDER BY uncovered DESC, programme_name ASC
-        LIMIT 8
-    ''', (plant_id, fy)).fetchall()
+        ''', (plant_id, fy)).fetchall():
+        if (r['emp'], r['prog']) not in trained:
+            unc[r['prog']] += 1
+    top = sorted(((v, k) for k, v in unc.items() if v > 0),
+                 key=lambda x: (-x[0], x[1]))[:8]
     return {
-        'paretoLabels': [r['programme_name'] for r in rows],
-        'paretoData':   [int(r['uncovered']) for r in rows],
+        'paretoLabels': [k for _, k in top],
+        'paretoData':   [int(v) for v, _ in top],
     }
 
 
-def _qc_histogram(db, plant_id, fy_start, fy_end):
+def _qc_histogram(db, plant_id, fy_start, fy_end, emp_rows=None):
     """Histogram — employees per total-FY-training-hours bucket, split BC vs WC.
     Fixed 8 buckets, upper edges [2,4,6,8,12,16,24, inf]. Never-trained → '0-2'.
     Also returns each collar's average hours/employee and its man-hour target,
     so the chart can overlay average + target reference lines."""
     from tms.config import get_config
     EDGES = [2, 4, 6, 8, 12, 16, 24, float('inf')]
-    rows = db.execute('''
-        SELECT e.collar AS collar, COALESCE(SUM(t.hrs), 0) AS hrs
-        FROM employees e
-        LEFT JOIN emp_training t
-          ON t.emp_code = e.emp_code
-         AND t.plant_id = e.plant_id
-         AND t.start_date BETWEEN ? AND ?
-        WHERE e.plant_id = ?
-          AND e.is_active = 1
-          AND e.collar IN ('Blue Collared', 'White Collared')
-        GROUP BY e.emp_code
-    ''', (fy_start, fy_end, plant_id)).fetchall()
+    rows = emp_rows if emp_rows is not None else _emp_fy_hours(db, plant_id, fy_start, fy_end)
     bc, wc = [0] * 8, [0] * 8
     bc_sum = bc_n = wc_sum = wc_n = 0
     for r in rows:
@@ -129,24 +143,14 @@ def _qc_histogram(db, plant_id, fy_start, fy_end):
     }
 
 
-def _qc_dept_compliance(db, plant_id, fy_start, fy_end):
+def _qc_dept_compliance(db, plant_id, fy_start, fy_end, emp_rows=None):
     """Per-department man-hour target compliance: how many active employees met
     their collar target (BC vs WC, from config) vs fell below. Each employee is
     judged against their own collar's target; results grouped by department."""
     from tms.config import get_config
     bc_t = get_config('mh_target_bc', 12, plant_id=plant_id)
     wc_t = get_config('mh_target_wc', 24, plant_id=plant_id)
-    rows = db.execute('''
-        SELECT COALESCE(NULLIF(e.department, ''), 'Unassigned') AS dept,
-               e.collar AS collar, COALESCE(SUM(t.hrs), 0) AS hrs
-        FROM employees e
-        LEFT JOIN emp_training t
-          ON t.emp_code = e.emp_code AND t.plant_id = e.plant_id
-         AND t.start_date BETWEEN ? AND ?
-        WHERE e.plant_id = ? AND e.is_active = 1
-          AND e.collar IN ('Blue Collared', 'White Collared')
-        GROUP BY e.emp_code
-    ''', (fy_start, fy_end, plant_id)).fetchall()
+    rows = emp_rows if emp_rows is not None else _emp_fy_hours(db, plant_id, fy_start, fy_end)
     agg = {}  # dept -> {met, below}
     for r in rows:
         target = bc_t if r['collar'] == 'Blue Collared' else wc_t
@@ -256,7 +260,7 @@ def _qc_hclass(pct):
     return 'h0'
 
 
-def _qc_heatmap(db, plant_id, fy_start, fy_end):
+def _qc_heatmap(db, plant_id, fy_start, fy_end, trained=None):
     """Heat map — prog_type × collar TNI-coverage % matrix in display column order.
     Coverage = trained / nominated per cell, over TNI rows ONLY, never averaged."""
     DISPLAY_COLS = [
@@ -268,28 +272,24 @@ def _qc_heatmap(db, plant_id, fy_start, fy_end):
         ('IT',         'IT'),
     ]
     ROW_COLLARS = ['Blue Collared', 'White Collared']
-    rows = db.execute('''
-        SELECT prog_type, collar,
-               ROUND(100.0 * SUM(CASE WHEN trained THEN 1 ELSE 0 END)
-                     / NULLIF(COUNT(*), 0), 1) AS cov_pct
-        FROM (
-            SELECT t.prog_type, e.collar, t.emp_code,
-                   EXISTS(
-                       SELECT 1 FROM emp_training et
-                       JOIN programme_details pd ON pd.session_code = et.session_code
-                       WHERE et.emp_code = t.emp_code
-                         AND pd.programme_name = t.programme_name
-                         AND pd.plant_id = t.plant_id
-                   ) AS trained
+    from collections import defaultdict
+    if trained is None:
+        trained = _trained_pairs(db, plant_id)
+    tot = defaultdict(int); cov = defaultdict(int)   # key=(collar, prog_type)
+    for r in db.execute('''
+            SELECT t.prog_type AS pt, e.collar AS collar,
+                   t.emp_code AS emp, t.programme_name AS prog
             FROM tni t
             JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
             WHERE t.plant_id = ? AND e.is_active = 1
-        )
-        GROUP BY prog_type, collar
-    ''', (plant_id,)).fetchall()
+        ''', (plant_id,)).fetchall():
+        k = (r['collar'] or '', r['pt'] or '')
+        tot[k] += 1
+        if (r['emp'], r['prog']) in trained:
+            cov[k] += 1
     matrix = {}
-    for r in rows:
-        matrix.setdefault(r['collar'] or '', {})[r['prog_type'] or ''] = r['cov_pct']
+    for (collar, pt), n in tot.items():
+        matrix.setdefault(collar, {})[pt] = round(100.0 * cov[(collar, pt)] / n, 1) if n else None
     heatmap = []
     for collar in ROW_COLLARS:
         cells = []
@@ -861,13 +861,15 @@ def _register(app):
         if ent and ent[0] > now:
             return jsonify(ent[1])
         db = get_db()
+        emp_rows = _emp_fy_hours(db, plant_id, fy_start, fy_end)  # shared: histogram + dept
+        trained = _trained_pairs(db, plant_id)                    # shared: pareto + heatmap
         out = {}
-        out.update(_qc_pareto(db, plant_id, fy_start, fy_end))
-        out.update(_qc_histogram(db, plant_id, fy_start, fy_end))
-        out.update(_qc_dept_compliance(db, plant_id, fy_start, fy_end))
+        out.update(_qc_pareto(db, plant_id, fy_start, fy_end, trained))
+        out.update(_qc_histogram(db, plant_id, fy_start, fy_end, emp_rows))
+        out.update(_qc_dept_compliance(db, plant_id, fy_start, fy_end, emp_rows))
         out.update(_qc_cumulative(db, plant_id, fy_start, fy_end))
         out.update(_qc_cumulative_hours(db, plant_id, fy_start, fy_end))
-        out.update(_qc_heatmap(db, plant_id, fy_start, fy_end))
+        out.update(_qc_heatmap(db, plant_id, fy_start, fy_end, trained))
         _QC_CACHE[key] = (now + _QC_TTL, out)
         return jsonify(out)
 
