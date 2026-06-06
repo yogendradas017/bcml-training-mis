@@ -217,19 +217,32 @@ table.st tbody tr.hi td{color:rgba(255,255,255,.82);}
 .qr-ldot{width:5px;height:5px;border-radius:50%;background:#34c267;animation:qrpulse 1.5s infinite;}
 @keyframes qrpulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ─── EXPORT MOCKUP ─── */
-.xp-wrap{background:#fff;border-radius:14px;overflow:hidden;}
-.xp-hd{background:#fff;border-bottom:1px solid #f0f0f0;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;}
-.xp-hd-l{font-size:13px;font-weight:700;color:#1d1d1f;letter-spacing:-.2px;}
-.xp-body{padding:14px 18px;}
-.xp-row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;border:1px solid #eee;margin-bottom:9px;}
-.xp-ic{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:linear-gradient(135deg,#e6f4ea,#c3e6cb);}
-.xp-meta{flex:1;min-width:0;}
-.xp-name{font-size:12.5px;font-weight:700;color:#1d1d1f;letter-spacing:-.2px;}
-.xp-sub{font-size:10px;color:#9d9da3;margin-top:2px;}
-.xp-size{font-size:10px;font-weight:600;color:#6e6e73;background:#f5f5f7;padding:3px 8px;border-radius:6px;flex-shrink:0;}
-.xp-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:11px;background:linear-gradient(135deg,#1a7a3c,#2e6da4);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:-.1px;margin-top:5px;}
-.xp-note{text-align:center;font-size:10px;color:#9d9da3;margin-top:11px;}
+/* ─── AUDIT-PROOF MOCKUP ─── */
+.xa-wrap{background:#fff;border-radius:14px;overflow:hidden;}
+.xa-hd{background:#fff;border-bottom:1px solid #f0f0f0;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;}
+.xa-hd-l{font-size:13px;font-weight:700;color:#1d1d1f;letter-spacing:-.2px;}
+.xa-body{padding:16px 18px;}
+/* Hero verdict panel */
+.xa-hero{display:flex;align-items:center;gap:14px;padding:15px 16px;border-radius:12px;background:linear-gradient(135deg,rgba(26,122,60,.08),rgba(52,194,103,.05));border:1px solid rgba(26,122,60,.18);margin-bottom:16px;}
+.xa-shield{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#1a7a3c,#34c267);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(26,122,60,.25);}
+.xa-hero-meta{flex:1;min-width:0;}
+.xa-verdict{font-size:15px;font-weight:800;color:#1a7a3c;letter-spacing:-.3px;line-height:1;}
+.xa-gaps{font-size:12px;font-weight:600;color:#1d1d1f;margin-top:5px;}
+.xa-asof{font-size:10px;color:#9d9da3;margin-top:3px;}
+/* Named-mandate group */
+.xa-mand{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.xa-mand-l{font-size:11px;font-weight:700;color:#6e6e73;letter-spacing:-.1px;}
+.xa-chip{font-size:9px;font-weight:800;color:#1a7a3c;background:rgba(26,122,60,.1);padding:3px 9px;border-radius:10px;letter-spacing:.04em;text-transform:uppercase;}
+/* Signed proof rows */
+.xa-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-top:1px solid #f4f4f6;}
+.xa-row:first-of-type{margin-top:6px;}
+.xa-lock{width:26px;height:26px;border-radius:7px;background:rgba(26,122,60,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.xa-row-meta{flex:1;min-width:0;}
+.xa-site{font-size:12px;font-weight:700;color:#1d1d1f;letter-spacing:-.2px;}
+.xa-sig{font-size:10px;color:#9d9da3;margin-top:1px;}
+.xa-tick{flex-shrink:0;display:flex;}
+/* Traceability footer */
+.xa-trust{font-size:10px;color:#9d9da3;margin-top:13px;padding-top:12px;border-top:1px solid #f0f0f0;line-height:1.45;}
 
 /* ── MODULES GRID ── */
 .mods{padding:100px 36px;background:#f2f2f7;}
@@ -698,64 +711,64 @@ table.st tbody tr.hi td{color:rgba(255,255,255,.82);}
   </div>
 </section>
 
-<!-- ── FEATURE 4: Excel Export (white) ── -->
+<!-- ── FEATURE 4: Audit-ready proof (white) ── -->
 <section class="sec seclight">
   <div class="seci">
     <div class="rr">
       <div class="smk tr reveal-r">
         <div class="smki">
-          <div class="xp-wrap">
-            <div class="xp-hd">
-              <span class="xp-hd-l">Export Centre — FY 2026-27</span>
-              <span style="background:linear-gradient(135deg,#1a7a3c,#2e6da4);color:#fff;padding:3px 10px;border-radius:20px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;">XLSX</span>
+          <div class="xa-wrap">
+            <div class="xa-hd">
+              <span class="xa-hd-l">Compliance Assurance</span>
+              <span style="background:linear-gradient(135deg,#1a7a3c,#2e6da4);color:#fff;padding:3px 10px;border-radius:20px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Verified</span>
             </div>
-            <div class="xp-body">
-              <div class="xp-row">
-                <div class="xp-ic">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="2.5" width="14" height="15" rx="2" stroke="#1a7a3c" stroke-width="1.5"/><path d="M7 7l6 6M13 7l-6 6" stroke="#1a7a3c" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <div class="xa-body">
+              <!-- Hero verdict -->
+              <div class="xa-hero">
+                <div class="xa-shield">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6l7-3z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
-                <div class="xp-meta"><div class="xp-name">Monthly Summary</div><div class="xp-sub">6 sheets · 735 rows</div></div>
-                <span class="xp-size">84 KB</span>
-              </div>
-              <div class="xp-row">
-                <div class="xp-ic">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="2.5" width="14" height="15" rx="2" stroke="#1a7a3c" stroke-width="1.5"/><path d="M7 7l6 6M13 7l-6 6" stroke="#1a7a3c" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <div class="xa-hero-meta">
+                  <div class="xa-verdict">Audit-ready</div>
+                  <div class="xa-gaps">0 unprovable gaps across 14 sites</div>
+                  <div class="xa-asof">Verified as of 06 Jun 2026</div>
                 </div>
-                <div class="xp-meta"><div class="xp-name">Coverage Report</div><div class="xp-sub">by type × collar · 48 rows</div></div>
-                <span class="xp-size">31 KB</span>
               </div>
-              <div class="xp-row">
-                <div class="xp-ic">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="2.5" width="14" height="15" rx="2" stroke="#1a7a3c" stroke-width="1.5"/><path d="M7 7l6 6M13 7l-6 6" stroke="#1a7a3c" stroke-width="1.5" stroke-linecap="round"/></svg>
-                </div>
-                <div class="xp-meta"><div class="xp-name">Attendance Log</div><div class="xp-sub">2A records · 1,240 rows</div></div>
-                <span class="xp-size">156 KB</span>
+              <!-- Named mandate -->
+              <div class="xa-mand">
+                <span class="xa-mand-l">Fire Safety — Statutory Mandate</span>
+                <span class="xa-chip">Fully Evidenced</span>
               </div>
-              <div class="xp-row">
-                <div class="xp-ic">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="2.5" width="14" height="15" rx="2" stroke="#1a7a3c" stroke-width="1.5"/><path d="M7 7l6 6M13 7l-6 6" stroke="#1a7a3c" stroke-width="1.5" stroke-linecap="round"/></svg>
-                </div>
-                <div class="xp-meta"><div class="xp-name">Compliance MIS</div><div class="xp-sub">all plants · 10 sheets</div></div>
-                <span class="xp-size">92 KB</span>
+              <!-- Signed proof rows -->
+              <div class="xa-row">
+                <div class="xa-lock"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="#1a7a3c" stroke-width="1.4"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="#1a7a3c" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+                <div class="xa-row-meta"><div class="xa-site">Northgate Plant</div><div class="xa-sig">Signed record · 184 people · 12 Apr 2026</div></div>
+                <span class="xa-tick"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5L13 5" stroke="#1a7a3c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
               </div>
-              <div class="xp-btn">
-                <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v8m0 0L5 7m3 3l3-3M3 13h10" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Download all · 4 reports
+              <div class="xa-row">
+                <div class="xa-lock"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="#1a7a3c" stroke-width="1.4"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="#1a7a3c" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+                <div class="xa-row-meta"><div class="xa-site">Westmill Site</div><div class="xa-sig">Signed record · 96 people · 18 Apr 2026</div></div>
+                <span class="xa-tick"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5L13 5" stroke="#1a7a3c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
               </div>
-              <div class="xp-note">Pre-formatted &amp; board-ready — opens straight in Excel.</div>
+              <div class="xa-row">
+                <div class="xa-lock"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="#1a7a3c" stroke-width="1.4"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="#1a7a3c" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+                <div class="xa-row-meta"><div class="xa-site">Harbour Plant</div><div class="xa-sig">Signed record · 142 people · 21 Apr 2026</div></div>
+                <span class="xa-tick"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5L13 5" stroke="#1a7a3c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </div>
+              <div class="xa-trust">Every record traceable to the individual, the date, and the signature.</div>
             </div>
           </div>
         </div>
       </div>
       <div class="reveal">
-        <p class="sectag">Excel Export</p>
-        <h2 class="sech" style="color:#1d1d1f;">One click.<br>Board-ready<br>reports.</h2>
-        <p class="secsub">Every view — Monthly Summary, coverage, attendance, compliance MIS — exports to fully formatted Excel in one click. No copy-paste, no manual formatting. The file leadership and auditors expect, ready the moment they ask.</p>
+        <p class="sectag">Audit Ready</p>
+        <h2 class="sech" style="color:#1d1d1f;">Walk into any audit<br>with proof<br>already in hand.</h2>
+        <p class="secsub">When a regulator, customer, or board asks &ldquo;can you prove everyone was trained?&rdquo; — the answer is already yes. Every required training carries a permanent, traceable record of who, where, and when, so a gap can never hide and an audit can never catch you unprepared.</p>
         <div class="spills">
-          <span class="spill"><span class="spilld" style="background:#2e6da4;"></span>Monthly Summary</span>
-          <span class="spill"><span class="spilld" style="background:#34c267;"></span>Coverage report</span>
-          <span class="spill"><span class="spilld" style="background:#f5a623;"></span>Attendance log</span>
-          <span class="spill"><span class="spilld" style="background:#a78bfa;"></span>Compliance MIS</span>
+          <span class="spill"><span class="spilld" style="background:#1a7a3c;"></span>Always audit-ready</span>
+          <span class="spill"><span class="spilld" style="background:#34c267;"></span>Nothing to chase</span>
+          <span class="spill"><span class="spilld" style="background:#2e6da4;"></span>Traceable proof</span>
+          <span class="spill"><span class="spilld" style="background:#f5a623;"></span>Zero hidden gaps</span>
         </div>
       </div>
     </div>
