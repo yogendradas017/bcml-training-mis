@@ -120,11 +120,21 @@
 <!-- Records Table -->
 <div class="card">
   <div class="card-header ch-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <span><i class="bi bi-table me-1"></i> Training Records — <strong>{{ records|length }}</strong> entries</span>
-    <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:var(--fs-body);padding:5px 14px;border-radius:8px;font-weight:700;">
-      <i class="bi bi-clock-fill me-1" style="font-size:var(--fs-sm);"></i>Total Hours (all records): {{ records|sum(attribute='hrs')|round(1) }}
+    <span><i class="bi bi-table me-1"></i> Training Records — <strong>{{ records|length }}</strong>{% if truncated %} <span style="font-size:var(--fs-xs);background:rgba(255,255,255,.18);padding:2px 8px;border-radius:var(--radius-pill);margin-left:4px;font-weight:600;">of {{ total_records }}</span>{% else %} entries{% endif %}</span>
+    <span class="d-flex gap-2 align-items-center">
+      {% if truncated %}
+      <a href="{{ url_for('emp_training', show_all=1) }}" class="btn btn-sm btn-warning" style="font-size:var(--fs-body);"><i class="bi bi-list-ul me-1"></i>Show all {{ total_records }}</a>
+      {% endif %}
+      <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:var(--fs-body);padding:5px 14px;border-radius:8px;font-weight:700;">
+        <i class="bi bi-clock-fill me-1" style="font-size:var(--fs-sm);"></i>Total Hours ({% if truncated %}loaded{% else %}all records{% endif %}): {{ records|sum(attribute='hrs')|round(1) }}
+      </span>
     </span>
   </div>
+  {% if truncated %}
+  <div class="px-3 pt-2" style="font-size:var(--fs-sm);color:var(--c-warn-text);background:var(--c-warn-bg-alt);">
+    <i class="bi bi-info-circle me-1"></i> Showing latest {{ cap }} of {{ total_records }} records for speed. Search/filters apply to these; click <strong>Show all {{ total_records }}</strong> to load everything (slower).
+  </div>
+  {% endif %}
   <div class="card-body py-3">
     <div class="d-flex gap-2 flex-wrap align-items-center">
       <div class="position-relative flex-grow-1" style="max-width:300px;">

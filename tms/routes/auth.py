@@ -1,6 +1,7 @@
 import io
 import os
 import shutil
+import time
 from datetime import date, datetime, timedelta
 from flask import render_template, request, redirect, url_for, session, flash, send_file, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -13,6 +14,12 @@ from tms.db import get_db
 from tms.decorators import spoc_required, login_required, admin_required
 from tms.helpers import _current_fy, _now_ist, _calc_compliance, _fy_label
 from tms.audit import log_action
+
+# Short-TTL in-process cache for the heavy /api/dashboard-qc payload (per plant+FY).
+# FY-cumulative analytics — a little staleness is fine; this kills the recompute
+# storm when many SPOCs open dashboards at once. Per gunicorn worker.
+_QC_CACHE = {}
+_QC_TTL = 60
 
 
 # Top-10k worst passwords subset — block obvious bad picks
@@ -843,10 +850,17 @@ def _register(app):
     @spoc_required
     def api_dashboard_qc():
         """QC analytics datasets (Pareto, Histogram, Heat map, Cumulative) as JSON,
-        fetched async by the dashboard so the page is not blocked on these queries."""
+        fetched async by the dashboard so the page is not blocked on these queries.
+        Six heavy aggregations over tni/emp_training — cached per plant for a short
+        TTL so concurrent dashboard opens don't each pay the full recompute."""
         plant_id = session['plant_id']
-        db = get_db()
         fy_start, fy_end = _current_fy()
+        key = (plant_id, fy_start)
+        now = time.time()
+        ent = _QC_CACHE.get(key)
+        if ent and ent[0] > now:
+            return jsonify(ent[1])
+        db = get_db()
         out = {}
         out.update(_qc_pareto(db, plant_id, fy_start, fy_end))
         out.update(_qc_histogram(db, plant_id, fy_start, fy_end))
@@ -854,6 +868,7 @@ def _register(app):
         out.update(_qc_cumulative(db, plant_id, fy_start, fy_end))
         out.update(_qc_cumulative_hours(db, plant_id, fy_start, fy_end))
         out.update(_qc_heatmap(db, plant_id, fy_start, fy_end))
+        _QC_CACHE[key] = (now + _QC_TTL, out)
         return jsonify(out)
 
     @app.route('/admin/seed-demo', methods=['GET', 'POST'])

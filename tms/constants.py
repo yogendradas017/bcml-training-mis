@@ -41,6 +41,9 @@ MONTHS_FY   = ['April','May','June','July','August','September',
 # Default page cap for Employees list — large plants render banner + 'Show all' toggle.
 # Override per-org via org_config key 'employees_page_cap' if needed.
 EMPLOYEES_PAGE_CAP = 200
+# Cap on rows rendered into record tables (2A) to keep big-plant pages fast;
+# user can Show all. Client-side search/filter operates on the loaded subset.
+RECORDS_PAGE_CAP = 500
 MONTH_NUM   = {m: f'{i+1:02d}' for i, m in enumerate(
                ['January','February','March','April','May','June',
                 'July','August','September','October','November','December'])}

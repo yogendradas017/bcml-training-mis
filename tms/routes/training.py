@@ -3,7 +3,7 @@ from datetime import datetime as _dt, date as _d, timedelta as _td
 
 from flask import render_template, request, redirect, url_for, session, flash, send_file
 
-from tms.constants import MONTHS_FY, PROG_TYPES, MODES
+from tms.constants import MONTHS_FY, PROG_TYPES, MODES, RECORDS_PAGE_CAP
 from tms.db import get_db
 from tms.decorators import spoc_required
 from tms.helpers import (
@@ -26,6 +26,13 @@ def _register(app):
     def emp_training():
         plant_id = session['plant_id']
         db = get_db()
+        # Cap rendered rows for big plants (page was multi-second / multi-MB on
+        # plants with thousands of 2A records). Newest first; Show all to load full.
+        show_all = request.args.get('show_all', '0') == '1'
+        total_records = db.execute(
+            'SELECT COUNT(*) FROM emp_training WHERE plant_id=?', (plant_id,)).fetchone()[0]
+        truncated = (not show_all) and total_records > RECORDS_PAGE_CAP
+        limit_sql = '' if not truncated else f' LIMIT {RECORDS_PAGE_CAP}'
         records = db.execute('''
             SELECT t.*, e.name as emp_name, e.designation, e.grade, e.collar,
                    e.department, e.section,
@@ -39,8 +46,7 @@ def _register(app):
                                   AND t.host_plant_id=99
             LEFT JOIN programme_master pm ON pm.plant_id=t.plant_id AND LOWER(pm.name)=LOWER(t.programme_name)
             WHERE t.plant_id=?
-            ORDER BY t.id DESC
-        ''', (plant_id,)).fetchall()
+            ORDER BY t.id DESC''' + limit_sql, (plant_id,)).fetchall()
         emps = db.execute(
             'SELECT emp_code, name, grade, collar, department FROM employees WHERE plant_id=? AND is_active=1 ORDER BY name',
             (plant_id,)).fetchall()
@@ -58,7 +64,9 @@ def _register(app):
         sessions_list = list(own_sessions) + list(central_sessions)
         return render_template('training_2a.html', records=records, employees=emps,
                                sessions=sessions_list, months=MONTHS_FY,
-                               prog_types=PROG_TYPES, modes=MODES)
+                               prog_types=PROG_TYPES, modes=MODES,
+                               total_records=total_records, truncated=truncated,
+                               show_all=show_all, cap=RECORDS_PAGE_CAP)
 
     @app.route('/training/add', methods=['POST'])
     @spoc_required
