@@ -335,24 +335,24 @@ function qaUpdateCount(){
         <i class="bi bi-search position-absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--c-muted-3);font-size:var(--fs-md);"></i>
         <input type="text" id="tni-q" class="form-control" placeholder="Search name, code, programme..." style="padding-left:34px;">
       </div>
-      <select id="tni-collar" class="form-select" style="width:150px;" aria-label="Filter by collar">
+      <select id="tni-collar" class="form-select" style="flex:1 1 130px;min-width:120px;" aria-label="Filter by collar">
         <option value="">All Collars</option>
         <option value="Blue Collared">Blue Collar</option>
         <option value="White Collared">White Collar</option>
       </select>
-      <select id="tni-dept" class="form-select" style="width:170px;" aria-label="Filter by department">
+      <select id="tni-dept" class="form-select" style="flex:1 1 150px;min-width:130px;" aria-label="Filter by department">
         <option value="">All Departments</option>
         {% for d in departments %}<option>{{ d }}</option>{% endfor %}
       </select>
-      <select id="tni-type" class="form-select" style="width:170px;" aria-label="Filter by programme type">
+      <select id="tni-type" class="form-select" style="flex:1 1 150px;min-width:130px;" aria-label="Filter by programme type">
         <option value="">All Types</option>
         {% for t in prog_types %}<option>{{ t }}</option>{% endfor %}
       </select>
-      <select id="tni-mode" class="form-select" style="width:130px;" aria-label="Filter by mode">
+      <select id="tni-mode" class="form-select" style="flex:1 1 120px;min-width:110px;" aria-label="Filter by mode">
         <option value="">All Modes</option>
         {% for m in modes %}<option>{{ m }}</option>{% endfor %}
       </select>
-      <select id="tni-completed" class="form-select" style="width:130px;" aria-label="Filter by completion status">
+      <select id="tni-completed" class="form-select" style="flex:1 1 120px;min-width:110px;" aria-label="Filter by completion status">
         <option value="">All Statuses</option>
         <option value="Yes">Completed</option>
         <option value="Pending">Pending</option>
@@ -539,11 +539,18 @@ const TNI = {
   load(reset) {
     if (reset) { this.page = 1; this.selectAll = false; this.selectedIds.clear(); }
     const tbody = document.getElementById('tniBody');
-    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-3"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</td></tr>';
+    const hasRows = tbody.querySelector('tr td .badge, tr .tni-cb-row') || tbody.children.length > 1;
+    // First load: spinner. Subsequent loads: dim existing rows so the table
+    // doesn't collapse/jump on every filter keystroke.
+    if (hasRows) {
+      tbody.style.opacity = '0.4'; tbody.style.pointerEvents = 'none';
+    } else {
+      tbody.innerHTML = '<tr><td colspan="12" class="text-center py-3"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</td></tr>';
+    }
     fetch('/tni/data?' + this._params())
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(d => { this.total = d.total; this._render(d.rows, d.page, d.total, d.per_page); })
-      .catch(() => { tbody.innerHTML = '<tr><td colspan="12" class="text-center text-danger py-4"><i class="bi bi-exclamation-circle me-1"></i>Failed to load data. Please refresh the page.</td></tr>'; });
+      .then(d => { tbody.style.opacity = ''; tbody.style.pointerEvents = ''; this.total = d.total; this._render(d.rows, d.page, d.total, d.per_page); })
+      .catch(() => { tbody.style.opacity = ''; tbody.style.pointerEvents = ''; tbody.innerHTML = '<tr><td colspan="12" class="text-center text-danger py-4"><i class="bi bi-exclamation-circle me-1"></i>Failed to load data. Please refresh the page.</td></tr>'; });
   },
 
   _render(rows, page, total, perPage) {

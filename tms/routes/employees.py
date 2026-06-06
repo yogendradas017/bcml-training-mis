@@ -113,6 +113,12 @@ def _register(app):
         departments = _plant_depts(db, plant_id)
         sections = _plant_sections(db, plant_id)
         designations = _plant_designations(db, plant_id)
+        # Pending effectiveness reviews per emp_code → shown in the Exit modal up
+        # front, so the SPOC sees the block reason before submitting (not after).
+        pending_reviews = {r['emp_code']: r['c'] for r in db.execute(
+            "SELECT emp_code, COUNT(*) c FROM effectiveness_review "
+            "WHERE plant_id=? AND (completed_date IS NULL OR completed_date='') "
+            "GROUP BY emp_code", (plant_id,)).fetchall()}
         return render_template('employees.html',
                                employees=emps, show_exited=show_exited,
                                recent_exited=recent_exited,
@@ -120,9 +126,26 @@ def _register(app):
                                collars=COLLARS, ph_options=PH_OPTIONS,
                                departments=departments, sections=sections,
                                designations=designations,
+                               pending_reviews=pending_reviews,
                                total_count=total_count, truncated=truncated,
                                show_all=show_all,
                                today=str(_today_ist()))
+
+    @app.route('/employees/check-code')
+    @spoc_required
+    def emp_check_code():
+        """Live duplicate-code check for the Add Employee form (debounced client-side)."""
+        from flask import jsonify
+        plant_id = session['plant_id']
+        code = (request.args.get('code') or '').strip()
+        if not code:
+            return jsonify({'exists': False})
+        row = get_db().execute(
+            'SELECT name, is_active FROM employees WHERE plant_id=? AND emp_code=?',
+            (plant_id, code)).fetchone()
+        if row:
+            return jsonify({'exists': True, 'name': row['name'], 'active': bool(row['is_active'])})
+        return jsonify({'exists': False})
 
     @app.route('/employees/suggest-similar')
     @spoc_required

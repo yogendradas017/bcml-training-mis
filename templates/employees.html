@@ -123,8 +123,9 @@
       <div class="row g-3">
         <div class="col-md-3">
           <label class="form-label">Employee Code <span class="required-star">*</span></label>
-          <input type="text" name="emp_code" class="form-control" required placeholder="e.g. 21700011">
+          <input type="text" name="emp_code" id="addEmpCode" class="form-control" required placeholder="e.g. 21700011" autocomplete="off">
           <div class="form-text" style="font-size:var(--fs-sm);">Must be unique within this plant. Cannot be changed later.</div>
+          <div id="empCodeWarn" class="invalid-feedback" style="display:none;"></div>
         </div>
         <div class="col-md-4">
           <label class="form-label">Full Name <span class="required-star">*</span></label>
@@ -319,6 +320,7 @@
                       aria-label="Exit {{ emp.name }}"
                       data-emp-id="{{ emp.id }}"
                       data-emp-name="{{ emp.name }}"
+                      data-pending="{{ pending_reviews.get(emp.emp_code, 0) }}"
                       data-exit-url="{{ url_for('exit_employee', emp_id=emp.id) }}">
                 <i class="bi bi-box-arrow-right"></i> Exit
               </button>
@@ -355,6 +357,7 @@
       <form method="POST" id="exitModalForm" action="">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
+          <div id="exitPendingWarn" class="alert alert-warning py-2 px-3 mb-3" style="display:none;font-size:var(--fs-sm);"></div>
           <div class="mb-3">
             <label class="form-label">Exit Date <span class="required-star">*</span></label>
             <input type="date" name="exit_date" id="exitDateInput" class="form-control" required>
@@ -507,6 +510,33 @@ try { new TomSelect('#sectTomSelect',  _empFieldOpts('section'));     } catch(e)
 // Modal init deferred — sharedExitModal renders after this scripts block (base.html render order)
 document.addEventListener('DOMContentLoaded', function() {
   const today = new Date().toISOString().split('T')[0];
+
+  // Live duplicate emp-code check (debounced) — warn before a full submit/reload.
+  const _codeEl = document.getElementById('addEmpCode');
+  const _codeWarn = document.getElementById('empCodeWarn');
+  if (_codeEl && _codeWarn) {
+    let _t;
+    _codeEl.addEventListener('input', function() {
+      clearTimeout(_t);
+      const v = this.value.trim();
+      _codeEl.classList.remove('is-invalid');
+      _codeWarn.style.display = 'none';
+      if (!v) return;
+      _t = setTimeout(function() {
+        fetch('{{ url_for("emp_check_code") }}?code=' + encodeURIComponent(v))
+          .then(r => r.json())
+          .then(d => {
+            if (d.exists) {
+              _codeEl.classList.add('is-invalid');
+              _codeWarn.textContent = 'Code ' + v + ' already exists' +
+                (d.name ? ' (' + d.name + (d.active ? '' : ', exited') + ')' : '') + '.';
+              _codeWarn.style.display = 'block';
+            }
+          }).catch(() => {});
+      }, 350);
+    });
+  }
+
   const _exitModalEl = document.getElementById('sharedExitModal');
   if (!_exitModalEl) return;
   const exitDateEl = document.getElementById('exitDateInput');
@@ -518,6 +548,19 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('exitModalForm').action = this.dataset.exitUrl;
       document.getElementById('exitDateInput').value = today;
       document.getElementById('confirmPendingChk').checked = false;
+      // Surface pending effectiveness reviews up front (not after a failed submit).
+      const pend = parseInt(this.dataset.pending || '0', 10);
+      const warn = document.getElementById('exitPendingWarn');
+      const chkWrap = document.getElementById('confirmPendingChk').closest('.form-check');
+      if (pend > 0) {
+        warn.innerHTML = '<strong>' + pend + ' pending Effectiveness Review' + (pend>1?'s':'') +
+          '</strong> open against this employee. Close them first, or tick the box below to force exit (reviews stay open).';
+        warn.style.display = '';
+        if (chkWrap) chkWrap.style.display = '';
+      } else {
+        warn.style.display = 'none';
+        if (chkWrap) chkWrap.style.display = 'none';   // checkbox is meaningless when nothing is pending
+      }
       _exitModal.show();
     });
   });

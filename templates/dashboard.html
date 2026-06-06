@@ -409,6 +409,22 @@
   };
 
   function render(d){
+    // Per-chart empty state: replace the canvas with "No data yet" so a blank
+    // panel never reads as "failed to load" (esp. early in the FY).
+    [
+      ['qcPareto', (d.paretoData||[]).length],
+      ['qcHist',   (d.histBc||[]).some(v=>v) || (d.histWc||[]).some(v=>v)],
+      ['qcDept',   (d.deptCompliance||[]).length],
+      ['qcRun',    (d.bcCumulative||[]).some(v=>v) || (d.wcCumulative||[]).some(v=>v)],
+      ['qcHrs',    (d.hoursCumulative||[]).some(v=>v)]
+    ].forEach(function(pair){
+      if (!pair[1]) {
+        const c = document.getElementById(pair[0]);
+        if (c && c.parentElement) c.parentElement.innerHTML =
+          '<div class="qc-sub" style="text-align:center;padding:40px 0;color:var(--c-muted-2);">No data yet for this FY.</div>';
+      }
+    });
+
     // Pareto — uncovered headcount + cumulative % line
     const pData = d.paretoData || [];
     const pTotal = pData.reduce((s,v)=>s+v,0) || 1;
@@ -874,6 +890,10 @@ function toggleSessDrill() {
     });
 
     var html = '';
+    if (DD.search) {
+      html += '<div class="dd-sub" style="grid-column:1/-1;font-size:var(--fs-sm);color:var(--c-muted-2);margin-bottom:2px;">'
+            + 'Showing ' + rows.length + ' of ' + DD.departments.length + ' departments</div>';
+    }
     rows.forEach(function(r) {
       var t   = tier(r.pct, r.actual_hrs);
       var pct = Math.min(Math.max(r.pct||0, 0), 100);

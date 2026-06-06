@@ -208,15 +208,25 @@ const PROG_AC = (() => {
     let _autoAddInput = null;
 
     function _lockSourceToNewRequirement(form, lock) {
-      const sel = form.querySelector('[name=source]');
+      const sel = form.querySelector('select[name=source]');
       if (!sel) return;
+      // A disabled <select> is NOT submitted, so back it with a hidden mirror that
+      // always carries the value — never rely on the server default to recover it.
+      let mirror = form.querySelector('input.source-mirror');
       if (lock) {
         sel.value = 'New Requirement';
         sel.disabled = true;
         sel.title = 'Locked to New Requirement — programme does not exist in TNI.';
+        if (!mirror) {
+          mirror = document.createElement('input');
+          mirror.type = 'hidden'; mirror.name = 'source'; mirror.className = 'source-mirror';
+          form.appendChild(mirror);
+        }
+        mirror.value = 'New Requirement';
       } else {
         sel.disabled = false;
         sel.title = '';
+        if (mirror) mirror.remove();
       }
     }
 
