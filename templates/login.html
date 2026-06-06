@@ -217,34 +217,19 @@ table.st tbody tr.hi td{color:rgba(255,255,255,.82);}
 .qr-ldot{width:5px;height:5px;border-radius:50%;background:#34c267;animation:qrpulse 1.5s infinite;}
 @keyframes qrpulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ─── COMPLIANCE MOCKUP ─── */
-.cd-wrap{background:#fff;border-radius:14px;overflow:hidden;}
-.cd-hd{background:#fff;border-bottom:1px solid #f0f0f0;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;}
-.cd-hd-l{font-size:13px;font-weight:700;color:#1d1d1f;letter-spacing:-.2px;}
-.cd-body{padding:16px 18px;}
-/* Twin man-hour gauges */
-.cd-gauges{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
-.cd-gauge{display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:12px;border:1px solid rgba(46,109,164,.1);background:linear-gradient(135deg,rgba(46,109,164,.05),rgba(26,122,60,.05));}
-.cd-arc-wrap{position:relative;width:64px;height:64px;flex-shrink:0;}
-.cd-arc-wrap svg{display:block;}
-.cd-arc-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.cd-arc-n{font-size:16px;font-weight:800;color:#1d1d1f;letter-spacing:-1px;line-height:1;}
-.cd-arc-l{font-size:7px;font-weight:600;color:#9d9da3;text-transform:uppercase;letter-spacing:.05em;}
-.cd-g-meta{flex:1;min-width:0;}
-.cd-g-title{font-size:12px;font-weight:700;color:#1d1d1f;margin-bottom:2px;letter-spacing:-.2px;}
-.cd-g-sub{font-size:10px;color:#6e6e73;line-height:1.4;}
-/* KPI strip */
-.cd-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
-.cd-stat{text-align:center;padding:10px 6px;background:#f7f8fa;border-radius:10px;}
-.cd-stat-n{font-size:16px;font-weight:800;color:#1d1d1f;letter-spacing:-.5px;line-height:1;}
-.cd-stat-l{font-size:9px;font-weight:600;color:#9d9da3;text-transform:uppercase;letter-spacing:.04em;margin-top:5px;}
-/* Coverage rows */
-.cd-cov-hd{font-size:10px;font-weight:700;color:#9d9da3;text-transform:uppercase;letter-spacing:.06em;margin-bottom:11px;}
-.cd-cov{display:grid;grid-template-columns:92px 1fr 34px;align-items:center;gap:8px;margin-bottom:9px;}
-.cd-cov-lbl{font-size:11px;font-weight:600;color:#424245;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cd-cov-bar{height:9px;background:#f0f0f0;border-radius:5px;overflow:hidden;}
-.cd-cov-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#34c267,#2e6da4);transition:width .5s ease;}
-.cd-cov-pct{font-size:11px;font-weight:700;color:#1d1d1f;text-align:right;}
+/* ─── EXPORT MOCKUP ─── */
+.xp-wrap{background:#fff;border-radius:14px;overflow:hidden;}
+.xp-hd{background:#fff;border-bottom:1px solid #f0f0f0;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;}
+.xp-hd-l{font-size:13px;font-weight:700;color:#1d1d1f;letter-spacing:-.2px;}
+.xp-body{padding:14px 18px;}
+.xp-row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;border:1px solid #eee;margin-bottom:9px;}
+.xp-ic{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:linear-gradient(135deg,#e6f4ea,#c3e6cb);}
+.xp-meta{flex:1;min-width:0;}
+.xp-name{font-size:12.5px;font-weight:700;color:#1d1d1f;letter-spacing:-.2px;}
+.xp-sub{font-size:10px;color:#9d9da3;margin-top:2px;}
+.xp-size{font-size:10px;font-weight:600;color:#6e6e73;background:#f5f5f7;padding:3px 8px;border-radius:6px;flex-shrink:0;}
+.xp-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:11px;background:linear-gradient(135deg,#1a7a3c,#2e6da4);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:-.1px;margin-top:5px;}
+.xp-note{text-align:center;font-size:10px;color:#9d9da3;margin-top:11px;}
 
 /* ── MODULES GRID ── */
 .mods{padding:100px 36px;background:#f2f2f7;}
@@ -713,76 +698,64 @@ table.st tbody tr.hi td{color:rgba(255,255,255,.82);}
   </div>
 </section>
 
-<!-- ── FEATURE 4: Compliance Dashboard (white) ── -->
+<!-- ── FEATURE 4: Excel Export (white) ── -->
 <section class="sec seclight">
   <div class="seci">
     <div class="rr">
       <div class="smk tr reveal-r">
         <div class="smki">
-          <div class="cd-wrap">
-            <div class="cd-hd">
-              <span class="cd-hd-l">Compliance Dashboard — FY 2026-27</span>
-              <span style="background:linear-gradient(135deg,#1a7a3c,#2e6da4);color:#fff;padding:3px 10px;border-radius:20px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Live</span>
+          <div class="xp-wrap">
+            <div class="xp-hd">
+              <span class="xp-hd-l">Export Centre — FY 2026-27</span>
+              <span style="background:linear-gradient(135deg,#1a7a3c,#2e6da4);color:#fff;padding:3px 10px;border-radius:20px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;">XLSX</span>
             </div>
-            <div class="cd-body">
-              <!-- Twin man-hour compliance gauges -->
-              <div class="cd-gauges">
-                <div class="cd-gauge">
-                  <div class="cd-arc-wrap">
-                    <svg width="64" height="64" viewBox="0 0 64 64">
-                      <circle cx="32" cy="32" r="26" fill="none" stroke="#f0f0f0" stroke-width="7"/>
-                      <circle cx="32" cy="32" r="26" fill="none" stroke="url(#cdbc)" stroke-width="7"
-                        stroke-dasharray="127.4 163.4" stroke-linecap="round" transform="rotate(-90 32 32)"/>
-                      <defs><linearGradient id="cdbc" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2e6da4"/><stop offset="100%" stop-color="#5aa0d8"/></linearGradient></defs>
-                    </svg>
-                    <div class="cd-arc-txt"><span class="cd-arc-n">78%</span><span class="cd-arc-l">BC</span></div>
-                  </div>
-                  <div class="cd-g-meta">
-                    <div class="cd-g-title">Blue Collar</div>
-                    <div class="cd-g-sub">9.4 of 12 h<br>per employee</div>
-                  </div>
+            <div class="xp-body">
+              <div class="xp-row">
+                <div class="xp-ic">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="2.5" width="14" height="15" rx="2" stroke="#1a7a3c" stroke-width="1.5"/><path d="M7 7l6 6M13 7l-6 6" stroke="#1a7a3c" stroke-width="1.5" stroke-linecap="round"/></svg>
                 </div>
-                <div class="cd-gauge">
-                  <div class="cd-arc-wrap">
-                    <svg width="64" height="64" viewBox="0 0 64 64">
-                      <circle cx="32" cy="32" r="26" fill="none" stroke="#f0f0f0" stroke-width="7"/>
-                      <circle cx="32" cy="32" r="26" fill="none" stroke="url(#cdwc)" stroke-width="7"
-                        stroke-dasharray="148.7 163.4" stroke-linecap="round" transform="rotate(-90 32 32)"/>
-                      <defs><linearGradient id="cdwc" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a7a3c"/><stop offset="100%" stop-color="#34c267"/></linearGradient></defs>
-                    </svg>
-                    <div class="cd-arc-txt"><span class="cd-arc-n">91%</span><span class="cd-arc-l">WC</span></div>
-                  </div>
-                  <div class="cd-g-meta">
-                    <div class="cd-g-title">White Collar</div>
-                    <div class="cd-g-sub">21.8 of 24 h<br>per employee</div>
-                  </div>
+                <div class="xp-meta"><div class="xp-name">Monthly Summary</div><div class="xp-sub">6 sheets · 735 rows</div></div>
+                <span class="xp-size">84 KB</span>
+              </div>
+              <div class="xp-row">
+                <div class="xp-ic">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="2.5" width="14" height="15" rx="2" stroke="#1a7a3c" stroke-width="1.5"/><path d="M7 7l6 6M13 7l-6 6" stroke="#1a7a3c" stroke-width="1.5" stroke-linecap="round"/></svg>
                 </div>
+                <div class="xp-meta"><div class="xp-name">Coverage Report</div><div class="xp-sub">by type × collar · 48 rows</div></div>
+                <span class="xp-size">31 KB</span>
               </div>
-              <!-- KPI strip -->
-              <div class="cd-stats">
-                <div class="cd-stat"><div class="cd-stat-n">18,420</div><div class="cd-stat-l">Man-Hours</div></div>
-                <div class="cd-stat"><div class="cd-stat-n">16.2 h</div><div class="cd-stat-l">Avg / Emp</div></div>
-                <div class="cd-stat"><div class="cd-stat-n">7 / 10</div><div class="cd-stat-l">On Track</div></div>
+              <div class="xp-row">
+                <div class="xp-ic">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="2.5" width="14" height="15" rx="2" stroke="#1a7a3c" stroke-width="1.5"/><path d="M7 7l6 6M13 7l-6 6" stroke="#1a7a3c" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
+                <div class="xp-meta"><div class="xp-name">Attendance Log</div><div class="xp-sub">2A records · 1,240 rows</div></div>
+                <span class="xp-size">156 KB</span>
               </div>
-              <!-- Coverage by programme type -->
-              <div class="cd-cov-hd">Coverage by Type</div>
-              <div class="cd-cov"><span class="cd-cov-lbl">Technical</span><div class="cd-cov-bar"><div class="cd-cov-fill" style="width:84%"></div></div><span class="cd-cov-pct">84%</span></div>
-              <div class="cd-cov"><span class="cd-cov-lbl">EHS / HR</span><div class="cd-cov-bar"><div class="cd-cov-fill" style="width:92%"></div></div><span class="cd-cov-pct">92%</span></div>
-              <div class="cd-cov"><span class="cd-cov-lbl">Behavioural</span><div class="cd-cov-bar"><div class="cd-cov-fill" style="width:71%"></div></div><span class="cd-cov-pct">71%</span></div>
-              <div class="cd-cov"><span class="cd-cov-lbl">Cane</span><div class="cd-cov-bar"><div class="cd-cov-fill" style="width:79%"></div></div><span class="cd-cov-pct">79%</span></div>
+              <div class="xp-row">
+                <div class="xp-ic">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="2.5" width="14" height="15" rx="2" stroke="#1a7a3c" stroke-width="1.5"/><path d="M7 7l6 6M13 7l-6 6" stroke="#1a7a3c" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
+                <div class="xp-meta"><div class="xp-name">Compliance MIS</div><div class="xp-sub">all plants · 10 sheets</div></div>
+                <span class="xp-size">92 KB</span>
+              </div>
+              <div class="xp-btn">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v8m0 0L5 7m3 3l3-3M3 13h10" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Download all · 4 reports
+              </div>
+              <div class="xp-note">Pre-formatted &amp; board-ready — opens straight in Excel.</div>
             </div>
           </div>
         </div>
       </div>
       <div class="reveal">
-        <p class="sectag">Compliance Dashboard</p>
-        <h2 class="sech" style="color:#1d1d1f;">Know where<br>every plant<br>stands.</h2>
-        <p class="secsub">Man-hour compliance against the 12 h blue-collar and 24 h white-collar yearly mandate, coverage % by programme type, and a live cross-plant ranking — the numbers leadership asks for, ready before they ask.</p>
+        <p class="sectag">Excel Export</p>
+        <h2 class="sech" style="color:#1d1d1f;">One click.<br>Board-ready<br>reports.</h2>
+        <p class="secsub">Every view — Monthly Summary, coverage, attendance, compliance MIS — exports to fully formatted Excel in one click. No copy-paste, no manual formatting. The file leadership and auditors expect, ready the moment they ask.</p>
         <div class="spills">
-          <span class="spill"><span class="spilld" style="background:#2e6da4;"></span>Man-hour gauges</span>
-          <span class="spill"><span class="spilld" style="background:#34c267;"></span>Coverage % by type</span>
-          <span class="spill"><span class="spilld" style="background:#f5a623;"></span>Cross-plant ranking</span>
-          <span class="spill"><span class="spilld" style="background:#a78bfa;"></span>Live KPIs</span>
+          <span class="spill"><span class="spilld" style="background:#2e6da4;"></span>Monthly Summary</span>
+          <span class="spill"><span class="spilld" style="background:#34c267;"></span>Coverage report</span>
+          <span class="spill"><span class="spilld" style="background:#f5a623;"></span>Attendance log</span>
+          <span class="spill"><span class="spilld" style="background:#a78bfa;"></span>Compliance MIS</span>
         </div>
       </div>
     </div>
