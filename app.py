@@ -331,6 +331,16 @@ anomalies.        _register(app)
 effectiveness.    _register(app)
 admin.            _register(app)
 
+
+# Force a logged-in user with must_change_password set to actually rotate it —
+# the login redirect alone is bypassable by navigating to any other URL.
+_PW_CHANGE_EXEMPT = {'change_password', 'logout', 'login', 'login_2fa',
+                     'self_2fa_setup', 'static', 'health'}
+@app.before_request
+def _enforce_password_change():
+    if session.get('must_change_password') and (request.endpoint or '') not in _PW_CHANGE_EXEMPT:
+        return redirect(url_for('change_password'))
+
 # Rate-limit login: 20/min per IP AND 5/min per username (botnet bypass mitigation)
 def _login_user_key():
     return (request.form.get('username') or '').strip().lower() or get_remote_address()

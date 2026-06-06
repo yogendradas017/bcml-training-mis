@@ -362,6 +362,7 @@ def _register(app):
                 session['role']         = user['role']
                 session['plant_id']     = user['plant_id']
                 session['totp_enabled'] = bool(user['totp_enabled'])
+                session['must_change_password'] = bool(user['must_change_password'])
                 if user['plant_id']:
                     session['plant_name'] = PLANT_MAP[user['plant_id']]['name']
                     session['unit_code']  = PLANT_MAP[user['plant_id']]['unit_code']
@@ -415,6 +416,7 @@ def _register(app):
                 session['role']         = user['role']
                 session['plant_id']     = user['plant_id']
                 session['totp_enabled'] = True
+                session['must_change_password'] = bool(user['must_change_password'])
                 if user['plant_id'] and user['plant_id'] in PLANT_MAP:
                     session['plant_name'] = PLANT_MAP[user['plant_id']]['name']
                     session['unit_code']  = PLANT_MAP[user['plant_id']]['unit_code']
@@ -739,6 +741,7 @@ def _register(app):
             db.execute('UPDATE users SET password=?, must_change_password=0 WHERE id=?',
                        (generate_password_hash(new_pw), session['user_id']))
             db.commit()
+            session.pop('must_change_password', None)   # lift the before_request gate
             log_action('PWD_CHANGE', 'self')
             flash('Password changed successfully.', 'success')
             role = session.get('role')
