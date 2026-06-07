@@ -329,10 +329,11 @@ if (addProgName && addProgSugg) {
         .then(data => {
           addProgSugg.innerHTML = '';
           if (!Array.isArray(data) || !data.length) { addProgSugg.style.display = 'none'; return; }
+          const esc = s => { const x = document.createElement('div'); x.textContent = (s==null?'':String(s)); return x.innerHTML; };
           data.forEach(d => {
             const el = document.createElement('div');
             el.style.cssText = 'cursor:pointer;padding:8px 14px;font-size:13px;border-bottom:1px solid #f0f0f0;';
-            el.innerHTML = `<strong>${d.name}</strong> <small style="color:#9ca3af;">${d.prog_type||''}</small>`;
+            el.innerHTML = `<strong>${esc(d.name)}</strong> <small style="color:#9ca3af;">${esc(d.prog_type)||''}</small>`;
             el.onmouseenter = () => el.style.background = '#eff6ff';
             el.onmouseleave = () => el.style.background = '';
             el.onclick = () => {

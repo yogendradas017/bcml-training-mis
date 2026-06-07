@@ -572,6 +572,7 @@ const TNI = {
     };
 
     const offset = (page - 1) * perPage;
+    const esc = s => { const d = document.createElement('div'); d.textContent = (s==null?'':String(s)); return d.innerHTML; };
     tbody.innerHTML = rows.map((r, i) => {
       const collarBadge = r.collar === 'Blue Collared'
         ? '<span class="badge badge-bc">Blue</span>'
@@ -597,11 +598,11 @@ const TNI = {
       return `<tr>
         <td class="sticky-l"><input type="checkbox" class="cb-row tni-cb-row" data-id="${r.id}" ${chk}></td>
         <td>${offset+i+1}</td>
-        <td class="sticky-l" style="left:36px;"><strong>${r.name}</strong><br><small class="text-muted">${r.emp_code}</small></td>
+        <td class="sticky-l" style="left:36px;"><strong>${esc(r.name)}</strong><br><small class="text-muted">${esc(r.emp_code)}</small></td>
         <td>${collarBadge}</td>
-        <td>${r.department||'—'}</td>
-        <td><strong>${r.programme_name}</strong></td>
-        <td><span class="badge-unit">${r.prog_type||'—'}</span></td>
+        <td>${esc(r.department)||'—'}</td>
+        <td><strong>${esc(r.programme_name)}</strong></td>
+        <td><span class="badge-unit">${esc(r.prog_type)||'—'}</span></td>
         <td>${r.mode||'—'}</td>
         <td>${srcCell}</td>
         <td>${r.planned_hours}</td>

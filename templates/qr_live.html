@@ -221,15 +221,18 @@ function refresh() {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No scans yet. Waiting…</td></tr>';
         return;
       }
+      // XSS guard: employee/dept names are free-text; escape before innerHTML so
+      // a malicious name cannot run script in this central/admin monitor.
+      const esc = s => { const d = document.createElement('div'); d.textContent = (s==null?'':String(s)); return d.innerHTML; };
       tbody.innerHTML = data.rows.map((r, i) => `
         <tr>
           <td style="padding:6px 14px;color:#9ca3af;">${i+1}</td>
-          <td style="padding:6px 14px;font-family:monospace;">${r.emp_code}</td>
-          <td style="padding:6px 14px;font-weight:500;">${r.name||'—'}</td>
-          ${IS_CENTRAL ? `<td style="padding:6px 14px;"><span class="badge-unit">${r.unit_code||'—'}</span></td>` : ''}
-          <td style="padding:6px 14px;">${r.designation||'—'}</td>
-          <td style="padding:6px 14px;">${r.department||'—'}</td>
-          <td style="padding:6px 14px;color:#6b7280;">${(r.scanned_at||'').slice(0,16)||'—'}</td>
+          <td style="padding:6px 14px;font-family:monospace;">${esc(r.emp_code)}</td>
+          <td style="padding:6px 14px;font-weight:500;">${esc(r.name)||'—'}</td>
+          ${IS_CENTRAL ? `<td style="padding:6px 14px;"><span class="badge-unit">${esc(r.unit_code)||'—'}</span></td>` : ''}
+          <td style="padding:6px 14px;">${esc(r.designation)||'—'}</td>
+          <td style="padding:6px 14px;">${esc(r.department)||'—'}</td>
+          <td style="padding:6px 14px;color:#6b7280;">${esc((r.scanned_at||'').slice(0,16))||'—'}</td>
         </tr>`).join('');
 
       if (data.rows.length > 0)

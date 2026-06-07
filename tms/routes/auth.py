@@ -451,7 +451,7 @@ def _register(app):
         rows = db.execute('''
             SELECT u.id, u.username, u.role, u.must_change_password,
                    u.failed_attempts, u.locked_until,
-                   u.totp_enabled, u.totp_secret,
+                   u.totp_enabled,
                    p.name AS plant_name
             FROM users u
             LEFT JOIN plants p ON p.id = u.plant_id

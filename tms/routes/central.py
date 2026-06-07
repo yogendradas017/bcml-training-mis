@@ -426,6 +426,10 @@ def _register(app):
             })
 
         # Auto-insight — rule-based, no AI
+        # insights render with |safe in the template (intended <strong> markup),
+        # so every interpolated DATA value (plant/category/username) is HTML-escaped
+        # here to prevent stored XSS via a crafted username/category label.
+        from markupsafe import escape as _esc
         insights = []
         if worst_unit['cnt'] > 0 and best_unit['cnt'] >= 0 and len(units_with_errors) > 1:
             ratio = (worst_unit['cnt'] / max(1, best_unit['cnt']))
@@ -433,16 +437,16 @@ def _register(app):
                 worst_row = next((u for u in unit_comparison if u['plant_name'] == worst_unit['name']), None)
                 if worst_row:
                     insights.append(
-                        f"<strong>{worst_unit['name']}</strong> has {ratio:.1f}× more errors than "
-                        f"<strong>{best_unit['name']}</strong> this FY. "
-                        f"Top issue: <strong>{worst_row['top_cat']}</strong> ({worst_row['top_cat_pct']}% of errors). "
-                        f"Recommend: targeted training session for SPOC <strong>{worst_row['top_user']}</strong>."
+                        f"<strong>{_esc(worst_unit['name'])}</strong> has {ratio:.1f}× more errors than "
+                        f"<strong>{_esc(best_unit['name'])}</strong> this FY. "
+                        f"Top issue: <strong>{_esc(worst_row['top_cat'])}</strong> ({worst_row['top_cat_pct']}% of errors). "
+                        f"Recommend: targeted training session for SPOC <strong>{_esc(worst_row['top_user'])}</strong>."
                     )
         if category_summary and category_summary[0]['pct'] >= 50:
             top_cat = category_summary[0]
             insights.append(
-                f"<strong>{top_cat['label']}</strong> accounts for {top_cat['pct']}% of all errors fleet-wide. "
-                f"Root cause: {top_cat['desc'].lower()}. Add this to next SPOC refresher deck."
+                f"<strong>{_esc(top_cat['label'])}</strong> accounts for {top_cat['pct']}% of all errors fleet-wide. "
+                f"Root cause: {_esc(top_cat['desc'].lower())}. Add this to next SPOC refresher deck."
             )
         if trend_dir == 'up' and this_month_cnt > 0:
             insights.append(

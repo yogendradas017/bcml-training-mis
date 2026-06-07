@@ -82,6 +82,7 @@
 
 <script>
 const TOKEN = '{{ token }}';
+const esc = s => { const d = document.createElement('div'); d.textContent = (s==null?'':String(s)); return d.innerHTML; };
 const T = {
   nomatch:    {% if lang=='hi' %}'कोई मिलान नहीं मिला'{% else %}'No match found'{% endif %},
   unavail:    {% if lang=='hi' %}'खोज उपलब्ध नहीं — पुनः प्रयास करें'{% else %}'Search unavailable — try again'{% endif %},
@@ -111,9 +112,9 @@ searchBox.addEventListener('input', () => {
           data.forEach(d => {
             const el = document.createElement('div');
             el.className = 'search-item';
-            el.innerHTML = `<strong>${d.name}</strong> <span style="color:#6b7280">${d.emp_code}</span>
-                            ${d.unit_code ? `<span class="badge bg-secondary ms-1" style="font-size:10px;">${d.unit_code}</span>` : ''}<br>
-                            <small style="color:#9ca3af">${d.designation||''} ${d.department?'· '+d.department:''}</small>`;
+            el.innerHTML = `<strong>${esc(d.name)}</strong> <span style="color:#6b7280">${esc(d.emp_code)}</span>
+                            ${d.unit_code ? `<span class="badge bg-secondary ms-1" style="font-size:10px;">${esc(d.unit_code)}</span>` : ''}<br>
+                            <small style="color:#9ca3af">${esc(d.designation)||''} ${d.department?'· '+esc(d.department):''}</small>`;
             el.onclick = () => selectEmp(d);
             suggestions.appendChild(el);
           });

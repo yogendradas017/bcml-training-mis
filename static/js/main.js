@@ -280,12 +280,13 @@ const PROG_AC = (() => {
         .sort((a,b) => b.s - a.s)
         .slice(0, 8);
       if (!scored.length) return;
+      const esc = s => { const e = document.createElement('div'); e.textContent = (s==null?'':String(s)); return e.innerHTML; };
       scored.forEach(({n, s}) => {
         const d = document.createElement('div');
         const isExact = n.toLowerCase() === ql;
         const tag = isExact ? '' : s >= 0.75
           ? '<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;margin-left:6px;">similar</span>' : '';
-        d.innerHTML = `<span style="font-size:13px;">${n}</span>${tag}`;
+        d.innerHTML = `<span style="font-size:13px;">${esc(n)}</span>${tag}`;
         d.style.cssText = 'padding:8px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
         d.onmouseenter = () => d.style.background='#f8fafc';
         d.onmouseleave = () => d.style.background='';

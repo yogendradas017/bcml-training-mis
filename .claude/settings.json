@@ -61,7 +61,16 @@
       "WebFetch(domain:render.discourse.group)",
       "WebSearch",
       "Bash(git apply *)",
-      "mcp__render__list_logs"
+      "mcp__render__list_logs",
+      "Bash(curl -s -o /dev/null -w \"login:%{http_code}\\\\n\" http://localhost:5000/login)",
+      "Bash(xargs -I {} bash -c 'echo \"=== {} ===\" && grep -A 10 \"id=.*[Tt]able\" \"{}\" | head -15')",
+      "Bash(cd /tmp)",
+      "Read(//c/Users/yogendra.das/AppData/Local/Temp/tms_p1_patches/**)",
+      "Bash(python -c \"import json; d=json.load\\(open\\(r'c:/Users/yogendra.das/AppData/Local/Temp/fs_scan.json'\\)\\); print\\(len\\(d['values']\\), d['total_occurrences'], len\\(d['files']\\)\\)\")",
+      "Bash(python _tmp_replace.py)",
+      "mcp__render__list_services",
+      "Bash(cd /c/Users/yogendra.das/Desktop/\"Training Management System\" && grep -A 5 \"@app.route.*health\" app.py)",
+      "Read(//c/c/Users/yogendra.das/Desktop/Training Management System/**)"
     ]
   }
 }
