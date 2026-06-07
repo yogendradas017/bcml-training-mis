@@ -45,12 +45,20 @@ def _validate_token(token, db, check_expiry=True):
 
 
 def _recompute_feedback_aggregates(plant_id, session_code, db):
-    """Recompute course/faculty feedback aggregates for a session.
+    """Fold QR feedback averages into the session's 2C row IF one exists.
 
-    Audit Tier 2 fix: if no programme_details (2C) row exists yet, INSERT a stub
-    with what we know from calendar. Previously this was a silent UPDATE no-op
-    leaving the aggregates orphaned until SPOC opened 2C — at which point the
-    2C INSERT overwrote them with blank form values.
+    COALESCE-only: fills ONLY the feedback columns the SPOC left NULL, so it
+    never clobbers manually-entered 2C feedback. If no programme_details (2C)
+    row exists yet, this is a deliberate no-op — the responses live safely in
+    feedback_response (the feedback report reads them directly) and are folded
+    in when the SPOC saves 2C (add_programme_details calls this after insert).
+
+    We intentionally do NOT create a stub programme_details row here. The old
+    stub (audit Tier 2) caused a CRITICAL chain break: it tripped the
+    'already recorded' guard so the real 2C save returned early (its merge
+    branch became dead code), and _sync_calendar_from_2c auto-promoted the
+    stub to 'Conducted' — fabricating a phantom conducted programme with 0
+    hours, no faculty/cost, no verification, and no effectiveness seeding.
     """
     row = db.execute('''
         SELECT
@@ -71,36 +79,13 @@ def _recompute_feedback_aggregates(plant_id, session_code, db):
     prog_avg    = _avg([row['q1'], row['q2'], row['q3'], row['q4'], row['q5']])
     trainer_avg = _avg([row['q6'], row['q7'], row['q8'], row['q9']])
 
-    cur = db.execute('''UPDATE programme_details SET
-                   course_feedback=?, faculty_feedback=?,
-                   trainer_fb_participants=?, trainer_fb_facilities=?
+    db.execute('''UPDATE programme_details SET
+                   course_feedback         = COALESCE(course_feedback, ?),
+                   faculty_feedback        = COALESCE(faculty_feedback, ?),
+                   trainer_fb_participants = COALESCE(trainer_fb_participants, ?),
+                   trainer_fb_facilities   = COALESCE(trainer_fb_facilities, ?)
                   WHERE plant_id=? AND session_code=?''',
                (prog_avg, trainer_avg, row['q8'], row['q9'], plant_id, session_code))
-    if cur.rowcount == 0:
-        # No 2C row yet — stub one from calendar so feedback isn't lost.
-        cal = db.execute(
-            'SELECT programme_name, prog_type, mode, target_audience, plan_start, plan_end, '
-            'time_from, time_to '
-            'FROM calendar WHERE plant_id=? AND session_code=? LIMIT 1',
-            (plant_id, session_code)
-        ).fetchone()
-        if cal:
-            db.execute('''INSERT INTO programme_details
-                (plant_id, session_code, programme_name, prog_type, mode,
-                 audience, start_date, end_date, time_from, time_to,
-                 course_feedback, faculty_feedback,
-                 trainer_fb_participants, trainer_fb_facilities)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                (plant_id, session_code,
-                 cal['programme_name'] or '',
-                 cal['prog_type'] or '',
-                 cal['mode'] or '',
-                 cal['target_audience'] or '',
-                 cal['plan_start'] or '',
-                 cal['plan_end'] or '',
-                 cal['time_from'] or None,
-                 cal['time_to'] or None,
-                 prog_avg, trainer_avg, row['q8'], row['q9']))
 
 
 def _make_qr_png(url):

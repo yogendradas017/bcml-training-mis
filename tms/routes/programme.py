@@ -597,6 +597,13 @@ def _register(app):
                  anom_pd))
         db.commit()
 
+        # Fold any QR feedback collected before 2C into this row. COALESCE-only,
+        # so SPOC-entered feedback is preserved and only blank fields get the QR
+        # averages. (Replaces the old phantom-stub mechanism.)
+        from tms.routes.qr import _recompute_feedback_aggregates
+        _recompute_feedback_aggregates(plant_id, session_code, db)
+        db.commit()
+
         now_iso  = _now_ist().isoformat(timespec='seconds')
         user_id  = session.get('user_id')
         username = session.get('username', '')

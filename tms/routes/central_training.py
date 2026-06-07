@@ -296,8 +296,12 @@ def _register(app):
         # Mirrors plant-side delete_calendar pattern; safe because Conducted is blocked above.
         db.execute('DELETE FROM session_qr WHERE plant_id=? AND session_code=?',
                    (CENTRAL_PLANT_ID, sc))
-        db.execute('DELETE FROM emp_training WHERE plant_id=? AND session_code=?',
-                   (CENTRAL_PLANT_ID, sc))
+        # Central attendees are stored under their HOME plant_id with
+        # host_plant_id=99, so deleting only plant_id=99 rows orphaned them —
+        # leaving phantom man-hours that inflated Summary + central rollup
+        # forever. Delete by session_code + host_plant_id to catch them.
+        db.execute('DELETE FROM emp_training WHERE session_code=? AND (plant_id=? OR host_plant_id=?)',
+                   (sc, CENTRAL_PLANT_ID, CENTRAL_PLANT_ID))
         db.execute('DELETE FROM effectiveness_review WHERE plant_id=? AND session_code=?',
                    (CENTRAL_PLANT_ID, sc))
         db.execute('DELETE FROM calendar WHERE id=? AND plant_id=?',

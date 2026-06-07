@@ -93,13 +93,19 @@ def _tni_is_locked():
 
 
 def _recompute_session_actuals(plant_id, session_code, db):
-    """Refresh calendar.actual_pax + actual_hrs from emp_training. Idempotent."""
+    """Refresh calendar.actual_pax + actual_hrs from emp_training. Idempotent.
+
+    Host-aware: a central (plant 99) session's attendees are stored under their
+    HOME plant_id with host_plant_id=99, so matching only plant_id=99 would miss
+    them all and leave the central calendar's actuals stuck at 0. Match
+    (plant_id OR host_plant_id) = the calendar row's plant. For ordinary plant
+    sessions host_plant_id is NULL, so the OR adds nothing — safe both ways."""
     if not session_code:
         return
     r = db.execute(
         'SELECT COUNT(*) AS pax, COALESCE(SUM(hrs),0) AS hrs '
-        'FROM emp_training WHERE plant_id=? AND session_code=?',
-        (plant_id, session_code)).fetchone()
+        'FROM emp_training WHERE session_code=? AND (plant_id=? OR host_plant_id=?)',
+        (session_code, plant_id, plant_id)).fetchone()
     db.execute(
         'UPDATE calendar SET actual_pax=?, actual_hrs=? WHERE session_code=? AND plant_id=?',
         (r['pax'], r['hrs'], session_code, plant_id))
@@ -428,18 +434,25 @@ def _calc_summary(plant_id, month_filter, db):
     month_central_clause = f"AND strftime('%m', et.start_date)='{mn}'" if mn else ("AND 1=0" if month_filter else "")
     month_pdx_clause     = f"AND strftime('%m', pd.start_date)='{mn}'" if mn else ("AND 1=0" if month_filter else "")
 
-    # Query 1: programme_details aggregates per prog_type
+    # Query 1: programme_details aggregates per prog_type.
+    # Count only CONDUCTED programmes (policy: a 2C row sitting in 'Awaiting
+    # Verification' must NOT be counted until Central verifies it — this matches
+    # the Dashboard/export 'Conducted' gate so the screens agree). LEFT JOIN so
+    # legacy 'New Program' 2C rows that have no calendar entry are still counted.
     pd_rows = db.execute(f'''
-        SELECT prog_type,
-               COUNT(DISTINCT CASE WHEN audience='Blue Collared'  THEN programme_name END) AS bc_progs,
-               COUNT(DISTINCT CASE WHEN audience='White Collared' THEN programme_name END) AS wc_progs,
-               COUNT(DISTINCT CASE WHEN audience='Common'         THEN programme_name END) AS common_progs,
-               COUNT(DISTINCT programme_name) AS total_progs,
-               COUNT(DISTINCT CASE WHEN int_ext='Internal' THEN programme_name END) AS int_prog,
-               COUNT(DISTINCT CASE WHEN int_ext='External' THEN programme_name END) AS ext_prog
+        SELECT p.prog_type AS prog_type,
+               COUNT(DISTINCT CASE WHEN p.audience='Blue Collared'  THEN p.programme_name END) AS bc_progs,
+               COUNT(DISTINCT CASE WHEN p.audience='White Collared' THEN p.programme_name END) AS wc_progs,
+               COUNT(DISTINCT CASE WHEN p.audience='Common'         THEN p.programme_name END) AS common_progs,
+               COUNT(DISTINCT p.programme_name) AS total_progs,
+               COUNT(DISTINCT CASE WHEN p.int_ext='Internal' THEN p.programme_name END) AS int_prog,
+               COUNT(DISTINCT CASE WHEN p.int_ext='External' THEN p.programme_name END) AS ext_prog
         FROM programme_details p
+        LEFT JOIN calendar c
+               ON c.session_code=p.session_code AND c.plant_id=p.plant_id
         WHERE p.plant_id=? {month_pd_clause}
-        GROUP BY prog_type
+          AND (c.session_code IS NULL OR c.status='Conducted')
+        GROUP BY p.prog_type
     ''', [plant_id]).fetchall()
     pd_map = {r['prog_type']: dict(r) for r in pd_rows}
 
