@@ -1,6 +1,8 @@
 import io
+import hmac
 import secrets
 import datetime
+from urllib.parse import urlparse
 
 import qrcode
 from flask import (abort, flash, jsonify, redirect, render_template,
@@ -86,6 +88,23 @@ def _recompute_feedback_aggregates(plant_id, session_code, db):
                    trainer_fb_facilities   = COALESCE(trainer_fb_facilities, ?)
                   WHERE plant_id=? AND session_code=?''',
                (prog_avg, trainer_avg, row['q8'], row['q9'], plant_id, session_code))
+
+
+def _is_cross_origin_post():
+    """For the CSRF-exempt public QR POSTs: block forged cross-site submissions.
+    Flask-WTF CSRF is exempted on these routes (phone scans carry no session), so
+    we fall back to an Origin/Referer same-host check. If the browser sent an
+    Origin/Referer and its host differs from ours, reject; absent header (some
+    mobile scanners strip Referer on same-origin form posts) is allowed."""
+    if request.method != 'POST':
+        return False
+    origin = request.headers.get('Origin') or request.headers.get('Referer') or ''
+    if not origin:
+        return False
+    try:
+        return urlparse(origin).netloc != request.host
+    except Exception:
+        return True
 
 
 def _make_qr_png(url):
@@ -552,9 +571,12 @@ def _register(app):
     @app.route('/q/<token>/emp-search')
     def qr_emp_search(token):
         db = get_db()
-        row = db.execute('SELECT plant_id FROM session_qr WHERE token=? AND is_active=1',
+        row = db.execute('SELECT plant_id, expires_at FROM session_qr WHERE token=? AND is_active=1',
                          (token,)).fetchone()
         if not row:
+            return jsonify([])
+        # Honour token expiry — an expired QR must not keep leaking the directory.
+        if row['expires_at'] and _now_iso() > row['expires_at']:
             return jsonify([])
         q = request.args.get('q', '').strip()
         if len(q) < 2:
@@ -615,9 +637,13 @@ def _register(app):
             return render_template('qr_attendance.html', qr=qr, token=token,
                                    has_pin=bool(qr['session_pin']), error=error, lang=lang)
 
+        if _is_cross_origin_post():
+            return _att_err('Could not verify the request origin. Please rescan the QR and try again.')
+
         if qr['session_pin']:
             entered_pin = request.form.get('session_pin', '').strip()
-            if entered_pin != qr['session_pin']:
+            # Constant-time compare to avoid leaking the PIN via response timing.
+            if not hmac.compare_digest(entered_pin, str(qr['session_pin'])):
                 return _att_err('Incorrect session code. Ask your trainer for the 4-digit code.')
 
         # GAP 6 (time gate): block scans before session start date
@@ -764,6 +790,10 @@ def _register(app):
             return render_template('qr_feedback.html', qr=qr, token=token,
                                    error=None, lang=lang)
 
+        if _is_cross_origin_post():
+            return render_template('qr_feedback.html', qr=qr, token=token, lang=lang,
+                                   error='Could not verify the request origin. Please rescan the QR and try again.')
+
         # Time gate: feedback opens once session starts
         if qr['plan_start']:
             today_iso = _today_ist().isoformat()
@@ -818,7 +848,10 @@ def _register(app):
         # submitted_at written explicitly in IST. Schema default is
         # datetime('now','localtime') = UTC on Render (server TZ is UTC), so the
         # default drifts feedback timestamps 5.5h behind IST. Set it ourselves.
-        db.execute('''INSERT OR REPLACE INTO feedback_response
+        # INSERT OR IGNORE (not REPLACE): once a (plant,session,emp_code) feedback
+        # row exists it is immutable, so a person who guesses another's emp_code
+        # cannot overwrite genuine feedback. First submission wins.
+        db.execute('''INSERT OR IGNORE INTO feedback_response
             (plant_id, session_code, emp_code, submitted_at,
              q_obj_explained, q_well_structured, q_content_appropriate,
              q_presentation_quality, q_time_reasonable,

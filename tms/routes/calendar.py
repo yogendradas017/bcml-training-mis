@@ -248,31 +248,20 @@ def _register(app):
                     f"or complete the reviews first.",
                     'danger')
                 return redirect(url_for('training_calendar'))
-        if f.get('status') == 'Conducted' and session.get('role') != 'admin':
-            sc = existing['session_code'] if existing else None
-            has_qr = sc and db.execute(
-                'SELECT 1 FROM session_qr WHERE plant_id=? AND session_code=? AND is_active=1',
-                (plant_id, sc)).fetchone()
-            has_feedback = sc and db.execute(
-                'SELECT 1 FROM feedback_response WHERE plant_id=? AND session_code=?',
-                (plant_id, sc)).fetchone()
-            # Tier 5: Conducted-gate now also requires at least one attendance row.
-            # Previously a SPOC could mark Conducted with zero attendees.
-            attendee_count = 0
-            if sc:
-                attendee_count = db.execute(
-                    'SELECT COUNT(*) FROM emp_training WHERE plant_id=? AND session_code=?',
-                    (plant_id, sc)).fetchone()[0]
-            missing = []
-            if not has_qr: missing.append('QR code')
-            if attendee_count == 0: missing.append('attendance (no 2A rows)')
-            if not has_feedback: missing.append('feedback responses')
-            if missing:
-                flash(
-                    "Can't mark Conducted — missing: " + ', '.join(missing) +
-                    ". Process: Generate QR → Mark Attendance → Collect Feedback.",
-                    'danger')
-                return redirect(url_for('training_calendar'))
+        # Privilege boundary: a SPOC must NOT be able to set 'Conducted' (or
+        # 'Awaiting Verification') directly via the calendar edit form. That would
+        # bypass the Central verification chokepoint — skipping the verification
+        # log, the anomaly review, and effectiveness seeding that verify_approve /
+        # 2C-save perform. The only legitimate path is: record Programme Details
+        # (2C) -> status becomes 'Awaiting Verification' -> Central approves ->
+        # 'Conducted'. Admin (trusted) may still set status directly.
+        if session.get('role') != 'admin' and new_status in ('Conducted', 'Awaiting Verification'):
+            flash(
+                "SPOCs can't set this status directly. Record Programme Details (2C) — "
+                "it is submitted to Central L&D for verification, and Central approval "
+                "marks the session Conducted.",
+                'danger')
+            return redirect(url_for('training_calendar'))
         row = {
             'programme_name': f.get('programme_name', ''),
             'prog_type':      f.get('prog_type', ''),

@@ -756,7 +756,18 @@ def _register(app):
 
         confirm_token = request.form.get('confirm')
         if confirm_token:
+            # Harden against path traversal + cross-tenant ingest: the token must
+            # be a hex token (no '../' or separators) AND must equal the one we
+            # issued to THIS session, so a SPOC cannot confirm another tenant's
+            # staged upload file.
+            if (len(confirm_token) > 64
+                    or not all(c in '0123456789abcdef' for c in confirm_token)
+                    or confirm_token != session.get('fresh_upload_token')):
+                flash('Session expired — please re-upload the file.', 'danger')
+                return redirect(url_for('tni_fresh_upload'))
             ext      = session.get('fresh_upload_ext', '.xlsx')
+            if ext not in ('.xlsx', '.xls', '.csv'):
+                ext = '.xlsx'
             tmp_path = os.path.join(TEMP_UPLOAD_DIR, f'tni_fresh_{confirm_token}{ext}')
             if not os.path.exists(tmp_path):
                 flash('Session expired — please re-upload the file.', 'danger')
@@ -977,8 +988,13 @@ def _register(app):
             flash('TNI window is closed (FY ended March 31). Contact admin to submit an override request.', 'danger')
             return redirect(url_for('tni'))
         aid  = request.form.get('aid', '')
+        # Harden against path traversal: aid is interpolated into a file path, so
+        # it must be a bare token (alphanumerics / - / _) with no separators.
+        if not aid or len(aid) > 64 or not all(c.isalnum() or c in '-_' for c in aid):
+            flash('Session expired. Please re-upload.', 'danger')
+            return redirect(url_for('tni_analyze'))
         path = os.path.join(BASE_DIR, 'data', f'tni_analyze_{aid}.json')
-        if not aid or not os.path.exists(path):
+        if not os.path.exists(path):
             flash('Session expired. Please re-upload.', 'danger')
             return redirect(url_for('tni_analyze'))
 
