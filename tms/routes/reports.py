@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from tms.db import get_db
 from tms.decorators import spoc_required
+from tms.config import get_config
 
 
 def _register(app):
@@ -12,6 +13,10 @@ def _register(app):
     def training_hours_report():
         plant_id   = session['plant_id']
         db         = get_db()
+        # Per-plant man-hour targets from config (not hardcoded 12/24) so this
+        # report agrees with the compliance gauge under per-plant overrides.
+        bc_t = get_config('mh_target_bc', 12, plant_id=plant_id)
+        wc_t = get_config('mh_target_wc', 24, plant_id=plant_id)
 
         dept_filter   = request.args.get('dept', '').strip()
         collar_filter = request.args.get('collar', '').strip()
@@ -25,7 +30,6 @@ def _register(app):
                 e.name,
                 COALESCE(e.designation, '') AS designation,
                 COALESCE(e.collar, '') AS collar,
-                CASE WHEN e.collar='Blue Collared' THEN 12 ELSE 24 END AS target_hrs,
                 COALESCE(SUM(t.hrs), 0) AS actual_hrs
             FROM employees e
             LEFT JOIN emp_training t
@@ -40,7 +44,7 @@ def _register(app):
         # Enrich + compute status
         employees = []
         for r in rows:
-            target  = r['target_hrs']
+            target  = bc_t if r['collar'] == 'Blue Collared' else wc_t
             actual  = round(r['actual_hrs'], 1)
             pct     = round(actual / target * 100, 1) if target else 0
             if actual == 0:

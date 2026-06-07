@@ -426,6 +426,11 @@ def _calc_summary(plant_id, month_filter, db):
     prog_types = 60 round-trips; now 4 GROUP BY queries × 1 = 4 round-trips.
     Same outputs, ~15× faster on cold disk."""
     fy   = _fy_label()
+    # FY date bounds — man-hours/seats must be scoped to the current financial
+    # year to match the Dashboard gauge and the /central card (which are
+    # FY-bound). Without this the same plant showed an all-time Summary total
+    # next to an FY dashboard total.
+    fy_start, fy_end = _current_fy()
     mn = MONTH_NUM.get(month_filter, '') if month_filter else ''
     # ms_* clauses force empty result when a month is selected but missing
     # from MONTH_NUM (preserves old 'AND 1=0' semantics).
@@ -466,6 +471,7 @@ def _calc_summary(plant_id, month_filter, db):
         LEFT JOIN employees e
                ON e.emp_code=et.emp_code AND e.plant_id=et.plant_id
         WHERE et.plant_id=? AND et.host_plant_id=99
+          AND et.start_date BETWEEN ? AND ?
           {month_central_clause}
           AND NOT EXISTS (
               SELECT 1 FROM programme_details pd
@@ -475,7 +481,7 @@ def _calc_summary(plant_id, month_filter, db):
               {month_pdx_clause}
           )
         GROUP BY pt_lc, et.programme_name
-    ''', [plant_id]).fetchall()
+    ''', [plant_id, fy_start, fy_end]).fetchall()
     # Per-prog_type tally: {pt_lc: {'bc':n, 'wc':n, 'common':n, 'total':n}}
     central_tally = {}
     for r in central_rows:
@@ -496,10 +502,10 @@ def _calc_summary(plant_id, month_filter, db):
                COALESCE(SUM(t.hrs),0) AS hrs
         FROM emp_training t
         JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-        WHERE t.plant_id=? {month_et_clause}
+        WHERE t.plant_id=? AND t.start_date BETWEEN ? AND ? {month_et_clause}
           AND e.collar IN ('Blue Collared', 'White Collared')
         GROUP BY t.prog_type, e.collar
-    ''', [plant_id]).fetchall()
+    ''', [plant_id, fy_start, fy_end]).fetchall()
     seat_map = {}
     for r in seat_rows:
         seat_map.setdefault(r['prog_type'], {})[r['collar']] = (r['seats'], r['hrs'])

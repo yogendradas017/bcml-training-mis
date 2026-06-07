@@ -5,6 +5,7 @@ from tms.db import get_db
 from tms.decorators import login_required, spoc_required
 import datetime
 from tms.helpers import _fy_label, _derive_audience, _calc_compliance, _current_fy, _now_ist
+from tms.config import get_config
 
 
 def _register(app):
@@ -250,6 +251,10 @@ def _register(app):
         collar = request.args.get('collar', 'ALL').upper()
         db     = get_db()
         fy_start, fy_end = _current_fy()
+        # Per-plant man-hour targets — must read config (not hardcode 12/24) so the
+        # drill-in reconciles with the compliance gauge when a plant overrides them.
+        bc_t = get_config('mh_target_bc', 12, plant_id=pid)
+        wc_t = get_config('mh_target_wc', 24, plant_id=pid)
 
         if collar == 'BC':
             collar_where = "AND e.collar='Blue Collared'"
@@ -280,7 +285,7 @@ def _register(app):
             d = dept_map[dept]
             d['emp_count']  += r['emp_count']
             d['actual_hrs'] += r['actual_hrs']
-            d['target_hrs'] += r['emp_count'] * (12 if r['collar'] == 'Blue Collared' else 24 if r['collar'] == 'White Collared' else 0)
+            d['target_hrs'] += r['emp_count'] * (bc_t if r['collar'] == 'Blue Collared' else wc_t if r['collar'] == 'White Collared' else 0)
 
         departments = []
         for d in sorted(dept_map.values(), key=lambda x: x['dept']):
@@ -303,7 +308,7 @@ def _register(app):
 
         employees = []
         for r in emp_rows:
-            tgt    = 12 if r['collar'] == 'Blue Collared' else 24 if r['collar'] == 'White Collared' else 0
+            tgt    = bc_t if r['collar'] == 'Blue Collared' else wc_t if r['collar'] == 'White Collared' else 0
             actual = round(r['actual_hrs'], 1)
             pct    = round(actual / tgt * 100, 1) if tgt else 0
             status = 'Met' if pct >= 100 else ('Zero' if actual == 0 else 'Low')
