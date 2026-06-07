@@ -24,19 +24,34 @@ def _is_ajax():
     return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
 
+# Bound bulk-upload size: MAX_CONTENT_LENGTH caps the raw bytes, but a small
+# spreadsheet can still expand to a huge row count that OOMs the single worker
+# or makes the per-row fuzzy match O(rows × master) catastrophic for ALL tenants.
+# Cap the row count post-parse (generous: full headcount × several programmes).
+_MAX_UPLOAD_ROWS = 60000
+
+
+def _enforce_row_cap(df):
+    if len(df) > _MAX_UPLOAD_ROWS:
+        raise ValueError(
+            f'File has {len(df):,} rows — the maximum per upload is '
+            f'{_MAX_UPLOAD_ROWS:,}. Split it into smaller files.')
+    return df
+
+
 def _read_upload_file(file_storage):
     import pandas as pd
     fname = file_storage.filename.lower()
     if fname.endswith('.csv'):
-        return pd.read_csv(file_storage, dtype=str).fillna('')
-    return pd.read_excel(file_storage, dtype=str).fillna('')
+        return _enforce_row_cap(pd.read_csv(file_storage, dtype=str).fillna(''))
+    return _enforce_row_cap(pd.read_excel(file_storage, dtype=str).fillna(''))
 
 
 def _read_upload_file_path(path):
     import pandas as pd
     if path.lower().endswith('.csv'):
-        return pd.read_csv(path, dtype=str).fillna('')
-    return pd.read_excel(path, dtype=str).fillna('')
+        return _enforce_row_cap(pd.read_csv(path, dtype=str).fillna(''))
+    return _enforce_row_cap(pd.read_excel(path, dtype=str).fillna(''))
 
 
 def _clean(row, keys):
