@@ -24,3 +24,22 @@ login_page.html
 login_result.html
 test_template.xlsx
 data/tmp_uploads/
+
+# Editor / local tooling
+.vscode/
+.claude/app.pid
+.claude/worktrees/
+.claude/setpw.py
+.claude/unlock.py
+.claude/test_quickadd.py
+
+# Local data / scratch artifacts — never commit (PII / not source)
+/login.html
+/Master_Programme_List.xlsx
+/TMS Dashboard*.pdf
+/Attendance & Feedback/
+docs/SPOC_Manual_Effort_Pre_TMS.*
+docs/build_tms_ppt.py
+docs/dashboard_mockup.html
+docs/lms_build_plan.html
+docs/lms_ui_mockup.html
