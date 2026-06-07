@@ -303,17 +303,22 @@ def _qc_heatmap(db, plant_id, fy_start, fy_end, trained=None):
 
 def _register(app):
 
+    # Internal design/mockup routes — gated to admin so they are not a public,
+    # unauthenticated surface in production.
     @app.route('/_dashboard-mockup')
+    @admin_required
     def _dashboard_mockup():
         """Temp: serve the mockup standalone (used inside compare iframe)."""
         return render_template('_dashboard_mockup.html')
 
     @app.route('/_dashboard-compare')
+    @admin_required
     def _dashboard_compare():
         """Temp: side-by-side current /dashboard vs proposed mockup."""
         return render_template('_dashboard_compare.html')
 
     @app.route('/_dashboard-styles')
+    @admin_required
     def _dashboard_styles():
         """Temp: Vercel vs Power BI style comparison for design direction."""
         return render_template('_dashboard_styles.html')
@@ -438,8 +443,16 @@ def _register(app):
                 flash('Invalid or expired code. Try again.', 'danger')
         return render_template('login_2fa.html')
 
-    @app.route('/logout')
+    @app.route('/logout', methods=['GET', 'POST'])
     def logout():
+        # Mitigate logout-CSRF: a cross-site GET (e.g. <img src=/logout>) carries
+        # the attacker's Origin/Referer host — reject those. Same-site clicks send
+        # our host; direct navigation sends none (allowed — that's the user).
+        ref = request.headers.get('Origin') or request.headers.get('Referer') or ''
+        if ref:
+            from urllib.parse import urlparse
+            if urlparse(ref).netloc != request.host:
+                return redirect(url_for('index'))
         log_action('LOGOUT')
         session.clear()
         return redirect(url_for('login'))

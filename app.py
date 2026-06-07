@@ -36,6 +36,15 @@ if _sentry_dsn:
 
 app = Flask(__name__)
 
+# Behind Render's reverse proxy, the socket peer is the proxy — so without this
+# every request's remote_addr is the proxy IP, collapsing per-IP rate limits
+# into one bucket (login/QR brute-force protection defeated) and logging the
+# proxy IP in the audit trail. Trust exactly one layer of X-Forwarded-* on
+# Render so get_remote_address() and audit see the real client IP.
+if os.environ.get('RENDER'):
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
 # SECRET_KEY: required on production. Refuse to start without it on Render.
 _secret = os.environ.get('SECRET_KEY')
 _on_render = bool(os.environ.get('RENDER'))

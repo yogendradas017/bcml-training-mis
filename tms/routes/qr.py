@@ -206,9 +206,13 @@ def _register(app):
     @spoc_or_central_required
     def qr_image(token):
         db = get_db()
-        row = db.execute('SELECT 1 FROM session_qr WHERE token=?', (token,)).fetchone()
+        row = db.execute('SELECT plant_id FROM session_qr WHERE token=?', (token,)).fetchone()
         if not row:
             abort(404)
+        # Plant binding: a SPOC may only render QR images for its own plant's
+        # sessions (sibling routes enforce this; this one previously did not).
+        if session.get('role') == 'spoc' and row['plant_id'] != session.get('plant_id'):
+            abort(403)
         url = request.host_url + f'q/{token}'
         buf = _make_qr_png(url)
         return send_file(buf, mimetype='image/png')
@@ -220,6 +224,9 @@ def _register(app):
     def qr_poster(token):
         db = get_db()
         qr = _validate_token(token, db, check_expiry=False)
+        # Plant binding: a SPOC may only view its own plant's session poster.
+        if session.get('role') == 'spoc' and qr['plant_id'] != session.get('plant_id'):
+            abort(403)
         qr_url = request.host_url + f'q/{token}'
         return render_template('qr_poster.html', qr=qr, token=token, qr_url=qr_url)
 
