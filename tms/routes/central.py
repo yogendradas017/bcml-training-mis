@@ -711,11 +711,10 @@ def _register(app):
         if not _hmac.compare_digest(request.args.get('token', ''), secret):
             return jsonify({'ok': False, 'error': 'invalid token'}), 403
 
+        dest = (request.args.get('dest', '') or '').strip().lower()  # '', 'disk', 'email', 'both'
         recipient = (request.args.get('to', '').strip()
                      or _os.environ.get('BACKUP_RECIPIENT', '').strip()
                      or _os.environ.get('SMTP_USER', '').strip())
-        if not recipient:
-            return jsonify({'ok': False, 'error': 'no recipient'}), 500
 
         stamp = _dt.now().strftime('%Y-%m-%d')
         tmpd = _tmp.mkdtemp()
@@ -738,26 +737,58 @@ def _register(app):
             except Exception:
                 pass
 
-        body = f"""
-        <p>TMS nightly backup — {stamp}</p>
-        <ul>
-            <li>DB source: <code>{DB_PATH}</code></li>
-            <li>Compressed size: <strong>{size_mb:.2f} MB</strong></li>
-            <li>Retention: kept in your Gmail; search "BCML TMS Backup" to find</li>
-            <li>Restore: gunzip the attachment, replace DATABASE_PATH file, restart</li>
-        </ul>
-        <p>— BCML TMS</p>
-        """
-        ok, detail = send_email(
-            to_addrs=recipient,
-            subject=f'BCML TMS Backup — {stamp}',
-            body_html=body,
-            attachments=[(f'tms_backup_{stamp}.db.gz', gz_bytes, 'application/gzip')],
-        )
+        results = {}
+
+        # --- Disk backup: gzipped snapshot on the persistent disk (default path) ---
+        if dest in ('', 'disk', 'both'):
+            import glob as _glob
+            bdir = _os2.path.join(_os2.path.dirname(_os2.path.abspath(DB_PATH)) or '.', 'backups')
+            _os2.makedirs(bdir, exist_ok=True)
+            out_path = _os2.path.join(bdir, f'tms_{stamp}.db.gz')
+            with open(out_path, 'wb') as f:
+                f.write(gz_bytes)
+            # Prune: keep the newest BACKUP_RETAIN files (default 14).
+            try:
+                retain = max(1, int(_os.environ.get('BACKUP_RETAIN', '14')))
+            except ValueError:
+                retain = 14
+            allfiles = sorted(_glob.glob(_os2.path.join(bdir, 'tms_*.db.gz')))
+            pruned = 0
+            for old in (allfiles[:-retain] if len(allfiles) > retain else []):
+                try:
+                    _os2.remove(old); pruned += 1
+                except OSError:
+                    pass
+            kept = len(_glob.glob(_os2.path.join(bdir, 'tms_*.db.gz')))
+            results['disk'] = {'ok': True, 'path': out_path, 'kept': kept, 'pruned': pruned}
+
+        # --- Email backup: only when explicitly asked, or a recipient is configured ---
+        if dest in ('email', 'both') or (dest == '' and recipient):
+            if not recipient:
+                results['email'] = {'ok': False, 'detail': 'no recipient configured'}
+            else:
+                body = f"""
+                <p>TMS backup — {stamp}</p>
+                <ul>
+                    <li>DB source: <code>{DB_PATH}</code></li>
+                    <li>Compressed size: <strong>{size_mb:.2f} MB</strong></li>
+                    <li>Restore: gunzip the attachment, replace DATABASE_PATH file, restart</li>
+                </ul>
+                <p>— BCML TMS</p>
+                """
+                ok, detail = send_email(
+                    to_addrs=recipient,
+                    subject=f'BCML TMS Backup — {stamp}',
+                    body_html=body,
+                    attachments=[(f'tms_backup_{stamp}.db.gz', gz_bytes, 'application/gzip')],
+                )
+                results['email'] = {'ok': ok, 'detail': detail, 'recipient': recipient}
+
+        overall = bool(results) and all(v.get('ok') for v in results.values())
         return jsonify({
-            'ok': ok, 'detail': detail, 'date': stamp,
-            'size_mb': round(size_mb, 2), 'recipient': recipient,
-        }), (200 if ok else 500)
+            'ok': overall, 'date': stamp,
+            'size_mb': round(size_mb, 2), 'results': results,
+        }), (200 if overall else 500)
 
     @app.route('/central/plant/<int:plant_id>')
     @central_required

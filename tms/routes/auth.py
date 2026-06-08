@@ -729,7 +729,34 @@ def _register(app):
             log_action('RECORD_ADD', f'backup_restore:{f.filename}')
             flash('Database restored successfully. All data is back.', 'success')
             return redirect(url_for('central_dashboard'))
-        return render_template('admin_backup_restore.html')
+        import glob as _glob, os as _os
+        from tms.constants import DB_PATH as _DBP
+        _bdir = _os.path.join(_os.path.dirname(_os.path.abspath(_DBP)) or '.', 'backups')
+        _bk = []
+        if _os.path.isdir(_bdir):
+            for _p in sorted(_glob.glob(_os.path.join(_bdir, 'tms_*.db.gz')), reverse=True):
+                try:
+                    _bk.append({'name': _os.path.basename(_p),
+                                'size_mb': round(_os.path.getsize(_p) / 1048576, 2)})
+                except OSError:
+                    pass
+        return render_template('admin_backup_restore.html', auto_backups=_bk)
+
+    @app.route('/admin/backups/download/<fname>')
+    @admin_required
+    def admin_backups_download(fname):
+        import os as _os, re as _re
+        from tms.constants import DB_PATH as _DBP
+        if not _re.fullmatch(r'tms_\d{4}-\d{2}-\d{2}\.db\.gz', fname or ''):
+            flash('Invalid backup name.', 'danger')
+            return redirect(url_for('admin_backup_restore'))
+        _bdir = _os.path.join(_os.path.dirname(_os.path.abspath(_DBP)) or '.', 'backups')
+        _fp = _os.path.join(_bdir, fname)
+        if not _os.path.isfile(_fp):
+            flash('Backup not found.', 'danger')
+            return redirect(url_for('admin_backup_restore'))
+        log_action('RECORD_ADD', f'backup_disk_download:{fname}')
+        return send_file(_fp, as_attachment=True, download_name=fname)
 
     @app.route('/change-password', methods=['GET', 'POST'])
     @login_required

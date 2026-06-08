@@ -1,8 +1,9 @@
 name: Nightly DB Backup
 
 # Fires the /cron/backup endpoint on the live Render service daily.
-# Endpoint dumps SQLite, gzips, emails as attachment to BACKUP_RECIPIENT
-# (defaults to SMTP_USER on the service).
+# With dest=disk the endpoint dumps SQLite, gzips, and writes the snapshot to
+# the persistent disk (/var/data/backups, last ~14 kept) — no email/SMTP needed.
+# Retrieve any snapshot from the admin DB Backup page.
 #
 # Required GitHub repo secrets:
 #   CRON_SECRET   — must match the env var on the Render service
@@ -30,7 +31,7 @@ jobs:
           fi
           RESPONSE=$(curl -sS -w "\nHTTP_STATUS:%{http_code}" \
             --max-time 120 \
-            "$APP_URL/cron/backup?token=$CRON_SECRET")
+            "$APP_URL/cron/backup?token=$CRON_SECRET&dest=disk")
           BODY=$(echo "$RESPONSE" | sed '$d')
           STATUS=$(echo "$RESPONSE" | tail -n1 | cut -d: -f2)
           echo "Status: $STATUS"

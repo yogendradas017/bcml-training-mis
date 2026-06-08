@@ -76,4 +76,30 @@
   </div>
 </div>
 
+<div class="card mt-3">
+  <div class="ch-dark"><i class="bi bi-hdd-stack-fill"></i> Daily Auto-Backups (server disk)</div>
+  <div class="card-body" style="font-size:var(--fs-md);">
+    <p class="text-muted" style="font-size:var(--fs-md);">A gzipped snapshot is written to the persistent disk automatically each night (last ~14 kept). Download one and keep it off-server for extra safety.</p>
+    {% set bks = auto_backups|default([]) %}
+    {% if bks %}
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Backup</th><th class="text-end">Size</th><th class="text-end">Download</th></tr></thead>
+        <tbody>
+          {% for b in bks %}
+          <tr>
+            <td><code>{{ b.name }}</code></td>
+            <td class="text-end">{{ b.size_mb }} MB</td>
+            <td class="text-end"><a class="btn btn-sm btn-outline-success" href="{{ url_for('admin_backups_download', fname=b.name) }}"><i class="bi bi-file-earmark-arrow-down"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-muted">No auto-backups yet — the first is created on the next nightly run.</div>
+    {% endif %}
+  </div>
+</div>
+
 {% endblock %}
