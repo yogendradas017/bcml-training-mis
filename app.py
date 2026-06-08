@@ -60,7 +60,7 @@ if not _secret:
     logging.warning('Using ephemeral SECRET_KEY for local dev. Set SECRET_KEY env var for stable sessions.')
 app.secret_key = _secret
 
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_UPLOAD_MB', '16')) * 1024 * 1024
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
 
 csrf     = CSRFProtect(app)
