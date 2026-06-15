@@ -2,13 +2,9 @@
 <html lang="en" data-theme="light">
 <head>
   <script>
-    // No-flash theme apply: runs before CSS to set data-theme on <html> from localStorage
-    (function(){
-      try {
-        var t = localStorage.getItem('tms-theme');
-        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
-      } catch(e){}
-    })();
+    // Dark mode removed — force light theme and clear any previously stored preference
+    // (so users who had toggled dark are reset and not left stuck).
+    (function(){ try { localStorage.removeItem('tms-theme'); } catch(e){} document.documentElement.setAttribute('data-theme','light'); })();
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -205,21 +201,6 @@
       {% if session.plant_name %}
       <span class="t-plant"><i class="bi bi-building" style="font-size:var(--fs-sm);"></i> <span class="plant-text">{{ session.plant_name }}</span></span>
       {% endif %}
-      <script>
-        // Sync toggle icon to active theme at load (in case localStorage was dark)
-        document.addEventListener('DOMContentLoaded', function(){
-          var btn = document.getElementById('themeToggle');
-          if (!btn) return;
-          var t = document.documentElement.getAttribute('data-theme');
-          btn.innerHTML = (t === 'dark') ? '<i class="bi bi-sun-fill"></i>' : '<i class="bi bi-moon-stars-fill"></i>';
-        });
-      </script>
-      <button id="themeToggle" type="button" aria-label="Toggle theme"
-              title="Toggle dark/light mode"
-              onclick="(function(){var t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('tms-theme',t);}catch(e){}document.getElementById('themeToggle').innerHTML=t==='dark'?'<i class=\'bi bi-sun-fill\'></i>':'<i class=\'bi bi-moon-stars-fill\'></i>';})()"
-              style="background:transparent;border:1px solid var(--c-border);color:var(--c-text);width:32px;height:32px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-md);margin-right:4px;">
-        <i class="bi bi-moon-stars-fill"></i>
-      </button>
       <div class="user-menu" id="userMenu">
         <button type="button" class="user-btn" id="userMenuBtn"
                 aria-haspopup="menu" aria-expanded="false" aria-controls="userMenuDropdown"
