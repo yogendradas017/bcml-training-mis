@@ -79,7 +79,7 @@ def _register(app):
         # Summary chips (before filter for totals)
         all_emps = [{'collar': r['collar'],
                      'actual': round(r['actual_hrs'], 1),
-                     'target': r['target_hrs']} for r in rows]
+                     'target': bc_t if r['collar'] == 'Blue Collared' else wc_t} for r in rows]
         total_bc   = sum(1 for e in all_emps if e['collar'] == 'Blue Collared')
         total_wc   = sum(1 for e in all_emps if e['collar'] == 'White Collared')
         zero_count = sum(1 for e in all_emps if e['actual'] == 0)

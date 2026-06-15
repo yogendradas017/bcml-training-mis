@@ -38,7 +38,7 @@
 
 <div class="alert alert-warning" style="font-size:var(--fs-md);">
   <i class="bi bi-exclamation-triangle-fill me-1"></i>
-  <strong>{{ plant_clusters | sum(attribute='clusters') | length }} duplicate cluster(s)</strong>
+  <strong>{{ plant_clusters | map(attribute='clusters') | map('length') | sum }} duplicate cluster(s)</strong>
   across {{ plant_clusters | length }} plant(s). Review carefully —
   <strong>merge is irreversible</strong> (cascade rename applies immediately).
 </div>

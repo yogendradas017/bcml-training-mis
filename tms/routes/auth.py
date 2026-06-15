@@ -917,6 +917,17 @@ def _register(app):
     @admin_required
     def admin_seed_demo():
         if request.method == 'POST':
+            # HARD GATE — this is a destructive all-plant wipe. It must be impossible
+            # to fire on production: requires ALLOW_DEMO_SEED=1 (never set on Render)
+            # AND an exact typed confirmation phrase.
+            import os
+            if os.environ.get('ALLOW_DEMO_SEED') != '1':
+                flash('Demo seeding is disabled in this environment. It is permanently off on '
+                      'production; set ALLOW_DEMO_SEED=1 only in a throwaway demo environment.', 'danger')
+                return redirect(url_for('admin_seed_demo'))
+            if (request.form.get('confirm_phrase') or '').strip() != 'SEED DEMO DATA':
+                flash('Type the exact phrase "SEED DEMO DATA" to confirm this destructive action.', 'warning')
+                return redirect(url_for('admin_seed_demo'))
             import seed_synthetic as _s
             db = get_db()
             db.execute("PRAGMA foreign_keys = OFF")
