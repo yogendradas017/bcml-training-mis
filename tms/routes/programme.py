@@ -624,10 +624,11 @@ def _register(app):
             (new_status, now_iso, user_id, v_at, v_by, attended, sum_hrs,
              session_code, plant_id))
         db.execute(
-            'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail) '
-            'VALUES (?,?,?,?,?,?)',
+            'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail, ts) '
+            'VALUES (?,?,?,?,?,?,?)',
             (session_code, plant_id, stage, username, user_id,
-             '; '.join(anomalies) if anomalies else 'clean'))
+             '; '.join(anomalies) if anomalies else 'clean',
+             _now_ist().isoformat(timespec='seconds')))
         db.commit()
 
         # Admin/Central 2C save bypasses verify_approve, so seed effectiveness
@@ -751,11 +752,12 @@ def _register(app):
                 "WHERE session_code=? AND plant_id=?",
                 (rec['session_code'], session['plant_id']))
             db.execute(
-                'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail) '
-                'VALUES (?,?,?,?,?,?)',
+                'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail, ts) '
+                'VALUES (?,?,?,?,?,?,?)',
                 (rec['session_code'], session['plant_id'], '2c_deleted',
                  session.get('username', ''), session.get('user_id'),
-                 f'Reverted to To Be Planned; purged {len(eff_before)} unfiled effectiveness stub(s)'))
+                 f'Reverted to To Be Planned; purged {len(eff_before)} unfiled effectiveness stub(s)',
+                 _now_ist().isoformat(timespec='seconds')))
             db.commit()
             log_record_change('RECORD_DELETE', rec_id, 'programme_details',
                               before=before_snap_dict, after=None,
@@ -969,10 +971,11 @@ def _register(app):
                 (new_status, now_iso, user_id, v_at, v_by, attended, sum_hrs,
                  sc, plant_id))
             db.execute(
-                'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail) '
-                'VALUES (?,?,?,?,?,?)',
+                'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail, ts) '
+                'VALUES (?,?,?,?,?,?,?)',
                 (sc, plant_id, stage, username, user_id,
-                 '; '.join(row_anomalies) if row_anomalies else 'clean'))
+                 '; '.join(row_anomalies) if row_anomalies else 'clean',
+                 _now_ist().isoformat(timespec='seconds')))
 
             # Admin/Central bulk save bypasses verify_approve — seed effectiveness
             # reviews for Specialized programmes (parity with verify_approve).

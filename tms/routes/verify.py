@@ -129,10 +129,11 @@ def _register(app):
                 'SELECT * FROM calendar WHERE session_code=? AND plant_id=?',
                 (session_code, plant_id)).fetchone()
             db.execute(
-                'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail) '
-                'VALUES (?,?,?,?,?,?)',
+                'INSERT INTO verification_log (session_code, plant_id, stage, actor, actor_id, detail, ts) '
+                'VALUES (?,?,?,?,?,?,?)',
                 (session_code, plant_id, 'verified', username, user_id,
-                 f'approved; checklist=all; note: {note}'))
+                 f'approved; checklist=all; note: {note}',
+                 _now_ist().isoformat(timespec='seconds')))
             seeded, due_date = seed_effectiveness_reviews(
                 plant_id, session_code, after_snap, db)
             db.commit()

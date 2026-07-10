@@ -1072,31 +1072,33 @@ def _register(app):
 
         # Persist error + duplicate rows for Central R&D / training analysis
         try:
+            from tms.helpers import _now_ist
             uname = session.get('username', 'unknown')
+            _ts = _now_ist().isoformat(timespec='seconds')
             for er in err_rows:
                 db.execute('''INSERT INTO tni_upload_errors(
                     plant_id, username, aid, row_status, row_num,
                     emp_code, emp_name, programme_name, prog_type, mode,
-                    planned_hours, issues, garbage_class)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    planned_hours, issues, garbage_class, ts)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                     (plant_id, uname, aid, 'error', er.get('row_num'),
                      er.get('emp_code') or '', er.get('emp_name') or '',
                      er.get('programme_name') or '', er.get('prog_type') or '',
                      er.get('mode') or '', er.get('planned_hours') or 0,
                      ' | '.join(er.get('issues') or []),
-                     er.get('prog_garbage_class') or ''))
+                     er.get('prog_garbage_class') or '', _ts))
             for dr in dup_rows:
                 db.execute('''INSERT INTO tni_upload_errors(
                     plant_id, username, aid, row_status, row_num,
                     emp_code, emp_name, programme_name, prog_type, mode,
-                    planned_hours, issues, garbage_class)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    planned_hours, issues, garbage_class, ts)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                     (plant_id, uname, aid, 'duplicate', dr.get('row_num'),
                      dr.get('emp_code') or '', dr.get('emp_name') or '',
                      dr.get('programme_name') or '', dr.get('prog_type') or '',
                      dr.get('mode') or '', dr.get('planned_hours') or 0,
                      dr.get('dup_type') or 'duplicate',
-                     dr.get('prog_garbage_class') or ''))
+                     dr.get('prog_garbage_class') or '', _ts))
             db.commit()
         except Exception as _e:
             import logging as _l

@@ -9,7 +9,7 @@ from tms.helpers import (
     _is_ajax, _canonical_prog, _get_or_create_prog_code, _new_session_code,
     _derive_audience, _sync_calendar_from_2c,
     _read_upload_file, _clean, _safe_float, _error_excel_response,
-    _current_fy, _in_current_fy, _parse_date_strict, _fy_label,
+    _current_fy, _in_current_fy, _parse_date_strict, _fy_label, _now_ist,
     validate_calendar_row, flash_validation,
 )
 
@@ -342,8 +342,8 @@ def _register(app):
                 db.execute(
                     'INSERT INTO calendar_reschedule_history '
                     '(plant_id, cal_id, session_code, old_plan_start, old_plan_end, '
-                    ' new_plan_start, new_plan_end, old_status, new_status, actor, reason) '
-                    'VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                    ' new_plan_start, new_plan_end, old_status, new_status, actor, reason, ts) '
+                    'VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
                     (plant_id, cal_id,
                      after_snap['session_code'],
                      before_snap_dict.get('plan_start'),
@@ -353,7 +353,8 @@ def _register(app):
                      before_snap_dict.get('status'),
                      after_snap['status'],
                      session.get('username', 'unknown'),
-                     (f.get('reschedule_reason') or '').strip()[:500]))
+                     (f.get('reschedule_reason') or '').strip()[:500],
+                     _now_ist().isoformat(timespec='seconds')))
                 db.commit()
         msg = 'Session updated.'
         if tni_audience_edit and form_audience_edit and form_audience_edit != tni_audience_edit:

@@ -186,9 +186,10 @@ def _register(app):
                 return redirect(url_for('spoc_submit_request'))
 
             db.execute(
-                'INSERT INTO spoc_requests(plant_id, requested_by, request_type, details, payload_json) '
-                'VALUES(?, ?, ?, ?, ?)',
-                (plant_id, session['username'], req_type, details[:2000], payload_str)
+                'INSERT INTO spoc_requests(plant_id, requested_by, request_type, details, payload_json, ts) '
+                'VALUES(?, ?, ?, ?, ?, ?)',
+                (plant_id, session['username'], req_type, details[:2000], payload_str,
+                 _now_ist().isoformat(timespec='seconds'))
             )
             db.commit()
             log_action('RECORD_ADD', f'spoc_request:{req_type}')
