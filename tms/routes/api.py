@@ -4,7 +4,7 @@ from tms.constants import PROG_TYPES
 from tms.db import get_db
 from tms.decorators import login_required, spoc_required
 import datetime
-from tms.helpers import _fy_label, _derive_audience, _calc_compliance, _current_fy, _now_ist
+from tms.helpers import _fy_label, _derive_audience, _calc_compliance, _current_fy, _now_ist, coverage_universe
 from tms.config import get_config
 
 
@@ -325,34 +325,32 @@ def _register(app):
         db       = get_db()
         fy       = _fy_label()
 
-        unique_progs = db.execute(
-            'SELECT COUNT(DISTINCT programme_name) FROM tni WHERE plant_id=?',
-            (plant_id,)).fetchone()[0]
-
-        tni_rows = db.execute(
-            'SELECT programme_name, COUNT(DISTINCT emp_code) as demand FROM tni WHERE plant_id=? GROUP BY programme_name ORDER BY demand DESC',
-            (plant_id,)).fetchall()
-
         fy_start, fy_end = _current_fy()
-        covered_map = {}
-        for r in db.execute(
-                'SELECT programme_name, COUNT(DISTINCT emp_code) as cnt FROM emp_training'
-                ' WHERE plant_id=? AND start_date BETWEEN ? AND ? GROUP BY programme_name',
-                (plant_id, fy_start, fy_end)):
-            covered_map[r['programme_name']] = r['cnt']
+        # Canonical coverage (coverage_universe): current-FY 'TNI Driven' nominations
+        # of active BC/WC employees; covered = nominee has an in-FY 2A attendance.
+        # Same rule as Monthly Summary + Dashboard, so the % matches everywhere and
+        # can never exceed 100% (covered is a subset of demand).
+        noms, trained = coverage_universe(db, plant_id, fy_start, fy_end, fy)
+        from collections import defaultdict
+        demand_map = defaultdict(int); covered_cnt = defaultdict(int); disp = {}
+        for n in noms:
+            demand_map[n['prog']] += 1
+            disp[n['prog']] = n['prog_display']
+            if (n['emp'], n['prog']) in trained:
+                covered_cnt[n['prog']] += 1
+        unique_progs = len(demand_map)
 
         sessions_map = {}
-        for r in db.execute('SELECT programme_name, COUNT(*) as cnt FROM calendar WHERE plant_id=? AND session_code LIKE ? GROUP BY programme_name',
+        for r in db.execute('SELECT LOWER(programme_name) AS pk, COUNT(*) as cnt FROM calendar WHERE plant_id=? AND session_code LIKE ? GROUP BY LOWER(programme_name)',
                             (plant_id, f'%/{fy}/%')):
-            sessions_map[r['programme_name']] = r['cnt']
+            sessions_map[r['pk']] = r['cnt']
 
         programmes = []
         total_needs = total_covered = 0
-        for r in tni_rows:
-            name      = r['programme_name']
-            demand    = r['demand']
-            covered   = covered_map.get(name, 0)
-            planned   = sessions_map.get(name, 0)
+        for prog_key, demand in sorted(demand_map.items(), key=lambda kv: -kv[1]):
+            name      = disp.get(prog_key, prog_key)
+            covered   = covered_cnt.get(prog_key, 0)
+            planned   = sessions_map.get(prog_key, 0)
             uncovered = max(0, demand - covered)
             pct       = round(covered / demand * 100) if demand > 0 else 0
             if demand < 30:  status = 'Small Group'

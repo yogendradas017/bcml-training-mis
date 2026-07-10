@@ -59,7 +59,9 @@ def _register(app):
             "SELECT COUNT(*) FROM calendar WHERE plant_id=? AND status='Lapsed'",
             (plant_id,)).fetchone()[0]
         demand_map = {}
-        for row in db.execute('SELECT programme_name, COUNT(DISTINCT emp_code) as cnt FROM tni WHERE plant_id=? GROUP BY programme_name', (plant_id,)):
+        # Current-FY 'TNI Driven' demand only, so it matches the current-FY Audience
+        # column beside it (was all-FY, which inflated the gap).
+        for row in db.execute("SELECT programme_name, COUNT(DISTINCT emp_code) as cnt FROM tni WHERE plant_id=? AND fy_year=? AND source='TNI Driven' GROUP BY programme_name", (plant_id, _fy_label())):
             demand_map[row['programme_name']] = row['cnt']
 
         master_programmes = [r[0] for r in db.execute(

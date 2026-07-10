@@ -290,6 +290,45 @@ def _fy_label_long():
     return f'{start_yr}–{str(end_yr)[2:]}'  # en-dash matches historical literals
 
 
+def coverage_universe(db, plant_id, fy_start, fy_end, fy):
+    """CANONICAL TNI-coverage inputs — the SINGLE source of truth used identically
+    by the Monthly Summary, Dashboard QC charts, and Programme Intelligence, so the
+    coverage % is the same number in every module.
+
+    Returns (nominations, trained):
+      nominations — one dict {emp, prog, prog_type, collar} per current-FY
+        'TNI Driven' nomination of an ACTIVE Blue/White-collar employee. `prog`
+        is lower-cased for case-insensitive matching.
+      trained — set of (emp, prog) with a 2A (emp_training) attendance record for
+        that programme dated WITHIN the current FY (attended-within-FY rule, per
+        CLAUDE.md _calc_compliance — not conducted-gated).
+    A nomination is 'covered' iff its (emp, prog) is in `trained`. Coverage % for
+    any slice = covered nominations / total nominations in that slice.
+    """
+    nominations = [
+        {'emp': r['emp'], 'prog': r['prog'], 'prog_display': r['prog_display'],
+         'prog_type': r['pt'], 'collar': r['collar']}
+        for r in db.execute('''
+            SELECT t.emp_code AS emp, LOWER(t.programme_name) AS prog,
+                   t.programme_name AS prog_display,
+                   t.prog_type AS pt, e.collar AS collar
+            FROM tni t
+            JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
+            WHERE t.plant_id = ? AND t.fy_year = ? AND t.source = 'TNI Driven'
+              AND e.is_active = 1
+              AND e.collar IN ('Blue Collared', 'White Collared')
+        ''', (plant_id, fy)).fetchall()
+    ]
+    trained = {
+        (r['emp'], r['prog']) for r in db.execute('''
+            SELECT DISTINCT emp_code AS emp, LOWER(programme_name) AS prog
+            FROM emp_training
+            WHERE plant_id = ? AND start_date BETWEEN ? AND ?
+        ''', (plant_id, fy_start, fy_end)).fetchall()
+    }
+    return nominations, trained
+
+
 def _get_or_create_prog_code(plant_id, prog_name, prog_type, db):
     # Atomic: reuse existing prog_code if the programme already has one.
     existing = db.execute(
@@ -525,24 +564,16 @@ def _calc_summary(plant_id, month_filter, db):
     for r in seat_rows:
         seat_map.setdefault(r['prog_type'], {})[r['collar']] = (r['seats'], r['hrs'])
 
-    # Query 4: TNI nominations + fulfilment per prog_type + collar
-    tni_rows = db.execute('''
-        SELECT t.prog_type, e.collar,
-               COUNT(*) AS fixed,
-               SUM(CASE WHEN EXISTS (
-                   SELECT 1 FROM emp_training et
-                   WHERE et.emp_code=t.emp_code AND et.plant_id=t.plant_id
-                   AND LOWER(et.programme_name)=LOWER(t.programme_name)
-               ) THEN 1 ELSE 0 END) AS fulfilled
-        FROM tni t
-        JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-        WHERE t.plant_id=? AND t.fy_year=? AND t.source='TNI Driven'
-          AND e.collar IN ('Blue Collared', 'White Collared')
-        GROUP BY t.prog_type, e.collar
-    ''', [plant_id, fy]).fetchall()
+    # Query 4: TNI nominations + fulfilment per prog_type + collar.
+    # Uses the CANONICAL coverage rule (coverage_universe) so this % is identical
+    # to the Dashboard QC and Programme Intelligence for the same plant.
+    _noms, _trained = coverage_universe(db, plant_id, fy_start, fy_end, fy)
     tni_map = {}
-    for r in tni_rows:
-        tni_map.setdefault(r['prog_type'], {})[r['collar']] = (r['fixed'] or 0, r['fulfilled'] or 0)
+    for n in _noms:
+        cell = tni_map.setdefault(n['prog_type'], {}).setdefault(n['collar'], [0, 0])
+        cell[0] += 1
+        if (n['emp'], n['prog']) in _trained:
+            cell[1] += 1
 
     # Assemble rows in PROG_TYPES order
     rows = []
@@ -602,32 +633,14 @@ def _calc_totals(rows, db=None, plant_id=None):
                 t[k] = round(t.get(k, 0) + (v or 0), 1)
     if db is not None and plant_id is not None:
         fy = _fy_label()
-        t['bc_fixed'] = db.execute('''SELECT COUNT(*) FROM tni t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.fy_year=? AND e.collar='Blue Collared'
-              AND t.source='TNI Driven' ''', [plant_id, fy]).fetchone()[0]
-        t['wc_fixed'] = db.execute('''SELECT COUNT(*) FROM tni t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.fy_year=? AND e.collar='White Collared'
-              AND t.source='TNI Driven' ''', [plant_id, fy]).fetchone()[0]
-        t['bc_cum'] = db.execute('''SELECT COUNT(*) FROM tni t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.fy_year=? AND e.collar='Blue Collared'
-              AND t.source='TNI Driven'
-              AND EXISTS (
-                  SELECT 1 FROM emp_training et
-                  WHERE et.emp_code=t.emp_code AND et.plant_id=t.plant_id
-                  AND LOWER(et.programme_name)=LOWER(t.programme_name)
-              ) ''', [plant_id, fy]).fetchone()[0]
-        t['wc_cum'] = db.execute('''SELECT COUNT(*) FROM tni t
-            JOIN employees e ON e.emp_code=t.emp_code AND e.plant_id=t.plant_id
-            WHERE t.plant_id=? AND t.fy_year=? AND e.collar='White Collared'
-              AND t.source='TNI Driven'
-              AND EXISTS (
-                  SELECT 1 FROM emp_training et
-                  WHERE et.emp_code=t.emp_code AND et.plant_id=t.plant_id
-                  AND LOWER(et.programme_name)=LOWER(t.programme_name)
-              ) ''', [plant_id, fy]).fetchone()[0]
+        fy_start, fy_end = _current_fy()
+        _noms, _trained = coverage_universe(db, plant_id, fy_start, fy_end, fy)
+        _bc = [n for n in _noms if n['collar'] == 'Blue Collared']
+        _wc = [n for n in _noms if n['collar'] == 'White Collared']
+        t['bc_fixed'] = len(_bc)
+        t['wc_fixed'] = len(_wc)
+        t['bc_cum'] = sum(1 for n in _bc if (n['emp'], n['prog']) in _trained)
+        t['wc_cum'] = sum(1 for n in _wc if (n['emp'], n['prog']) in _trained)
     else:
         t['bc_fixed'] = sum(r.get('bc_fixed', 0) or 0 for r in rows)
         t['wc_fixed'] = sum(r.get('wc_fixed', 0) or 0 for r in rows)
@@ -698,54 +711,33 @@ def _calc_worst_cells(plant_id, db, limit=3, min_nominated=3):
     Only cells with at least `min_nominated` TNI rows are considered.
     Each row also carries a `rag` label using the same 75/50 thresholds.
     """
-    sql = '''
-        SELECT prog_type, collar,
-               ROUND(100.0 * SUM(CASE WHEN trained THEN 1 ELSE 0 END)
-                     / NULLIF(COUNT(*), 0), 1) AS cov_pct,
-               COUNT(*) AS nominated,
-               SUM(CASE WHEN trained THEN 1 ELSE 0 END) AS trained_cnt
-        FROM (
-            SELECT t.prog_type, e.collar, t.emp_code,
-                   EXISTS(
-                       SELECT 1 FROM emp_training et
-                       JOIN programme_details pd ON pd.session_code = et.session_code
-                       WHERE et.emp_code = t.emp_code
-                         AND pd.programme_name = t.programme_name
-                         AND pd.plant_id = t.plant_id
-                   ) AS trained
-            FROM tni t
-            JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
-            WHERE t.plant_id = ? AND e.is_active = 1
-        )
-        GROUP BY prog_type, collar
-        HAVING nominated >= ?
-        ORDER BY cov_pct ASC
-        LIMIT ?
-    '''
+    fy = _fy_label()
+    fy_start, fy_end = _current_fy()
     try:
-        rows = db.execute(sql, (plant_id, min_nominated, limit)).fetchall()
+        noms, trained = coverage_universe(db, plant_id, fy_start, fy_end, fy)
     except Exception:
         return []
+    from collections import defaultdict
+    tot = defaultdict(int); cvd = defaultdict(int)   # key=(prog_type, collar)
+    for n in noms:
+        k = (n['prog_type'], n['collar'])
+        tot[k] += 1
+        if (n['emp'], n['prog']) in trained:
+            cvd[k] += 1
     out = []
-    for r in rows:
-        pct = r['cov_pct'] or 0
-        if pct >= 75:
-            rag = 'on-track'
-        elif pct >= 50:
-            rag = 'watch'
-        else:
-            rag = 'critical'
+    for (pt, collar), nom in tot.items():
+        if nom < min_nominated:
+            continue
+        c = cvd[(pt, collar)]
+        pct = round(100.0 * c / nom, 1) if nom else 0
+        rag = 'on-track' if pct >= 75 else ('watch' if pct >= 50 else 'critical')
         out.append({
-            'prog_type':   r['prog_type'] or '',
-            'collar':      r['collar'] or '',
-            'pct':         pct,
-            'cov_pct':     pct,
-            'trained':     r['trained_cnt'] or 0,
-            'trained_cnt': r['trained_cnt'] or 0,
-            'nominated':   r['nominated'] or 0,
-            'rag':         rag,
+            'prog_type': pt or '', 'collar': collar or '',
+            'pct': pct, 'cov_pct': pct,
+            'trained': c, 'trained_cnt': c, 'nominated': nom, 'rag': rag,
         })
-    return out
+    out.sort(key=lambda x: x['cov_pct'])
+    return out[:limit]
 
 
 # ── Excel error response ──────────────────────────────────────────────────────

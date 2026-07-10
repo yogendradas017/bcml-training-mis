@@ -76,16 +76,17 @@ def _emp_fy_hours(db, plant_id, fy_start, fy_end):
 
 
 def _trained_pairs(db, plant_id):
-    """Set of (emp_code, programme_name) this plant has actually trained — one
-    pass over emp_training⋈programme_details. Shared by pareto + heatmap so the
-    per-row correlated EXISTS (≈660ms + 247ms) is replaced by a single scan."""
+    """CANONICAL trained set — matches helpers.coverage_universe so Dashboard
+    coverage equals Summary + Intelligence. A (emp_code, lower(programme_name))
+    pair is trained if the plant has a 2A (emp_training) attendance record for
+    that programme dated WITHIN the current FY. Shared by pareto + heatmap."""
+    from tms.helpers import _current_fy
+    fy_start, fy_end = _current_fy()
     return {(r['emp'], r['prog']) for r in db.execute('''
-        SELECT DISTINCT et.emp_code AS emp, pd.programme_name AS prog
-        FROM emp_training et
-        JOIN programme_details pd ON pd.session_code = et.session_code
-                                 AND pd.plant_id = et.plant_id
-        WHERE et.plant_id = ?
-    ''', (plant_id,)).fetchall()}
+        SELECT DISTINCT emp_code AS emp, LOWER(programme_name) AS prog
+        FROM emp_training
+        WHERE plant_id = ? AND start_date BETWEEN ? AND ?
+    ''', (plant_id, fy_start, fy_end)).fetchall()}
 
 
 def _qc_pareto(db, plant_id, fy_start, fy_end, trained=None):
@@ -100,9 +101,11 @@ def _qc_pareto(db, plant_id, fy_start, fy_end, trained=None):
             SELECT t.programme_name AS prog, t.emp_code AS emp
             FROM tni t
             JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
-            WHERE t.plant_id = ? AND t.fy_year = ? AND e.is_active = 1
+            WHERE t.plant_id = ? AND t.fy_year = ? AND t.source = 'TNI Driven'
+              AND e.is_active = 1
+              AND e.collar IN ('Blue Collared', 'White Collared')
         ''', (plant_id, fy)).fetchall():
-        if (r['emp'], r['prog']) not in trained:
+        if (r['emp'], r['prog'].lower()) not in trained:
             unc[r['prog']] += 1
     top = sorted(((v, k) for k, v in unc.items() if v > 0),
                  key=lambda x: (-x[0], x[1]))[:8]
@@ -179,23 +182,23 @@ def _qc_cumulative(db, plant_id, fy_start, fy_end):
     # Two flat, index-driven queries + a Python match — avoids the tni×sessions×
     # attendance join explosion that made the SQL-join versions take 35–66s.
     # 1) trained facts: earliest in-FY training date per (emp, programme).
-    trained = {}  # (emp_code, programme_name) -> earliest start_date
+    trained = {}  # (emp_code, lower(programme_name)) -> earliest in-FY start_date
     for r in db.execute('''
-            SELECT et.emp_code AS emp, pd.programme_name AS prog, MIN(et.start_date) AS first_train
-            FROM emp_training et
-            JOIN programme_details pd ON pd.session_code = et.session_code AND pd.plant_id = et.plant_id
-            WHERE et.plant_id = ? AND et.start_date BETWEEN ? AND ?
-            GROUP BY et.emp_code, pd.programme_name
+            SELECT emp_code AS emp, LOWER(programme_name) AS prog, MIN(start_date) AS first_train
+            FROM emp_training
+            WHERE plant_id = ? AND start_date BETWEEN ? AND ?
+            GROUP BY emp_code, LOWER(programme_name)
         ''', (plant_id, fy_start, fy_end)).fetchall():
         trained[(r['emp'], r['prog'])] = r['first_train']
     # 2) nominations (the coverage universe) with collar.
     denom = {'Blue Collared': 0, 'White Collared': 0}
     firsts = {'Blue Collared': [], 'White Collared': []}
     for r in db.execute('''
-            SELECT t.emp_code AS emp, t.programme_name AS prog, e.collar AS collar
+            SELECT t.emp_code AS emp, LOWER(t.programme_name) AS prog, e.collar AS collar
             FROM tni t
             JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
-            WHERE t.plant_id = ? AND t.fy_year = ? AND e.is_active = 1
+            WHERE t.plant_id = ? AND t.fy_year = ? AND t.source = 'TNI Driven'
+              AND e.is_active = 1
               AND e.collar IN ('Blue Collared', 'White Collared')
         ''', (plant_id, fy)).fetchall():
         collar = r['collar']
@@ -275,17 +278,20 @@ def _qc_heatmap(db, plant_id, fy_start, fy_end, trained=None):
     from collections import defaultdict
     if trained is None:
         trained = _trained_pairs(db, plant_id)
+    fy = _fy_label()
     tot = defaultdict(int); cov = defaultdict(int)   # key=(collar, prog_type)
     for r in db.execute('''
             SELECT t.prog_type AS pt, e.collar AS collar,
                    t.emp_code AS emp, t.programme_name AS prog
             FROM tni t
             JOIN employees e ON e.emp_code = t.emp_code AND e.plant_id = t.plant_id
-            WHERE t.plant_id = ? AND e.is_active = 1
-        ''', (plant_id,)).fetchall():
+            WHERE t.plant_id = ? AND t.fy_year = ? AND t.source = 'TNI Driven'
+              AND e.is_active = 1
+              AND e.collar IN ('Blue Collared', 'White Collared')
+        ''', (plant_id, fy)).fetchall():
         k = (r['collar'] or '', r['pt'] or '')
         tot[k] += 1
-        if (r['emp'], r['prog']) in trained:
+        if (r['emp'], r['prog'].lower()) in trained:
             cov[k] += 1
     matrix = {}
     for (collar, pt), n in tot.items():
