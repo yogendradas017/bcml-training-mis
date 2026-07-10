@@ -43,3 +43,42 @@ docs/build_tms_ppt.py
 docs/dashboard_mockup.html
 docs/lms_build_plan.html
 docs/lms_ui_mockup.html
+
+# Secrets — never commit
+.claude/.elevenlabs_key
+.claude/*.key
+
+# Video studio — heavy binaries / generated assets / deps — never commit
+.claude/video_studio/node_modules/
+.claude/video_studio/public/
+.claude/video_studio/assets/
+.claude/video_studio/render/
+.claude/video_studio/out/
+.claude/videos/
+.claude/_video_work/
+.claude/_tts_*.mp3
+.claude/*_test.mp3
+.claude/demo_bulk_employees.xlsx
+
+# Local tooling + generated artifacts (video pipeline, demos, gstack) — not app code
+.claude/*.py
+.claude/*.png
+.claude/*.mp3
+.claude/*.log
+.claude/*.docx
+.claude/videos/
+.claude/_demo_shots/
+.claude/_cine_work/
+.claude/_demo_tts.mp3
+.claude/hf_intro/
+.claude/video_studio/
+.claude/bin/
+.claude/skills/
+.claude/launch.json
+.claude/.el_voice
+.agents/
+.obsidian/
+tms-video/
+New folder/
+skills-lock.json
+DEMO_FLAW_REPORT.md
