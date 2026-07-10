@@ -88,10 +88,6 @@
       "Read(//c/c/Users/yogendra.das/Desktop/Training Management System/**)",
       "Bash(python .claude/demo_tour.py)",
       "Bash(python .claude/capture_ui.py)"
-    ],
-    "defaultMode": "bypassPermissions"
-  },
-  "skipDangerousModePermissionPrompt": true,
-  "skipAutoPermissionPrompt": true,
-  "skipWorkflowUsageWarning": true
+    ]
+  }
 }

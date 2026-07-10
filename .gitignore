@@ -27,6 +27,7 @@ data/tmp_uploads/
 
 # Editor / local tooling
 .vscode/
+.claude/settings.local.json
 .claude/app.pid
 .claude/worktrees/
 .claude/setpw.py
@@ -48,12 +49,7 @@ docs/lms_ui_mockup.html
 .claude/.elevenlabs_key
 .claude/*.key
 
-# Video studio — heavy binaries / generated assets / deps — never commit
-.claude/video_studio/node_modules/
-.claude/video_studio/public/
-.claude/video_studio/assets/
-.claude/video_studio/render/
-.claude/video_studio/out/
+# Video studio — heavy binaries / generated assets / deps — never commit (whole dir ignored below)
 .claude/videos/
 .claude/_video_work/
 .claude/_tts_*.mp3
@@ -66,7 +62,6 @@ docs/lms_ui_mockup.html
 .claude/*.mp3
 .claude/*.log
 .claude/*.docx
-.claude/videos/
 .claude/_demo_shots/
 .claude/_cine_work/
 .claude/_demo_tts.mp3
@@ -82,3 +77,4 @@ tms-video/
 New folder/
 skills-lock.json
 DEMO_FLAW_REPORT.md
+.gstack/
